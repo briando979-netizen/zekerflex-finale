@@ -10,31 +10,36 @@ import { listMyReplacementRequests } from "@/lib/replacements/store";
 import { PushToggle } from "@/components/app/PushToggle";
 import { SpoedKanaalToggle } from "@/components/app/SpoedKanaalToggle";
 import { ZiekMelden } from "@/components/app/ZiekMelden";
-import { ReliabilityRing } from "@/components/app/ReliabilityRing";
 import { getTheme } from "@/lib/theme/server";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import { AccountLanguageRow } from "@/components/app/AccountLanguageRow";
-import { LevelCard, ReferralCard } from "@/components/rewards/RewardsCards";
-import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { locatieTeksten } from "@/lib/locatie/teksten";
 import { hulpTeksten } from "@/lib/hulp/teksten";
+import { SUPPORT_CHAT } from "@/lib/hulp/hulpjes";
 import { BANK_AAN } from "@/lib/app-mode";
-import { PageHeader } from "@/components/app/ui";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
+
+// Het Account van de werker in de opzet van de app van YoungOnes (21 nov 2026, eigenaar: "alles weg en in de stijl van
+// YoungOnes, alleen de chat bewaren"; lees-uit in memory/youngones-app-20nov.md): de kop "ACCOUNT" staat in de balk
+// bovenaan (FreelancerShell), dan één kaart met de ronde foto erbovenop, de naam groot, vijf sterren (grijs bij nul) en
+// "0 beoordelingen", een lijn en "Jouw klussen over de laatste 6 maanden" met drie tellers; daaronder losse rijen met
+// een chevron, in de volgorde van die app. Wat van ons echt bestaat (administratie, certificaten, passkeys, …) staat er
+// als gewone rij tussen; de kaarten die geen functie waren (betrouwbaarheidsring, level, uitnodigen, beveiligingskaart)
+// zijn weg. Sterren en tellers staan er altijd, ook op nul: zo doet die app het ook.
 
 // vlag `publiek-alleen-flexwerk` (20 nov 2026, eigenaar): de losse diensten die niets met flexwerk te maken hebben
 // (zakelijk nummer, wifi op locatie, portofoon, toegangscodes, kenteken) staan dan niet meer in dit menu; de pagina's blijven.
 const NIET_FLEXWERK_ACCOUNT = new Set(["/dashboard/telefonie", "/dashboard/wifi", "/dashboard/portofoon", "/dashboard/toegangscodes", "/dashboard/voertuig"]);
 
-type Item =
-  | { label: string; href: string; external?: boolean }
-  | { label: string; value: string };
+type Item = { label: string; href: string; external?: boolean };
+
+const KAART = "overflow-hidden rounded-2xl border border-hair bg-white shadow-card";
 
 export default async function AccountPage() {
   const principal = await requirePrincipal();
@@ -78,7 +83,6 @@ export default async function AccountPage() {
   ]);
 
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
-  const secured = await hasTwoFactor(principal.userId).catch(() => true);
   const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
   // Only a request that actually found a substitute counts as "arranged" — an
   // "open" (still pending) or "cancelled" (withdrawn, worked it yourself)
@@ -88,215 +92,167 @@ export default async function AccountPage() {
   ).length;
   const reviews = card?.freelancer?.reviews ?? { average: 0, count: 0, distribution: {} as never };
   const stars = Math.round(reviews.average);
-  // Nog geen beoordeling en alle drie de tellers op nul: de kaart toont dan alleen foto en naam.
-  const nogNietsGedaan = reviews.count === 0 && matched === 0 && notCompleted === 0 && replacementsArranged === 0;
   // Een geplande (toekomstige) klus: het overzicht haalt die al op (lib/dashboard/freelancer.ts, kpis.upcoming).
   const heeftGeplandeKlus = overview.kpis.upcoming > 0;
 
-  const GROUPS_ALLES: { items: Item[] }[] = [
+  // De eerste rijen staan elk in een eigen kaart (zo staat het in die app), de rest in groepen.
+  const BOVEN_ALLES: Item[] = [
+    // "Ik heb een vraag": de chat met ZekerFlex (bij YoungOnes opent dit de service)
+    { label: t.question, href: SUPPORT_CHAT },
     {
-      items: [
-        { label: t.admin, href: "/dashboard/administratie" },
-        { label: t.forecast, href: "/dashboard/vooruitblik" },
-        { label: t.assistant, href: "/dashboard/assistent" },
-        // ZekerFlex OS staat hier bewust niet meer: dat is geen flexwerk (de pagina /os zelf bestaat nog).
-        { label: t.availability, href: "/dashboard/beschikbaarheid" },
-        { label: t.trips, href: "/dashboard/ritten" },
-        { label: t.calendar, href: "/dashboard/agenda-koppeling" },
-        { label: t.workNumber, href: "/dashboard/telefonie" },
-        ...(inApp || !BANK_AAN ? [] : [{ label: t.bank, href: "/dashboard/bank" }]),
-        { label: t.question, href: "/kennis" },
-        {
-          label: t.feedback,
-          href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex-app",
-          external: true,
-        },
-        { label: t.favorites, href: "/dashboard/favorieten" },
-        // "Introduceer een bedrijf" (17 nov 2026, lib/introducties); in de app zonder de beloning
-        { label: ft.introductie.menu, href: "/dashboard/introduceren" },
-        { label: lt.portofoon, href: "/dashboard/portofoon" },
-        { label: lt.kluis, href: "/dashboard/toegangscodes" },
-        { label: lt.voertuig, href: "/dashboard/voertuig" },
-        { label: t.hidden, href: "/dashboard/account/verborgen" },
-      ],
+      label: t.feedback,
+      href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex-app",
+      external: true,
     },
-    {
-      items: isUitzend
+  ];
+  // hierna volgt de pushkaart (zie de JSX), dan de groepen
+  const GROEPEN_ALLES: Item[][] = [
+    [
+      { label: t.favorites, href: "/dashboard/favorieten" },
+      { label: t.hidden, href: "/dashboard/account/verborgen" },
+      // "Introduceer een bedrijf" (17 nov 2026, lib/introducties); in de app zonder de beloning
+      { label: ft.introductie.menu, href: "/dashboard/introduceren" },
+    ],
+    [
+      { label: t.personal, href: "/dashboard/profiel" },
+      { label: t.address, href: "/dashboard/profiel" },
+      { label: t.experience, href: "/dashboard/profiel" },
+      ...(isUitzend
         ? [
-            { label: t.personal, href: "/dashboard/profiel" },
-            { label: t.address, href: "/dashboard/profiel" },
-            { label: t.experience, href: "/dashboard/profiel" },
-            { label: t.certs, href: "/dashboard/certificaten" },
-            { label: t.wifi, href: "/dashboard/wifi" },
-            { label: t.passport, href: "/dashboard/paspoort" },
+            { label: t.kindBsn, href: "/dashboard/fiscaal" },
             { label: t.uitzendContract, href: "/dashboard/verificatie" },
             { label: t.payroll, href: "/dashboard/verloning" },
-            { label: t.kindBsn, href: "/dashboard/fiscaal" },
           ]
         : [
-            { label: t.personal, href: "/dashboard/profiel" },
-            { label: t.address, href: "/dashboard/profiel" },
-            { label: t.experience, href: "/dashboard/profiel" },
-            { label: t.certs, href: "/dashboard/certificaten" },
-            { label: t.wifi, href: "/dashboard/wifi" },
-            { label: t.passport, href: "/dashboard/paspoort" },
             { label: t.business, href: "/dashboard/fiscaal" },
             { label: t.insurance, href: "/dashboard/verzekering" },
             { label: t.invoices, href: "/dashboard/uitbetalingen" },
             { label: t.mandate, href: "/dashboard/uitbetalingen" },
-          ],
-    },
-    {
-      items: [
-        { label: t.email, href: "/dashboard/profiel" },
-        { label: t.password, href: "/wachtwoord-vergeten" },
-        { label: t.twoFactor, href: "/dashboard/account/beveiliging" },
-        { label: t.passkey, href: "/dashboard/account/passkeys" },
-        {
-          label: t.download,
-          href: "/api/me/gegevens/export",
-          external: true,
-        },
-        { label: t.delete, href: "/dashboard/account/verwijderen" },
-      ],
-    },
-    {
-      items: [
-        // het hulpcentrum voor werkers (lib/hulp/teksten.ts), in de taal van de werker; dezelfde plek als het vraagteken in de kopbalk
-        { label: hulpTeksten(locale).titel, href: "/dashboard/hulp" },
-        { label: t.kb, href: "/kennis" },
-        // de handleidingen (Outline, lib/kennisbank): inloggen gaat met het ZekerFlex-account
-        ...(kennisbankIngesteld() ? [{ label: t.manuals, href: `${outlinePubliekeUrl()}/`, external: true }] : []),
-        { label: t.community, href: "/nieuwsbrief" },
-      ],
-    },
-    {
-      items: [{ label: t.privacy, href: "/privacy" }],
-    },
+          ]),
+      { label: t.certs, href: "/dashboard/certificaten" },
+      { label: t.passport, href: "/dashboard/paspoort" },
+      { label: t.availability, href: "/dashboard/beschikbaarheid" },
+      { label: t.calendar, href: "/dashboard/agenda-koppeling" },
+      { label: t.trips, href: "/dashboard/ritten" },
+      { label: t.admin, href: "/dashboard/administratie" },
+      { label: t.forecast, href: "/dashboard/vooruitblik" },
+      { label: t.assistant, href: "/dashboard/assistent" },
+      // ZekerFlex OS staat hier bewust niet: dat is geen flexwerk (de pagina /os zelf bestaat nog).
+      ...(inApp || !BANK_AAN ? [] : [{ label: t.bank, href: "/dashboard/bank" }]),
+      { label: t.workNumber, href: "/dashboard/telefonie" },
+      { label: t.wifi, href: "/dashboard/wifi" },
+      { label: lt.portofoon, href: "/dashboard/portofoon" },
+      { label: lt.kluis, href: "/dashboard/toegangscodes" },
+      { label: lt.voertuig, href: "/dashboard/voertuig" },
+    ],
+    [
+      { label: t.email, href: "/dashboard/profiel" },
+      { label: t.password, href: "/wachtwoord-vergeten" },
+      { label: t.twoFactor, href: "/dashboard/account/beveiliging" },
+      { label: t.passkey, href: "/dashboard/account/passkeys" },
+      { label: t.download, href: "/api/me/gegevens/export", external: true },
+      { label: t.privacy, href: "/privacy" },
+      { label: t.delete, href: "/dashboard/account/verwijderen" },
+    ],
+    [
+      // het hulpcentrum voor werkers (lib/hulp/teksten.ts), in de taal van de werker; dezelfde plek als het vraagteken in de kopbalk
+      { label: hulpTeksten(locale).titel, href: "/dashboard/hulp" },
+      { label: t.kb, href: "/kennis" },
+      // de handleidingen (Outline, lib/kennisbank): inloggen gaat met het ZekerFlex-account
+      ...(kennisbankIngesteld() ? [{ label: t.manuals, href: `${outlinePubliekeUrl()}/`, external: true }] : []),
+      { label: t.community, href: "/nieuwsbrief" },
+    ],
   ];
   // met de vlag aan vallen de niet-flexwerk-diensten uit het menu (de pagina's zelf blijven bereikbaar)
-  const GROUPS = alleenFlexwerk ? GROUPS_ALLES.map((g) => ({ items: g.items.filter((i) => !("href" in i) || !NIET_FLEXWERK_ACCOUNT.has(i.href)) })) : GROUPS_ALLES;
+  const zonderNietFlexwerk = (items: Item[]) => (alleenFlexwerk ? items.filter((i) => !NIET_FLEXWERK_ACCOUNT.has(i.href)) : items);
+  const BOVEN = zonderNietFlexwerk(BOVEN_ALLES);
+  const GROEPEN = GROEPEN_ALLES.map(zonderNietFlexwerk);
 
   return (
     <>
-      <PageHeader title={t.title} />
+      {/* Profile header: de ronde foto steekt boven de kaart uit, zoals in de app van YoungOnes */}
+      <section className="relative mt-14 rounded-2xl border border-hair bg-white px-5 pb-6 pt-16 text-center shadow-card">
+        <div className="absolute -top-12 left-1/2 grid h-24 w-24 -translate-x-1/2 place-items-center overflow-hidden rounded-full border border-hair bg-paper-soft">
+          {card?.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={card.avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ink" aria-hidden>
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="10" r="3.2" />
+              <path d="M6.2 18.4c1.3-2.2 3.3-3.4 5.8-3.4s4.5 1.2 5.8 3.4" />
+            </svg>
+          )}
+        </div>
+        <p className="font-display text-2xl font-bold text-ink">{card?.name ?? principal.email}</p>
 
-      {/* de oproep staat bovenaan: zonder afgerond profiel kan de werker nog niets aannemen */}
-      {!overview.profileComplete && (
+        {/* vijf sterren, altijd: grijs zolang er geen beoordeling is (neutralx-400 haalt de 3:1 voor beeldelementen) */}
+        <div className="mt-2 flex items-center justify-center gap-1 text-2xl leading-none text-amber-500" aria-hidden>
+          {"★★★★★".slice(0, stars)}
+          <span className="text-neutralx-400">{"★★★★★".slice(stars)}</span>
+        </div>
         <Link
-          href="/dashboard/verificatie"
-          className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-warn/40 bg-warn/5 px-4 py-3.5 text-sm"
+          href="/dashboard/beoordelingen"
+          className="mt-2 inline-block text-base font-semibold text-neutralx-500 underline underline-offset-4"
         >
-          <span className="font-semibold text-ink">{t.finishProfile}</span>
-          <span className="text-neutralx-400">›</span>
+          {t.reviews(reviews.count)}
         </Link>
-      )}
+
+        <div className="mt-6 border-t border-hair pt-5">
+          <p className="text-base text-ink">{t.statsTitle}</p>
+          <div className="mt-4 grid grid-cols-3 divide-x divide-hair">
+            <Stat value={matched} label={t.matched} />
+            <Stat value={notCompleted} label={t.notCompleted} />
+            <Stat value={replacementsArranged} label={t.replaced} />
+          </div>
+        </div>
+      </section>
 
       {/* ziek melden blijft alleen weg bij wie nog nooit een klus aannam: "gepland" telt alleen klussen die nog moeten
           beginnen, dus wie tijdens een lopende klus ziek wordt, vindt de kaart via de aangenomen klussen van het laatste
           halfjaar (beide getallen zijn hierboven al opgehaald, geen extra vraag aan de database) */}
       {isUitzend && (heeftGeplandeKlus || matched > 0) && (
-        <div className="mb-4">
+        <div className="mt-4">
           <ZiekMelden texts={ft.accountDelen.ziek} />
         </div>
       )}
 
-      {/* Profile header */}
-      <div className="rounded-2xl border border-hair bg-white p-5 text-center shadow-card">
-        <div className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full border border-hair bg-paper-soft">
-          {card?.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={card.avatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="font-display text-2xl font-bold text-neutralx-400">
-              {(card?.name ?? "?").slice(0, 1)}
-            </span>
-          )}
-        </div>
-        <p className="mt-3 font-display text-xl font-bold text-ink">{card?.name ?? principal.email}</p>
-
-        {/* een nieuwe werker ziet geen vijf grijze sterren en drie nullen: pas tonen als er iets te tonen is */}
-        {!nogNietsGedaan && (
-          <>
-            {/* lege sterren: neutralx-400 haalt de 3:1 voor beeldelementen (neutralx-300 was 1,6:1) */}
-            <div className="mt-1.5 flex items-center justify-center gap-1 text-lg text-amber-500">
-              {"★★★★★".slice(0, stars)}
-              <span className="text-neutralx-400">{"★★★★★".slice(stars)}</span>
-            </div>
-            <Link
-              href="/dashboard/beoordelingen"
-              className="mt-1 inline-block text-sm font-semibold text-ink underline underline-offset-2"
-            >
-              {t.reviews(reviews.count)}
-            </Link>
-
-            <div className="mt-5 border-t border-hair pt-4">
-              <p className="text-sm text-neutralx-500">{t.statsTitle}</p>
-              <div className="mt-3 grid grid-cols-3 divide-x divide-hair">
-                <Stat value={matched} label={t.matched} />
-                <Stat value={notCompleted} label={t.notCompleted} />
-                <Stat value={replacementsArranged} label={t.replaced} />
-              </div>
-            </div>
-          </>
-        )}
-
-        {profile && (
-          <div className="mt-4 flex justify-center border-t border-hair pt-4 text-left">
-            <ReliabilityRing score={overview.reliabilityScore} shiftsCompleted={overview.shiftsCompleted} size={84} t={ft.ring} />
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4 space-y-4">
-        {!secured && (
-          <Link href="/dashboard/account/beveiliging" className="trust-card flex items-center gap-3 rounded-2xl p-4">
-            <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-trust text-white" aria-hidden>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-trust-ink">{t.secureTitle}</span>
-              <span className="block text-xs text-neutralx-600">{t.secureBody}</span>
-            </span>
-            <span className="text-trust" aria-hidden>→</span>
-          </Link>
-        )}
-        <LevelCard texts={ft.rewards.level} />
-        <ReferralCard texts={ft.rewards.uitnodiging} />
-      </div>
-
       <div className="mt-4 space-y-3">
-        <PushToggle cardTexts={ft.accountDelen.push} />
-        <SpoedKanaalToggle />
-      </div>
+        {BOVEN.map((it) => (
+          <div key={it.label} className={KAART}>
+            <Row item={it} />
+          </div>
+        ))}
 
-      <div className="mt-4 space-y-5">
-        {GROUPS.map((g, gi) => (
-          <div key={gi} className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
-            {g.items.map((it) => (
+        {/* Pushmeldingen: de kaart zelf (aan/uit, testmelding), met daaronder sms/WhatsApp bij spoedoproepen */}
+        <PushToggle cardTexts={ft.accountDelen.push} />
+        <div className={KAART}>
+          <SpoedKanaalToggle />
+        </div>
+
+        {GROEPEN.map((items, gi) => (
+          <div key={gi} className={KAART}>
+            {items.map((it) => (
               <Row key={it.label} item={it} />
             ))}
           </div>
         ))}
 
-        <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+        <div className={KAART}>
           <ThemeToggleRow theme={theme} texts={ft.accountDelen.thema} />
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+        <div className={KAART}>
           <AccountLanguageRow />
         </div>
 
-        <UitloggenFormulier
-          className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card"
-          {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}
-        >
+        <UitloggenFormulier className={KAART} {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}>
           <button
             type="submit"
-            className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-semibold text-crit hover:bg-crit/5"
+            className="flex min-h-[56px] w-full items-center justify-between gap-3 px-5 py-4 text-left text-base font-medium text-crit hover:bg-crit/5"
           >
             {t.logout}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
                 d="M16 17l5-5-5-5M21 12H9M12 19H6a2 2 0 01-2-2V7a2 2 0 012-2h6"
                 stroke="currentColor"
@@ -308,10 +264,6 @@ export default async function AccountPage() {
           </button>
         </UitloggenFormulier>
       </div>
-
-      <p className="mt-6 text-center text-xs text-neutralx-400">
-        ZekerFlex · {principal.email}
-      </p>
     </>
   );
 }
@@ -319,30 +271,20 @@ export default async function AccountPage() {
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div className="px-2">
-      <p className="font-display text-2xl font-bold text-ink">{value}</p>
-      <p className="mt-0.5 text-xs leading-tight text-neutralx-500">{label}</p>
+      <p className="font-display text-3xl font-bold text-ink">{value}</p>
+      <p className="mt-1 text-sm leading-snug text-neutralx-500">{label}</p>
     </div>
   );
 }
 
 function Row({ item }: { item: Item }) {
   const chevron = (
-    <span className="flex-shrink-0 text-neutralx-400" aria-hidden>
-      ›
-    </span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="flex-shrink-0 text-neutralx-400" aria-hidden>
+      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
-
-  if ("value" in item) {
-    return (
-      <div className="flex items-center justify-between gap-3 border-b border-hair px-4 py-3.5 text-sm last:border-b-0">
-        <span className="font-medium text-ink">{item.label}</span>
-        <span className="text-neutralx-400">{item.value}</span>
-      </div>
-    );
-  }
-
   const cls =
-    "flex items-center justify-between gap-3 border-b border-hair px-4 py-3.5 text-sm font-medium text-ink last:border-b-0 hover:bg-paper-soft";
+    "flex min-h-[56px] items-center justify-between gap-3 border-b border-hair px-5 py-4 text-base font-medium text-ink last:border-b-0 hover:bg-paper-soft";
 
   if (item.external) {
     return (

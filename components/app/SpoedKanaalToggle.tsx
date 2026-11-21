@@ -5,6 +5,7 @@ import { useFT } from "@/components/i18n/useFT";
 
 // Account van de kracht: sms/WhatsApp bij spoedoproepen aan of uit
 // (lib/spoed; STOP per bericht zet hem ook uit). Push in de app staat los.
+// Een gewone rij (de pagina zet de kaart eromheen), zoals de andere rijen van het Account (opzet YoungOnes, 21 nov 2026).
 export function SpoedKanaalToggle() {
   const t = useFT().spoed;
   const [aan, setAan] = useState<boolean | null>(null);
@@ -34,9 +35,9 @@ export function SpoedKanaalToggle() {
   }
 
   return (
-    <div className="flex items-start justify-between gap-3 rounded-2xl border border-hair bg-white p-4 shadow-card">
+    <div className="flex min-h-[56px] items-start justify-between gap-3 px-5 py-4">
       <div className="min-w-0">
-        <p className="font-semibold text-ink">⚡ {t.title}</p>
+        <p className="text-base font-medium text-ink">{t.title}</p>
         <p className="mt-0.5 text-xs text-neutralx-500">{t.body}</p>
         {fout && (
           <p role="alert" className="mt-1 text-xs text-crit">
