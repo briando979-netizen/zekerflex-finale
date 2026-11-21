@@ -30,7 +30,7 @@ const FAQ = [
   },
   {
     q: "Hoe helpt ZekerFlex hierbij?",
-    a: "Zzp'ers kiezen op ZekerFlex zelf hun klussen, de afspraken per opdracht worden vastgelegd en je krijgt een seintje bij signalen zoals veel uren bij één opdrachtgever. Heb je mensen nodig die onder jouw leiding werken, dan kan dat via het ZekerFlex-uitzendbureau.",
+    a: "Zzp'ers kiezen op ZekerFlex zelf hun klussen, de afspraken per opdracht worden vastgelegd en je krijgt een seintje bij signalen zoals veel uren bij één opdrachtgever. Heb je mensen nodig die onder jouw leiding werken, dan kan dat met uitzendkrachten via een aangesloten uitzendbureau; dat bureau is dan de werkgever.",
   },
 ];
 

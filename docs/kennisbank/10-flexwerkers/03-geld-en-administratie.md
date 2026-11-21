@@ -2,18 +2,18 @@
 
 ## Tarief
 
-Bij elke klus staat het uurtarief dat jij krijgt. Als zzp'er is dat exclusief btw; ZekerFlex rekent de btw voor je uit op de factuur. Als uitzendkracht is het je brutoloon per uur; de loonstrook laat zien hoe dat is opgebouwd (loonheffing, vakantiegeld, pensioen).
+Bij elke klus staat het uurtarief dat jij krijgt. Als zzp'er is dat exclusief btw; ZekerFlex rekent de btw voor je uit op de factuur. Als uitzendkracht is het je brutoloon per uur; de loonstrook van je uitzendbureau laat zien hoe dat is opgebouwd (loonheffing, vakantiegeld, pensioen).
 
 ## Uren indienen
 
 1. Na de klus: **Uren → controleer → Indienen**. Pas pauze en begintijd aan als ze niet kloppen.
 2. De opdrachtgever keurt goed (meestal binnen twee dagen). Klopt iets niet, dan kan hij een opmerking sturen; je ziet dat in de app.
-3. Na goedkeuring maakt ZekerFlex de factuur (zzp) of zet de uren op je loonstrook (uitzend).
+3. Na goedkeuring maakt ZekerFlex de factuur (zzp). Bij een uitzendklus verloont je uitzendbureau de goedgekeurde uren (uitzend).
 
 ## Uitbetaling
 
 - Zzp: de opdrachtgever betaalt de factuur; de standaardtermijn staat op de factuur. Met **Snelle uitbetaling** krijg je het geld eerder tegen een klein percentage.
-- Uitzend: elke week of vier weken, zoals in je contract staat.
+- Uitzend: je uitzendbureau betaalt je loon, zo vaak als in je contract met het bureau staat.
 - Je rekeningnummer vul je in onder **Account → Bank**. Het moet op jouw naam staan; we controleren dat.
 
 ## Kilometers
@@ -27,4 +27,4 @@ Rij je met eigen auto? Onder **Account → Ritten** staan je ritten van huis naa
 
 ## Vragen over een factuur of loonstrook
 
-Stuur een bericht via **Chat → ZekerFlex** en noem het factuurnummer of de week. Een geschil over uren open je bij de klus zelf (**Uren → Niet eens**); dan kijkt ZekerFlex mee.
+Stuur een bericht via **Chat → ZekerFlex** en noem het factuurnummer of de week. Een vraag over je loonstrook als uitzendkracht stel je aan je uitzendbureau: dat is je werkgever. Een geschil over uren open je bij de klus zelf (**Uren → Niet eens**); dan kijkt ZekerFlex mee.

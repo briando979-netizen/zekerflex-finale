@@ -51,20 +51,23 @@ export const PAGINA_VIDEOS: Record<string, PaginaVideo> = {
       "Wil je werken wanneer het jou uitkomt? Met ZekerFlex zie je klussen bij jou in de buurt.",
       "Je ziet vooraf wat je verdient, je checkt in met je telefoon, en je geld komt op je eigen rekening.",
       "Meedoen is gratis, en je bent in een paar minuten klaar. De app is er in vijf talen.",
-      "Met of zonder KVK: als zelfstandige, of als uitzendkracht via het ZekerFlex uitzendbureau.",
+      "Met of zonder KVK: als zelfstandige, of als uitzendkracht via een aangesloten uitzendbureau.",
       "Maak gratis een profiel aan en begin vandaag."
     ],
   },
+  // 21 nov 2026: ZekerFlex is zelf geen uitzendbureau meer (uitzenden via aangesloten uitzendbureaus). De tekst hieronder en de
+  // zin over uitzenden bij "voor-freelancers" zijn al aangepast; de stem in uitzendbureau.mp4 en voor-freelancers.mp4 moet
+  // opnieuw worden ingesproken met deze tekst.
   "uitzendbureau": {
     slug: "uitzendbureau",
-    titel: "Het ZekerFlex uitzendbureau",
-    samenvatting: "Werken zonder KVK, met loon, cao en pensioen geregeld.",
+    titel: "Uitzendwerk via ZekerFlex",
+    samenvatting: "Werken zonder KVK, via een aangesloten uitzendbureau.",
     seconden: 21,
     tekst: [
-      "Werken zonder KVK? Dan kies je het ZekerFlex uitzendbureau.",
-      "Bij een uitzendkracht is ZekerFlex de werkgever. Loon, cao en pensioen zijn geregeld.",
+      "Werken zonder KVK? Dan werk je als uitzendkracht via een aangesloten uitzendbureau.",
+      "Het uitzendbureau is je werkgever. Het regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.",
       "Jij kiest je diensten en werkt wanneer het jou uitkomt, met de rechten van een dienstverband.",
-      "Hier zie je welke uitzendklussen er open staan, en reageer je direct."
+      "Hier zie je welke uitzendklussen er open staan, en vraag je met één knop een uitzendcontract aan."
     ],
   },
   "prijzen": {

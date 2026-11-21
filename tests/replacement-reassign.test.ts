@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
+
 // Kiest een werker een vervanger, dan:
 // - weigert het als de vervanger op dat moment al elders werkt (zonder te zeggen waar),
 // - krijgt de vervanger een push ("Jij neemt de klus over") en de opdrachtgever

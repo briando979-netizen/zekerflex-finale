@@ -165,10 +165,10 @@ export default function TarievenOverzichtPage() {
             <p className="mt-2 text-[0.975rem] leading-relaxed text-neutralx-600">{TARIEVEN_TEKST.uitzend}</p>
             <p className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm">
               <Link href="/uitzendbureau" className="font-semibold text-brand-600 underline">
-                Meer over het uitzendbureau
+                Uitzendkrachten aanvragen
               </Link>
               <Link href="/contact" className="font-semibold text-brand-600 underline">
-                Vraag een offerte aan
+                Neem contact op
               </Link>
             </p>
           </div>

@@ -12,7 +12,7 @@ import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 const TITLE = "Personeel inhuren in heel Nederland — klus plaatsen voor flex- en uitzendkrachten";
 const DESCRIPTION =
-  "Plaats een klus en huur flexkrachten, zzp'ers of uitzendkrachten in heel Nederland in. Matching op reistijd en vak, € 3,50 per gewerkt uur, geen abonnement en Wet DBA-risicosignalering.";
+  "Plaats een klus en huur flexkrachten en zzp'ers in heel Nederland in, of krijg uitzendkrachten via een aangesloten uitzendbureau. Matching op reistijd en vak, € 3,50 per gewerkt uur, geen abonnement.";
 
 export const metadata: Metadata = {
   title: { absolute: seoTitel(TITLE) },
@@ -35,7 +35,7 @@ export default function PersoneelInhurenPage() {
           kop="h1"
           eyebrow="Voor bedrijven"
           title="Personeel inhuren, door heel Nederland"
-          intro="Plaats een klus en ZekerFlex vindt geverifieerde flexkrachten in de buurt van je locatie — zzp'ers, flexwerkers of uitzendkrachten via het ZekerFlex-uitzendbureau. Je betaalt € 3,50 per gewerkt uur, zonder abonnement."
+          intro="Plaats een klus en ZekerFlex vindt geverifieerde zzp'ers en flexwerkers in de buurt van je locatie. Je betaalt € 3,50 per gewerkt uur, zonder abonnement. Liever uitzendkrachten? Die krijg je via een aangesloten uitzendbureau; dat bureau is dan de werkgever."
         />
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href={klusUrl()} className="btn-primary">

@@ -52,6 +52,7 @@
     "tests/stripe-kopie.test.ts",
     "tests/talen-bewaker.test.ts",
     "tests/te-doen-eerst.test.ts",
+    "tests/uitzend-openbaar-eerlijk.test.ts",
     "tests/valkuil-bewakers.test.ts",
     "tests/verder-kaart.test.ts",
     "tests/verzekering-eerlijk.test.ts",

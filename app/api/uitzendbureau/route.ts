@@ -26,9 +26,11 @@ const schema = z.object({
 });
 
 // POST /api/uitzendbureau — public intake for a company wanting uitzendkrachten
-// via ZekerFlex's own uitzendbureau, rather than the zzp-marktplaats. Lands as
-// a sales lead (source "uitzendbureau") so it shows up both in the general
-// sales pipeline and in the dedicated /admin/uitzendbureau overview.
+// rather than the zzp-marktplaats. Since 21 nov 2026 ZekerFlex is no uitzender
+// itself: we connect the company to an aangesloten uitzendbureau (uitzendpartner),
+// which is the employer. Lands as a sales lead (source "uitzendbureau") so it
+// shows up both in the general sales pipeline and in the dedicated
+// /admin/uitzendbureau overview.
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     await enforceRateLimit({
@@ -94,11 +96,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       from: env.MAIL_FROM,
       replyTo: CONTACTS.uitzendbureau,
       kind: "uitzendbureau-aanvraag-bevestiging",
-      subject: "Je aanvraag bij het ZekerFlex-uitzendbureau",
-      text: `Hoi ${d.contactName},\n\nBedankt voor je aanvraag voor het ZekerFlex-uitzendbureau. We nemen binnen één werkdag contact met je op om de mogelijkheden te bespreken.\n\nTot snel!`,
+      subject: "Je aanvraag voor uitzendkrachten",
+      text: `Hoi ${d.contactName},\n\nBedankt voor je aanvraag voor uitzendkrachten. Bij ZekerFlex lopen uitzendkrachten via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt het contract, het loon en de loonadministratie. We nemen binnen één werkdag contact met je op om je vraag te bespreken.\n\nTot snel!`,
       html: mailShell(
         "Aanvraag ontvangen",
-        `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${d.contactName}, bedankt voor je aanvraag voor het ZekerFlex-uitzendbureau. We nemen binnen één werkdag contact met je op om de mogelijkheden te bespreken.</p>`,
+        `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(d.contactName)}, bedankt voor je aanvraag voor uitzendkrachten. Bij ZekerFlex lopen uitzendkrachten via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt het contract, het loon en de loonadministratie. We nemen binnen één werkdag contact met je op om je vraag te bespreken.</p>`,
       ),
     }).catch(() => undefined);
 

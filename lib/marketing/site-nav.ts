@@ -91,7 +91,7 @@ export const NAV: NavEntry[] = [
         items: [
           { title: "Vind werk", desc: "Diensten die matchen op je vak, je reistijd en je beschikbaarheid.", href: "/voor-freelancers#matching" },
           { title: "Starten als freelancer", desc: "Van aanmelding tot je eerste dienst — alles geregeld behalve het werk zelf.", href: "/voor-freelancers" },
-          { title: "Via het uitzendbureau", desc: "Liever loonstrook, vakantiegeld en pensioen? Werk als uitzendkracht.", href: "/uitzendbureau" },
+          { title: "Via een uitzendbureau", desc: "Liever loonstrook, vakantiegeld en pensioen? Werk als uitzendkracht via een aangesloten uitzendbureau.", href: "/uitzendbureau" },
           { title: "Verzekeren", desc: "Welke verzekering je als zzp'er of flexwerker zelf regelt.", href: "/voor-freelancers#verzekering" },
         ],
       },
@@ -252,7 +252,7 @@ export const SNELLE_ACTIES: Record<Audience, SnelleActie[]> = {
   werknemers: [
     { label: "Open klussen", sub: "Bij jou in de buurt", href: "/klussen", icoon: "zoek" },
     { label: "Klussen op de kaart", sub: "Zie waar werk is", href: "/open-diensten", icoon: "kaart" },
-    { label: "Via het uitzendbureau", sub: "Loonstrook elke week", href: "/uitzendbureau", icoon: "loon" },
+    { label: "Via een uitzendbureau", sub: "Werken zonder KVK", href: "/uitzendbureau", icoon: "loon" },
     { label: "Download de app", sub: "Diensten en uren", href: "/app", icoon: "app" },
   ],
   bedrijven: [

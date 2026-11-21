@@ -17,6 +17,7 @@ import { CONCEPT_KEY, parseConcept, toShiftFormValues } from "@/lib/klusconcept/
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 const initial: NewShiftState = { error: null };
 
@@ -495,7 +496,7 @@ export function NewShiftForm({
         </label>
 
 
-        {!edit && (
+        {!edit && ZEKERFLEX_UITZENDER && (
         <label className="flex items-start gap-3 rounded-xl border border-hairstrong bg-paper-soft px-4 py-3">
           <input type="checkbox" name="viaUitzendbureau" value="on" className="mt-0.5 h-4 w-4 accent-brand-500" />
           <span>
@@ -505,6 +506,15 @@ export function NewShiftForm({
             </span>
           </span>
         </label>
+        )}
+        {/* ZekerFlex is zelf geen uitzender meer (lib/uitzend/model.ts): uitzendkrachten lopen via een aangesloten uitzendbureau */}
+        {!edit && !ZEKERFLEX_UITZENDER && (
+          <p className="rounded-xl border border-hairstrong bg-paper-soft px-4 py-3 text-xs text-neutralx-500">
+            {n.uitzendViaBureau}{" "}
+            <Link href="/uitzendbureau#werkgevers" className="font-semibold text-brand-600 underline">
+              {n.uitzendViaBureauLink}
+            </Link>
+          </p>
         )}
 
         {!edit && (

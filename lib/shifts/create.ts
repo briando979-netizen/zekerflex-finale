@@ -18,6 +18,7 @@ import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 import { ANNULEER_TERMIJNEN, isAnnuleerTermijn, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { zetKlusAutoAccept } from "@/lib/shifts/auto-accept";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 // The fixed klus-templates live in a pure module (lib/shifts/catalogus.ts) so the
 // browser forms can read them too; re-exported here for the existing imports.
@@ -125,8 +126,9 @@ export async function createShift(
     branch = found;
   }
 
-  // Een uitzendpartner (lib/uitzend/partners-kern.ts) plaatst altijd uitzendklussen: het bureau is de werkgever.
-  const viaUitzendbureau = input.viaUitzendbureau || (await isUitzendPartnerTenant(branch.tenantId));
+  // Een uitzendpartner (lib/uitzend/partners-kern.ts) plaatst altijd uitzendklussen: het bureau is de werkgever. Een gewoon
+  // bedrijf niet meer: ZekerFlex is zelf geen uitzender (lib/uitzend/model.ts); uitzendkrachten lopen via een bureau.
+  const viaUitzendbureau = (await isUitzendPartnerTenant(branch.tenantId)) || (ZEKERFLEX_UITZENDER && input.viaUitzendbureau);
 
   let pool: { id: string; name: string } | null = null;
   if (input.poolId) {

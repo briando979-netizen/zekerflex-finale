@@ -63,8 +63,8 @@ export function UitzendbureauContactForm() {
   return (
     <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-e2">
       <div className="border-b border-hair bg-paper-soft px-6 py-4">
-        <p className="text-sm font-semibold text-ink">Uitzendkrachten inhuren via ZekerFlex</p>
-        <p className="text-xs text-neutralx-500">Wij zijn de formele werkgever — jij regelt de bezetting.</p>
+        <p className="text-sm font-semibold text-ink">Uitzendkrachten via een aangesloten uitzendbureau</p>
+        <p className="text-xs text-neutralx-500">Het uitzendbureau is de werkgever — jij regelt de bezetting.</p>
       </div>
       <div className="p-6">
         <div className="grid gap-3 sm:grid-cols-2">

@@ -15,7 +15,7 @@ export const revalidate = 600;
 
 const TITLE = "Freelance werk in Nederland — klussen voor zzp'ers, flexwerkers en uitzendkrachten";
 const DESCRIPTION =
-  "Freelance werk vinden in heel Nederland: open klussen in horeca, logistiek, retail, evenementen en zorg. Met KVK of btw-nummer als zzp'er, of zonder KVK via het ZekerFlex-uitzendbureau. Gratis aanmelden, zelf je uitbetaling kiezen.";
+  "Freelance werk vinden in heel Nederland: open klussen in horeca, logistiek, retail, evenementen en zorg. Met KVK of btw-nummer als zzp'er, of zonder KVK als uitzendkracht via een aangesloten uitzendbureau. Gratis aanmelden, zelf je uitbetaling kiezen.";
 
 export const metadata: Metadata = {
   title: { absolute: seoTitel(TITLE) },
@@ -31,7 +31,7 @@ const FAQ = [
   },
   {
     q: "Heb ik een KVK-nummer nodig?",
-    a: "Niet per se. Met een KVK-nummer of een EU-btw-nummer werk je als zzp'er. Zonder KVK werk je als uitzendkracht via het ZekerFlex-uitzendbureau, met loon, vakantiegeld en pensioen.",
+    a: "Niet per se. Met een KVK-nummer of een EU-btw-nummer werk je als zzp'er. Zonder KVK werk je als uitzendkracht via een aangesloten uitzendbureau: dat bureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.",
   },
   {
     q: "Wat kost het voor freelancers?",
@@ -106,7 +106,7 @@ export default async function FreelanceWerkPage() {
       </Section>
       <CtaBand
         title="Vind vandaag nog een klus"
-        body="Gratis account, KVK of btw-nummer koppelen (of zonder KVK via ons uitzendbureau) en direct reageren."
+        body="Gratis account, KVK of btw-nummer koppelen (of zonder KVK via een aangesloten uitzendbureau) en direct reageren."
         primaryHref="/register?type=freelancer"
         primaryLabel="Gratis account maken"
         secondaryHref="/uitzendbureau"

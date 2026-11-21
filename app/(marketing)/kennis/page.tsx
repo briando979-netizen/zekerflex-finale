@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 const INFO = [
   { t: "Wat is ZekerFlex?", b: "Eén platform waar werknemers en werkgevers elkaar vinden: slim gematcht op reistijd en vak, met flexibele uitbetaling en compliance ingebouwd." },
-  { t: "Voor wie?", b: "Freelancers (zzp of flexwerker), uitzendkrachten via ons uitzendbureau, en bedrijven die flexibele bezetting nodig hebben." },
+  { t: "Voor wie?", b: "Freelancers (zzp of flexwerker), uitzendkrachten via een aangesloten uitzendbureau, en bedrijven die flexibele bezetting nodig hebben." },
   { t: "Wat kost het?", b: "Gratis voor freelancers. Bedrijven betalen € 3,50 platformkosten per gewerkt uur — alleen bij gebruik." },
   { t: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", b: "ZekerFlex legt afspraken vast en signaleert risico's. De feitelijke werkwijze blijft bepalend voor de beoordeling van de arbeidsrelatie." },
   { t: "Welke diensten gebruiken jullie?", b: "Voor onderdelen zoals hosting, betalingen, e-mail en identiteitscontroles gebruiken we gespecialiseerde dienstverleners. Bekijk ons privacybeleid voor meer informatie." },

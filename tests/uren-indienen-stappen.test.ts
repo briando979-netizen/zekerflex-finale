@@ -146,6 +146,7 @@ describe("het scherm", () => {
       expect(Object.hasOwn(d.ts, "skip"), taal).toBe(false);
       expect(Object.hasOwn(d.ts, "skipped"), taal).toBe(false);
     }
-    expect(FREELANCER_DICTS.nl.ts.payrollPayLine).toBe("Je loon komt met de wekelijkse verloning (loonstrook).");
+    // sinds 21 nov verloont het uitzendbureau, niet ZekerFlex (lib/uitzend/model.ts): geen "wekelijks" meer beloven
+    expect(FREELANCER_DICTS.nl.ts.payrollPayLine).toBe("Je loon komt met de verloning van het uitzendbureau (loonstrook).");
   });
 });

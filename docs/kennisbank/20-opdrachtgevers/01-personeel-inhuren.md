@@ -24,7 +24,7 @@ Na elke dienst dient de flexwerker zijn uren in. Onder **Uren goedkeuren** keur 
 ## Kosten en facturen
 
 - Zzp: de flexwerker factureert via ZekerFlex (self-billing). ZekerFlex rekent daarnaast een platformbijdrage per gewerkt uur; die staat op een aparte factuur.
-- Uitzend: je krijgt één factuur per periode met het tarief dat bij de klus stond.
+- Uitzend: uitzendkrachten krijg je via een aangesloten uitzendbureau. Dat bureau is de werkgever en stuurt je zelf de factuur, met zijn eigen tarief.
 - Alle facturen staan onder **Facturen**; betalen kan met iDEAL of per overboeking. De e-factuur (UBL) kun je aan je boekhoudpakket koppelen.
 
 ## Rapportages

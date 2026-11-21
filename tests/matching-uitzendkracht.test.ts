@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
+
 // The auto-match candidate pool used to require vatValid+kvkValid outright —
 // which an uitzendkracht never has by design (ZekerFlex is their employer),
 // so they could never be auto-matched/notified for any shift at all, only

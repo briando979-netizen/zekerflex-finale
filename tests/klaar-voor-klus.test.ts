@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { vi, describe, expect, it } from "vitest";
+
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
 import { KLUS_STUK_HREF, nogVoorEersteKlus, type KlusFeiten } from "@/lib/onboarding/klaar-voor-klus";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 

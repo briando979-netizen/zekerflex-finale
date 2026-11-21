@@ -75,7 +75,7 @@ export const SJABLONEN: readonly Sjabloon[] = [
   },
   {
     doelgroep: "freelancer",
-    tekst: "Geen KVK? Dan werk je als uitzendkracht via het ZekerFlex-uitzendbureau: wekelijkse verloning, pensioen via StiPP en het ABU-fasensysteem geregeld.",
+    tekst: "Geen KVK? Dan werk je als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.",
     hashtags: ["uitzendwerk", "flexwerk", "bijbaan", "ZekerFlex"],
     beeldIdee: "Twee collega's in werkkleding die lachen bij de ingang van een magazijn.",
   },

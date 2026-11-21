@@ -89,7 +89,7 @@ export function UitzendConsole() {
     void load();
   }
 
-  const head = <PageHead title="Uitzendbureau" subtitle="Bedrijven die personeel via het ZekerFlex-uitzendbureau afnemen, van eerste aanvraag tot actieve klant." />;
+  const head = <PageHead title="Uitzendbureau" subtitle="Bedrijven die uitzendkrachten afnemen via een aangesloten uitzendbureau, van eerste aanvraag tot actieve klant." />;
 
   if (!d) {
     return (

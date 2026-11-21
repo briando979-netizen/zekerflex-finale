@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
+
 // payoutEligibility (de poort vóór reageren, aannemen en tegenbod) controleert na de
 // fiscale eisen ook het recht om in Nederland te werken (lib/werkrecht).
 

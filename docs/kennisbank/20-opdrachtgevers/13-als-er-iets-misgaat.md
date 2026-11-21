@@ -9,7 +9,6 @@ Lukt het inplannen niet terwijl je wel geverifieerd bent? Dan staat de werker wa
 ## Er reageert niemand
 
 - Kijk of je tarief niet te laag is: er geldt een minimumtarief, en de eerlijk-tarief-meter helpt bij een goed bedrag.
-- Is de klus voor uitzendkrachten (**Via het ZekerFlex-uitzendbureau**)? Dan kunnen zzp'ers niet reageren.
 - Is hij privé (**Eerst privé uitnodigen**)? Dan ziet alleen je pool hem. Zet hem **op de open markt**.
 - Moet het snel? Gebruik een **Spoedoproep**.
 

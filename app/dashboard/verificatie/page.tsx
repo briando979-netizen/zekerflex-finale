@@ -32,6 +32,7 @@ import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
 import type { KlusStuk } from "@/lib/onboarding/klaar-voor-klus";
 import { featureEnabled } from "@/lib/flags";
 import { LATER_ANKERS, laterBlokTonen, stapStaatElders } from "@/lib/onboarding/later-blok";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 export const dynamic = "force-dynamic";
 
@@ -149,7 +150,8 @@ function AanmeldingKlaar({
 
       {!ibanOpen && documenten}
 
-      {uitzend && (
+      {/* de uitzendovereenkomst met ZekerFlex alleen als ZekerFlex zelf uitzender is (lib/uitzend/model.ts) */}
+      {uitzend && ZEKERFLEX_UITZENDER && (
         <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 scroll-mt-20 focus:outline-none">
           <Panel title={pt.uitzendKlaarTitel}>
             <div className="p-5">
@@ -382,7 +384,7 @@ export default async function VerificatiePage() {
           </div>
         )}
 
-        {isUitzend && (
+        {isUitzend && ZEKERFLEX_UITZENDER && (
           <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 card scroll-mt-20 p-6 focus:outline-none">
             <h2 className="font-display text-base font-bold text-ink">{pt.uitzendTitel}</h2>
             <div className="mt-4">

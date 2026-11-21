@@ -6,7 +6,7 @@ Welkom bij ZekerFlex. Dit is de kortste weg van een leeg account naar je eerste 
 
 1. Maak een account op zekerflex.com en bevestig je e-mailadres (de link in de mail).
 2. Vul je profiel in: woonplaats of postcode (voor klussen in de buurt en je ritten), telefoonnummer en de branches waarin je wilt werken.
-3. Werk je als zzp'er? Vul je KVK-nummer in. Werk je liever als uitzendkracht via ZekerFlex? Kies dat in je profiel; dan regelen wij loonstrook, vakantiegeld en pensioen (StiPP).
+3. Werk je als zzp'er? Vul je KVK-nummer in. Werk je liever als uitzendkracht, zonder KVK? Dat kan via een aangesloten uitzendbureau: bij een uitzendklus vraag je met één knop een uitzendcontract aan bij het bureau van de klus. Dat bureau is je werkgever en regelt je loonstrook, vakantiegeld en pensioen volgens zijn cao.
 
 ## 2. Identiteit (KYC)
 
@@ -32,7 +32,7 @@ Heb je een VCA, BHV of heftruckcertificaat? Voeg het toe onder **Account → Cer
 ## 6. Uren en uitbetaling
 
 - Na de klus staan je uren onder **Uren**. Controleer ze en dien ze in; de opdrachtgever keurt ze goed.
-- Zzp: je factuur wordt voor je gemaakt (self-billing) en gaat naar de opdrachtgever. Uitzend: je uren komen op je loonstrook.
+- Zzp: je factuur wordt voor je gemaakt (self-billing) en gaat naar de opdrachtgever. Uitzend: je uitzendbureau verloont je uren en geeft je een loonstrook.
 - Wil je sneller je geld? Kijk bij **Snelle uitbetaling** wat dat kost en of het voor jou openstaat.
 
 ## Hulp nodig?

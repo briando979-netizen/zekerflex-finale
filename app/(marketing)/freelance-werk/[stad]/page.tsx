@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
   const c = cityBySlug((await params).stad);
   if (!c) return {};
   const title = `Freelance werk in ${c.name} — klussen, flexwerk & uitzendwerk`;
-  const description = `Open klussen in ${c.name} en omgeving: ${c.sectors.join(", ")}. Reageer direct via ZekerFlex, werk wanneer jij wilt en kies zelf hoe snel je wordt uitbetaald — ook zonder KVK via ons uitzendbureau.`;
+  const description = `Open klussen in ${c.name} en omgeving: ${c.sectors.join(", ")}. Reageer direct via ZekerFlex, werk wanneer jij wilt en kies zelf hoe snel je wordt uitbetaald — ook zonder KVK via een aangesloten uitzendbureau.`;
   return {
     title: { absolute: seoTitel(title) },
     description: seoBeschrijving(description),
@@ -42,7 +42,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
     },
     {
       q: `Kan ik in ${c.name} werken zonder KVK-nummer?`,
-      a: "Ja. Via het ZekerFlex-uitzendbureau werk je als uitzendkracht: geen KVK nodig, wekelijks loon met vakantiegeld, pensioen (StiPP) en reiskosten. Heb je wel een KVK- of EU-btw-nummer, dan werk je als zzp'er.",
+      a: "Ja. Dan werk je als uitzendkracht via een aangesloten uitzendbureau: geen KVK nodig, en het bureau is je werkgever. Het regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao. Heb je wel een KVK- of EU-btw-nummer, dan werk je als zzp'er.",
     },
     {
       q: "Hoe snel word ik uitbetaald?",
@@ -92,7 +92,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
         <p className="mt-6 text-sm text-neutralx-600">
           Liever zonder KVK werken?{" "}
           <Link href="/uitzendbureau" className="font-medium text-brand-600 hover:underline">
-            Werk via het ZekerFlex-uitzendbureau
+            Werk als uitzendkracht via een aangesloten uitzendbureau
           </Link>
           . Ben je een bedrijf in {c.name}?{" "}
           <Link href={`/personeel-inhuren/${c.slug}`} className="font-medium text-brand-600 hover:underline">

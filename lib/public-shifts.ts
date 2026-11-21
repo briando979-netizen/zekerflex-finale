@@ -140,7 +140,7 @@ export function jobPostingJsonLd(s: PublicShift, siteUrl: string): Record<string
       `<p>Klus via ZekerFlex in ${escapeHtml(s.city)} op ${s.startsAt.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" })}, ` +
       `${hours.toFixed(1).replace(".", ",")} uur, € ${(s.hourlyRateCents / 100).toFixed(2).replace(".", ",")} per uur. ` +
       (s.viaUitzendbureau
-        ? "Je werkt via het ZekerFlex-uitzendbureau: geen KVK nodig, loon met vakantiegeld en pensioen.</p>"
+        ? "Je werkt via een aangesloten uitzendbureau: geen KVK nodig. Het uitzendbureau is je werkgever en regelt je loon, vakantiegeld en pensioen volgens zijn cao.</p>"
         : "Voor zzp'ers en flexwerkers; je kiest zelf hoe snel je wordt uitbetaald.</p>"),
     datePosted: s.createdAt.toISOString(),
     validThrough: s.startsAt.toISOString(),
