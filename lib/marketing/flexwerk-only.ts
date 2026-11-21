@@ -30,7 +30,8 @@ export function pijlerIsFlexwerk(sleutel: PijlerSleutel): boolean {
 }
 
 /** Hoofdmenu-knoppen (lib/marketing/site-nav.ts) die niet over flexwerk gaan. "aanbod" = de brede Aanbod-uitklap. */
-export const NIET_FLEXWERK_NAV_KEYS: readonly string[] = ["shop", "apps", "aanbod"];
+// 21 nov 2026 (eigenaar: "prijzen ook weg"): de knop Prijzen ook uit het menu; tarievenoverzicht en rekenhulp staan onder Kennis
+export const NIET_FLEXWERK_NAV_KEYS: readonly string[] = ["shop", "apps", "aanbod", "prijzen"];
 
 /** Werkruimte-soorten die niet over flexwerk gaan (de losse product-dashboards). "personeel" blijft. */
 export const NIET_FLEXWERK_SOORTEN: readonly string[] = ["website", "webshop", "horeca", "rijschool"];

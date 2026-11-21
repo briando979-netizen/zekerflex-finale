@@ -127,8 +127,9 @@ describe("het hoofdmenu met de vlag aan", () => {
     const keys = zichtbareNav(NAV, true).map((n) => n.key);
     for (const weg of NIET_FLEXWERK_NAV_KEYS) expect(keys, weg).not.toContain(weg);
     expect(keys).not.toContain("aanbod");
-    // de flexwerk-knoppen blijven
-    expect(keys).toContain("prijzen");
+    // de flexwerk-knoppen blijven; Prijzen staat sinds 21 nov ook niet meer in de bovenbalk (de pagina blijft, de tarieven en
+    // de rekenhulp staan onder Kennis)
+    expect(keys).not.toContain("prijzen");
     expect(keys).toContain("kennis");
   });
 

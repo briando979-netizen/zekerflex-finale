@@ -31,12 +31,10 @@ describe("paginavideo's", () => {
   it("elke pagina die een video wil tonen, kent hem", () => {
     // de voorpagina toont sinds 21 nov geen uitlegvideo meer (eigenaar: "haal de uitlegvideo's weg")
     const paginas: [string, string][] = [
-      ["app/(marketing)/voor-bedrijven/page.tsx", "voor-bedrijven"],
+      // 21 nov 2026: voor-bedrijven, prijzen en horeca tonen hun video niet meer op de pagina, maar in de videokamer /uitleg/videos
       ["app/(marketing)/uitzendbureau/page.tsx", "uitzendbureau"],
-      ["app/(marketing)/prijzen/page.tsx", "prijzen"],
       ["app/(marketing)/rijschool-software/page.tsx", "rijschool-software"],
       // /website-maken toont zijn video niet meer (19 nov 2026): de pagina is een aanvraag geworden, de video legt nog het zelf bouwen uit
-      ["components/marketing/SectorLanding.tsx", "horeca"],
     ];
     for (const [bestand, id] of paginas) {
       expect(readFileSync(path.join(root, bestand), "utf8"), bestand).toContain(`<PaginaVideoBlok id="${id}" />`);

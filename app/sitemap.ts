@@ -164,6 +164,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/kennis/blog", 0.6, "weekly"),
     entry("/kennis/whitepapers", 0.6, "monthly"),
     entry("/uitleg", 0.5, "monthly"),
+    entry("/uitleg/videos", 0.5, "monthly"),
+    entry("/rekentools/platformkosten-berekenen", 0.6, "monthly"),
     entry("/nieuwsbrief", 0.4, "monthly"),
     ...GUIDES.map((g) => entry(`/kennis/${g.slug}`, 0.6, "monthly", g.updated)),
     ...POSTS.map((p) => entry(`/kennis/blog/${p.slug}`, 0.5, "yearly", p.date)),

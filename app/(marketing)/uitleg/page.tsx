@@ -6,6 +6,7 @@ import { Section, SectionHead } from "@/components/marketing/primitives";
 import { CopyLinkButton } from "@/components/marketing/CopyLinkButton";
 import { FotoKolom } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
+import { UITLEG_VIDEOS } from "@/lib/marketing/uitleg-videos";
 
 // De filmpjes staan als bestand in /public/videos (in git, ±1 MB per stuk, gemaakt met scripts/uitleg-videos/: echte schermen met
 // onze eigen stem). Een video zonder bestand wordt niet getoond; er staat nergens "komt binnenkort".
@@ -18,38 +19,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/uitleg" },
 };
 
-const VIDEOS = [
-  {
-    slug: "wat-is-zekerflex",
-    title: "Wat is ZekerFlex?",
-    duration: "35 sec",
-    body: "Eén platform voor freelancers en uitzendkrachten, alles digitaal geregeld. Uitzendkrachten werken via een aangesloten uitzendbureau.",
-  },
-  {
-    slug: "klus-plaatsen",
-    title: "Zo plaats je een klus",
-    duration: "25 sec",
-    body: "Van functie en tarief tot bevestigde kracht — je zet een klus in een paar minuten live.",
-  },
-  {
-    slug: "uitzenden-of-freelance",
-    title: "Uitzenden of freelance — het verschil",
-    duration: "25 sec",
-    body: "Loonstrook, vakantiegeld en pensioen via een aangesloten uitzendbureau, of een zzp'er met eigen factuur.",
-  },
-  {
-    slug: "uren-goedkeuren",
-    title: "Uren goedkeuren in 30 seconden",
-    duration: "30 sec",
-    body: "GPS-check-in, ingevulde uren, één tik akkoord. Daarna loopt de facturatie automatisch; een uitzendkracht wordt verloond door zijn uitzendbureau.",
-  },
-  {
-    slug: "kosten-en-facturen",
-    title: "Wat kost het en hoe zit het met facturen?",
-    duration: "30 sec",
-    body: "€ 3,50 per gewerkt uur, één heldere factuur. Bij uitzenden factureert het uitzendbureau zelf, met zijn eigen tarief.",
-  },
-];
+// de lijst staat in lib/marketing/uitleg-videos.ts (ook voor de videokamer /uitleg/videos)
+const VIDEOS = UITLEG_VIDEOS;
 
 function videoReady(slug: string): boolean {
   return existsSync(join(process.cwd(), "public", "videos", `${slug}.mp4`));
@@ -69,7 +40,10 @@ export default function UitlegPage() {
             Handig om te bekijken vóór je begint — of om te laten zien tijdens een gesprek met een
             opdrachtgever.
           </p>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link href="/uitleg/videos" className="btn-mint">
+              Bekijk alle video&apos;s
+            </Link>
             <CopyLinkButton path="/uitleg" />
           </div>
           </div>
@@ -123,6 +97,12 @@ export default function UitlegPage() {
               </article>
             );
           })}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link href="/uitleg/videos" className="btn-primary">
+            Bekijk alle video&apos;s
+          </Link>
         </div>
 
         <div className="mt-14 rounded-2xl border border-hair bg-white p-6 text-center">

@@ -120,6 +120,13 @@ export const PAGINA_VIDEOS: Record<string, PaginaVideo> = {
   },
 };
 
+/**
+ * De paginavideo's in de videokamer /uitleg/videos (21 nov 2026, eigenaar: "alle uitlegvideo's in een aparte ruimte bij Uitleg").
+ * Alleen flexwerk. Niet: rijschool-software en website-maken (geen flexwerk), en uitzendbureau en voor-freelancers (de stem moet
+ * eerst opnieuw worden ingesproken, zie hierboven).
+ */
+export const VIDEOKAMER: readonly string[] = ["home", "voor-bedrijven", "prijzen", "horeca"];
+
 export const paginaVideo = (id: string): PaginaVideo | undefined => (Object.hasOwn(PAGINA_VIDEOS, id) ? PAGINA_VIDEOS[id] : undefined);
 
 export const videoPad = (v: Pick<PaginaVideo, "slug">): string => `/videos/pagina/${v.slug}.mp4`;

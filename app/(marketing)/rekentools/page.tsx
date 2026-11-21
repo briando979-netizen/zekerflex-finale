@@ -40,23 +40,12 @@ const TOOLS = [
     body: "Is een btw-nummer geldig? Gecontroleerd bij VIES, voor alle EU-landen. Ook een KVK-nummer opzoeken.",
   },
   {
-    href: "/prijzen#bedrijven",
+    href: "/rekentools/platformkosten-berekenen",
     who: "Voor bedrijven",
     title: "Platformkosten per maand",
     body: "Hoeveel betaal je ZekerFlex bij jouw aantal uren, met de staffelkorting erin?",
   },
-  {
-    href: "/website-check",
-    who: "Voor ondernemers",
-    title: "Gratis website-check",
-    body: "Hoe snel, vindbaar en veilig is je website? Binnen een halve minuut een rapport in gewone taal.",
-  },
-  {
-    href: "/review-check",
-    who: "Voor ondernemers",
-    title: "Gratis review-check",
-    body: "Hoe scoort je bedrijf op Google, naast de zaken bij jou in de buurt? Met verbeterpunten en voorbeeldantwoorden.",
-  },
+  // 21 nov 2026: de website-check en de review-check staan hier niet meer (alleen flexwerk)
 ];
 
 export default function RekentoolsPage() {

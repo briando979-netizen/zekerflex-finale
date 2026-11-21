@@ -92,7 +92,7 @@ export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; m
 
 const OVER_ITEMS: MenuItem[] = [
   { title: "Ons verhaal", desc: "Waarom ZekerFlex bestaat en wat we anders doen.", href: "/over-ons#verhaal" },
-  { title: "Drie uitgangspunten", desc: "Onafhankelijk, zeker en transparant.", href: "/over-ons#uitgangspunten" },
+  // 21 nov 2026 (eigenaar): "Drie uitgangspunten" uit het menu
   { title: "Werken bij ons", desc: "Stuur een open sollicitatie — goede mensen zijn altijd welkom.", href: "/over-ons#werken-bij" },
   { title: "Contact", desc: "Vragen of samenwerken? Mail info@zekerflex.com.", href: "mailto:info@zekerflex.com" },
 ];
@@ -105,6 +105,9 @@ const KENNIS_ITEMS: MenuItem[] = [
   { title: "Nieuwsroom", desc: "Het laatste nieuws over werk, regels en ondernemen, kort uitgelegd.", href: "/nieuws" },
   { title: "Blogs", desc: "Achtergrond over flexibel werk en het platform.", href: "/kennis/blog" },
   { title: "FAQ", desc: "Kort antwoord op de vragen die we het vaakst krijgen.", href: "/kennis/faq" },
+  // 21 nov 2026 (eigenaar: "Prijzen weg, tarievenoverzicht bij de vragen, de rekenhulp een plekje geven")
+  { title: "Tarievenoverzicht", desc: "Richttarief per functie en branche, ook als pdf.", href: "/tarieven-overzicht" },
+  { title: "Platformkosten berekenen", desc: "Wat je per maand betaalt bij jouw aantal uren.", href: "/rekentools/platformkosten-berekenen" },
 ];
 
 // "Apps & spelletjes": de knoppen "Ga naar …" uit lib/marketing/apps.ts
@@ -157,8 +160,7 @@ export const NAV: NavEntry[] = [
         items: [
           { title: "Voor bedrijven", desc: "Zet een dienst uit — ZekerFlex matcht direct de beste kandidaten.", href: "/voor-bedrijven" },
           { title: "Matching & toewijzing", desc: "Automatisch per vestiging, gewogen op reistijd en betrouwbaarheid.", href: "/voor-bedrijven#matching" },
-          { title: "GPS check-in & urengoedkeuring", desc: "Uren goedkeuren in één klik — de facturen volgen vanzelf.", href: "/voor-bedrijven#checkin" },
-          { title: "Facturatie & Wet DBA-monitor", desc: "Geaggregeerde facturatie en vroege risicosignalen per samenwerking.", href: "/voor-bedrijven#facturatie" },
+          // 21 nov 2026 (eigenaar): "GPS check-in & urengoedkeuring" en "Facturatie & Wet DBA-monitor" uit het menu
           { title: "Helpcentrum voor opdrachtgevers", desc: "Account, PO-nummers, diensten plaatsen en uren goedkeuren — stap voor stap.", href: "/kennis/werkgevers" },
           // 21 nov 2026: uitzendbureaus zetten hun klussen op ZekerFlex en blijven zelf werkgever (lib/uitzend/partners-kern.ts)
           { title: "Voor uitzendbureaus", desc: "Zet je uitzendklussen op ZekerFlex, onder je eigen naam.", href: "/uitzendpartner" },
@@ -187,8 +189,7 @@ export const NAV: NavEntry[] = [
         eyebrow: "Eerlijk en voorspelbaar",
         cta: CTA_BV,
         items: [
-          { title: "€ 3,50 per gewerkt uur", desc: "Vaste platformkosten — alleen wanneer er iemand werkt.", href: "/prijzen#bedrijven" },
-          { title: "Personeel zonder abonnement", desc: "Geen opstart- of plaatsingskosten, geen staffels om te doorgronden.", href: "/prijzen#bedrijven" },
+          // 21 nov 2026 (eigenaar): "die 3,50 kan weg" en "personeel zonder abonnement ook weg"
           { title: "Tarievenoverzicht", desc: "Richttarief per functie en branche, ook als pdf.", href: "/tarieven-overzicht" },
           { title: "Veelgestelde vragen", desc: "Wanneer de fee telt, offerte op maat, btw.", href: "/prijzen#faq" },
         ],

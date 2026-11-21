@@ -3,7 +3,7 @@ import { Section } from "@/components/marketing/primitives";
 
 // Een korte reclamevideo met onze eigen campagnebeelden (17 nov 2026), zonder geluid. Servercomponent, geen scripts: de video
 // laadt pas bij het afspelen (preload="none"). De bestanden staan in public/videos/reclame/ (bron: zie CREDITS.md daar).
-const VIDEOS = {
+export const RECLAME_VIDEOS = {
   werkers: {
     kop: "Jouw dag. Jouw klus.",
     tekst: "Horeca, magazijn, bezorgen, winkel of festival: kies zelf wanneer je werkt. Met of zonder KVK.",
@@ -22,8 +22,8 @@ const VIDEOS = {
   },
 } as const;
 
-export function ReclameVideoBlok({ soort }: { soort: keyof typeof VIDEOS }) {
-  const v = VIDEOS[soort];
+export function ReclameVideoBlok({ soort }: { soort: keyof typeof RECLAME_VIDEOS }) {
+  const v = RECLAME_VIDEOS[soort];
   return (
     <Section>
       <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
