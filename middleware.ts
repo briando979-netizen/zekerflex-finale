@@ -145,6 +145,8 @@ function next(
 // ---------------------------------------------------------------------------
 const APP_ALLOWED = [
   "/start", "/welkom", "/login", "/register", "/wachtwoord-vergeten", "/wachtwoord-herstellen", "/verifieer-email",
+  // uitloggen via GET voor een account zonder rol (app/uitloggen/route.ts, 21 nov): anders stuurt de app-poort hem naar /start en blijft de lus
+  "/uitloggen",
   "/dashboard", "/werkgever", "/admin", "/sales", "/berichten", "/betaal", "/betaalverzoek", "/kyc", "/r", "/uitnodiging",
   "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
   "/shop", "/kennis", "/offline", "/studio",

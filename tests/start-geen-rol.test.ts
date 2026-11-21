@@ -30,6 +30,12 @@ describe("een account zonder rol wordt op /start uitgelogd", () => {
     expect(r.match(/^export /gm)?.length).toBe(3);
   });
 
+  it("de app-poort in de middleware laat /uitloggen door (anders stuurt de app hem naar /start en blijft de lus)", () => {
+    const m = lees("middleware.ts");
+    const lijst = m.slice(m.indexOf("const APP_ALLOWED = ["), m.indexOf("];", m.indexOf("const APP_ALLOWED = [")));
+    expect(lijst).toContain('"/uitloggen"');
+  });
+
   it("het inlogscherm kent de melding", () => {
     expect(lees("components/auth/LoginForm.tsx")).toMatch(/GeenRol: "Dit account hoort bij geen bedrijf of werkersprofiel meer/);
   });
