@@ -23,7 +23,6 @@ import { localStamp, type CalendarEvent } from "@/lib/calendar/links";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listAdvances } from "@/lib/payouts/advances";
 import { voorschottenVoorWerker } from "@/lib/payouts/voorschot-zicht";
-import { gearForShift } from "@/lib/shop/klus-gear";
 import { certsRequiredForShift } from "@/lib/certificates/matching";
 import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
 import { getFreelancerDict } from "@/lib/i18n/server";
@@ -31,15 +30,25 @@ import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
-import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
 import { reageerStap } from "@/lib/onboarding/laat-weten";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
 import { UurloonInfo } from "@/components/app/UurloonInfo";
 import { uurloonOpbouw } from "@/lib/payroll/uurloon-opbouw";
 import { amsterdamWeek, findOverlappingShift, MAX_WEEK_HOURS, restViolation, weekHoursWith } from "@/lib/shifts/worker-overlap";
 import { afzegDeadline } from "@/lib/shifts/annuleertermijn";
+import { KLUS_TYPE_EMOJI } from "@/lib/shifts/klus-type";
 
 export const dynamic = "force-dynamic";
+
+// ---------------------------------------------------------------------------
+// De kluspagina van de werker, in de opzet van de app van YoungOnes (eigenaar, 21 nov 2026: "alles in de stijl van
+// YoungOnes, alleen de chat bewaren"). Van boven naar beneden: foto · terug/hart/⋯ · bedrijf · titel · dag | tijd |
+// plaats · chips (Invalklus, Freelance) + tarief · voorwaarden-chips · kaart + reistijden · adres, pauze, functie,
+// "We zoeken n freelancers", kledingvoorschriften, "Je kunt annuleren tot" · omschrijving · kledingvoorschriften ·
+// vaste balk met tarief, "Verdien ~" en "Reageer op deze klus" · "Er zijn n reacties". Wat ZekerFlex extra kan en
+// echt werkt blijft: ID-herinnering, certificaten, Arbeidstijdenwet-waarschuwingen, modelovereenkomst, uren/uitbetaling
+// na afloop, en altijd de chat met de opdrachtgever.
+// ---------------------------------------------------------------------------
 
 // Dutch wall-clock times — this page renders on the server, which runs in UTC.
 const hhmm = (d: Date | string) => amsterdamClock(d);
@@ -65,10 +74,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const shiftEnded = new Date(s.endsAt).getTime() < Date.now();
   const cat = shiftCategory(s.title, s.skill);
 
-  const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient, market] = await Promise.all([
+  const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient] = await Promise.all([
     listCounterOffers(500),
     reviewSummary("company", s.clientTenantId),
     getOrgProfileExtra(s.clientTenantId),
+    // andere komende klussen van dit bedrijf: in de reageer-sheet kun je er in één keer op meereageren
     prisma.shift.findMany({
       where: {
         branch: { tenantId: s.clientTenantId },
@@ -76,43 +86,15 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         startsAt: { gte: new Date() },
         id: { not: s.id },
       },
-      select: {
-        id: true,
-        title: true,
-        startsAt: true,
-        endsAt: true,
-        hourlyRateCents: true,
-        breakMinutes: true,
-        requiredSkill: { select: { name: true } },
-        branch: { select: { name: true, city: true } },
-      },
+      select: { id: true, title: true, startsAt: true, hourlyRateCents: true },
       orderBy: { startsAt: "asc" },
       take: 6,
     }),
     getFiscal(principal.userId),
     isFollowing(principal.userId, s.clientTenantId),
-    marketStats().catch(() => null),
   ]);
-  // Tarief tegenover de mediaan van dit soort werk (null bij te weinig vergelijkingsmateriaal).
-  const vsMarket = rateVsMarket(s.hourlyRateCents, market, cat.key);
-  const catLabel = ft.cat[cat.key];
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
   const reactionCount = offers.filter((o) => o.shiftId === s.id && o.status === "pending").length;
-
-  // "Dit heb je nodig voor deze klus" — werkgear uit de webshop, op werktype.
-  const gearHints = gearForShift(s.title, s.skill);
-  const gearProducts = gearHints.length
-    ? await prisma.shopProduct.findMany({
-        where: { slug: { in: gearHints.map((g) => g.slug) }, active: true },
-        select: { id: true, slug: true, name: true, priceCents: true, imageUrl: true },
-      })
-    : [];
-  const gear = gearHints
-    .map((h) => {
-      const product = gearProducts.find((p) => p.slug === h.slug);
-      return product ? { product, reason: h.reason, required: h.required ?? false } : null;
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null);
 
   // Certificaten die deze klus vraagt + wat de freelancer heeft.
   const certReqs = certsRequiredForShift(s.title, s.skill);
@@ -120,7 +102,6 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const certList = certReqs.map((c) => ({
     ...c,
     label: CERT_TYPES[c.type].label,
-    shopSlug: CERT_TYPES[c.type].shopSlug ?? null,
     have: heldCerts.has(c.type),
   }));
   const missingRequiredCert = certList.find((c) => c.required && !c.have) ?? null;
@@ -184,10 +165,6 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const weekHours = weekShifts.length
     ? weekHoursWith(weekShifts.map((w) => w.shift), { startsAt: start, endsAt: new Date(s.endsAt), breakMinutes: s.breakMinutes })
     : 0;
-  const fmtAt = (d: Date) => {
-    const p = amsterdamParts(d);
-    return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(d)}`;
-  };
   const applyDisabled = !s.canApply || Boolean(overlap) || Boolean(missingRequiredCert) || uitzendbureauBlocked;
   const applyBlockReasonText = !s.canApply && s.blockReason ? translateBlockReason(s.blockReason, ft) : null;
   const applyBlockReason = !s.canApply
@@ -200,6 +177,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           ? D.blockCert(missingRequiredCert.label)
           : null;
   // Nog niet mogen reageren door de aanmelding (de server beslist, s.blockReason): de knop opent dan een uitleg-sheet
+  // (zonder goedgekeurd ID: "Je moet jouw ID-check nog afronden" + Check ID, zoals bij YoungOnes)
   const applyBlokkade = !s.canApply && applyBlockReasonText ? { reden: applyBlockReasonText, stap: reageerStap(s.blockReason) } : null;
   let assigned: {
     assignmentId: string;
@@ -209,13 +187,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     replacementRequested: boolean;
   } | null = null;
   if (s.alreadyApplied && upcoming) {
-    const profile = await prisma.freelancerProfile.findUnique({
-      where: { userId: principal.userId },
-      select: { id: true },
-    });
-    const row = profile
+    const row = myProfile
       ? await prisma.shiftAssignment.findFirst({
-          where: { shiftId: s.id, freelancerId: profile.id, cancelledAt: null },
+          where: { shiftId: s.id, freelancerId: myProfile.id, cancelledAt: null },
           select: { id: true },
         })
       : null;
@@ -312,6 +286,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const sp = amsterdamParts(start);
   const dateLabel = `${WD[sp.weekday]} ${sp.day} ${MON[sp.month - 1]}.`;
   const timeLabel = `${hhmm(s.startsAt)} - ${hhmm(s.endsAt)}`;
+  const dresscode = s.dresscode?.trim() || null;
 
   const calendarEvent: CalendarEvent = {
     title: `${s.title} — ${s.company}`,
@@ -329,20 +304,19 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
 
   return (
     <div className="pb-40">
-      {/* Hero */}
-      <div className="relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={cat.photo} alt="" className="h-52 w-full object-cover sm:h-64" />
-        <span className="absolute inset-0 bg-gradient-to-b from-ink/40 to-transparent" />
+      {/* Foto, met eronder de rij terug · hartje · ⋯ (zoals in de app van YoungOnes) */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={cat.photo} alt="" className="h-52 w-full object-cover sm:h-64" />
+      <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2">
         <Link
           href="/dashboard/klussen"
           aria-label={D.back}
-          className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow-card backdrop-blur"
+          className="grid h-10 w-10 place-items-center rounded-full text-xl text-ink"
         >
           ←
         </Link>
-        <div className="absolute right-4 top-4 flex items-center gap-2">
-          {/* het hartje bovenin = opdrachtgever als favoriet (melding bij elke nieuwe dienst), met een bevestiging */}
+        <div className="flex items-center gap-2">
+          {/* het hartje = opdrachtgever als favoriet (melding bij elke nieuwe dienst), met een bevestiging */}
           <FollowEmployerButton variant="hart" tenantId={s.clientTenantId} name={s.clientName || s.branch} initialFollowing={followsClient} />
           <ShiftMenu employerName={s.branch} shiftTitle={s.title} />
         </div>
@@ -353,20 +327,10 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           {!assigned.replacementRequested && (
             <>
               <h2 className="font-display text-xl font-bold text-ink">{D.yourJob}</h2>
-              {cancelPassed ? (
-                <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{D.cancelPassedBody}</p>
-              ) : (
-                <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{D.cancelFreeUntil(fmtDay(cancelDeadline))}</p>
-              )}
+              <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">
+                {cancelPassed ? D.cancelPassedBody : D.yourJobBody(s.company, fmtDay(cancelDeadline))}
+              </p>
               <p className="mt-3 text-sm font-semibold text-ink">{D.bringId}</p>
-              <a
-                href={agreementHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink underline"
-              >
-                📄 {s.agreement ? D.viewAgreement : D.viewDraftAgreement}
-              </a>
             </>
           )}
           <div className={assigned.replacementRequested ? "" : "mt-4"}>
@@ -385,6 +349,16 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               variant="detail"
             />
           </div>
+          {!assigned.replacementRequested && (
+            <a
+              href={agreementHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center gap-2 text-sm font-semibold text-ink underline"
+            >
+              📄 {s.agreement ? D.viewAgreement : D.viewDraftAgreement}
+            </a>
+          )}
         </div>
       )}
 
@@ -421,7 +395,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         </p>
         {rest && (
           <p className="mt-3 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs leading-relaxed text-warn">
-            ⏳ {D.shortRest(`${fmtAt(rest.startsAt)} – ${fmtAt(rest.endsAt)}`)}
+            ⏳ {D.shortRest(`${fmtDay(rest.startsAt)} – ${fmtDay(rest.endsAt)}`)}
           </p>
         )}
         {weekHours > MAX_WEEK_HOURS && (
@@ -430,16 +404,22 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </p>
         )}
 
+        {/* chips links (Invalklus, Freelance of Via uitzendbureau), het tarief groot rechts */}
         <div className="mt-3 flex items-center justify-between gap-3">
-          {s.viaUitzendbureau ? (
-            <span className="rounded border border-amber-500/40 px-2 py-0.5 text-xs font-semibold text-amber-700">
-              {ft.card.viaAgency}
-            </span>
-          ) : (
-            <span className="rounded border border-brand-500/40 px-2 py-0.5 text-xs font-semibold text-brand-600">
-              {ft.card.freelance}
-            </span>
-          )}
+          <span className="flex flex-wrap items-center gap-1.5">
+            {s.isReplacement && upcoming && (
+              <span className="rounded border border-warn/40 px-2 py-0.5 text-xs font-semibold text-warn">{ft.card.invalklus}</span>
+            )}
+            {s.viaUitzendbureau ? (
+              <span className="rounded border border-amber-500/40 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                {ft.card.viaAgency}
+              </span>
+            ) : (
+              <span className="rounded border border-brand-500/40 px-2 py-0.5 text-xs font-semibold text-brand-600">
+                {ft.card.freelance}
+              </span>
+            )}
+          </span>
           <span className="flex items-center gap-2">
             <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
             {agencyTerms && (
@@ -447,39 +427,26 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             )}
           </span>
         </div>
-        {vsMarket !== null && (
-          <p className={`mt-1 text-right text-xs font-medium ${vsMarket >= 5 ? "text-brand-600" : "text-neutralx-500"}`} title={ft.rate.note}>
-            {vsMarket >= 5 ? ft.rate.above(vsMarket, catLabel) : vsMarket <= -5 ? ft.rate.below(-vsMarket, catLabel) : ft.rate.average(catLabel)}
+
+        {/* de voorwaarden als chips met een pictogram, in de volgorde van de kluspagina van YoungOnes:
+            ✌️ ZZP bij de opdrachtgever · 💸 Uitbetaling per klus · 📋 Belasting: zelf · 💰 Tegenbod mogelijk · ⛱️ Vakantiegeld: nee;
+            bij een uitzendklus de uitzendvoorwaarden (zelfde teksten als het vergelijkblok op Ontdekken) */}
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={ft.market.typeTitle}>
+          {(agencyTerms ? ft.market.typeUitzend.map((tekst, i) => `${KLUS_TYPE_EMOJI.uitzenden[i] ?? "•"} ${tekst}`) : D.chips).map((c) => (
+            <li key={c} className="rounded-lg border border-hair bg-paper-soft px-2.5 py-1.5 text-xs font-medium text-neutralx-700">
+              {c}
+            </li>
+          ))}
+        </ul>
+
+        {/* Snelle uitbetaling — alleen als de opdrachtgever het aanbiedt (en niet in de Android-app) */}
+        {s.fastPay && !inApp && !agencyTerms && (
+          <p className="mt-3 rounded-xl border border-brand-500/30 bg-brand-50 px-3 py-2.5 text-xs text-brand-700">
+            <span className="font-semibold">{D.fastPayTitle}</span>{D.fastPayBody}
           </p>
         )}
 
-        {/* Fast payout — only when the client offers it (credit-checked) */}
-        <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp && !agencyTerms ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
-          {agencyTerms ? (
-            <>
-              <span className="font-semibold">{D.payroll}</span> — {ft.market.typeUitzend.filter((_, i) => i !== 1).join(" · ")}
-            </>
-          ) : s.fastPay && !inApp ? (
-            <>
-              <span className="font-semibold">{D.fastPayTitle}</span>{D.fastPayBody}
-            </>
-          ) : (
-            <>
-              <span className="font-semibold">{D.standardPayTitle}</span>{D.standardPayBody}
-            </>
-          )}
-        </div>
-
-        {/* Info chips */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {(agencyTerms ? ft.market.typeUitzend : D.chips).map((c) => (
-            <span key={c} className="rounded-lg border border-hair bg-white px-2.5 py-1.5 text-xs text-neutralx-600">
-              {c}
-            </span>
-          ))}
-        </div>
-
-        {/* Map — met een thuisbasis ook de echte route ernaartoe (onze eigen routeplanner, achteraf geladen;
+        {/* Kaart — met een thuisbasis ook de echte route ernaartoe (onze eigen routeplanner, achteraf geladen;
             zonder routeplanner blijft de schatting staan). De thuisbasis gaat niet mee naar de browser. */}
         <div className="mt-5">
           {s.travel ? (
@@ -500,8 +467,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           )}
         </div>
 
-        {/* Travel — needs a saved home base (set during onboarding's postcode
-            geocode); show why instead of silently having nothing here. */}
+        {/* Reistijden vragen een thuisbasis (de postcode van de aanmelding); zeg waarom hier anders niets staat. */}
         {!s.travel && (
           <p className="mt-3 rounded-xl border border-dashed border-hair bg-paper-soft px-4 py-3 text-sm text-neutralx-500">
             {D.homeBefore}{" "}
@@ -542,8 +508,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </details>
         )}
 
-        {/* Detail rows */}
-        <dl className="mt-4 space-y-3.5">
+        {/* Rijen met een pictogram: adres · pauze · functie · we zoeken n · kledingvoorschriften · annuleren tot */}
+        <dl className="mt-5 space-y-3.5">
           <InfoRow icon="◎">
             {s.address}
             <br />
@@ -552,17 +518,15 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <InfoRow icon="☕">
             {s.breakMinutes > 0 ? D.breakMin(s.breakMinutes) : D.noBreak}
           </InfoRow>
-          {s.skill && <InfoRow icon="🏷️">{s.skill}</InfoRow>}
+          <InfoRow icon="🏷️">{s.skill ?? ft.cat[cat.key]}</InfoRow>
           <InfoRow icon="👤">
             {s.viaUitzendbureau ? D.lookingForAgency(s.positions) : D.lookingFor(s.positions)}
           </InfoRow>
-          <InfoRow icon="👕">
-            {s.dresscode || D.noDresscode}
-          </InfoRow>
+          {dresscode && <InfoRow icon="👕">{D.dresscodeApply}</InfoRow>}
           <InfoRow icon="⊘">
             {cancelPassed ? D.cancelPassed(fmtDay(cancelDeadline)) : D.cancelUntil(fmtDay(cancelDeadline))}
           </InfoRow>
-          {showAgreement && (
+          {showAgreement && !assigned && (
             <div className="flex items-start gap-3 text-sm">
               <span className="mt-0.5 grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-hairstrong text-xs text-neutralx-400">
                 📄
@@ -609,185 +573,105 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </div>
         )}
 
-        <p className="mt-5 text-sm font-semibold text-ink">
-          💼 {D.role}: <span className="font-normal text-neutralx-600">{s.skill ?? ft.cat[cat.key]}</span>
-        </p>
-
         {s.description && (
-          <div className="mt-4 whitespace-pre-line text-sm leading-relaxed text-neutralx-700">{s.description}</div>
+          <div className="mt-6 whitespace-pre-line text-sm leading-relaxed text-neutralx-700">{s.description}</div>
         )}
 
         {/* "Extra informatie" staat nergens meer in de werker-app (10 nov, eigenaar) */}
 
-        {(gear.length > 0 || certList.length > 0) && (
+        {dresscode && (
+          <section className="mt-6">
+            <h2 className="font-display text-base font-bold text-ink">{D.dresscodeTitle}</h2>
+            <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-neutralx-700">{dresscode}</p>
+          </section>
+        )}
+
+        {/* Certificaten die de klus vraagt (een verplicht certificaat dat je mist, blokkeert het reageren) */}
+        {certList.length > 0 && (
           <section className="mt-8 border-t border-hair pt-5">
             <h2 className="font-display text-base font-bold text-ink">{D.needTitle}</h2>
-            <p className="mt-1 text-xs text-neutralx-500">{D.needBody}</p>
-
-            {certList.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {certList.map((c) => (
-                  <div
-                    key={c.type}
-                    className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 text-sm ${
-                      c.have
-                        ? "border-ok/30 bg-ok/5"
-                        : c.required
-                          ? "border-crit/30 bg-crit/5"
-                          : "border-hair bg-paper-soft"
-                    }`}
-                  >
-                    <span className="mt-0.5">{c.have ? "✅" : c.required ? "⛔" : "📄"}</span>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-ink">
-                        {c.label}
-                        {c.required ? D.required : D.recommended}
-                      </p>
-                      <p className="text-xs text-neutralx-500">
-                        {c.have ? D.haveCert : c.reason}
-                      </p>
-                      {!c.have && (
-                        <p className="mt-1 flex flex-wrap gap-3 text-xs font-semibold">
-                          <Link href="/dashboard/certificaten" className="text-brand-600 underline">
-                            {D.addCert}
-                          </Link>
-                          {c.shopSlug && (
-                            <Link href={`/shop#${c.shopSlug}`} className="text-brand-600 underline">
-                              {D.shopBook}
-                            </Link>
-                          )}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {gear.length > 0 && (
-            <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-              {gear.map((g) => (
-                <Link
-                  key={g.product.id}
-                  href={`/shop#${g.product.slug}`}
-                  className="w-56 flex-shrink-0 snap-start overflow-hidden rounded-2xl border border-hair bg-white shadow-card"
+            <div className="mt-3 space-y-2">
+              {certList.map((c) => (
+                <div
+                  key={c.type}
+                  className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 text-sm ${
+                    c.have
+                      ? "border-ok/30 bg-ok/5"
+                      : c.required
+                        ? "border-crit/30 bg-crit/5"
+                        : "border-hair bg-paper-soft"
+                  }`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={g.product.imageUrl ?? cat.photo} alt="" className="h-24 w-full object-cover" />
-                  <div className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="line-clamp-2 text-sm font-bold leading-snug text-ink">{g.product.name}</p>
-                      {g.required && (
-                        <span className="flex-shrink-0 rounded border border-crit/30 px-1 py-0.5 text-[10px] font-semibold text-crit">
-                          {D.requiredBadge}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-neutralx-500">{g.reason}</p>
-                    <p className="mt-1.5 text-sm font-bold text-ink">{moneyExact(g.product.priceCents)}</p>
+                  <span className="mt-0.5">{c.have ? "✅" : c.required ? "⛔" : "📄"}</span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink">
+                      {c.label}
+                      {c.required ? D.required : D.recommended}
+                    </p>
+                    <p className="text-xs text-neutralx-500">
+                      {c.have ? D.haveCert : c.reason}
+                    </p>
+                    {!c.have && (
+                      <p className="mt-1 text-xs font-semibold">
+                        <Link href="/dashboard/certificaten" className="text-brand-600 underline">
+                          {D.addCert}
+                        </Link>
+                      </p>
+                    )}
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* Over de opdrachtgever: alleen wat er echt is (beoordelingen, eigen tekst, website) en al zijn klussen */}
+        {(orgReviews.count > 0 || orgExtra.about || orgExtra.websiteUrl) && (
+          <section className="mt-8 border-t border-hair pt-5">
+            <h2 className="font-display text-base font-bold text-ink">{D.about(s.company)}</h2>
+            {orgReviews.count > 0 && (
+              <p className="mt-1.5 flex items-center gap-2 text-sm">
+                <span className="text-amber-500">
+                  {"★★★★★".slice(0, Math.round(orgReviews.average))}
+                  <span className="text-neutralx-300">{"★★★★★".slice(Math.round(orgReviews.average))}</span>
+                </span>
+                <span className="text-neutralx-500">
+                  {D.reviews(orgReviews.count)}
+                </span>
+              </p>
+            )}
+            {orgExtra.about && (
+              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{orgExtra.about}</p>
+            )}
+            {orgExtra.websiteUrl && (
+              <a
+                href={orgExtra.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline"
+              >
+                {D.website(s.company)}
+              </a>
             )}
           </section>
         )}
 
-        {/* Over de opdrachtgever */}
-        <section className="mt-8 border-t border-hair pt-5">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-display text-base font-bold text-ink">{D.about(s.company)}</h2>
-            <FollowEmployerButton tenantId={s.clientTenantId} name={s.clientName || s.branch} initialFollowing={followsClient} />
-          </div>
-          {orgReviews.count > 0 && (
-            <p className="mt-1.5 flex items-center gap-2 text-sm">
-              <span className="text-amber-500">
-                {"★★★★★".slice(0, Math.round(orgReviews.average))}
-                <span className="text-neutralx-300">{"★★★★★".slice(Math.round(orgReviews.average))}</span>
-              </span>
-              <span className="text-neutralx-500">
-                {D.reviews(orgReviews.count)}
-              </span>
-            </p>
-          )}
-          {orgExtra.about && (
-            <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{orgExtra.about}</p>
-          )}
-          {orgExtra.websiteUrl && (
-            <a
-              href={orgExtra.websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline"
-            >
-              {D.website(s.company)}
-            </a>
-          )}
+        <Link
+          href={`/dashboard/klussen?employer=${encodeURIComponent(s.company)}`}
+          className="mt-6 block rounded-xl border border-hairstrong px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-paper-soft"
+        >
+          {D.allJobsOf(s.company)}
+        </Link>
 
-          <div className="mt-4 divide-y divide-hair rounded-xl bg-paper-soft">
-            <StatRow icon="🕐">{D.stat1}</StatRow>
-            <StatRow icon="🙂">{D.stat2}</StatRow>
-            <StatRow icon="🐖">{agencyTerms ? D.stat3Agency : D.stat3}</StatRow>
-          </div>
-
-          <Link
-            href={`/dashboard/klussen?employer=${encodeURIComponent(s.company)}`}
-            className="mt-4 block rounded-xl border border-hairstrong px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-paper-soft"
-          >
-            {D.allJobsOf(s.company)}
-          </Link>
-        </section>
-
-        {otherShifts.length > 0 && (
-          <section className="mt-8">
-            <h2 className="mb-3 font-display text-base font-bold text-ink">
-              {D.alsoForYou}
-            </h2>
-            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-              {otherShifts.map((o) => {
-                const oc = shiftCategory(o.title, o.requiredSkill?.name ?? null);
-                const od = new Date(o.startsAt);
-                const odp = amsterdamParts(od);
-                const oh =
-                  Math.round(
-                    ((new Date(o.endsAt).getTime() - od.getTime()) / 3_600_000 - o.breakMinutes / 60) * 10,
-                  ) / 10;
-                return (
-                  <Link
-                    key={o.id}
-                    href={`/dashboard/klussen/${o.id}`}
-                    className="w-64 flex-shrink-0 snap-start overflow-hidden rounded-2xl border border-hair bg-white shadow-card"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={oc.photo} alt="" className="h-28 w-full object-cover" />
-                    <div className="p-3">
-                      <p className="text-xs font-semibold text-brand-600">{s.company}</p>
-                      <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-ink">{o.title}</p>
-                      <p className="mt-1 text-[11px] text-neutralx-400">
-                        {WD[odp.weekday]} {odp.day} {MON[odp.month - 1]}. · {hhmm(o.startsAt)} · {o.branch.city}
-                      </p>
-                      <p className="mt-1.5 text-sm font-bold text-ink">
-                        {moneyExact(o.hourlyRateCents)} <span className="text-[11px] font-normal text-neutralx-400">· {ft.card.hours(oh)}</span>
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        <div className="mt-6 rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-500">
-          {agencyTerms ? D.footerAgency : D.footer}
-        </div>
-
+        {/* de chat met de opdrachtgever blijft altijd (eigenaar, 20 nov) */}
         {!settled && (
-          <div className="mt-4">
+          <div className="mt-3">
             <MessageEmployerButton shiftId={s.id} label={D.messageEmployer} />
           </div>
         )}
       </div>
 
-      {/* Sticky action bar */}
+      {/* Vaste balk onderaan: tarief + "Verdien ~" links, "Reageer op deze klus" rechts, eronder het aantal reacties */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-hair bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-2xl px-4 py-3">
           {settled ? (
@@ -842,7 +726,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 endTime={hhmm(s.endsAt)}
                 conflict={conflict}
                 agreementHref={agreementHref}
-                dresscode={s.dresscode}
+                dresscode={dresscode}
                 otherShifts={otherShifts.map((o) => ({
                   id: o.id,
                   title: o.title,
@@ -875,15 +759,6 @@ function InfoRow({ icon, children }: { icon: string; children: React.ReactNode }
         {icon}
       </span>
       <span className="text-neutralx-700">{children}</span>
-    </div>
-  );
-}
-
-function StatRow({ icon, children }: { icon: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-3 px-4 py-3 text-sm text-neutralx-600">
-      <span className="text-base leading-none">{icon}</span>
-      <span>{children}</span>
     </div>
   );
 }
@@ -975,4 +850,3 @@ function WorkStatusHeader({
     </>
   );
 }
-

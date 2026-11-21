@@ -14,6 +14,9 @@ export function ReageerBlokSheet({ reden, stap, onClose }: { reden: string; stap
   const t = useFT().reageerBlok;
   const ref = useDialog(true, onClose);
   const stapTekst = stap === "anders" ? null : t[stap];
+  // Zonder goedgekeurd ID precies de sheet van YoungOnes (21 nov): kop "REAGEER OP DEZE KLUS", één gele melding
+  // "Je moet jouw ID-check nog afronden." en de knop "Check ID" (de ID-controle staat op /dashboard/verificatie).
+  const idCheck = stap === "identiteit";
 
   return (
     <Portal>
@@ -26,14 +29,16 @@ export function ReageerBlokSheet({ reden, stap, onClose }: { reden: string; stap
           className="w-full max-w-md rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)] shadow-lift"
           onClick={(e) => e.stopPropagation()}
         >
+          <h2 className="border-b border-hair px-5 py-4 text-center font-display text-lg font-bold uppercase tracking-tight text-ink">
+            {t.eyebrow}
+          </h2>
           <div className="space-y-4 px-5 pb-2 pt-5">
-            <p className="eyebrow text-center">{t.eyebrow}</p>
             <div role="alert" className="rounded-xl border border-warn/40 bg-warn/5 px-4 py-3">
-              <h2 id="reageer-blok-titel" className="font-display text-base font-bold text-ink">{t.titel}</h2>
-              {stapTekst ? <p className="mt-1 text-sm text-neutralx-700">{t.tekst}</p> : null}
-              <p className="mt-1 text-sm text-neutralx-700">{reden}</p>
+              <p id="reageer-blok-titel" className="font-display text-base font-bold text-ink">{idCheck ? t.idTitel : t.titel}</p>
+              {!idCheck && stapTekst ? <p className="mt-1 text-sm text-neutralx-700">{t.tekst}</p> : null}
+              {!idCheck && <p className="mt-1 text-sm text-neutralx-700">{reden}</p>}
             </div>
-            {stapTekst && (
+            {!idCheck && stapTekst && (
               <p className="text-sm text-neutralx-600">
                 <span className="font-semibold text-ink">{t.mistLabel}:</span> {stapTekst}
               </p>
@@ -42,7 +47,7 @@ export function ReageerBlokSheet({ reden, stap, onClose }: { reden: string; stap
           <div className="p-4">
             {stapTekst && (
               <Link href={reageerStapHref(stap)} className="btn-primary block w-full py-3 text-center text-sm">
-                {t.knop}
+                {idCheck ? t.idKnop : t.knop}
               </Link>
             )}
             <button

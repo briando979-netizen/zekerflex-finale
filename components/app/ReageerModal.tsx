@@ -19,9 +19,10 @@ export interface OtherShiftOption {
 
 /**
  * "Reageer op deze klus" — the confirmation screen a freelancer sees before
- * reacting: beschikbaarheid (volledige dienst of flexibel), rate (tegenbod),
- * motivation, akkoord-vinkjes, en automatisch intrekken. Pas na "Bevestig je
- * reactie" gaat de reactie de deur uit.
+ * reacting, in de opzet van de sheet van YoungOnes (21 nov): waarschuwing,
+ * beschikbaarheid (volledige dienst of flexibel), uurtarief (tegenbod),
+ * motivatie, akkoord-vinkjes, "Bevestig je reactie". Pas daarna gaat de
+ * reactie de deur uit.
  */
 export function ReageerButton({
   shiftId,
@@ -135,9 +136,7 @@ function Modal({
   const [writing, setWriting] = useState(false);
   const [okAgreement, setOkAgreement] = useState(false);
   const [okDresscode, setOkDresscode] = useState(false);
-  const [autoWithdraw, setAutoWithdraw] = useState(false);
   const [showDresscode, setShowDresscode] = useState(false);
-  const [hours, setHours] = useState(4);
   const [extraIds, setExtraIds] = useState<Set<string>>(new Set());
   const [extraRates, setExtraRates] = useState<Record<string, string>>({});
   const [err, setErr] = useState<string | null>(null);
@@ -179,7 +178,6 @@ function Modal({
     const parts: string[] = [];
     if (motivation.trim()) parts.push(motivation.trim());
     if (mode === "flex") parts.push(`Voorgestelde tijden: ${from}–${to}`);
-    if (autoWithdraw) parts.push(`Reactie automatisch intrekken ${hours} uur voor aanvang.`);
     const note = parts.join("\n");
 
     start(async () => {
@@ -447,56 +445,8 @@ function Modal({
               )}
             </div>
 
-            {/* Automatisch intrekken */}
-            <div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-ink">{a.autoWithdraw}</p>
-                <span
-                  className="grid h-4 w-4 place-items-center rounded-full border border-neutralx-400 text-[9px] text-neutralx-400"
-                  title={a.autoWithdrawInfo}
-                >
-                  i
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-hair p-3">
-                <p className="text-sm text-neutralx-600">
-                  {a.withdrawBefore}{" "}
-                  {autoWithdraw ? (
-                    <span className="inline-flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setHours((h) => Math.max(1, h - 1))}
-                        className="grid h-5 w-5 place-items-center rounded border border-hairstrong text-xs"
-                      >
-                        −
-                      </button>
-                      <span className="w-4 text-center font-bold text-ink">{hours}</span>
-                      <button
-                        type="button"
-                        onClick={() => setHours((h) => Math.min(72, h + 1))}
-                        className="grid h-5 w-5 place-items-center rounded border border-hairstrong text-xs"
-                      >
-                        +
-                      </button>
-                    </span>
-                  ) : (
-                    <span className="font-bold text-ink">0</span>
-                  )}{" "}
-                  {a.withdrawAfter}
-                </p>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={autoWithdraw}
-                  onClick={() => setAutoWithdraw((v) => !v)}
-                  className={`relative h-6 w-11 flex-shrink-0 rounded-full transition ${autoWithdraw ? "bg-brand-500" : "bg-hairstrong"}`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${autoWithdraw ? "left-[22px]" : "left-0.5"}`}
-                  />
-                </button>
-              </div>
-            </div>
+            {/* "Automatisch intrekken" is weg (21 nov): het schreef alleen een regel in de notitie, de server deed er niets
+                mee; YoungOnes heeft het ook niet. */}
 
             {err && <p role="alert" className="text-xs text-crit">{err}</p>}
           </div>
