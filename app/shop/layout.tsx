@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { WEBSHOP_AAN } from "@/lib/shop/aan";
 import { robotsVerborgen } from "@/lib/seo/verbergen";
 import { clientDict, getLocale } from "@/lib/i18n/server";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
@@ -26,6 +28,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // Hergebruikt dezelfde locale-cookie/i18n-infrastructuur als /werkgever. Sinds
 // de marktplaats-opbouw (4 nov 2026) alleen de gewone letters, geen schreefletter.
 export default async function ShopLayout({ children }: { children: ReactNode }) {
+  // de webshop staat uit (lib/shop/aan.ts): elke /shop-pagina gaat naar de voorpagina
+  if (!WEBSHOP_AAN) redirect("/");
   const locale = await getLocale();
   // particulier of zakelijk (functioneel cookie): bepaalt prijzen met of zonder btw en het menu
   const modus = leesModus((await cookies()).get(MODUS_COOKIE)?.value);

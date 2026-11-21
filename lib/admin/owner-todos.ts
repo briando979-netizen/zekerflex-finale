@@ -56,6 +56,7 @@ import { telKvkStand } from "@/lib/kvk/inhalen";
 import { functiesWachtenTodo } from "@/lib/admin/todo-besluiten";
 import { KV_VERLOPEN_METING, VERLOPEN_VLAG, type VerlopenMeting } from "@/lib/shifts/verlopen";
 import { BOUNCE_VLAG, KV_BOUNCE_METING, type BounceMeting } from "@/lib/mail/bounce-ronde";
+import { WEBSHOP_AAN } from "@/lib/shop/aan";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -343,7 +344,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const rijAlles = rij !== null && rijKlaar.length === rij.length;
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
-  return [
+  const lijst: OwnerTodo[] = [
     ...(platformnaam ? [platformnaam] : []),
     ...stripeAccount,
     ...(kvkTegoed ? [kvkTegoed] : []),
@@ -1576,7 +1577,12 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(bankToestemming && bankToestemming.length > 0 ? { doneNote: bankToestemming.join("; ") } : {}),
     },
   ];
+  // de webshop staat uit (lib/shop/aan.ts): zijn taken niet meer tonen
+  return WEBSHOP_AAN ? lijst : lijst.filter((t) => !WEBSHOP_TAKEN.has(t.id));
 }
+
+/** De taken die alleen over de webshop gaan (weg zolang WEBSHOP_AAN uit staat). */
+export const WEBSHOP_TAKEN: ReadonlySet<string> = new Set(["webshop-leverancier", "product-photos", "3d-models", "stripe-agentische-handel"]);
 
 export async function setManualDone(id: string, done: boolean, by: string): Promise<void> {
   const cur = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};

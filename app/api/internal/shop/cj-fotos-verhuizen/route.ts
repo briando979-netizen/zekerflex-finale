@@ -4,6 +4,7 @@ import { recordCronRun } from "@/lib/metrics";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { rondeVerhuizenAchtergrond, zetVerhuisStand } from "@/lib/shop/cj/fotos-verhuizen";
+import { WEBSHOP_AAN } from "@/lib/shop/aan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,11 @@ async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) {
     return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
+  }
+  // de webshop staat uit (lib/shop/aan.ts): niets doen, wel de hartslag (Beheer → Systeem → Taken blijft groen)
+  if (!WEBSHOP_AAN) {
+    recordCronRun("cj-fotos-verhuizen", true);
+    return NextResponse.json({ ok: true, uit: "De webshop staat uit." });
   }
   try {
     const start = new URL(request.url).searchParams.get("start") === "1";

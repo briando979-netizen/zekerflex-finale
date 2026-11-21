@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WEBSHOP_AAN } from "@/lib/shop/aan";
 
 const kv = vi.hoisted(() => new Map<string, unknown>());
 const live = vi.hoisted(() => ({
@@ -282,20 +283,22 @@ describe("owner to-do list", () => {
     expect((await byId())["stripe-expired"]!.done).toBe(true);
   });
 
+  // de 3D-modellen horen bij de webshop: die taak staat er alleen met WEBSHOP_AAN (21 nov 2026, lib/shop/aan.ts)
   it("names leftover test accounts, vague branch cities and counts 3D models", async () => {
     live.testUsers = 5;
     live.branches = [{ name: "Hoofdvestiging", tenant: { name: "Café De Hoek" } }];
     let t = await byId();
     expect(t["test-accounts"]).toMatchObject({ done: false, doneNote: "nog 5 over" });
     expect(t["branch-cities"]).toMatchObject({ done: false, doneNote: "Bij: Café De Hoek (Hoofdvestiging)" });
-    expect(t["3d-models"]!.done).toBe(false);
+    if (WEBSHOP_AAN) expect(t["3d-models"]!.done).toBe(false);
+    else expect(t["3d-models"]).toBeUndefined();
     live.testUsers = 0;
     live.branches = [];
     live.models = new Map([["p1", {}]]);
     t = await byId();
     expect(t["test-accounts"]!.done).toBe(true);
     expect(t["branch-cities"]!.done).toBe(true);
-    expect(t["3d-models"]).toMatchObject({ done: true, doneNote: "1 product heeft een 3D-model" });
+    if (WEBSHOP_AAN) expect(t["3d-models"]).toMatchObject({ done: true, doneNote: "1 product heeft een 3D-model" });
   });
 
   it("keeps own notes", async () => {
