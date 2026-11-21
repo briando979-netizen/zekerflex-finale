@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { aantalOpen, nogStappenTekst, reageerStap, reageerStapHref, stapVanTotaal, TIJDLIJN_VOLGORDE, tijdlijnStappen, volgendeStap, type TijdlijnKlaar } from "@/lib/onboarding/laat-weten";
 import { openVerplicht, POORT_STAPPEN, poortStapVan, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
@@ -132,4 +134,24 @@ describe("teksten in vijf talen", () => {
       for (const s of Object.values(d.reageerBlok)) expect(String(s).length).toBeGreaterThan(1);
     });
   }
+});
+
+// 21 nov 2026 (eigenaar: "ik kan niet reageren op een freelance klus"): een uitzendkracht op een freelance klus kreeg
+// "Rond eerst je aanmelding af" + "Maak je aanmelding compleet", terwijl er niets ontbrak; alleen de werkvorm past niet.
+describe("uitzendkracht op een freelance klus", () => {
+  const reden =
+    "Als uitzendkracht reageer je op uitzendklussen van aangesloten uitzendbureaus. Voor andere klussen heb je een KVK-nummer nodig: kies dan zzp'er of flexwerker bij Werkvorm.";
+  it("is de stap werkvorm, met de knop naar het scherm waar je hem kiest", () => {
+    expect(reageerStap(reden)).toBe("werkvorm");
+    expect(reageerStapHref("werkvorm")).toBe("/dashboard/fiscaal");
+  });
+  it("de zin in de code is nog dezelfde als in lib/fiscal/eligibility.ts", () => {
+    const bron = readFileSync(path.join(process.cwd(), "lib/fiscal/eligibility.ts"), "utf8");
+    expect(bron).toContain(reden);
+  });
+  it("het venster toont dan niet 'Rond eerst je aanmelding af'", () => {
+    const sheet = readFileSync(path.join(process.cwd(), "components/app/ReageerBlokSheet.tsx"), "utf8");
+    expect(sheet).toContain("!idCheck && !werkvorm && stapTekst");
+    expect(sheet).toContain("werkvorm ? t.werkvormKnop : t.knop");
+  });
 });

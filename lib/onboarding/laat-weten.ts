@@ -66,7 +66,7 @@ export function nogStappenTekst(n: number, t: { nogEen: string; nogMeer: string;
   return vorm.replace("{n}", String(n));
 }
 
-export type ReageerStap = "start" | "identiteit" | "werkrecht" | "gegevens" | "anders";
+export type ReageerStap = "start" | "identiteit" | "werkrecht" | "werkvorm" | "gegevens" | "anders";
 
 /**
  * Welke stap mist er volgens de reden die de server gaf (Nederlandse zin uit
@@ -77,6 +77,8 @@ export function reageerStap(reden: string | null | undefined): ReageerStap {
   if (/recht om te werken|werkrecht|werkvergunning|verblijf/.test(r)) return "werkrecht";
   // de aanmelding zelf (ONBOARDING_EERST): de stappen staan bovenaan Ontdekken
   if (/aanmelding af/.test(r)) return "start";
+  // een uitzendkracht op een freelance klus (UITZEND_ALLEEN_VIA_BUREAU): geen gegevens die ontbreken, maar de werkvorm (21 nov)
+  if (/als uitzendkracht reageer je|bij werkvorm/.test(r)) return "werkvorm";
   // vóór "identiteit": de redenen over het rekeningnummer en de overeenkomst noemen ook "Verificatie" (15 nov)
   if (/bsn|rekeningnummer|iban|kvk|btw|uitzend|overeenkomst|contract|gegevens|fiscaa/.test(r)) return "gegevens";
   if (/identiteit|id-controle|verificatie|geverifieerd/.test(r)) return "identiteit";
@@ -84,6 +86,7 @@ export function reageerStap(reden: string | null | undefined): ReageerStap {
 }
 
 export function reageerStapHref(stap: ReageerStap): string {
+  if (stap === "werkvorm") return "/dashboard/fiscaal"; // daar kies je zzp'er of flexwerker
   if (stap === "start") return "/dashboard/klussen"; // de stappen en "Klaar voor je eerste klus" staan bovenaan Ontdekken
   return stap === "werkrecht" ? "/dashboard/verificatie#werkrecht" : "/dashboard/verificatie"; // gegevens en identiteit staan allebei op het stappenscherm
 }

@@ -438,6 +438,9 @@ const nl = {
     knop: "Maak je aanmelding compleet",
     idTitel: "Je moet jouw ID-check nog afronden.",
     idKnop: "Check ID",
+    werkvormTitel: "Deze klus is voor zzp'ers en flexwerkers",
+    werkvorm: "Zzp'er of flexwerker kiezen bij Werkvorm. Je eerste 2 klussen mogen zonder KVK-nummer.",
+    werkvormKnop: "Wijzig je werkvorm",
     sluiten: "Sluiten",
   },
   /** KOR-hulp (components/app/KorHulp.tsx, lib/fiscal/kor.ts) */
@@ -2246,6 +2249,9 @@ const en: FreelancerDict = {
     knop: "Complete your sign-up",
     idTitel: "You still need to finish your ID check.",
     idKnop: "Check ID",
+    werkvormTitel: "This job is for zzp'ers and flex workers",
+    werkvorm: "Choose zzp'er or flexwerker under Work type. Your first 2 jobs are allowed without a KVK number.",
+    werkvormKnop: "Change your work type",
     sluiten: "Close",
   },
   /** KOR-hulp (components/app/KorHulp.tsx, lib/fiscal/kor.ts) */
@@ -4091,6 +4097,9 @@ const pl: FreelancerDict = {
     knop: "Dokończ rejestrację",
     idTitel: "Musisz jeszcze dokończyć weryfikację dokumentu.",
     idKnop: "Sprawdź ID",
+    werkvormTitel: "To zlecenie jest dla zzp'erów i flexwerkerów",
+    werkvorm: "Wybierz zzp'er lub flexwerker w polu Forma pracy. Pierwsze 2 zlecenia możesz przyjąć bez numeru KVK.",
+    werkvormKnop: "Zmień formę pracy",
     sluiten: "Zamknij",
   },
   /** KOR-hulp (components/app/KorHulp.tsx, lib/fiscal/kor.ts) */
@@ -5936,6 +5945,9 @@ const ro: FreelancerDict = {
     knop: "Finalizează înscrierea",
     idTitel: "Mai trebuie să finalizezi verificarea actului de identitate.",
     idKnop: "Verifică ID-ul",
+    werkvormTitel: "Această lucrare este pentru zzp'eri și flexwerkeri",
+    werkvorm: "Alege zzp'er sau flexwerker la Forma de muncă. Primele 2 lucrări le poți accepta fără număr KVK.",
+    werkvormKnop: "Schimbă forma de muncă",
     sluiten: "Închide",
   },
   /** KOR-hulp (components/app/KorHulp.tsx, lib/fiscal/kor.ts) */
@@ -7781,6 +7793,9 @@ const uk: FreelancerDict = {
     knop: "Заверши реєстрацію",
     idTitel: "Вам ще потрібно завершити перевірку документа.",
     idKnop: "Перевірити ID",
+    werkvormTitel: "Ця робота для zzp'ers і flexwerkers",
+    werkvorm: "Обери zzp'er або flexwerker у розділі «Форма роботи». Перші 2 роботи можна взяти без номера KVK.",
+    werkvormKnop: "Змінити форму роботи",
     sluiten: "Закрити",
   },
   /** KOR-hulp (components/app/KorHulp.tsx, lib/fiscal/kor.ts) */

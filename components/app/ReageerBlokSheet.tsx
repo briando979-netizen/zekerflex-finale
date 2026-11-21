@@ -17,6 +17,8 @@ export function ReageerBlokSheet({ reden, stap, onClose }: { reden: string; stap
   // Zonder goedgekeurd ID precies de sheet van YoungOnes (21 nov): kop "REAGEER OP DEZE KLUS", één gele melding
   // "Je moet jouw ID-check nog afronden." en de knop "Check ID" (de ID-controle staat op /dashboard/verificatie).
   const idCheck = stap === "identiteit";
+  // Een uitzendkracht op een freelance klus (21 nov): er ontbreekt niets aan de aanmelding, alleen de werkvorm past niet.
+  const werkvorm = stap === "werkvorm";
 
   return (
     <Portal>
@@ -34,8 +36,8 @@ export function ReageerBlokSheet({ reden, stap, onClose }: { reden: string; stap
           </h2>
           <div className="space-y-4 px-5 pb-2 pt-5">
             <div role="alert" className="rounded-xl border border-warn/40 bg-warn/5 px-4 py-3">
-              <p id="reageer-blok-titel" className="font-display text-base font-bold text-ink">{idCheck ? t.idTitel : t.titel}</p>
-              {!idCheck && stapTekst ? <p className="mt-1 text-sm text-neutralx-700">{t.tekst}</p> : null}
+              <p id="reageer-blok-titel" className="font-display text-base font-bold text-ink">{idCheck ? t.idTitel : werkvorm ? t.werkvormTitel : t.titel}</p>
+              {!idCheck && !werkvorm && stapTekst ? <p className="mt-1 text-sm text-neutralx-700">{t.tekst}</p> : null}
               {!idCheck && <p className="mt-1 text-sm text-neutralx-700">{reden}</p>}
             </div>
             {!idCheck && stapTekst && (
@@ -47,7 +49,7 @@ export function ReageerBlokSheet({ reden, stap, onClose }: { reden: string; stap
           <div className="p-4">
             {stapTekst && (
               <Link href={reageerStapHref(stap)} className="btn-primary block w-full py-3 text-center text-sm">
-                {idCheck ? t.idKnop : t.knop}
+                {idCheck ? t.idKnop : werkvorm ? t.werkvormKnop : t.knop}
               </Link>
             )}
             <button
