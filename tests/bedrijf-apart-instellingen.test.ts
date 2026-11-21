@@ -125,10 +125,10 @@ describe("de instellingen van een bedrijf", () => {
     for (const f of ["lib/i18n/dictionaries.ts", "lib/i18n/dictionary-en.ts"]) expect(bron(f), f).toContain("bedrijfKop:");
   });
 
-  it("de persoonlijke accountpagina van een bedrijf is tweetalig, ook tweestapsverificatie en passkeys", () => {
+  it("de persoonlijke accountpagina van een bedrijf is tweetalig, ook de passkeys (tweestapsverificatie is weg, 21 nov 2026)", () => {
     const p = bron("app/werkgever/account/page.tsx");
     expect(p).toContain("d.persoonlijkAccount");
-    expect(p).toContain("FREELANCER_DICTS.en.twofa");
+    expect(p).not.toContain("TwoFactorSettings");
     expect(p).toContain("FREELANCER_DICTS.en.passkeys");
     expect(p).not.toContain("Persoonlijke accountinstellingen");
     expect(bron("tests/werkgever-taal-basislijn.json")).not.toContain("app/werkgever/account/page.tsx");

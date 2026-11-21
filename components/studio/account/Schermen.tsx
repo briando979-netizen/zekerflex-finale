@@ -22,7 +22,6 @@ import { InvoicesOverview, type InvoiceRow } from "@/components/app/InvoicesOver
 import { TeamBoard } from "@/components/app/TeamBoard";
 import { EmployerMailbox } from "@/components/app/EmployerMailbox";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
-import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 import { PasskeySettings } from "@/components/auth/PasskeySettings";
 
 // ---------------------------------------------------------------------------
@@ -214,9 +213,6 @@ export async function MijnAccountScherm() {
           <Link href="/wachtwoord-vergeten" className={`${btn.secondary} mt-3`}>
             Wachtwoord wijzigen
           </Link>
-        </Card>
-        <Card title="Tweestapsverificatie">
-          <TwoFactorSettings recommended />
         </Card>
         <Card title="Inloggen met passkey">
           <PasskeySettings />

@@ -112,11 +112,11 @@ describe("extra AI-teams", () => {
     expect(out.logs.join("\n")).toContain('wacht al 6 uur op antwoord: "Wanneer word ik betaald?"');
   });
 
-  it("veiligheid: admins without 2FA and critical fraud flags", async () => {
+  it("veiligheid: kritieke fraudesignalen; tweestapsverificatie van beheerders bestaat niet meer (21 nov 2026)", async () => {
     m.twoFa = new Set(["a1"]);
     await veiligheid(NOW, tools as never);
     const text = out.logs.join("\n");
-    expect(text).toContain("1 beheerder(s) zonder tweestapsverificatie: Sanne");
+    expect(text).not.toContain("tweestapsverificatie");
     expect(text).toContain("Verdachte uren van Kees: GPS nep-locatie");
   });
 });

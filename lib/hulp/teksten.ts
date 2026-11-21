@@ -111,7 +111,7 @@ const nl: HulpTeksten = {
     {
       id: "beveiligen",
       v: "Hoe beveilig ik mijn account?",
-      a: "Zet tweestapsverificatie aan onder Account. Nog makkelijker inloggen kan met een passkey: met je vingerafdruk, gezicht of pincode, zonder wachtwoord.",
+      a: "Maak een passkey aan onder Account: dan log je in met je vingerafdruk, gezicht of pincode, zonder wachtwoord. Kies verder een wachtwoord dat je nergens anders gebruikt.",
       link: { href: "/dashboard/account/passkeys", label: "Passkey instellen" },
     },
     {
@@ -301,7 +301,7 @@ const en: HulpTeksten = {
     {
       id: "beveiligen",
       v: "How do I secure my account?",
-      a: "Turn on two-step verification under Account. Logging in is even easier with a passkey: with your fingerprint, face or PIN, without a password.",
+      a: "Create a passkey under Account: then you log in with your fingerprint, face or PIN, without a password. Also pick a password you use nowhere else.",
       link: { href: "/dashboard/account/passkeys", label: "Set up a passkey" },
     },
     {
@@ -491,7 +491,7 @@ const pl: HulpTeksten = {
     {
       id: "beveiligen",
       v: "Jak zabezpieczyć konto?",
-      a: "Włącz weryfikację dwuetapową w zakładce Konto. Jeszcze łatwiej zalogujesz się kluczem dostępu: odciskiem palca, twarzą lub kodem PIN, bez hasła.",
+      a: "Utwórz klucz dostępu w zakładce Konto: logujesz się wtedy odciskiem palca, twarzą lub kodem PIN, bez hasła. Używaj też hasła, którego nie masz nigdzie indziej.",
       link: { href: "/dashboard/account/passkeys", label: "Ustaw klucz dostępu" },
     },
     {
@@ -681,7 +681,7 @@ const ro: HulpTeksten = {
     {
       id: "beveiligen",
       v: "Cum îmi securizez contul?",
-      a: "Activează verificarea în doi pași la Cont. Și mai simplu te conectezi cu o cheie de acces: cu amprenta, fața sau codul PIN, fără parolă.",
+      a: "Creează o cheie de acces la Cont: te conectezi apoi cu amprenta, fața sau codul PIN, fără parolă. Alege și o parolă pe care nu o folosești nicăieri altundeva.",
       link: { href: "/dashboard/account/passkeys", label: "Configurează o cheie de acces" },
     },
     {
@@ -871,7 +871,7 @@ const uk: HulpTeksten = {
     {
       id: "beveiligen",
       v: "Як захистити акаунт?",
-      a: "Увімкніть двоетапну перевірку в «Акаунт». Ще простіше входити з ключем доступу: відбитком пальця, обличчям або PIN-кодом, без пароля.",
+      a: "Створіть ключ доступу в «Акаунт»: тоді ви входите відбитком пальця, обличчям або PIN-кодом, без пароля. Також оберіть пароль, який більше ніде не використовуєте.",
       link: { href: "/dashboard/account/passkeys", label: "Налаштувати ключ доступу" },
     },
     {

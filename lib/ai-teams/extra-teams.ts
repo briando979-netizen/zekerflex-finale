@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { kvListValues } from "@/lib/storage/kv";
 import { shiftCategory } from "@/lib/shifts/category";
 import { isTenantVerified } from "@/lib/company/verified";
-import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { fraudForTimesheet } from "@/lib/fraud/timesheet";
 import { listConversations } from "@/lib/chat/webchat";
 import type { Review } from "@/lib/reviews/store";
@@ -186,13 +185,8 @@ export async function klantenservice(now: Date, t: TeamTools) {
   }
 }
 
-/** Security: admins without two-step verification and suspicious hours. */
+/** Veiligheid: verdachte uren. (De controle op tweestapsverificatie van beheerders is weg: die bestaat niet meer, 21 nov 2026.) */
 export async function veiligheid(now: Date, t: TeamTools) {
-  const admins = await prisma.membership.findMany({ where: { role: "PLATFORM_ADMIN", user: { disabledAt: null } }, select: { user: { select: { id: true, fullName: true } } } });
-  const without: string[] = [];
-  for (const a of admins) if (!(await hasTwoFactor(a.user.id))) without.push(a.user.fullName);
-  if (without.length) await t.log("veiligheid", `${without.length} beheerder(s) zonder tweestapsverificatie: ${without.join(", ")}. Zet het aan via Admin → Beveiliging & 2FA.`, "finding");
-
   const recent = await prisma.timesheet.findMany({
     where: { status: "SUBMITTED", submittedAt: { gte: new Date(now.getTime() - 7 * DAY) } },
     select: { id: true, freelancer: { select: { user: { select: { fullName: true } } } } },
@@ -205,5 +199,5 @@ export async function veiligheid(now: Date, t: TeamTools) {
     suspicious++;
     await t.log("veiligheid", `Verdachte uren van ${ts.freelancer.user.fullName}: ${flags.map((f) => f.message).join("; ")}`, "finding");
   }
-  await t.log("veiligheid", `${admins.length} beheerder(s) en ${recent.length} ingediende urenbriefje(s) gecontroleerd: ${without.length} zonder 2FA, ${suspicious} met ernstige fraudesignalen.`);
+  await t.log("veiligheid", `${recent.length} ingediende urenbriefje(s) gecontroleerd: ${suspicious} met ernstige fraudesignalen.`);
 }

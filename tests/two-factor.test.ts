@@ -7,6 +7,8 @@ vi.mock("@/lib/storage/kv", () => ({
   kvDelete: async (k: string) => void kv.delete(k),
 }));
 vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn() }));
+// de functies zelf blijven werken; live staat de schakelaar uit (21 nov 2026, tests/tweestap-uit.test.ts)
+vi.mock("@/lib/auth/tweestap-aan", () => ({ TWEESTAP_AAN: true }));
 
 import { base32Decode, base32Encode, counterAt, otpauthUrl, totpAt, verifyTotp } from "@/lib/auth/totp";
 import {

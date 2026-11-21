@@ -148,7 +148,7 @@ export default async function AccountPage() {
     [
       { label: t.email, href: "/dashboard/profiel" },
       { label: t.password, href: "/wachtwoord-vergeten" },
-      { label: t.twoFactor, href: "/dashboard/account/beveiliging" },
+      // tweestapsverificatie is weg (21 nov 2026, eigenaar; lib/auth/tweestap-aan.ts): een passkey is de extra beveiliging
       { label: t.passkey, href: "/dashboard/account/passkeys" },
       { label: t.download, href: "/api/me/gegevens/export", external: true },
       { label: t.privacy, href: "/privacy" },

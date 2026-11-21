@@ -36,7 +36,8 @@ export function poortStappen(f: WerkerPoortFeiten, soort: WerkerSoort): PoortSta
     { key: "gegevens", label: "Gegevens ingevuld", ok: f.gegevensIngevuld, uitleg: gegevensUitleg(soort) },
     { key: "identiteit", label: "ID ingestuurd of goedgekeurd", ok: f.identiteitIngestuurd, uitleg: "Een identiteitsbewijs insturen." },
     { key: "foto", label: "Profielfoto", ok: f.fotoGezet, uitleg: "Een profielfoto zetten." },
-    { key: "tweestap", label: "Tweestapsverificatie of passkey (optioneel)", ok: f.tweestapAan, uitleg: "Aanbevolen, niet verplicht: tweestapsverificatie of een passkey bij Account → Beveiliging.", optioneel: true },
+    // tweestapsverificatie met codes bestaat niet meer (21 nov 2026, eigenaar); een passkey is de extra beveiliging
+    { key: "tweestap", label: "Passkey (optioneel)", ok: f.tweestapAan, uitleg: "Aanbevolen, niet verplicht: een passkey (vingerafdruk, gezicht of pincode) bij Account → Passkeys.", optioneel: true },
   ];
 }
 

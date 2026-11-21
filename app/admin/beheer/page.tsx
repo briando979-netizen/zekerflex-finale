@@ -17,7 +17,7 @@ const CARDS: { title: string; desc: string; href: string }[] = [
   { title: "Werkvormen & btw", desc: "Zzp, flexwerker of uitzendkracht en de btw-afhandeling per gebruiker.", href: "/admin/fiscaal" },
   { title: "Pensioenaangifte", desc: "De maandelijkse aangifte aan StiPP voor uitzendkrachten.", href: "/admin/pensioen" },
   { title: "ICP-opgave", desc: "Grensoverschrijdende prestaties met verlegde btw.", href: "/admin/icp" },
-  { title: "Beveiliging & tweestaps", desc: "Beveiligingsinstellingen en wie tweestapsverificatie aan heeft.", href: "/admin/beveiliging" },
+  { title: "Beveiliging", desc: "Het dreigingsbeeld, de herstelstand van de back-ups en wat de aanvalsbescherming tegenhoudt.", href: "/admin/beveiliging" },
   { title: "Stripe", desc: "Live betaal- en uitbetaalstatus via Stripe.", href: "/admin/stripe" },
   { title: "Verkeer", desc: "Bezoek, aandacht en instroom uit de site.", href: "/admin/analytics" },
 ];

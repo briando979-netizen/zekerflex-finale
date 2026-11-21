@@ -405,7 +405,7 @@ function UserMenu({ userName, userMeta, avatarUrl }: { userName: string; userMet
             Naar de website
           </Link>
           <Link href="/admin/beveiliging" className="block rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--a-elev)]" style={{ color: "var(--a-dim)" }}>
-            Beveiliging & 2FA
+            Beveiliging
           </Link>
           <form action={logoutAction}>
             <button className="w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--a-elev)]" style={{ color: "var(--a-crit)" }}>

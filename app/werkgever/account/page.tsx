@@ -7,7 +7,6 @@ import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updateEmployerPersonalInfoAction } from "@/app/werkgever/account/actions";
-import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 import { PasskeySettings } from "@/components/auth/PasskeySettings";
 import { BirthdayForm } from "@/components/app/BirthdayForm";
 import { getUserBirthday } from "@/lib/seasons/settings";
@@ -17,7 +16,8 @@ import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 export const dynamic = "force-dynamic";
 
 // De persoonlijke accountpagina van een bedrijf, in de taal van de werkgeversapp (15 nov 2026: was alleen Nederlands).
-// Tweestapsverificatie en passkeys krijgen in het Engels dezelfde vertaling als de werkersapp (platte strings).
+// Passkeys krijgen in het Engels dezelfde vertaling als de werkersapp (platte strings). Tweestapsverificatie is weg (21 nov 2026,
+// eigenaar; lib/auth/tweestap-aan.ts).
 export default async function WerkgeverAccountPage() {
   const principal = await requirePrincipal();
   // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
@@ -65,12 +65,6 @@ export default async function WerkgeverAccountPage() {
             <Link href="/wachtwoord-vergeten" className="btn-ghost mt-3 inline-block">
               {t.wachtwoordKnop}
             </Link>
-          </div>
-        </Panel>
-
-        <Panel title={t.tweestap}>
-          <div className="p-5">
-            <TwoFactorSettings recommended {...(en ? { texts: FREELANCER_DICTS.en.twofa } : {})} />
           </div>
         </Panel>
 

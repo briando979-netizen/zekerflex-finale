@@ -33,12 +33,11 @@ Onder **Account** beheer je je eigen gegevens:
 
 - je naam en telefoonnummer (je e-mailadres staat er ter info);
 - **Wachtwoord resetten**;
-- **Tweestapsverificatie**;
 - **Inloggen met passkey**: inloggen met je vingerafdruk, gezicht of pincode, zonder wachtwoord;
 - **Verjaardag** (optioneel);
 - **Uitloggen**.
 
-Zet tweestapsverificatie aan: het beschermt je account én de gegevens van je bedrijf.
+Maak een passkey aan: dan log je in met je vingerafdruk, gezicht of pincode, zonder wachtwoord. Kies verder een wachtwoord dat je nergens anders gebruikt.
 
 ## Gegevens downloaden of verwijderen
 

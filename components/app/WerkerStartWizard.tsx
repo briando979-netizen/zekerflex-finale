@@ -169,7 +169,7 @@ export function WerkerStartWizard({
     : k === "identiteit" ? { href: "/dashboard/verificatie", tekst: t.identiteitCta }
     : k === "foto" ? { href: "/dashboard/eerste-indruk?stap=foto", tekst: t.fotoCta }
     : k === "werkrecht" ? { href: "/dashboard/verificatie#werkrecht", tekst: t.werkrechtCta }
-    : k === "tweestap" ? { href: "/dashboard/account/beveiliging", tekst: t.tweestapCta }
+    : k === "tweestap" ? { href: "/dashboard/account/passkeys", tekst: t.tweestapCta }
     : null;
 
   if (gesloten) return null;

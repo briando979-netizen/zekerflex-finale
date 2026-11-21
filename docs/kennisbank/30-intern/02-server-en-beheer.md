@@ -26,4 +26,4 @@ Nieuwe code gaat via GitHub (main) en de knop **Live zetten** in Admin → Zeker
 
 ## Toegang
 
-Iedereen logt overal in met zijn ZekerFlex-account. Beheerders hebben tweestapsverificatie aan. Deel nooit een wachtwoord of sleutel via de chat; sleutels horen in `.env.production` op de server (alleen root).
+Iedereen logt overal in met zijn ZekerFlex-account. Beheerders loggen in met een sterk, uniek wachtwoord of een passkey. Deel nooit een wachtwoord of sleutel via de chat; sleutels horen in `.env.production` op de server (alleen root).

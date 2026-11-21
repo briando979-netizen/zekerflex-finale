@@ -11,7 +11,6 @@ import { kettingOverzicht } from "@/lib/ai/ketting-stand";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getProducts } from "@/lib/bank/insurance";
 import { platformAdminIds } from "@/lib/messaging/contacts";
-import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { prisma } from "@/lib/prisma";
 import { getReminderSettings } from "@/lib/billing/reminders";
 import { readBackupReport, type BackupReport } from "@/lib/ops/backup";
@@ -106,17 +105,6 @@ async function adminHasPush(): Promise<boolean> {
     return (await prisma.webPushSubscription.count({ where: { userId: { in: ids }, disabledAt: null } })) > 0;
   } catch {
     return false;
-  }
-}
-
-/** How many active platform admins have two-step verification on. */
-async function adminTwoFactor(): Promise<{ on: number; total: number }> {
-  try {
-    const ids = await platformAdminIds();
-    const on = (await Promise.all(ids.map((id) => hasTwoFactor(id)))).filter(Boolean).length;
-    return { on, total: ids.length };
-  } catch {
-    return { on: 0, total: 0 };
   }
 }
 
@@ -268,12 +256,11 @@ async function bonnenMailStand(): Promise<BonnenMailStand> {
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
   const base = env.APP_BASE_URL ?? "";
-  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling, bouwer, unsent, concepten] = await Promise.all([
+  const [webhookEvents, products, issuing, llm, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling, bouwer, unsent, concepten] = await Promise.all([
     stripeWebhookEvents(),
     getProducts().catch(() => []),
     stripeIssuingActive(),
     llmGezondheidGecachet(),
-    adminTwoFactor(),
     adminHasPush(),
     getReminderSettings().catch(() => ({ enabled: false })),
     readBackupReport().catch(() => null),
@@ -1207,16 +1194,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Meta Business-verificatie afronden en een zakelijk nummer aan de WhatsApp Business Cloud API koppelen.", "Lever aan: phone-number ID, een permanente (system user) token en het app secret — dan bouw en test ik de live koppeling."],
       auto: false,
       ...m("whatsapp-live"),
-    },
-    {
-      id: "admin-2fa",
-      group: "Beheer & veiligheid",
-      title: "Tweestapsverificatie aan voor alle beheerders",
-      why: "Beheerders kunnen bij betalingen, bankgegevens en ID-bewijzen. Met tweestapsverificatie is een gestolen wachtwoord niet genoeg om in te loggen.",
-      how: ["Ga naar Admin → Beveiliging & 2FA en klik 'Tweestapsverificatie aanzetten'.", "Scan de QR-code met een authenticator-app (Google Authenticator, Microsoft Authenticator of 1Password) en vul de code in.", "Bewaar de 10 herstelcodes op een veilige plek (bijv. je wachtwoordmanager). Laat elke andere beheerder hetzelfde doen."],
-      auto: true,
-      done: admin2fa.total > 0 && admin2fa.on === admin2fa.total,
-      doneNote: `${admin2fa.on} van ${admin2fa.total} beheerders hebben het aan`,
     },
     {
       id: "invoice-reminders",

@@ -60,7 +60,7 @@ describe("één kopstijl in de werker-app", () => {
   // Ontdekken en Mijn klussen hebben sinds 21 nov (stijl YoungOnes) geen eigen kop meer: de naam staat in de balk bovenaan
   const SCHERMEN = [
     // app/dashboard/account/page.tsx staat hier niet meer: sinds 21 nov 2026 (opzet YoungOnes) is "ACCOUNT" alleen de titel in de balk bovenaan
-    "app/dashboard/account/beveiliging/page.tsx",
+    // app/dashboard/account/beveiliging/page.tsx staat hier niet meer: tweestapsverificatie is weg (21 nov 2026), de pagina stuurt door
     "app/dashboard/account/passkeys/page.tsx",
     "app/dashboard/account/verborgen/page.tsx",
     "app/dashboard/account/verwijderen/page.tsx",

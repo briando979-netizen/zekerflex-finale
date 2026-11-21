@@ -197,7 +197,6 @@ export function ChatSettingsPanel({
       <div>
         {back(t.account)}
         <Row icon="👤" title={t.persoonlijkeGegevens} onClick={() => (window.location.href = employer ? "/werkgever/bedrijf" : "/dashboard/profiel")} />
-        <Row icon="🛡" title={t.tweestapsverificatie} onClick={() => (window.location.href = employer ? "/werkgever/account" : "/dashboard/account/beveiliging")} />
         <Row icon="🔐" title={t.wachtwoordWijzigen} onClick={() => (window.location.href = "/wachtwoord-vergeten")} />
         <Row icon="📦" title={t.downloadGegevens} sub={t.downloadGegevensSub} onClick={() => (window.location.href = "/api/me/gegevens/export")} />
         <Row icon="🗑" title={t.accountVerwijderen} onClick={() => (window.location.href = "/account-verwijderen")} />

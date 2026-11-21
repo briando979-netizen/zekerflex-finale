@@ -3,6 +3,7 @@ import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { openSecret, sealSecret } from "@/lib/security/sealed-secret";
 import { recordAudit } from "@/lib/audit";
 import { newTotpSecret, otpauthUrl, verifyTotp } from "@/lib/auth/totp";
+import { TWEESTAP_AAN } from "@/lib/auth/tweestap-aan";
 
 // ---------------------------------------------------------------------------
 // Two-step verification per user. The TOTP secret is sealed (AES-256-GCM,
@@ -28,6 +29,8 @@ async function load(userId: string): Promise<Record2fa> {
 }
 
 export async function twoFactorStatus(userId: string): Promise<{ enabled: boolean; enabledAt: string | null; recoveryLeft: number }> {
+  // uit sinds 21 nov 2026 (lib/auth/tweestap-aan.ts): ook wie het eerder aanzette, krijgt geen codestap meer
+  if (!TWEESTAP_AAN) return { enabled: false, enabledAt: null, recoveryLeft: 0 };
   const r = await load(userId);
   return { enabled: Boolean(r.secret && r.enabledAt), enabledAt: r.enabledAt, recoveryLeft: (r.recovery ?? []).length };
 }

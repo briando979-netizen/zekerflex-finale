@@ -72,7 +72,7 @@ export const TEAMS: Team[] = [
   { id: "prijs", name: "Prijs & tarieven", emoji: "💶", mission: "Vergelijkt open klussen met de markt en adviseert opdrachtgevers die te laag betalen.", members: ["Tariefanalist"], needsModel: false },
   { id: "kwaliteit", name: "Kwaliteit", emoji: "⭐", mission: "Bewaakt beoordelingen en afzeggingen van freelancers en bedrijven.", members: ["Kwaliteitsbewaker"], needsModel: false },
   { id: "klantenservice", name: "Klantenservice", emoji: "💬", mission: "Let op vragen in de websitechat die te lang onbeantwoord blijven en zet een conceptantwoord klaar dat jij goedkeurt.", members: ["Servicedesk"], needsModel: false },
-  { id: "veiligheid", name: "Veiligheid", emoji: "🔐", mission: "Controleert tweestapsverificatie van beheerders en zoekt verdachte uren.", members: ["Beveiliger", "Fraudespeurder"], needsModel: false },
+  { id: "veiligheid", name: "Veiligheid", emoji: "🔐", mission: "Zoekt verdachte uren en kritieke fraudesignalen.", members: ["Beveiliger", "Fraudespeurder"], needsModel: false },
   { id: "investeren", name: "Investeringen", emoji: "💶", mission: "Kijkt waar geld het meeste oplevert en zet investeringen klaar binnen jouw maandbudget — uitgeven doe jij, na goedkeuring.", members: ["Investeerder", "Rekenmeester"], needsModel: false },
   { id: "updates", name: "Updates & rapportage", emoji: "📰", mission: "Dagelijks een verslag van de cijfers en wat er veranderde.", members: ["Verslaggever"], needsModel: false },
   { id: "denken", name: "Denken & strategie", emoji: "🧠", mission: "Denkt na over de koers op basis van de cijfers en signalen van de andere teams.", members: ["Strateeg"], needsModel: true },

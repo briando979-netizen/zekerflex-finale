@@ -12,6 +12,7 @@ import {
   regenerateRecoveryCodes,
   twoFactorStatus,
 } from "@/lib/auth/two-factor";
+import { TWEESTAP_AAN } from "@/lib/auth/tweestap-aan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,8 @@ const schema = z.discriminatedUnion("action", [
 
 // POST /api/me/2fa — begin setup (QR + secret), confirm with a code, regenerate recovery codes, or turn off.
 export const POST = withAuth(async (req, { principal }) => {
+  // uit sinds 21 nov 2026 (eigenaar): niets meer aan te zetten
+  if (!TWEESTAP_AAN) throw AppError.notFound("Tweestapsverificatie bestaat niet meer op ZekerFlex. Beveilig je account met een passkey.");
   const body = schema.parse(await req.json().catch(() => ({})));
   // codes are guessable in theory — keep brute force impossible
   await enforceRateLimit({ name: "2fa", identifier: principal.userId, limit: 10, windowSeconds: 300 });

@@ -59,9 +59,9 @@ const PIJLERS: { kop: string; tekst: string }[] = [
       "Elke nacht maken we een back-up van de database en de bestanden en bewaren die veertien dagen. Elke back-up wordt direct proef-teruggezet in een losse database, zodat we zeker weten dat hij werkt op de dag dat we hem nodig hebben.",
   },
   {
-    kop: "Tweestapsverificatie en inlogbescherming",
+    kop: "Inlogbescherming",
     tekst:
-      "Iedereen kan tweestapsverificatie aanzetten; voor beheerders houden we bij of het aanstaat. Wie te vaak een verkeerd wachtwoord probeert, wordt vertraagd en krijgt een controle. Wachtwoorden slaan we alleen versleuteld op.",
+      "Inloggen kan met een wachtwoord of met een passkey: je vingerafdruk, gezicht of pincode, zonder wachtwoord. Wie te vaak een verkeerd wachtwoord probeert, wordt vertraagd en krijgt een controle. Wachtwoorden slaan we alleen versleuteld op.",
   },
   {
     kop: "Geen trackers, geen cookies van anderen",
