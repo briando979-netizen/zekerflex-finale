@@ -763,13 +763,13 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     {
       id: "verkoop-mailbox",
       group: "Beheer & veiligheid",
-      title: "Een eigen mailbox voor verkoopmail maken (sales@zekerflex.com)",
+      title: "Een eigen mailbox voor verkoopmail instellen (gratis: uitzendbureau@zekerflex.com)",
       why: "Op 21 nov gingen ±1000 verkoopmails via dezelfde mailbox als de app. TransIP staat ±1000 ontvangers per dag per mailbox toe en weigerde daarna alles, ook inlogcodes en 'wachtwoord vergeten'. Verkoopmail gaat nu alleen nog via een eigen mailbox; zolang die er niet is, gaat er geen verkoopmail de deur uit.",
       how: [
-        "Log in bij TransIP en ga naar E-mail → zekerflex.com.",
-        "Staat sales@zekerflex.com daar als doorstuuradres (naar info@)? Haal dat doorsturen weg en maak sales@zekerflex.com aan als echte mailbox, met een sterk wachtwoord.",
-        "Zet bij die mailbox automatisch doorsturen naar info@zekerflex.com aan, zodat antwoorden van bedrijven en teruggestuurde mails bij info@ blijven binnenkomen.",
-        "Ga in ZekerFlex naar Beheer → Mail → Verkoopmailbox, typ het adres en het wachtwoord en klik 'Testen en opslaan'. Deze taak vinkt zichzelf af.",
+        "Het pakket bij TransIP (E-mail Only Core) heeft 3 mailboxen en die zijn alle 3 in gebruik: info@, uitzendbureau@ en noreply@. Een extra mailbox kost een upgrade (€ 9,99 per maand). Gratis: gebruik de mailbox uitzendbureau@zekerflex.com, die niet meer gebruikt wordt.",
+        "Log in bij TransIP, ga naar E-mail → zekerflex.com en geef de mailbox uitzendbureau@zekerflex.com een nieuw, sterk wachtwoord.",
+        "Laat sales@zekerflex.com doorsturen naar uitzendbureau@, en laat uitzendbureau@ doorsturen naar info@. Dan komen antwoorden van bedrijven en teruggestuurde mails gewoon bij info@ binnen. (Sessie 2d helpt hierbij.)",
+        "Ga in ZekerFlex naar Beheer → Mail → Verkoopmailbox, typ uitzendbureau@zekerflex.com en het nieuwe wachtwoord en klik 'Testen en opslaan'. De verkoopmail blijft als afzender sales@ houden. Deze taak vinkt zichzelf af.",
       ],
       auto: true,
       done: Boolean(verkoopBox?.ingesteld),

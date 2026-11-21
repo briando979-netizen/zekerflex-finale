@@ -15,7 +15,8 @@ interface Stand {
  */
 export function VerkoopMailbox() {
   const [stand, setStand] = useState<Stand | null>(null);
-  const [adres, setAdres] = useState("sales@zekerflex.com");
+  // 21 nov: het pakket van TransIP zit vol (3/3); gratis is de ongebruikte mailbox uitzendbureau@ (afzender blijft sales@)
+  const [adres, setAdres] = useState("uitzendbureau@zekerflex.com");
   const [wachtwoord, setWachtwoord] = useState("");
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<{ fout: boolean; tekst: string } | null>(null);
@@ -73,7 +74,8 @@ export function VerkoopMailbox() {
       </p>
       <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--a-mute)" }}>
         Verkoopmail gaat alleen via een eigen mailbox. Zo blijft de mail van de app (inlogcodes, wachtwoord vergeten) altijd werken, ook na
-        een grote verkoopronde. Maak de mailbox bij TransIP en typ hier het adres en het wachtwoord.
+        een grote verkoopronde. Typ hier de mailbox waarmee verkoopmail inlogt (gratis: uitzendbureau@) en het wachtwoord dat je bij TransIP
+        zette. Als afzender blijft sales@zekerflex.com staan.
       </p>
       <p className="mt-2 text-xs" style={{ color: stand?.ingesteld ? "var(--a-ok, #16a34a)" : "var(--a-warn, #d97706)" }}>
         {stand === null
