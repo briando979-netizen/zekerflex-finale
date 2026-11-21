@@ -84,7 +84,7 @@ export const SECTORS: Sector[] = [
     inhurenKop: "Schoonmaakpersoneel inhuren",
     inhurenHub: "Schoonmakers en schoonmaakpersoneel inhuren",
     werkUitleg:
-      "Je maakt kantoren, hotelkamers, horecazaken of net opgeleverde woningen schoon, vaak vroeg in de ochtend of 's avonds na sluitingstijd. Ervaring helpt, en bij elke klus staat wat de opdrachtgever precies vraagt.",
+      "Je maakt kantoren, hotelkamers, horecazaken of net opgeleverde woningen schoon, voor het bedrijf dat de klus plaatst: een schoonmaakbedrijf, een hotel of een kantoor. Vaak is dat vroeg in de ochtend of 's avonds na sluitingstijd, en bij elke klus staat wat de opdrachtgever precies vraagt.",
   },
   {
     slug: "evenementen-personeel-inhuren",

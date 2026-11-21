@@ -34,6 +34,11 @@ const UITZEND_BEDRIJF: Vraag = {
   q: "Is ZekerFlex een uitzendbureau?",
   a: "Nee. ZekerFlex is zelf geen uitzendbureau, maar een platform waarop je zelf zzp'ers en flexwerkers inhuurt, zonder uitzendmarge. Uren, facturen en betalingen lopen dan via het platform. Wil je liever uitzendkrachten, dan krijg je die via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao.",
 };
+// Search Console 22 nov 2026: "student inhuren breda", "student inhuren logistiek". Werken kan vanaf 18 (zie /nog-geen-18).
+const STUDENT_BEDRIJF: Vraag = {
+  q: "Kan ik ook studenten inhuren?",
+  a: "Ja. Studenten vanaf 18 jaar melden zich aan als zzp'er of werken als uitzendkracht via een aangesloten uitzendbureau. Ze kiezen zelf hun diensten, vaak 's avonds en in het weekend. Bij elke reactie zie je wie het is en wat die eerder deed, en je kiest zelf wie je inroostert.",
+};
 const UITZEND_WERKER: Vraag = {
   q: "Is ZekerFlex een uitzendbureau?",
   a: "Nee. ZekerFlex is zelf geen uitzendbureau, maar een app met freelance klussen en uitzendklussen. Bij een uitzendklus teken je je contract bij het uitzendbureau van die dienst: dat bureau is je werkgever en betaalt je loon.",
@@ -58,6 +63,7 @@ function cityFaq(s: Sector, c: City): Vraag[] {
       q: "Wat als iemand niet bevalt of niet komt opdagen?",
       a: "Je ziet vooraf reviews en ervaring, en je kunt iemand blokkeren zodat je die nooit meer krijgt. Valt er iemand uit, dan staat je klus meteen weer open bij andere beschikbare krachten in de buurt.",
     },
+    STUDENT_BEDRIJF,
     UITZEND_BEDRIJF,
   ];
 }
@@ -76,6 +82,7 @@ function hubFaq(s: Sector): Vraag[] {
       q: "Kan ik mijn vaste ploeg opbouwen?",
       a: "Ja — krachten die bevallen zet je bij favorieten of in een vaste pool en roostert je met één tik opnieuw in.",
     },
+    STUDENT_BEDRIJF,
     UITZEND_BEDRIJF,
   ];
 }
