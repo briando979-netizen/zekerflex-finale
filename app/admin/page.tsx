@@ -5,21 +5,25 @@ import { ADMIN_HUBS } from "@/lib/admin/nav";
 import { resolvePeriod } from "@/lib/admin/period";
 import { homeInsights } from "@/lib/admin/insights/home";
 import { count, dateNl, euro, timeAgoNl } from "@/lib/admin/format";
-import { Feed, Funnel, KpiStrip, PageHead, Panel, PeriodTabs, Pill, Spark, type Tone } from "@/components/admin/kit";
-import { Chart } from "@/components/admin/kit-client";
+import { Feed, KpiStrip, PageHead, Panel, PeriodTabs, Pill, Spark, type KpiProps, type Tone } from "@/components/admin/kit";
 import { HomeLive } from "@/components/admin/HomeLive";
-import { VerkoopKaart } from "@/components/admin/VerkoopKaart";
-import { verkoopWacht } from "@/lib/admin/verkoop-wacht";
 import { WeekCijfersKaart } from "@/components/admin/WeekCijfersKaart";
 import { haalWeekCijfers } from "@/lib/admin/weekcijfers";
 
 export const dynamic = "force-dynamic";
+
+// Het Controlecentrum (21 nov 2026, eigenaar: "haal al die extra dingen weg"): alleen wat ertoe doet
+// voor het flexwerk-platform. Acht getallen, de week in vijf getallen, wat op een mens wacht, wat er
+// net gebeurde en per onderdeel een tegel. Geen webshop, verkoop of proeven meer op dit scherm.
 
 const SEVERITY: Record<string, { tone: Tone; label: string }> = {
   high: { tone: "crit", label: "Urgent" },
   medium: { tone: "warn", label: "Vandaag" },
   low: { tone: "neutral", label: "Later" },
 };
+
+/** Amber = wacht op jou, rood = probleem (één kleur, één betekenis; zie AGENTS.md → Kleuren). */
+const toon = (n: number, tone: Tone): Pick<KpiProps, "tone"> => (n > 0 ? { tone } : {});
 
 function greeting(now: Date): string {
   const hour = Number(new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", hour: "numeric", hourCycle: "h23" }).format(now));
@@ -35,10 +39,10 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) redirect("/admin/disputes");
   const { periode } = await props.searchParams;
   const period = resolvePeriod(periode);
-  const [d, verkoop, week] = await Promise.all([homeInsights(period), verkoopWacht(), haalWeekCijfers()]);
+  const [d, week] = await Promise.all([homeInsights(period), haalWeekCijfers()]);
   const now = new Date();
   const firstName = principal.fullName.split(/\s+/)[0] ?? "";
-  const funnels = d.funnels.filter((f) => f.steps.some((s) => s.count > 0));
+  const onderdelen = ADMIN_HUBS.filter((hub) => !hub.verborgen && d.hubs[hub.id]);
 
   return (
     <div className="space-y-4">
@@ -49,32 +53,28 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
         actions={<PeriodTabs period={period} basePath="/admin" />}
       />
 
-      {/* wat de eigenaar kan verkopen en wat op een mens wacht (lib/admin/verkoop-wacht.ts) */}
-      <VerkoopKaart stand={verkoop} />
+      <KpiStrip
+        items={[
+          { label: "Nieuwe aanmeldingen", value: count(d.signups.total), delta: d.signups.delta, spark: d.signups.series, hint: "zonder test- en eigen accounts", href: "/admin/gebruikers" },
+          { label: "Nieuwe bedrijven", value: count(d.bedrijven.total), delta: d.bedrijven.delta, hint: period.versus, href: "/admin/bedrijven" },
+          { label: "Open klussen", value: count(d.openKlussen.total), hint: d.openKlussen.binnenkort > 0 ? `${count(d.openKlussen.binnenkort)} beginnen binnen 2 dagen` : "zoeken nog mensen", href: "/admin/vooruitblik", ...toon(d.openKlussen.binnenkort, "warn") },
+          { label: "Reacties", value: count(d.reacties.total), delta: d.reacties.delta, hint: "werkers die een klus aannamen", href: "/admin/vooruitblik" },
+          { label: "Uren te keuren", value: count(d.urenTeKeuren), hint: "ingediend, wacht op het bedrijf", ...toon(d.urenTeKeuren, "warn") },
+          { label: "Open facturen", value: euro(d.facturen.openCents), hint: d.facturen.teLaatCents > 0 ? `${count(d.facturen.openCount)} open · ${euro(d.facturen.teLaatCents)} te laat` : `${count(d.facturen.openCount)} open`, href: "/admin/facturen", ...toon(d.facturen.teLaatCents, "warn") },
+          { label: "Foutmeldingen", value: d.fouten === null ? "—" : count(d.fouten), hint: "laatste 24 uur", href: "/admin/systeem", ...toon(d.fouten ?? 0, "crit") },
+          { label: "Te doen", value: d.todos === null ? "—" : count(d.todos), hint: "taken voor jou", href: "/admin/te-doen", ...toon(d.todos ?? 0, "warn") },
+        ]}
+      />
 
       {/* elke week dezelfde vijf getallen, zonder test (lib/admin/weekcijfers.ts): beweegt er iets? */}
       <WeekCijfersKaart cijfers={week} />
 
-      <KpiStrip
-        items={[
-          { label: "Eigen omzet", value: euro(d.revenue.total), delta: d.revenue.delta, spark: d.revenue.series, hint: period.versus, href: "/admin/financien" },
-          { label: "Door het platform", value: euro(d.gross.total), delta: d.gross.delta, hint: "gefactureerd + webshop", href: "/admin/facturen" },
-          { label: "Gewerkte uren", value: count(Math.round(d.hours.total)), delta: d.hours.delta, spark: d.hours.series, href: "/admin/verloning" },
-          { label: "Bezetting", value: `${d.fill.pct}%`, delta: d.fill.delta, hint: `${d.fill.filled} van ${d.fill.total} klussen`, href: "/admin/vooruitblik" },
-          { label: "Nieuwe gebruikers", value: count(d.signups.total), delta: d.signups.delta, spark: d.signups.series, hint: "zonder test", href: "/admin/gebruikers" },
-          { label: "Bezoekers", value: count(d.visitors.total), delta: d.visitors.delta, spark: d.visitors.series, href: "/admin/analytics" },
-        ]}
-      />
-
-      <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-        <Panel title="Eigen omzet" subtitle={`Marge op facturen en webshop, laatste ${period.label}`}>
-          <Chart title={`Eigen omzet per ${period.bucket === "month" ? "maand" : "dag"}`} kind="bars" unit="money" labels={d.labels} series={[{ label: "Eigen omzet", values: d.revenue.series }]} height={250} emptyText="Nog geen omzet in deze periode." />
-        </Panel>
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <Panel flush title="Actie vereist" subtitle={d.triage.length === 0 ? "Alles is afgehandeld" : `${d.urgent} urgent, ${d.triage.length} in totaal`}>
           {d.triage.length === 0 ? (
             <p className="px-5 pb-6 text-sm" style={{ color: "var(--a-mute)" }}>Niets openstaand. Alles onder controle.</p>
           ) : (
-            <ul className="max-h-[19.5rem] overflow-y-auto">
+            <ul className="max-h-[22rem] overflow-y-auto">
               {d.triage.map((item) => (
                 <li key={item.id} style={{ borderTop: "1px solid var(--a-border)" }}>
                   <Link href={item.href} className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--a-panel-2)] sm:px-5">
@@ -89,24 +89,22 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
             </ul>
           )}
         </Panel>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Panel title="Gewerkte uren" subtitle="Goedgekeurde uren">
-          <Chart title="Gewerkte uren" kind="bars" unit="hours" labels={d.labels} series={[{ label: "Uren", values: d.hours.series }]} height={170} emptyText="Nog geen goedgekeurde uren." />
-        </Panel>
-        <Panel title="Aanmeldingen" subtitle="Nieuwe accounts">
-          <Chart title="Nieuwe accounts" kind="bars" unit="count" labels={d.labels} series={[{ label: "Aanmeldingen", values: d.signups.series }]} height={170} emptyText="Geen aanmeldingen in deze periode." />
-        </Panel>
-        <Panel title="Bezoekers" subtitle="Unieke bezoekers op de site">
-          <Chart title="Unieke bezoekers" kind="line" unit="count" labels={d.labels} series={[{ label: "Bezoekers", values: d.visitors.series }]} height={170} emptyText="Nog geen bezoekers geteld." />
+        <Panel title="Laatste activiteit" subtitle="Wat er net gebeurde">
+          <Feed
+            items={d.activity.map((a) => ({
+              key: a.key,
+              text: a.text,
+              meta: timeAgoNl(a.at),
+              tone: a.severity === "critical" ? "crit" : a.severity === "warning" ? "warn" : "ok",
+            }))}
+          />
         </Panel>
       </div>
 
       <section aria-label="Onderdelen van de beheeromgeving">
-        <h2 className="mb-2.5 mt-6 text-sm font-semibold" style={{ color: "var(--a-text)" }}>Alle onderdelen</h2>
+        <h2 className="mb-2.5 mt-6 text-sm font-semibold" style={{ color: "var(--a-text)" }}>Onderdelen</h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {ADMIN_HUBS.filter((hub) => d.hubs[hub.id]).map((hub) => {
+          {onderdelen.map((hub) => {
             const data = d.hubs[hub.id]!;
             return (
               <Link key={hub.id} href={hub.pages[0]!.href} className="a-panel group block p-4 transition-colors hover:border-[var(--a-border-strong)] sm:p-5">
@@ -133,24 +131,6 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
           })}
         </div>
       </section>
-
-      <div className={`grid gap-4 pt-2 ${funnels.length >= 2 ? "lg:grid-cols-3" : funnels.length === 1 ? "lg:grid-cols-2" : ""}`}>
-        {funnels.map((f) => (
-          <Panel key={f.key} title={f.label} subtitle={period.days > 90 ? "Laatste 12 maanden" : "Laatste 3 maanden"}>
-            <Funnel stages={f.steps.map((s) => ({ label: s.label, value: s.count }))} />
-          </Panel>
-        ))}
-        <Panel title="Laatste activiteit" subtitle="Wat er net gebeurde">
-          <Feed
-            items={d.activity.map((a) => ({
-              key: a.key,
-              text: a.text,
-              meta: timeAgoNl(a.at),
-              tone: a.severity === "critical" ? "crit" : a.severity === "warning" ? "warn" : "ok",
-            }))}
-          />
-        </Panel>
-      </div>
     </div>
   );
 }

@@ -48,9 +48,11 @@ describe("Mijn winkel: de pagina en het menu", () => {
     expect(pagina).toContain('hasRole(principal, "PLATFORM_ADMIN")');
   });
 
-  it("Mijn winkel staat bovenaan Webshop en merk", () => {
-    const merk = ADMIN_HUBS.find((h) => h.id === "merk");
-    expect(merk?.pages[0]).toEqual({ href: "/admin/webshop", label: "Mijn winkel" });
+  it("Mijn winkel staat vóór Webshop in het dichtgeklapte onderdeel Overig", () => {
+    // 21 nov 2026: het beheer gaat alleen nog over flexwerk; de webshop staat in "Overig (verborgen)"
+    const overig = ADMIN_HUBS.find((h) => h.id === "overig");
+    const webshop = overig?.pages.filter((p) => p.href === "/admin/webshop" || p.href === "/admin/shop") ?? [];
+    expect(webshop[0]).toEqual({ href: "/admin/webshop", label: "Mijn winkel" });
   });
 
   it("de knop Product toevoegen opent meteen het formulier voor een nieuw product", () => {

@@ -78,7 +78,8 @@ describe("campagnepagina's", () => {
     expect(route.match(/withAdminAccess\(\["PLATFORM_ADMIN"\]/g)).toHaveLength(2);
     expect(route).toContain("campagneFouten(pagina)");
     expect(lees("app/admin/campagnes/page.tsx")).toContain('hasRole(principal, "PLATFORM_ADMIN")');
-    expect(ADMIN_HUBS.find((h) => h.id === "groei")?.pages.some((p) => p.href === "/admin/campagnes")).toBe(true);
+    // 21 nov 2026: marketing staat in het dichtgeklapte onderdeel "Overig (verborgen)"; het beheer gaat alleen nog over flexwerk
+    expect(ADMIN_HUBS.find((h) => h.id === "overig")?.pages.some((p) => p.href === "/admin/campagnes")).toBe(true);
   });
 });
 
