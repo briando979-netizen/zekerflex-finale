@@ -36,7 +36,7 @@ describe("tekstregister van de Site-ontwerper", () => {
     expect(oo["oo.title"]).toBe("Flexibel werk hoort eerlijk, snel en zeker te zijn.");
     expect(oo["oo.verhaal1"]).toMatch(/^ZekerFlex is ontstaan uit een simpele frustratie: flexibel werken in Nederland is omslachtig geworden\. Zzp'ers wachten/);
     expect(oo["oo.opr.tekst"]).toContain("jóuw agenda");
-    expect(contentKeys("pr.").length).toBe(20);
+    expect(contentKeys("pr.").length).toBe(16); // 21 nov 2026: de vier teksten van het API-blok zijn weg
     expect(contentKeys("oo.").length).toBe(17);
   });
 

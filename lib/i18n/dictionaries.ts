@@ -19,6 +19,13 @@ export const nl = {
     edit: "Bewerken",
     naarWebsite: "Naar website",
   },
+  /** Werkgever → Inchecken (21 nov 2026): alleen nog de QR-poster per vestiging, geen kastjes of NFC (lib/incheck/aan.ts) */
+  incheckQr: {
+    eyebrow: "Personeel",
+    titel: "Inchecken met een QR-code",
+    uitleg: "Je krachten checken in door bij aankomst de QR-code van de vestiging met hun telefoon te scannen. Zet per vestiging de QR-code aan, print de poster en hang hem bij de ingang. Elke check-in staat meteen in het urenbriefje.",
+    knop: "Naar je vestigingen en de QR-poster",
+  },
   nav: {
     start: "Jouw start",
     klussen: "Klussen",
@@ -32,7 +39,7 @@ export const nl = {
     geblokkeerd: "Geblokkeerd",
     beheer: "Beheer",
     urenGoedkeuren: "Uren goedkeuren",
-    inchecken: "Inchecken op locatie",
+    inchecken: "Inchecken met QR-code",
     assistent: "Assistent",
     facturen: "Facturen",
     compliance: "Compliance",

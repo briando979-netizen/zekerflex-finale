@@ -5,6 +5,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { maakTerminal, terminalRegelsVanVandaag, terminalsVan, verwijderTerminal, vernieuwSleutel, wijzigTerminal } from "@/lib/incheck/store";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ async function tenantVan() {
 }
 
 export async function GET(): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 423 });
   try {
     const tenantId = await tenantVan();
     const [terminals, branches, vandaag] = await Promise.all([
@@ -39,6 +41,7 @@ export async function GET(): Promise<NextResponse> {
 const nieuw = z.object({ branchId: z.string().min(1).max(64), naam: z.string().trim().min(1).max(60) });
 
 export async function POST(request: Request): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 423 });
   try {
     const tenantId = await tenantVan();
     const body = nieuw.parse(await request.json().catch(() => ({})));
@@ -55,6 +58,7 @@ const wijzig = z.object({ id: z.string().max(40), naam: z.string().trim().min(1)
 
 // PATCH { id, naam?, actief?, nieuweSleutel? }
 export async function PATCH(request: Request): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 423 });
   try {
     const tenantId = await tenantVan();
     const body = wijzig.parse(await request.json().catch(() => ({})));
@@ -73,6 +77,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 }
 
 export async function DELETE(request: Request): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 423 });
   try {
     const tenantId = await tenantVan();
     const id = new URL(request.url).searchParams.get("id") ?? "";

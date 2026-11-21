@@ -41,7 +41,7 @@ export const MODULES: readonly BrancheModule[] = [
   // personeel
   klaar("flexwerk", "personeel", "Flexwerkers inhuren", "Een klus plaatsen, werkers vinden en aannemen.", "/werkgever/diensten"),
   klaar("rooster", "personeel", "Rooster en planner", "Diensten inplannen en een week vullen.", "/werkgever/planner"),
-  klaar("inchecken", "personeel", "Inchecken op locatie", "Met QR, NFC of telefoon; je ziet wie er is.", "/werkgever/inchecken"),
+  klaar("inchecken", "personeel", "Inchecken met QR-code", "Je krachten scannen de QR-code van de vestiging; je ziet wie er is.", "/werkgever/inchecken"),
   klaar("uren", "personeel", "Uren goedkeuren", "De uren van je mensen nakijken en goedkeuren.", "/werkgever/uren"),
   klaar("certificaten", "personeel", "Certificaten en documenten", "Diploma's en bewijzen van je mensen, en wat er verloopt.", "/werkgever/compliance"),
   // geld

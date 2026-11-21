@@ -3,6 +3,9 @@ import { env } from "@/lib/env";
 import { PageHeader } from "@/components/app/ui";
 import { TerminalsBeheer } from "@/components/app/TerminalsBeheer";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
+import Link from "next/link";
+import { getDict } from "@/lib/i18n/server";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,19 @@ export const dynamic = "force-dynamic";
 // in het urenbriefje, op de plek van de vestiging zelf.
 export default async function IncheckenPage() {
   await requirePrincipal();
+  // 21 nov 2026: geen kastjes, NFC of sleutelhangers meer (lib/incheck/aan.ts); inchecken gaat met de QR-poster per vestiging
+  if (!INCHECK_KASTJES_AAN) {
+    const t = (await getDict()).incheckQr;
+    return (
+      <>
+        <SamenTabs groep="uren" actief="inchecken" />
+        <PageHeader eyebrow={t.eyebrow} title={t.titel} subtitle={t.uitleg} />
+        <Link href="/werkgever/locaties" className="btn-primary">
+          {t.knop}
+        </Link>
+      </>
+    );
+  }
   const origin = new URL(env.APP_BASE_URL).origin;
   return (
     <>

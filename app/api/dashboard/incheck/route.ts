@@ -5,6 +5,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { isCode } from "@/lib/incheck/regels";
 import { checkInViaTelefoon, fobsVan, ontkoppelFob, startKoppeling, standVoor, terminalVanCode } from "@/lib/incheck/store";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 // ---------------------------------------------------------------------------
 
 export async function GET(request: Request): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 423 });
   try {
     const p = await requirePrincipal();
     requireRole(p, "FREELANCER");
@@ -45,6 +47,7 @@ const schema = z.discriminatedUnion("actie", [
 ]);
 
 export async function POST(request: Request): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 423 });
   try {
     const p = await requirePrincipal();
     requireRole(p, "FREELANCER");

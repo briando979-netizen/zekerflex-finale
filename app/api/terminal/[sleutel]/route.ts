@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { otpRest, otpVoor } from "@/lib/incheck/regels";
 import { koppelingOpen, markeerGezien, terminalVanSleutel, tikOpTerminal } from "@/lib/incheck/store";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ async function terminal(sleutel: string, request: Request) {
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ sleutel: string }> }): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 404 });
   try {
     const t = await terminal((await params).sleutel, request);
     const [branch, koppeling] = await Promise.all([prisma.branch.findUnique({ where: { id: t.branchId }, select: { name: true, city: true, tenant: { select: { name: true } } } }), koppelingOpen(t.id)]);
@@ -59,6 +61,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ sleu
 const tik = z.object({ serie: z.string().max(80).optional(), paspoort: z.string().max(300).optional() }).refine((v) => v.serie || v.paspoort, "Geen sleutelhanger of paspoort");
 
 export async function POST(request: Request, { params }: { params: Promise<{ sleutel: string }> }): Promise<NextResponse> {
+  if (!INCHECK_KASTJES_AAN) return NextResponse.json({ error: { code: "KASTJES_UIT", message: "Inchecken met een terminal, NFC-sticker of sleutelhanger staat uit. Inchecken gaat met de QR-code van de vestiging." } }, { status: 404 });
   try {
     const t = await terminal((await params).sleutel, request);
     const body = tik.parse(await request.json().catch(() => ({})));

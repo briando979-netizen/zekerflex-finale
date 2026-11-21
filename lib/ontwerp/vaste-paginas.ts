@@ -50,7 +50,6 @@ export const VASTE_PAGINAS = {
     pad: "/prijzen",
     secties: [
       { id: "tarieven", naam: "De tarieven", uitleg: "De twee kaarten (freelancers en bedrijven) met de rekenhulp en de links eronder." },
-      { id: "api", naam: "Koppeling voor ontwikkelaars", uitleg: "Het blok over de API, met de knop naar de pagina voor ontwikkelaars." },
       { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden over de kosten." },
       { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
     ],

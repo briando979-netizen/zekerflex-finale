@@ -35,7 +35,7 @@ export const MENU_NAAM: Partial<Record<MenuSleutel, { naam: string; wanneer?: st
   whatsapp: { naam: "WhatsApp" },
   geblokkeerd: { naam: "Geblokkeerd" },
   uren: { naam: "Uren goedkeuren" },
-  inchecken: { naam: "Inchecken op locatie" },
+  inchecken: { naam: "Inchecken met QR-code" },
   facturen: { naam: "Facturen" },
   rapportages: { naam: "Rapportages" },
   inkaart: { naam: "Bedrijf in kaart" },

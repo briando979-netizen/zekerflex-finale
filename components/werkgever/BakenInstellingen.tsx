@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 // Werkgever → Locaties → Locatiebaken: QR-code aan/uit (met nieuwe code),
 // Bluetooth-baken en automatisch inchecken per vestiging (lib/checkin/baken.ts).
@@ -74,6 +75,8 @@ export function BakenInstellingen({ branchId, canManage }: { branchId: string; c
         </button>
       )}
 
+      {/* het Bluetooth-baken staat uit met de kastjes (lib/incheck/aan.ts); de QR-code hierboven blijft */}
+      {INCHECK_KASTJES_AAN && (
       <form
         className="rounded-xl border border-hair bg-paper-soft/60 px-4 py-3 text-sm"
         onSubmit={(e) => {
@@ -94,6 +97,7 @@ export function BakenInstellingen({ branchId, canManage }: { branchId: string; c
           </span>
         </label>
       </form>
+      )}
 
       {msg && (
         <p role={msg.ok ? "status" : "alert"} className={`text-xs ${msg.ok ? "text-ok" : "text-crit"}`}>

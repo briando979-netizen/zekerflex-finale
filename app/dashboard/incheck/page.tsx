@@ -4,6 +4,8 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 import { IncheckOpLocatie } from "@/components/app/IncheckOpLocatie";
 import { BackLink } from "@/components/app/BackLink";
 import { PageHeader } from "@/components/app/ui";
+import { redirect } from "next/navigation";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,8 @@ export const dynamic = "force-dynamic";
 // op het scherm en de sticker sturen hierheen met ?t=<code> (zekerflex.com/i/<code>).
 export default async function IncheckPage() {
   await requirePrincipal();
+  // terminal, NFC-sticker en sleutelhanger staan uit (lib/incheck/aan.ts); inchecken gaat met de QR-code op de klus
+  if (!INCHECK_KASTJES_AAN) redirect("/dashboard/klussen");
   const t = (await getFreelancerDict()).incheck;
   return (
     <>

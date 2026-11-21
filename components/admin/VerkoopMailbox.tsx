@@ -65,8 +65,6 @@ export function VerkoopMailbox() {
     }
   }
 
-  const veld = { background: "var(--a-bg, #0b0b0c)", border: "1px solid var(--a-border)", color: "var(--a-text)" };
-
   return (
     <div className="mb-4 rounded-xl p-4" style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}>
       <p className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
@@ -93,8 +91,7 @@ export function VerkoopMailbox() {
             value={adres}
             onChange={(e) => setAdres(e.target.value)}
             autoComplete="off"
-            className="rounded-lg px-3 py-2 text-sm"
-            style={veld}
+            className="a-input"
           />
         </label>
         <label className="flex min-w-[13rem] flex-1 flex-col gap-1 text-xs" style={{ color: "var(--a-mute)" }}>
@@ -104,8 +101,7 @@ export function VerkoopMailbox() {
             value={wachtwoord}
             onChange={(e) => setWachtwoord(e.target.value)}
             autoComplete="new-password"
-            className="rounded-lg px-3 py-2 text-sm"
-            style={veld}
+            className="a-input"
           />
         </label>
         <button type="button" disabled={bezig || !adres.trim() || !wachtwoord} onClick={() => void opslaan()} className="a-btn a-btn-primary disabled:opacity-50">

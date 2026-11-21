@@ -41,7 +41,7 @@ export const SAMEN_GROEPEN: Record<SamenGroep, SamenGroepDef> = {
     label: "Uren",
     tabs: [
       { id: "uren", href: "/werkgever/uren", label: "Goedkeuren" },
-      { id: "inchecken", href: "/werkgever/inchecken", label: "Inchecken op locatie" },
+      { id: "inchecken", href: "/werkgever/inchecken", label: "Inchecken met QR-code" },
     ],
   },
   werkers: {

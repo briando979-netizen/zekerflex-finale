@@ -1,10 +1,11 @@
 import QRCode from "qrcode";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { terminalVan } from "@/lib/incheck/store";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 // QR en de tag wijzen allebei naar zekerflex.com/i/<code>: een tik of scan opent
 // de incheckpagina van de kracht.
 export default async function StickerPagina({ params }: { params: Promise<{ id: string }> }) {
+  if (!INCHECK_KASTJES_AAN) redirect("/werkgever/inchecken"); // stickers staan uit (lib/incheck/aan.ts)
   const { id } = await params;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);

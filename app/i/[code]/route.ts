@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { isCode } from "@/lib/incheck/regels";
+import { INCHECK_KASTJES_AAN } from "@/lib/incheck/aan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }): Promise<Response> {
   const { code } = await params;
   const base = new URL(env.APP_BASE_URL).origin;
+  // de NFC-sticker en de terminal staan uit (lib/incheck/aan.ts): naar de klussen
+  if (!INCHECK_KASTJES_AAN) return NextResponse.redirect(`${base}/dashboard/klussen`, 302);
   if (!isCode(code)) return NextResponse.redirect(`${base}/dashboard/incheck`, 302);
   const k = new URL(request.url).searchParams.get("k") ?? "";
   const q = new URLSearchParams({ t: code, ...(/^[A-HJ-NP-Z2-9]{6}$/.test(k) ? { k } : {}) });

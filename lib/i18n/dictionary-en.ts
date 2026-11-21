@@ -15,6 +15,12 @@ export const en: Dict = {
     edit: "Edit",
     naarWebsite: "To website",
   },
+  incheckQr: {
+    eyebrow: "Staff",
+    titel: "Check in with a QR code",
+    uitleg: "Your workers check in by scanning the location's QR code with their phone when they arrive. Turn on the QR code per location, print the poster and put it up at the entrance. Every check-in goes straight into the timesheet.",
+    knop: "Go to your locations and the QR poster",
+  },
   nav: {
     start: "Your start",
     klussen: "Jobs",
@@ -28,7 +34,7 @@ export const en: Dict = {
     geblokkeerd: "Blocked",
     beheer: "Manage",
     urenGoedkeuren: "Approve hours",
-    inchecken: "On-site check-in",
+    inchecken: "Check-in with QR code",
     assistent: "Assistant",
     facturen: "Invoices",
     compliance: "Compliance",

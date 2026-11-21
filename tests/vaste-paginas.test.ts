@@ -21,7 +21,7 @@ const OUD: Record<VastePaginaId, string[]> = {
   "voor-bedrijven": ["systeem", "cijfers", "rekentools", "faq", "slot"],
   // 21 nov 2026: nieuwe opbouw (kenmerken, stappen met telefoon, functies, branches, overtuigd), zonder video's
   "voor-freelancers": ["kenmerken", "stappen", "voordelen", "branches", "overtuigd", "faq", "slot"],
-  prijzen: ["tarieven", "api", "faq", "slot"],
+  prijzen: ["tarieven", "faq", "slot"], // 21 nov 2026: het API-blok is weg
   "over-ons": ["verhaal", "oprichter", "uitgangspunten", "werkenbij", "slot"],
   uitzendbureau: ["pijlers", "verwachtingen", "stappen", "fasen", "ervaring", "routes", "verloning", "werkgevers", "faq", "slot"],
   beveiliging: ["cijfers", "maatregelen", "logboek", "melden", "slot"],
