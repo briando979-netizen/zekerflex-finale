@@ -46,28 +46,28 @@ export const PAGINA_VIDEOS: Record<string, PaginaVideo> = {
     slug: "voor-freelancers",
     titel: "Werken via ZekerFlex",
     samenvatting: "Klussen in de buurt, met of zonder KVK.",
-    seconden: 27,
+    seconden: 26,
     tekst: [
       "Wil je werken wanneer het jou uitkomt? Met ZekerFlex zie je klussen bij jou in de buurt.",
-      "Je ziet vooraf wat je verdient, je checkt in met je telefoon, en je geld komt op je eigen rekening.",
+      "Je ziet vooraf wat je verdient, en je geld komt op je eigen rekening.",
       "Meedoen is gratis, en je bent in een paar minuten klaar. De app is er in vijf talen.",
       "Met of zonder KVK: als zelfstandige, of als uitzendkracht via een aangesloten uitzendbureau.",
       "Maak gratis een profiel aan en begin vandaag."
     ],
   },
-  // 21 nov 2026: ZekerFlex is zelf geen uitzendbureau meer (uitzenden via aangesloten uitzendbureaus). De tekst hieronder en de
-  // zin over uitzenden bij "voor-freelancers" zijn al aangepast; de stem in uitzendbureau.mp4 en voor-freelancers.mp4 moet
-  // opnieuw worden ingesproken met deze tekst.
+  // 21 nov 2026: ZekerFlex is zelf geen uitzendbureau meer (uitzenden via aangesloten uitzendbureaus). uitzendbureau.mp4 en
+  // voor-freelancers.mp4 zijn met deze tekst opnieuw ingesproken (Piper nl-vrouw) en het beeld van uitzendbureau.mp4 zegt nu
+  // "Het uitzendbureau is je werkgever".
   "uitzendbureau": {
     slug: "uitzendbureau",
     titel: "Uitzendwerk via ZekerFlex",
     samenvatting: "Werken zonder KVK, via een aangesloten uitzendbureau.",
-    seconden: 21,
+    seconden: 24,
     tekst: [
       "Werken zonder KVK? Dan werk je als uitzendkracht via een aangesloten uitzendbureau.",
       "Het uitzendbureau is je werkgever. Het regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.",
       "Jij kiest je diensten en werkt wanneer het jou uitkomt, met de rechten van een dienstverband.",
-      "Hier zie je welke uitzendklussen er open staan, en vraag je met één knop een uitzendcontract aan."
+      "In de app zet je het filter op Uitzendklussen en vraag je bij een klus een uitzendcontract aan."
     ],
   },
   "prijzen": {
@@ -122,10 +122,10 @@ export const PAGINA_VIDEOS: Record<string, PaginaVideo> = {
 
 /**
  * De paginavideo's in de videokamer /uitleg/videos (21 nov 2026, eigenaar: "alle uitlegvideo's in een aparte ruimte bij Uitleg").
- * Alleen flexwerk. Niet: rijschool-software en website-maken (geen flexwerk), en uitzendbureau en voor-freelancers (de stem moet
- * eerst opnieuw worden ingesproken, zie hierboven).
+ * Alleen flexwerk. Niet: rijschool-software en website-maken (geen flexwerk). Uitzendbureau en voor-freelancers staan er sinds ze
+ * opnieuw zijn ingesproken (21 nov 2026) ook in.
  */
-export const VIDEOKAMER: readonly string[] = ["home", "voor-bedrijven", "prijzen", "horeca"];
+export const VIDEOKAMER: readonly string[] = ["home", "voor-freelancers", "uitzendbureau", "voor-bedrijven", "prijzen", "horeca"];
 
 export const paginaVideo = (id: string): PaginaVideo | undefined => (Object.hasOwn(PAGINA_VIDEOS, id) ? PAGINA_VIDEOS[id] : undefined);
 

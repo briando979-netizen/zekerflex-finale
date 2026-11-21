@@ -18,7 +18,8 @@ export function schoonTesterAdres(ruw: string): string | null {
 /** Voeg toe zonder dubbele; een bestaande aanvraag blijft staan (ook als hij al is toegevoegd). Nieuwste bovenaan, hooguit `max`. */
 export function metNieuweTester(lijst: readonly TesterAanvraag[], email: string, now: Date, max = 2000): { lijst: TesterAanvraag[]; nieuw: boolean } {
   if (lijst.some((t) => t.email === email)) return { lijst: [...lijst], nieuw: false };
-  return { lijst: [{ email, platform: "android", at: now.toISOString(), toegevoegd: false }, ...lijst].slice(0, max), nieuw: true };
+  const nieuwe: TesterAanvraag = { email, platform: "android", at: now.toISOString(), toegevoegd: false };
+  return { lijst: [nieuwe, ...lijst].slice(0, max), nieuw: true };
 }
 
 /** De adressen die nog in de Play Console moeten, met komma's (zo plak je ze in de testerslijst). */

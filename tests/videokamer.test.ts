@@ -18,7 +18,12 @@ describe("de videokamer", () => {
       expect(v, id).toBeDefined();
       expect(existsSync(path.join(process.cwd(), "public", videoPad(v!))), id).toBe(true);
     }
-    for (const weg of ["rijschool-software", "website-maken", "uitzendbureau", "voor-freelancers"]) expect(VIDEOKAMER).not.toContain(weg);
+    for (const weg of ["rijschool-software", "website-maken"]) expect(VIDEOKAMER).not.toContain(weg);
+    // opnieuw ingesproken (21 nov 2026): geen "met één knop" en geen inchecken meer in de tekst
+    for (const id of ["uitzendbureau", "voor-freelancers"]) {
+      expect(VIDEOKAMER, id).toContain(id);
+      expect(paginaVideo(id)!.tekst.join(" "), id).not.toMatch(/één knop|check je in|checkt in/);
+    }
     expect(UITLEG_VIDEOS.length).toBeGreaterThanOrEqual(5);
   });
 
