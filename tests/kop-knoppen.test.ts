@@ -12,7 +12,12 @@ describe("knoppen in de kopbalk per kant", () => {
   it("werkers: in plaats van Inloggen staat er Ga naar de app; Start vandaag blijft account aanmaken", () => {
     const w = KOP_KNOPPEN.werknemers;
     expect(w.eerste).toEqual({ label: "Ga naar de app", href: "/app" });
-    expect(w.mobiel.href).toBe("/app");
+    // 21 nov 2026 (middag): wie via de site een account maakte, moet kunnen inloggen: op de telefoon Inloggen naast het menu
+    expect(w.mobiel).toEqual({ label: "Inloggen", href: "/login" });
+    expect(w.inloggen).toEqual({ label: "Inloggen", href: "/login" });
+    expect(lees("components/marketing/SiteHeader.tsx")).toContain("knoppen.inloggen &&");
+    expect(lees("components/marketing/MobileMenu.tsx")).toContain("KOP_KNOPPEN[doel].inloggen &&");
+    expect(lees("components/marketing/AppDownload.tsx")).toContain("Al een account?");
     expect(w.tweede).toEqual({ label: "Start vandaag", href: "/register" });
   });
 

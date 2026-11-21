@@ -78,11 +78,15 @@ export interface KopKnop {
  * aanmaken in de browser); Start vandaag blijft account aanmaken. Bedrijven loggen in of melden zich aan. `mobiel` is de korte
  * knop naast de menuknop.
  */
-export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; mobiel: KopKnop }> = {
+// 21 nov 2026 (eigenaar, middag: "via de web inlog kwamen heel veel mensen en maakten een account … fix dat"): wie via de site
+// een account maakte, vond op de telefoon het inloggen niet meer. Bij werkers staat daarom ook Inloggen: op de telefoon als knop
+// naast het menu, in het menu boven de andere twee, en op de computer als link naast Ga naar de app.
+export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; mobiel: KopKnop; inloggen?: KopKnop }> = {
   werknemers: {
     eerste: { label: "Ga naar de app", href: "/app" },
     tweede: { label: "Start vandaag", href: CTA_WN.href },
-    mobiel: { label: "Naar de app", href: "/app" },
+    mobiel: { label: "Inloggen", href: "/login" },
+    inloggen: { label: "Inloggen", href: "/login" },
   },
   bedrijven: {
     eerste: { label: "Inloggen", href: "/login" },

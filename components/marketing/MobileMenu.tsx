@@ -248,6 +248,14 @@ export function MobileMenu({
 
       {/* altijd in beeld, ook met de duimen onderaan het scherm */}
       <div className="border-t border-white/10 bg-black/25 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+        {/* werkers: ook Inloggen (wie via de site een account maakte, logt hier in) */}
+        {KOP_KNOPPEN[doel].inloggen && (
+          <div className="shell mb-2.5">
+            <Link href={KOP_KNOPPEN[doel].inloggen!.href} className="block rounded-full border border-white/25 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10">
+              {KOP_KNOPPEN[doel].inloggen!.label}
+            </Link>
+          </div>
+        )}
         <div className="shell grid grid-cols-2 gap-2.5">
           {/* per kant (KOP_KNOPPEN): werkers naar de app, bedrijven inloggen of aanmelden */}
           <Link href={KOP_KNOPPEN[doel].eerste.href} className="rounded-full bg-white px-4 py-3 text-center text-sm font-bold text-ink transition hover:bg-white/90">

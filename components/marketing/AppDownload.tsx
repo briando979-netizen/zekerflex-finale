@@ -168,6 +168,23 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
               Reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen — alles vanaf je
               telefoon, met meldingen die kloppen.
             </p>
+            {/* 21 nov 2026: wie al een account heeft (vaak via de site gemaakt), ziet dat hier meteen, vóór het installeren */}
+            {standalone && (
+              <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <span>
+                  Al een account?{" "}
+                  <Link href="/login" className="font-semibold text-brand-mint underline">
+                    Log in
+                  </Link>
+                </span>
+                <span>
+                  Nieuw?{" "}
+                  <Link href="/register" className="font-semibold text-brand-mint underline">
+                    Maak een account
+                  </Link>
+                </span>
+              </p>
+            )}
             <div className="mt-7 flex flex-wrap items-start gap-3">
               <InstallAppButton />
               <AppleBadgeTest live={iphone} store={appStore} />
