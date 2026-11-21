@@ -29,6 +29,8 @@ export const metadata: Metadata = {
     "flexwerk zonder KVK",
   ],
   ...canonical("/uitzendbureau"),
+  // 21 nov 2026: /uitzendbureau stuurt door naar /starten-als-uitzendkracht (next.config.mjs) en staat niet meer in de sitemap.
+  robots: { index: false, follow: true },
 };
 
 const PILLARS = [

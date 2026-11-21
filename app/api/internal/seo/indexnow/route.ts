@@ -15,7 +15,7 @@ export const maxDuration = 120;
 // zodat ze net zo snel geïndexeerd raken als bij Google. No-op zonder INDEXNOW_KEY.
 const PATHS = [
   "/", "/voor-bedrijven", "/voor-freelancers", "/prijzen", "/klussen",
-  "/open-diensten", "/shop", "/uitzendbureau", "/kennis", "/over-ons", "/app",
+  "/open-diensten", "/shop", "/starten-als-uitzendkracht", "/kennis", "/over-ons", "/app",
   "/rekentools", "/rekentools/zzp-uurtarief-berekenen", "/rekentools/kosten-uitzendkracht-berekenen", "/rekentools/wet-dba-check",
 ];
 

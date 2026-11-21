@@ -64,7 +64,7 @@ describe("counterOfferAction — viaUitzendbureau gate", () => {
     const result = await counterOfferAction("shift1", 1800, "");
 
     expect(result.ok).toBe(false);
-    expect(result.message).toContain("uitzendkrachten");
+    expect(result.message).toBe("Deze klus loopt via een uitzendbureau; reageren kan alleen als uitzendkracht.");
     expect(createCounterOffer).not.toHaveBeenCalled();
   });
 

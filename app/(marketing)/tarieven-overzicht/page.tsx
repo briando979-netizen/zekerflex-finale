@@ -164,7 +164,7 @@ export default function TarievenOverzichtPage() {
             <h3 className="font-display text-xl font-semibold text-ink">Een uitzendkracht</h3>
             <p className="mt-2 text-[0.975rem] leading-relaxed text-neutralx-600">{TARIEVEN_TEKST.uitzend}</p>
             <p className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-              <Link href="/uitzendbureau" className="font-semibold text-brand-600 underline">
+              <Link href="/contact" className="font-semibold text-brand-600 underline">
                 Uitzendkrachten aanvragen
               </Link>
               <Link href="/contact" className="font-semibold text-brand-600 underline">

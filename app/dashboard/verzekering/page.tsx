@@ -4,16 +4,18 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { BackLink } from "@/components/app/BackLink";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 export const dynamic = "force-dynamic";
 
 // Verzekering voor zzp'ers en flexwerkers (15 nov 2026). ZekerFlex biedt geen verzekering: er is geen verzekeraar en geen
 // polis. Deze pagina zei dat je automatisch verzekerd was en bood een verzekeringsbewijs aan; nu zegt hij wat je zelf regelt.
-// Een uitzendkracht is in dienst van ZekerFlex: die gaat naar de verloning.
+// Een uitzendkracht is in dienst van ZekerFlex: die gaat naar de verloning. Is ZekerFlex geen uitzender (ZEKERFLEX_UITZENDER
+// uit, lib/uitzend/model.ts), dan is het uitzendbureau de werkgever en blijft de verloning leeg: dan naar Mijn klussen.
 export default async function VerzekeringPage() {
   const principal = await requirePrincipal();
   const t = (await getFreelancerDict()).verzekering;
-  if (invoiceModeFor(await getFiscal(principal.userId)) === "payroll") redirect("/dashboard/verloning");
+  if (invoiceModeFor(await getFiscal(principal.userId)) === "payroll") redirect(ZEKERFLEX_UITZENDER ? "/dashboard/verloning" : "/dashboard/diensten");
   return (
     <>
       <BackLink fallbackHref="/dashboard/account" label={t.back} />

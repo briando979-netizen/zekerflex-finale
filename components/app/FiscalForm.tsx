@@ -8,6 +8,7 @@ import type { FiscalProfile, WorkerKind } from "@/lib/fiscal/store";
 import { KorHulp } from "@/components/app/KorHulp";
 import { useFT } from "@/components/i18n/useFT";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import {
   BEDRIJFSNAAM_MAX,
@@ -322,18 +323,21 @@ export function FiscalForm({
             <div className="rounded-lg border border-hair bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
               {f.uitzendUitleg}
             </div>
-            <Field
-              label={f.bsn}
-              hint={hasBsnOnFile ? vulIn(f.bsnOpBestand, { laatste4: initial.bsnLast4 ?? "" }) : f.bsnHint}
-            >
-              <input
-                value={bsn}
-                onChange={(e) => setBsn(e.target.value)}
-                inputMode="numeric"
-                placeholder={hasBsnOnFile ? f.bsnOngewijzigd : "123456782"}
-                className="field-input"
-              />
-            </Field>
+            {/* het BSN vraagt sinds 21 nov het uitzendbureau zelf (ZEKERFLEX_UITZENDER = false) */}
+            {ZEKERFLEX_UITZENDER && (
+              <Field
+                label={f.bsn}
+                hint={hasBsnOnFile ? vulIn(f.bsnOpBestand, { laatste4: initial.bsnLast4 ?? "" }) : f.bsnHint}
+              >
+                <input
+                  value={bsn}
+                  onChange={(e) => setBsn(e.target.value)}
+                  inputMode="numeric"
+                  placeholder={hasBsnOnFile ? f.bsnOngewijzigd : "123456782"}
+                  className="field-input"
+                />
+              </Field>
+            )}
           </>
         )}
 

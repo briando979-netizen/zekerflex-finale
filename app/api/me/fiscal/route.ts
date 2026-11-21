@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 import { toErrorBody, AppError } from "@/lib/errors";
 import { checkVies } from "@/lib/integrations/vies";
 import { isValidIban } from "@/lib/billing/sepa";
@@ -139,7 +140,8 @@ export async function PUT(request: Request): Promise<NextResponse> {
         const { hash, last4 } = hashBsn(input.bsn);
         patch.bsnHash = hash;
         patch.bsnLast4 = last4;
-      } else if (!before.bsnHash) {
+      } else if (!before.bsnHash && ZEKERFLEX_UITZENDER) {
+        // sinds 21 nov verloont het uitzendbureau en vraagt het zelf je BSN (lib/uitzend/model.ts): dan is het hier niet verplicht
         throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig. Kom je uit het buitenland en heb je nog geen BSN? Dan vraag je het aan bij een RNI-loket van een gemeente, met je paspoort of ID-kaart.").metSleutel("fiscal.bsnNodig");
       }
       // bevestigd of zelf ingevuld: het voorstel is niet meer nodig

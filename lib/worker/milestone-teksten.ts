@@ -3,6 +3,9 @@
 // staan in lib/i18n/freelancer.ts onder `milestones` met dezelfde vorm. Puur en zonder imports, zodat zowel de server als
 // de woordenlijst het kan laden. Plaatshouders: {pct}, {naam}, {n}, {uren}, {bedrag}, {datum}, … (lib/i18n/vul-in.ts).
 // De standaard van de mijlpalen is deze Nederlandse tekst: de dagelijkse push en de tests lezen hem ongewijzigd.
+// abu, stipp en belasting zeggen dat ZekerFlex verloont: ze worden alleen gebruikt als ZekerFlex zelf uitzender is
+// (ZEKERFLEX_UITZENDER, lib/uitzend/model.ts). Staat die uit, dan regelt het uitzendbureau dat en maakt
+// lib/worker/milestones.ts deze kaarten niet. De sleutels blijven staan: de andere talen hebben dezelfde vorm.
 // ---------------------------------------------------------------------------
 
 export const MILESTONE_NL = {

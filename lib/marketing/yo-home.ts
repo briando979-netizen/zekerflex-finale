@@ -145,7 +145,7 @@ export const YO_BEDRIJF = {
         tekst: "Liever iemand in loondienst? Dan krijg je uitzendkrachten via een aangesloten uitzendbureau: het bureau is de werkgever en regelt contract en loon, jij houdt de regie over wie er komt en wanneer.",
         foto: "/werk/campagne-uitzend.jpg",
         alt: "Een medewerker duwt een steekkar met dozen",
-        knop: { label: "Vraag uitzendkrachten aan", href: "/uitzendbureau#werkgevers" },
+        knop: { label: "Vraag uitzendkrachten aan", href: "/contact" },
         knop2: { label: "Zo werkt uitzenden", href: "/uitzendbureau" },
       },
     ] satisfies YoTab[],

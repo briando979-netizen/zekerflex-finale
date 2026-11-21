@@ -7,6 +7,7 @@ import { abuFaseEmailT } from "@/lib/mail/werker/abu-fase";
 import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 // ---------------------------------------------------------------------------
 // ABU-fase transition sweep. getUitzendStatus() recomputes the current phase
@@ -36,6 +37,9 @@ export interface AbuPhaseSweepResult {
 }
 
 export async function sweepAbuPhaseTransitions(): Promise<AbuPhaseSweepResult> {
+  // Is ZekerFlex geen uitzender (lib/uitzend/model.ts), dan houdt het uitzendbureau de ABU-fase bij: geen mail van ons
+  // (die wees naar /dashboard/verloning, en die blijft dan leeg)
+  if (!ZEKERFLEX_UITZENDER) return { checked: 0, seeded: 0, transitions: [] };
   const profiles = await prisma.freelancerProfile.findMany({
     where: { timesheets: { some: { status: { in: ["APPROVED", "PAID", "SUBMITTED"] } } } },
     select: { id: true, userId: true, lastAbuPhase: true, user: { select: { fullName: true, email: true } } },

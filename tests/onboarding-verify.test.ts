@@ -80,6 +80,9 @@ const gezichtControle = vi.fn().mockResolvedValue(GEZICHT_NIET);
 vi.mock("@/lib/kyc/gezicht/controle", () => ({ gezichtControle: (...a: unknown[]) => gezichtControle(...a) }));
 const featureEnabled = vi.fn().mockResolvedValue(true);
 vi.mock("@/lib/flags", () => ({ featureEnabled: (...a: unknown[]) => featureEnabled(...a) }));
+// sinds 21 nov staat het recht om te werken uit in de code (lib/werkrecht/aan.ts); deze test bewaakt het gedrag als het weer aan gaat
+// (met de schakelaar uit: tests/uitzender-werkrecht-uit.test.ts)
+vi.mock("@/lib/werkrecht/aan", () => ({ WERKRECHT_AAN: true }));
 
 /** de code op het document (MRZ), standaard: hoort bij Jan Jansen en SPECI2014, geldig tot 2030 */
 const MRZ_JAN = {

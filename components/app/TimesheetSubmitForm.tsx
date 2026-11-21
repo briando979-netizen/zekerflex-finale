@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 import { useFT } from "@/components/i18n/useFT";
 import { BANK_AAN } from "@/lib/app-mode";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 import { stappenVolgorde, volgendeStap, vorigeStap, type IndienStap } from "@/lib/timesheets/indien-stappen";
 
 // ---------------------------------------------------------------------------
@@ -185,9 +186,12 @@ export function TimesheetSubmitForm({
             : T.submittedFreelance(clientName, speed === "instant" ? T.whenInstant : speed === "threeDay" ? T.whenThreeDay : T.whenClient, toBank ? T.whereBank : T.whereIban)}
         </p>
         <div className="mt-6 space-y-2">
-          <Link href={payroll ? "/dashboard/verloning" : "/dashboard/uitbetalingen"} className="btn-ghost w-full">
-            {payroll ? T.viewPayslips : T.payoutsAndAdvance}
-          </Link>
+          {/* loonstroken bij ZekerFlex alleen als ZekerFlex zelf verloont (lib/uitzend/model.ts); anders geeft het uitzendbureau ze */}
+          {(!payroll || ZEKERFLEX_UITZENDER) && (
+            <Link href={payroll ? "/dashboard/verloning" : "/dashboard/uitbetalingen"} className="btn-ghost w-full">
+              {payroll ? T.viewPayslips : T.payoutsAndAdvance}
+            </Link>
+          )}
           <Link href="/dashboard/diensten" className="btn-primary w-full">
             {T.toMyJobs}
           </Link>

@@ -33,7 +33,7 @@ const KENMERKEN = [
 const STAPPEN: { titel: string; tekst: string; scherm?: UitzendScherm; app?: boolean }[] = [
   {
     titel: "Download de app",
-    tekst: "Installeer ZekerFlex op je telefoon. Liever eerst in de browser kijken? Dat kan ook.",
+    tekst: "Installeer ZekerFlex op je telefoon, voor Android of iPhone. Je werkersomgeving gebruik je in de app.",
     app: true,
   },
   {
@@ -133,9 +133,6 @@ export default function StartenAlsUitzendkrachtPage() {
                   <div className="mt-5 flex flex-wrap gap-3">
                     <Link href="/app" className="btn-primary">
                       Naar de app
-                    </Link>
-                    <Link href="/login" className="btn-ghost">
-                      Inloggen in de browser
                     </Link>
                   </div>
                 )}

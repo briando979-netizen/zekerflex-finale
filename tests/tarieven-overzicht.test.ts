@@ -60,7 +60,9 @@ describe("tarievenoverzicht", () => {
   it("de pagina linkt naar de pdf, de klus, de prijzen, het uitzendbureau en contact", () => {
     expect(TARIEVEN_PDF).toBe("/api/kennis/whitepaper/tarieven-overzicht");
     expect(pagina).toContain("href={TARIEVEN_PDF}");
-    for (const href of ["/klus-plaatsen", "/prijzen", "/uitzendbureau", "/contact"]) expect(pagina, href).toContain(`href="${href}"`);
+    // uitzendkrachten aanvragen gaat sinds 21 nov via contact (het oude formulier op /uitzendbureau is weg)
+    for (const href of ["/klus-plaatsen", "/prijzen", "/contact"]) expect(pagina, href).toContain(`href="${href}"`);
+    expect(pagina).not.toContain('href="/uitzendbureau"');
     expect(pagina).toContain('canonical("/tarieven-overzicht")');
     // bewust geen formulier: direct downloaden
     expect(pagina).not.toMatch(/<form|<input/);

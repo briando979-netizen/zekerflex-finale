@@ -5,7 +5,11 @@ import Link from "next/link";
 
 type State = "idle" | "sending" | "done" | "error";
 
-export function NewsletterSignup({ source = "footer" }: { source?: string }) {
+/**
+ * `toestemming`: een eigen tekst bij het vinkje (bijv. de wachtlijst voor jongeren van 16 en 17 op /nog-geen-18); zonder: de
+ * gewone nieuwsbrieftekst. De privacyverklaring staat er altijd achter.
+ */
+export function NewsletterSignup({ source = "footer", toestemming }: { source?: string; toestemming?: string }) {
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState<State>("idle");
@@ -86,7 +90,7 @@ export function NewsletterSignup({ source = "footer" }: { source?: string }) {
           className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 accent-brand-mint"
         />
         <span>
-          Ja, stuur me af en toe nieuws over ZekerFlex. Afmelden kan altijd. Zie de{" "}
+          {toestemming ?? "Ja, stuur me af en toe nieuws over ZekerFlex. Afmelden kan altijd."} Zie de{" "}
           <Link href="/privacy" className="underline hover:text-white/80">
             privacyverklaring
           </Link>

@@ -65,6 +65,12 @@ export function leeftijdsgroep(geboortedatum: string | null | undefined, dag: st
   return j >= 18 ? "volwassen" : j >= 16 ? "minderjarig" : "te-jong";
 }
 
+/**
+ * De uitleg bij de controle "Recht om te werken in Nederland" in de ID-uitslag. Die controle staat er alleen als het recht
+ * om te werken aan staat (WERKRECHT_AAN, lib/werkrecht/aan.ts; lib/onboarding/verify.ts): staat het uit, dan ziet de werker
+ * hem niet en houdt een nationaliteit van buiten de EU de goedkeuring niet tegen. De categorie zelf (werkrechtUitMrz) wordt
+ * wel altijd bepaald en bewaard. De tekst blijft gelijk aan de vertaling in lib/i18n/id-redenen.ts (werkrecht.*).
+ */
 export const WERKRECHT_TEKST: Record<Werkrecht, string> = {
   vrij: "Nationaliteit uit de EU, de EER of Zwitserland: vrij om in Nederland te werken",
   controle: "Nationaliteit buiten de EU/EER: een verblijfsdocument met 'arbeid vrij toegestaan' of een werkvergunning (TWV) is nodig. Een medewerker vraagt dit op.",

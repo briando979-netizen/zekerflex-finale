@@ -100,7 +100,7 @@ export async function applyToShift(
   }
   // een gewone uitzendklus is alleen voor uitzendkrachten van ZekerFlex; bij een uitzendpartner mag iedereen een contract aanvragen
   if (shift.viaUitzendbureau && !partnerKlus && eligible.track !== "payroll") {
-    throw AppError.forbidden("Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau.").metSleutel("apply.uitzendOnly");
+    throw AppError.forbidden("Deze klus loopt via een uitzendbureau; reageren kan alleen als uitzendkracht.").metSleutel("apply.uitzendOnly");
   }
   if (await isBlockedByAny([shift.branch.tenantId], userId)) {
     throw AppError.forbidden("Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.").metSleutel("apply.opdrachtgeverWeigert");

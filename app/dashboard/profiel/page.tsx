@@ -10,6 +10,7 @@ import { AvatarUpload } from "@/components/app/AvatarUpload";
 import { ErvaringLijst } from "@/components/app/ErvaringLijst";
 import { getErvaring } from "@/lib/werker/ervaring-store";
 import { UitzendContractCard } from "@/components/app/UitzendContractCard";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 import { listCertificates } from "@/lib/certificates/store";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
@@ -186,7 +187,21 @@ export default async function ProfielPage() {
           </dl>
         </Panel>
 
-        {isUitzend ? (
+        {/* ZekerFlex is geen uitzender meer (lib/uitzend/model.ts): het uitzendbureau verloont en vraagt het BSN zelf, dus geen
+            BSN, loonheffingskorting, loonstroken of uitzendovereenkomst van ZekerFlex (21 nov) */}
+        {isUitzend && !ZEKERFLEX_UITZENDER ? (
+          <Panel title={t.werkvorm}>
+            <dl className="divide-y divide-hair text-sm">
+              <Field k={t.werkvorm} v={t.uitzendkrachtWerkgever} />
+              <Field k={t.btwKvk} v={t.nietNodig} />
+            </dl>
+            <div className="border-t border-hair px-5 py-4">
+              <Link href="/dashboard/fiscaal" className="text-sm font-medium text-brand-600">
+                {t.werkvormBtw}
+              </Link>
+            </div>
+          </Panel>
+        ) : isUitzend ? (
           <Panel title={t.werkvormVerloning}>
             <dl className="divide-y divide-hair text-sm">
               <Field k={t.werkvorm} v={t.uitzendkrachtWerkgever} />
@@ -233,7 +248,7 @@ export default async function ProfielPage() {
           </Panel>
         )}
 
-        {isUitzend && (
+        {isUitzend && ZEKERFLEX_UITZENDER && (
           <Panel title={t.uitzendOvereenkomst}>
             <div className="p-5">
               <UitzendContractCard />
@@ -281,11 +296,14 @@ export default async function ProfielPage() {
             <Field k={t.postcode} v={profile?.homePostalCode ?? "—"} />
             <Field k={t.tijdzone} v={profile?.timezone ?? "Europe/Amsterdam"} />
           </dl>
-          <div className="border-t border-hair px-5 py-4">
-            <Link href={isUitzend ? "/dashboard/verloning" : "/dashboard/uitbetalingen"} className="text-sm font-medium text-brand-600">
-              {isUitzend ? t.loonstrokenBekijk : t.uitbetalingenBekijk}
-            </Link>
-          </div>
+          {/* een uitzendkracht krijgt zijn loon van het uitzendbureau: geen link naar loonstroken of uitbetalingen van ZekerFlex */}
+          {(!isUitzend || ZEKERFLEX_UITZENDER) && (
+            <div className="border-t border-hair px-5 py-4">
+              <Link href={isUitzend ? "/dashboard/verloning" : "/dashboard/uitbetalingen"} className="text-sm font-medium text-brand-600">
+                {isUitzend ? t.loonstrokenBekijk : t.uitbetalingenBekijk}
+              </Link>
+            </div>
+          )}
         </Panel>
 
         <Panel title={t.mailPrefs}>

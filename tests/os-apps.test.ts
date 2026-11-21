@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { OS_CATEGORIEEN, OS_ROLLEN, alleApps, appsVoor, perCategorie, zoekApps, STANDAARD_VASTGEZET, type OsRol } from "@/lib/os/apps";
 import { MAX_VASTGEZET, normalizeInstellingen, standaardInstellingen } from "@/lib/os/instellingen";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 const apps = alleApps();
 
@@ -70,7 +71,8 @@ describe("ZekerFlex OS — de appcatalogus", () => {
   it("zoeken vindt op naam, zoekwoord en uitleg; de beste treffer eerst", () => {
     const werker = appsVoor("werker");
     expect(zoekApps(werker, "uren")[0]?.id).toBe("w-uren");
-    expect(zoekApps(werker, "loonstrook").map((a) => a.id)).toContain("w-verloning");
+    // de verloning staat er alleen als ZekerFlex zelf verloont (lib/uitzend/model.ts); anders doet het uitzendbureau dat
+    expect(zoekApps(werker, "loonstrook").map((a) => a.id).includes("w-verloning")).toBe(ZEKERFLEX_UITZENDER);
     expect(zoekApps(werker, "")).toEqual([]);
     expect(zoekApps(werker, "qqqzzz")).toEqual([]);
   });

@@ -60,7 +60,7 @@ describe("applyToShift — viaUitzendbureau gate", () => {
     shiftFindUnique.mockResolvedValue(uitzendShift);
 
     await expect(applyToShift("u1", "shift1")).rejects.toThrow(
-      "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau.",
+      "Deze klus loopt via een uitzendbureau; reageren kan alleen als uitzendkracht.",
     );
     expect(shiftMatchUpsert).not.toHaveBeenCalled();
     expect(recordOfferResponse).not.toHaveBeenCalled();

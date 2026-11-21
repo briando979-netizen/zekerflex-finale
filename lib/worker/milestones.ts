@@ -5,6 +5,7 @@ import { amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { env } from "@/lib/env";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { MILESTONE_NL, type MilestoneTeksten } from "@/lib/worker/milestone-teksten";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 // ---------------------------------------------------------------------------
 // "Je administratie, zonder gedoe": mijlpalen, drempels en deadlines die een
@@ -121,6 +122,9 @@ export async function getWorkerMilestones(userId: string, now = new Date(), t: M
   const milestones: Milestone[] = [];
 
   if (isPayroll) {
+    // Is ZekerFlex geen uitzender (lib/uitzend/model.ts), dan regelt het uitzendbureau de ABU-fase, StiPP en de
+    // loonheffing: geen kaarten die zeggen dat ZekerFlex dat doet. Urencriterium, KOR en btw gelden niet voor loon.
+    if (!ZEKERFLEX_UITZENDER) return { workerKind: fiscal.workerKind, fiscalComplete: Boolean(fiscal.workerKind), generatedAt: now.toISOString(), milestones };
     // Uitzendkracht: ABU-fase, StiPP-pensioen, loonheffing — read-only status.
     const st = await getUitzendStatus(userId);
     if (st) {

@@ -6,6 +6,7 @@ import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, money, moneyExact }
 import { PayoutSpeedPanel } from "@/components/app/PayoutSpeedPanel";
 import { BackLink } from "@/components/app/BackLink";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,9 @@ const TONE: Record<string, "ok" | "warn" | "crit" | "neutral"> = {
 
 export default async function UitbetalingenPage() {
   const principal = await requirePrincipal();
-  // Uitzendkrachten have no invoices: they are paid through payroll.
-  if (invoiceModeFor(await getFiscal(principal.userId)) === "payroll") redirect("/dashboard/verloning");
+  // Uitzendkrachten have no invoices: they are paid through payroll. Verloont het uitzendbureau (ZEKERFLEX_UITZENDER uit,
+  // lib/uitzend/model.ts), dan blijft /dashboard/verloning leeg: dan naar Mijn klussen.
+  if (invoiceModeFor(await getFiscal(principal.userId)) === "payroll") redirect(ZEKERFLEX_UITZENDER ? "/dashboard/verloning" : "/dashboard/diensten");
   const [o, ft] = await Promise.all([getFreelancerOverview(principal.userId), getFreelancerDict()]);
   const t = ft.pay;
   // Bedragen en datums in de taal van de app, altijd Nederlandse tijd.

@@ -31,6 +31,8 @@ vi.mock("@/lib/mail", () => ({ sendMail: (...a: unknown[]) => sendMail(...a) }))
 vi.mock("@/lib/mail/taal", () => ({ mailTaalVoorWerker: async () => "nl" }));
 
 vi.mock("@/lib/env", () => ({ env: { MAIL_ADMIN: "admin@zekerflex.com" } }));
+// sinds 21 nov is ZekerFlex geen uitzender (lib/uitzend/model.ts) en slaat de sweep alles over; deze test bewaakt het gedrag als het weer aan gaat
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
 
 import { sweepAbuPhaseTransitions } from "@/lib/payroll/abu-phase-sweep";
 

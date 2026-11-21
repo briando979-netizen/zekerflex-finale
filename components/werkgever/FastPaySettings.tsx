@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useT } from "@/components/i18n/I18nProvider";
+import { BANK_AAN } from "@/lib/app-mode";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 interface Settings {
   offerFastPay: boolean;
@@ -86,8 +88,9 @@ export function FastPaySettings() {
         </div>
       )}
       {/* 16 nov 2026: de schakelaar stond aan en beloofde een voorschot dat niet werd overgemaakt (geen uitbetaalroute).
-          Kan het niet, dan staat het blok er niet: wat niet kan hoeft niet op het scherm. */}
-      {s.voorschotKan ? (
+          Kan het niet, dan staat het blok er niet: wat niet kan hoeft niet op het scherm. Een loonvoorschot bestaat alleen
+          als ZekerFlex zelf uitzender is (lib/uitzend/model.ts) en de bank aan staat (lib/app-mode.ts). */}
+      {ZEKERFLEX_UITZENDER && BANK_AAN && s.voorschotKan ? (
         <label className="flex items-start justify-between gap-3 border-t border-hair pt-4 text-sm">
           <span>
             <span className="block">{f.voorschotKop}</span>

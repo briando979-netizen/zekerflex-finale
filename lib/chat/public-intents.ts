@@ -6,6 +6,8 @@
 // line "[[vraag 1|vraag 2|…]]" which it renders as tap-able chips.
 // ---------------------------------------------------------------------------
 
+import { JONGEREN_ANTWOORD, JONGEREN_VRAAG } from "@/lib/marketing/jongeren";
+
 export interface IntentReply {
   reply: string;
   suggestions: string[];
@@ -57,6 +59,12 @@ const SMALL_TALK: { re: RegExp; answer: () => IntentReply }[] = [
 
 const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   {
+    // 21 nov 2026 (eigenaar): wie jonger is dan 18 niet laten weglopen; 16 en 17 laten een e-mailadres achter (lib/marketing/jongeren.ts).
+    // Vóór "ik zoek werk": "ik ben 16 en zoek werk" hoort hier.
+    re: JONGEREN_VRAAG,
+    answer: { reply: JONGEREN_ANTWOORD, suggestions: ["Kan ik als uitzendkracht werken?", "Contact met een mens"] },
+  },
+  {
     re: /ik zoek (werk|een baan|klussen)|werk zoeken|bijverdienen|geld verdienen|bijbaan/i,
     answer: { reply: "Top! Maak gratis een account via 'Aan de slag', vul je vak, beschikbaarheid en woonplaats in en doorloop een korte identiteitscheck. Daarna zie je klussen bij jou in de buurt en reageer je met één tik.", suggestions: ["Hoe snel word ik uitbetaald?", "Heb ik een KVK nodig?", "Kan ik als uitzendkracht werken?"] },
   },
@@ -70,7 +78,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /voorschot/i,
-    answer: { reply: "Een voorschot voor zzp'ers is er op dit moment niet. Wil je eerder je geld, kies dan na goedkeuring van je uren 'direct indienen' (4%) of 'binnen 3 werkdagen' (2%). Werk je als uitzendkracht en biedt je opdrachtgever het aan, dan krijg je na goedkeuring wel een voorschot op je loon.", suggestions: ["Hoe snel word ik uitbetaald?", "Kan ik zonder KVK werken?"] },
+    answer: { reply: "Een voorschot voor zzp'ers is er op dit moment niet. Wil je eerder je geld, kies dan na goedkeuring van je uren 'direct indienen' (4%) of 'binnen 3 werkdagen' (2%). Werk je als uitzendkracht, dan betaalt je uitzendbureau je loon op vaste momenten.", suggestions: ["Hoe snel word ik uitbetaald?", "Kan ik zonder KVK werken?"] },
   },
   {
     // vóór de prijs-regel: "reiskosten" bevat "kost"
@@ -102,7 +110,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   {
     re: /uitzend|zonder kvk|geen kvk|loonstrook|payroll/i,
     // 21 nov 2026: ZekerFlex is zelf geen uitzendbureau meer; het aangesloten uitzendbureau is de werkgever en verloont
-    answer: { reply: "Geen KVK? Dan werk je als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is je werkgever: het regelt je contract, loonheffing, vakantiegeld en pensioen volgens zijn cao, en je loonstrook krijg je van het bureau. Bij een uitzendklus vraag je in de app met één knop een uitzendcontract aan.", suggestions: ["Hoe meld ik me aan?", "Hoe snel word ik uitbetaald?"] },
+    answer: { reply: "Geen KVK? Dan werk je als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is je werkgever: het regelt je contract, loonheffing, vakantiegeld en pensioen volgens zijn cao, en je loonstrook krijg je van het bureau. In de app zet je bij het filter Type klus de Uitzendklussen aan en meld je je aan; het bureau neemt dan contact met je op.", suggestions: ["Hoe meld ik me aan?", "Hoe snel word ik uitbetaald?"] },
   },
   {
     re: /belasting|btw|inkomstenbelasting|aangifte|kvk|kleineondernemers|\bkor\b/i,

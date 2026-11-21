@@ -82,7 +82,7 @@ const nl: HulpTeksten = {
     {
       id: "betaling",
       v: "Wanneer krijg ik mijn geld?",
-      a: "Zodra de opdrachtgever je uren heeft goedgekeurd, regelt ZekerFlex de rest: je hoeft zelf geen factuur te sturen. Het geld gaat naar je eigen bankrekening. De stand zie je onder Account → Facturenoverzicht. Werk je als uitzendkracht, dan betaalt het uitzendbureau je loon en krijg je je loonstrook van het bureau.",
+      a: "Zodra de opdrachtgever je uren heeft goedgekeurd, regelt ZekerFlex de rest: je hoeft zelf geen factuur te sturen. Het geld gaat naar je eigen bankrekening. De stand zie je onder Account → Facturenoverzicht. Werk je als uitzendkracht, dan betaalt je uitzendbureau je loon en krijg je je loonstrook van het bureau.",
       link: { href: "/dashboard/uitbetalingen", label: "Naar Facturenoverzicht" },
     },
     {
@@ -272,7 +272,7 @@ const en: HulpTeksten = {
     {
       id: "betaling",
       v: "When do I get paid?",
-      a: "As soon as the employer has approved your hours, ZekerFlex takes care of the rest: you don't need to send an invoice yourself. The money goes to your own bank account. You can see the status under Account → Invoice overview. If you work as a temp worker, the staffing agency pays your wages and you get your payslip from the agency.",
+      a: "As soon as the employer has approved your hours, ZekerFlex takes care of the rest: you don't need to send an invoice yourself. The money goes to your own bank account. You can see the status under Account → Invoice overview. If you work as a temp worker, your staffing agency pays your wages and you get your payslip from the agency.",
       link: { href: "/dashboard/uitbetalingen", label: "Go to Invoice overview" },
     },
     {
@@ -462,7 +462,7 @@ const pl: HulpTeksten = {
     {
       id: "betaling",
       v: "Kiedy dostanę pieniądze?",
-      a: "Gdy tylko zleceniodawca zatwierdzi Twoje godziny, ZekerFlex zajmie się resztą: nie musisz sam wysyłać faktury. Pieniądze trafiają na Twoje własne konto bankowe. Stan zobaczysz w Konto → Przegląd faktur. Jeśli pracujesz jako pracownik tymczasowy, wynagrodzenie wypłaca agencja pracy i to od niej dostajesz odcinek płacowy.",
+      a: "Gdy tylko zleceniodawca zatwierdzi Twoje godziny, ZekerFlex zajmie się resztą: nie musisz sam wysyłać faktury. Pieniądze trafiają na Twoje własne konto bankowe. Stan zobaczysz w Konto → Przegląd faktur. Jeśli pracujesz jako pracownik tymczasowy, wynagrodzenie wypłaca Twoja agencja pracy i to od niej dostajesz odcinek płacowy.",
       link: { href: "/dashboard/uitbetalingen", label: "Przejdź do Przegląd faktur" },
     },
     {
@@ -652,7 +652,7 @@ const ro: HulpTeksten = {
     {
       id: "betaling",
       v: "Când primesc banii?",
-      a: "Imediat ce angajatorul ți-a aprobat orele, ZekerFlex se ocupă de rest: nu trebuie să trimiți tu o factură. Banii ajung în contul tău bancar. Situația o vezi la Cont → Prezentare facturi. Dacă lucrezi ca lucrător temporar, salariul ți-l plătește agenția de muncă temporară și fluturașul îl primești de la agenție.",
+      a: "Imediat ce angajatorul ți-a aprobat orele, ZekerFlex se ocupă de rest: nu trebuie să trimiți tu o factură. Banii ajung în contul tău bancar. Situația o vezi la Cont → Prezentare facturi. Dacă lucrezi ca lucrător temporar, salariul ți-l plătește agenția ta de muncă temporară și fluturașul îl primești de la agenție.",
       link: { href: "/dashboard/uitbetalingen", label: "Mergi la Prezentare facturi" },
     },
     {
@@ -842,7 +842,7 @@ const uk: HulpTeksten = {
     {
       id: "betaling",
       v: "Коли я отримаю гроші?",
-      a: "Щойно роботодавець затвердить ваші години, ZekerFlex зробить решту: вам не потрібно самому надсилати рахунок. Гроші надходять на ваш власний банківський рахунок. Стан видно в «Акаунт → Огляд рахунків». Якщо ви працюєте як тимчасовий працівник, зарплату виплачує кадрова агенція, і розрахунковий лист ви отримуєте від неї.",
+      a: "Щойно роботодавець затвердить ваші години, ZekerFlex зробить решту: вам не потрібно самому надсилати рахунок. Гроші надходять на ваш власний банківський рахунок. Стан видно в «Акаунт → Огляд рахунків». Якщо ви працюєте як тимчасовий працівник, зарплату виплачує ваша кадрова агенція, і розрахунковий лист ви отримуєте від неї.",
       link: { href: "/dashboard/uitbetalingen", label: "До «Огляд рахунків»" },
     },
     {

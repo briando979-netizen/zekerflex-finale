@@ -374,7 +374,9 @@ describe("de sitemap met de vlag aan", () => {
     // de flexwerk-kern blijft; /klussen en /aanbod zijn nu verborgen
     expect(urls.some((u) => padVan(u) === "/")).toBe(true);
     expect(urls.some((u) => padVan(u) === "/prijzen")).toBe(true);
-    expect(urls.some((u) => padVan(u) === "/uitzendbureau")).toBe(true);
+    // 21 nov: /uitzendbureau stuurt door; de uitleg voor uitzendkrachten staat op /starten-als-uitzendkracht
+    expect(urls.some((u) => padVan(u) === "/starten-als-uitzendkracht")).toBe(true);
+    expect(urls.some((u) => padVan(u) === "/uitzendbureau")).toBe(false);
     expect(urls.some((u) => padVan(u) === "/klussen")).toBe(false);
     expect(urls.some((u) => padVan(u) === "/aanbod")).toBe(false);
   });

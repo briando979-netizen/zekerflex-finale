@@ -11,6 +11,7 @@
 
 import type { WorkerKind } from "@/lib/fiscal/store";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 export type FormulierMist = "btwZzp" | "btwFlex" | "bsn";
 
@@ -36,7 +37,8 @@ export function formulierMist(f: FormulierFeiten): FormulierMist[] {
   const mist: FormulierMist[] = [];
   if (f.kind === "zzp" && !(f.vatNumber.trim() || (f.vatRequested && f.kvkNumber.trim()))) mist.push("btwZzp");
   if (f.kind === "flexwerker" && !(f.vatNumber.trim() || f.kor || f.vatRequested || f.korIngediend)) mist.push("btwFlex");
-  if (f.kind === "uitzendkracht" && !(f.hasBsn || f.bsn.trim())) mist.push("bsn");
+  // sinds 21 nov vraagt het uitzendbureau zelf je BSN (ZEKERFLEX_UITZENDER = false): dan mist het hier niet
+  if (ZEKERFLEX_UITZENDER && f.kind === "uitzendkracht" && !(f.hasBsn || f.bsn.trim())) mist.push("bsn");
   return mist;
 }
 

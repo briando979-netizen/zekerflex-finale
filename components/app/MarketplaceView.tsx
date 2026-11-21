@@ -138,10 +138,13 @@ export function MarketplaceView({
   defaultMinRateCents,
   defaultMaxTravel,
   defaultBranches = [],
+  alleenUitzend = false,
   leeg,
 }: {
   /** de branches die de werker bij de start koos: het filter staat er standaard op (en kan weg) */
   defaultBranches?: ShiftCategoryKey[];
+  /** uitzendkracht zonder KVK: Type klus staat standaard alleen op Uitzendklussen (hij kan alleen daarop reageren) */
+  alleenUitzend?: boolean;
   /**
    * Zonder één klus: wat er in het vak staat, met één knop. De filterbalk met het zoekveld blijft dan gewoon staan
    * (zoals bij YoungOnes; 21 nov: het vergrootglas in de balk springt naar #zoeken en deed anders niets).
@@ -167,7 +170,7 @@ export function MarketplaceView({
   const [q, setQ] = useState(initialQuery);
   const [minRate, setMinRate] = useState<number>(defaultMinRateCents ? Math.round(defaultMinRateCents / 100) : 0);
   // "Tijden" (ochtend/middag/avond) staat sinds 21 nov niet meer in het filter (eigenaar: "haal tijden weg in de filter")
-  const [typen, setTypen] = useState<Set<KlusType>>(new Set(ALLE_TYPEN));
+  const [typen, setTypen] = useState<Set<KlusType>>(new Set(alleenUitzend ? ["uitzend"] : ALLE_TYPEN));
   // Branches (sectors) — multi-select over the full list, not just what happens to be on screen.
   const [branches, setBranches] = useState<Set<ShiftCategoryKey>>(new Set(defaultBranches));
   const [quick, setQuick] = useState<Set<string>>(new Set());

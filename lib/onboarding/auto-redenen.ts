@@ -9,7 +9,7 @@
 //  - geen leesbare code op het document (MRZ) of een rijbewijs (geen code): dan is niet zeker dat het document klopt;
 //  - het gezicht lijkt niet zeker genoeg op de pasfoto, of het hoofd draaide niet echt (een foto van een foto);
 //  - foto's via "verder op je telefoon" (QR): een doorgestuurde link kan bij een ander uitkomen (review H1);
-//  - geen EU/EER/CH-nationaliteit (Wet arbeid vreemdelingen), of jonger dan 18;
+//  - geen EU/EER/CH-nationaliteit (Wet arbeid vreemdelingen; alleen met WERKRECHT_AAN, lib/werkrecht/aan.ts), of jonger dan 18;
 //  - hetzelfde document of dezelfde chip al bij een ander account;
 //  - geen live camerabeelden bij de server (review 73, 12 nov): foto's die iemand zelf kiest kunnen bestaande foto's
 //    van een ander zijn (een gestolen paspoort plus twee foto's van de eigenaar van sociale media). Alleen de scan met de
@@ -19,6 +19,7 @@
 // ---------------------------------------------------------------------------
 
 import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
+import { WERKRECHT_AAN } from "@/lib/werkrecht/aan";
 
 /** Zoveel live camerabeelden moet de server tijdens de selfies gezien hebben (de reeks, laatste half uur). */
 export const MIN_LIVE_BEELDEN = 5;
@@ -95,7 +96,8 @@ export function redenenNietAutomatisch(f: AutoFeiten): string[] {
   else {
     if (!f.mrzNummerOk) r.push("het getypte documentnummer wijkt af van het nummer op het document");
     if (!f.mrzNaamOk) r.push("de naam op het document wijkt af van de accountnaam");
-    if (f.werkrecht !== "vrij") r.push(f.werkrecht === "controle" ? "geen EU/EER/CH-nationaliteit: het recht om te werken moet gecontroleerd worden" : "de nationaliteit is niet te lezen");
+    // het recht om te werken telt alleen als het aan staat (lib/werkrecht/aan.ts); anders controleert het uitzendbureau dat
+    if (WERKRECHT_AAN && f.werkrecht !== "vrij") r.push(f.werkrecht === "controle" ? "geen EU/EER/CH-nationaliteit: het recht om te werken moet gecontroleerd worden" : "de nationaliteit is niet te lezen");
     if (f.leeftijd !== "volwassen") r.push(f.leeftijd === "minderjarig" || f.leeftijd === "te-jong" ? "de werker is jonger dan 18" : "de leeftijd is niet te lezen");
   }
   if (f.chipFotoVerschil) r.push("de chip hoort bij een ander document dan de foto's");

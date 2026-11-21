@@ -109,7 +109,7 @@ export default async function FreelanceWerkPage() {
         body="Gratis account, KVK of btw-nummer koppelen (of zonder KVK via een aangesloten uitzendbureau) en direct reageren."
         primaryHref="/register?type=freelancer"
         primaryLabel="Gratis account maken"
-        secondaryHref="/uitzendbureau"
+        secondaryHref="/starten-als-uitzendkracht"
         secondaryLabel="Werken zonder KVK"
       />
     </>

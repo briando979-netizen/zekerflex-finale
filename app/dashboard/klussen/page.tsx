@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { startSchermTonen } from "@/lib/onboarding/werker-poort";
+import { UITZEND_ALLEEN_VIA_BUREAU } from "@/lib/fiscal/eligibility";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
@@ -63,6 +64,10 @@ export default async function KlussenPage(
   };
   // Alleen testklussen (lib/shifts/testklus.ts)? Dan zeggen we eerlijk dat er nog geen echt werk is.
   const alleenTest = alleenTestklussen(m.shifts);
+  // Een uitzendkracht (geen KVK) mag alleen op uitzendklussen van een uitzendbureau reageren (lib/fiscal/eligibility.ts). Dan
+  // geen balk "reageren kan zodra dat rond is" (21 nov, op de telefoon gezien: op uitzendklussen kan hij al reageren), en het
+  // filter staat op Uitzendklussen.
+  const alleenUitzend = !m.canApply && m.blockReason === UITZEND_ALLEEN_VIA_BUREAU;
   // Warme, contextuele subregel bij de groet — alleen als er iets te melden is.
   const greetSub =
     m.newSinceLastVisit > 0 ? t.greet.subNew : m.shifts.length > 0 && !alleenTest ? t.greet.subDiscover : undefined;
@@ -95,7 +100,7 @@ export default async function KlussenPage(
           nog mist, zie je bij het reageren en op /dashboard/start/profiel. Dan ook niet de reden-balk eronder. */}
       {poort && onboardingOpen ? (
         <GeldVerdienenKaart kop={t.start.geldKop} tekst={t.start.geldTekst} knop={t.start.geldKnop} href="/dashboard/start/profiel" />
-      ) : nogVoorKlus.length > 0 ? null : (
+      ) : nogVoorKlus.length > 0 || alleenUitzend ? null : (
         // iets anders houdt reageren tegen (bijv. de KVK-controle wacht, of matching is tijdelijk beperkt): de echte reden
         !m.canApply &&
         m.blockReason && (
@@ -129,6 +134,8 @@ export default async function KlussenPage(
         homeLabel={m.homeLabel}
         initialQuery={initialQuery}
         defaultBranches={standaardFilter(brancheKeuze)}
+        // uitzendkracht zonder KVK: het filter Type klus staat standaard op Uitzendklussen (zoals YoungOnes)
+        {...(alleenUitzend ? { alleenUitzend: true } : {})}
         canApply={m.canApply}
         blockReason={m.blockReason}
         defaultMinRateCents={m.prefs.minHourlyRateCents}

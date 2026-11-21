@@ -132,7 +132,7 @@ export async function counterOfferAction(
     // Uitzendkrachten work for the listed wage (CAO) — no counter-offers.
     if (eligible.track === "payroll" || partnerKlus) proposedRateCents = shift.hourlyRateCents;
     if (shift.viaUitzendbureau && !partnerKlus && eligible.track !== "payroll") {
-      return { ok: false, message: "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau." };
+      return { ok: false, message: "Deze klus loopt via een uitzendbureau; reageren kan alleen als uitzendkracht." };
     }
     if (!["OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status)) {
       return { ok: false, message: "Deze dienst neemt geen biedingen meer aan." };

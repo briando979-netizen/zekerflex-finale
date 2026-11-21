@@ -12,6 +12,7 @@ import { UITZEND_NIEUW } from "@/lib/agreements/uitzend-nieuw-teksten";
 import { getLocale } from "@/lib/i18n/server";
 import { recordAudit } from "@/lib/audit";
 import { gegevensVoorContractCompleet } from "@/lib/agreements/uitzend-gegevens";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +40,10 @@ export async function POST(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     requireRole(p, "FREELANCER");
+    // ZekerFlex is geen uitzender meer (lib/uitzend/model.ts): je uitzendcontract teken je bij het uitzendbureau van de klus
+    if (!ZEKERFLEX_UITZENDER) {
+      throw AppError.precondition("Je uitzendcontract teken je bij het uitzendbureau van de klus, niet bij ZekerFlex.");
+    }
 
     const fiscal = await getFiscal(p.userId);
     if (invoiceModeFor(fiscal) !== "payroll") {

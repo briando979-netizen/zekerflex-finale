@@ -511,7 +511,7 @@ export function NewShiftForm({
         {!edit && !ZEKERFLEX_UITZENDER && (
           <p className="rounded-xl border border-hairstrong bg-paper-soft px-4 py-3 text-xs text-neutralx-500">
             {n.uitzendViaBureau}{" "}
-            <Link href="/uitzendbureau#werkgevers" className="font-semibold text-brand-600 underline">
+            <Link href="/contact" className="font-semibold text-brand-600 underline">
               {n.uitzendViaBureauLink}
             </Link>
           </p>

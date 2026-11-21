@@ -144,12 +144,14 @@ export const AANBOD: AanbodItem[] = [
       "Geen werkgeversrisico voor jou",
       "Contract, loon en pensioen via het uitzendbureau, volgens zijn cao",
       "Inchecken en uren in de ZekerFlex-app",
-      "Aanvragen met één formulier",
+      "Aanvragen via contact: wij brengen je in contact met een bureau",
     ],
     voorWie: "Bedrijven die mensen langer of vaker willen inzetten",
     status: "beschikbaar",
-    pagina: "/uitzendbureau",
-    start: { label: "Vraag uitzendkrachten aan", href: "/uitzendbureau#werkgevers" },
+    // 21 nov: de oude uitzendpagina met het aanvraagformulier is weg (/uitzendbureau stuurt door naar de uitleg voor werkers);
+    // een bedrijf dat uitzendkrachten zoekt, komt bij personeel inhuren en vraagt ze aan via contact
+    pagina: "/personeel-inhuren",
+    start: { label: "Vraag uitzendkrachten aan", href: "/contact" },
   },
   {
     slug: "inchecken-op-locatie",
@@ -721,7 +723,7 @@ export const AANBOD: AanbodItem[] = [
 export const WERK_ZOEKEN: { naam: string; kort: string; href: string }[] = [
   { naam: "Open klussen", kort: "Diensten bij jou in de buurt, op vak en reistijd.", href: "/klussen" },
   { naam: "Starten als freelancer", kort: "Van aanmelding tot je eerste dienst.", href: "/voor-freelancers" },
-  { naam: "Werken als uitzendkracht", kort: "Zonder KVK, via een aangesloten uitzendbureau.", href: "/uitzendbureau" },
+  { naam: "Werken als uitzendkracht", kort: "Zonder KVK, via een aangesloten uitzendbureau.", href: "/starten-als-uitzendkracht" },
   { naam: "Download de app", kort: "Diensten, uren en uitbetaling op je telefoon.", href: "/app" },
 ];
 

@@ -41,7 +41,7 @@ const FAQ = [
   },
   {
     q: "Kan ik via ZekerFlex ook uitzendkrachten inhuren?",
-    a: "Ja, via een aangesloten uitzendbureau. Dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao. Je vraagt uitzendkrachten aan op de pagina over het uitzendbureau; het tarief krijg je vooraf van het bureau.",
+    a: "Ja, via een aangesloten uitzendbureau. Dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao. Je vraagt uitzendkrachten aan via contact; wij brengen je in contact met een aangesloten uitzendbureau, en het tarief krijg je vooraf van het bureau.",
   },
 ];
 
@@ -116,7 +116,7 @@ export default function KostenUitzendkrachtPage() {
               </Link>
               . Heb je mensen nodig die onder jouw leiding werken, dan is een uitzendkracht de juiste keuze. Dat kan ook
               via ZekerFlex, met een{" "}
-              <Link href="/uitzendbureau" className="text-brand-600 underline">
+              <Link href="/contact" className="text-brand-600 underline">
                 aangesloten uitzendbureau
               </Link>
               .

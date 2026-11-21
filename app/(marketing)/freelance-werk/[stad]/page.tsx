@@ -91,7 +91,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
         </div>
         <p className="mt-6 text-sm text-neutralx-600">
           Liever zonder KVK werken?{" "}
-          <Link href="/uitzendbureau" className="font-medium text-brand-600 hover:underline">
+          <Link href="/starten-als-uitzendkracht" className="font-medium text-brand-600 hover:underline">
             Werk als uitzendkracht via een aangesloten uitzendbureau
           </Link>
           . Ben je een bedrijf in {c.name}?{" "}

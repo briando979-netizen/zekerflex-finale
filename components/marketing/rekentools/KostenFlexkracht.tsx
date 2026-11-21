@@ -120,7 +120,7 @@ export function KostenFlexkracht() {
           <Link href="/register?type=bedrijf" className="btn-primary">
             Gratis klus plaatsen
           </Link>
-          <Link href="/uitzendbureau" className="btn-ghost">
+          <Link href="/contact" className="btn-ghost">
             Liever uitzendkrachten?
           </Link>
         </div>

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { WORKER_PUSH, type WorkerPushTexts } from "@/lib/i18n/worker-push";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 // "✅ Je uren zijn goedgekeurd" — het moment waarop een werker op zijn geld
 // wacht. Eén bericht per goedkeuring (ook bij een automatische via de autopilot),
@@ -35,6 +36,15 @@ export function approvedPushText(r: ApprovedSummary, shiftTitle: string, t: Work
   return { title: t.approvedTitle, body: `${shiftTitle}: ${hours} ${t.hours}. ${next}` };
 }
 
+/**
+ * Waar een tik op het bericht heen gaat. De verloning (loonstroken van ZekerFlex) alleen als ZekerFlex zelf verloont
+ * (lib/uitzend/model.ts); anders verloont het uitzendbureau en blijft die pagina leeg, dus naar Mijn klussen.
+ */
+export function approvedPushUrl(track: ApprovedSummary["track"]): string {
+  if (track === "payroll") return ZEKERFLEX_UITZENDER ? "/dashboard/verloning" : "/dashboard/diensten";
+  return track === "partner" ? "/dashboard/diensten" : "/dashboard/uitbetalingen";
+}
+
 export async function pushHoursApproved(r: ApprovedSummary): Promise<void> {
   const ts = await prisma.timesheet.findUnique({
     where: { id: r.timesheetId },
@@ -46,7 +56,7 @@ export async function pushHoursApproved(r: ApprovedSummary): Promise<void> {
     ...approvedPushText(r, shiftTitle, t),
     data: {
       type: "SHIFT",
-      url: r.track === "payroll" ? "/dashboard/verloning" : r.track === "partner" ? "/dashboard/diensten" : "/dashboard/uitbetalingen",
+      url: approvedPushUrl(r.track),
       tag: `goedgekeurd-${r.timesheetId}`,
     },
     ttlSeconds: 3 * 86_400,

@@ -167,7 +167,7 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             </h2>
             <p className="mt-4 max-w-md text-white/70">
               Reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen — alles vanaf je
-              telefoon. Dezelfde functies als op het web, met meldingen die kloppen.
+              telefoon, met meldingen die kloppen.
             </p>
             <div className="mt-7 flex flex-wrap items-start gap-3">
               <InstallAppButton />
@@ -188,15 +188,16 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
                 .
               </p>
             )}
-            {/* de knoppen rechtsboven sturen werkers hierheen (KOP_KNOPPEN): hier dus ook inloggen en een account aanmaken */}
+            {/* de knoppen rechtsboven sturen werkers hierheen (KOP_KNOPPEN). Je werkersomgeving gebruik je sinds 21 nov alleen in de
+                app (lib/app-vereist.ts); een account aanmaken kan wel hier, en bedrijven loggen in via de website. */}
             <p className="mt-4 text-xs text-white/65">
-              Ook zonder installeren werkt alles gewoon in je browser:{" "}
-              <Link href="/login" className="underline hover:text-white/80">
-                inloggen
-              </Link>{" "}
-              of{" "}
+              Je werkersomgeving gebruik je in de app. Nog geen account?{" "}
               <Link href="/register" className="underline hover:text-white/80">
-                een account aanmaken
+                Maak er een aan
+              </Link>
+              . Een bedrijf?{" "}
+              <Link href="/login" className="underline hover:text-white/80">
+                Log in via de website
               </Link>
               .
             </p>

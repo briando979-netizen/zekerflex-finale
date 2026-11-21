@@ -34,6 +34,13 @@ describe("venster Vraag uitzendcontract aan", () => {
     expect(venster).toContain('role="alert"');
   });
 
+  it("een uitzendkracht ziet geen balk 'reageren kan zodra dat rond is' en het filter staat op Uitzendklussen", () => {
+    const pagina = lees("app/dashboard/klussen/page.tsx");
+    expect(pagina).toContain("const alleenUitzend = !m.canApply && m.blockReason === UITZEND_ALLEEN_VIA_BUREAU;");
+    expect(pagina).toContain("nogVoorKlus.length > 0 || alleenUitzend ? null : (");
+    expect(lees("components/app/MarketplaceView.tsx")).toContain('new Set(alleenUitzend ? ["uitzend"] : ALLE_TYPEN)');
+  });
+
   it("oude uitzendklussen zonder uitzendbureau staan niet meer in de lijst", () => {
     expect(lees("lib/dashboard/marketplace.ts")).toContain("visible.filter((s) => !s.viaUitzendbureau || isUitzendPartner(uitzendPartners, s.branch.tenantId))");
   });

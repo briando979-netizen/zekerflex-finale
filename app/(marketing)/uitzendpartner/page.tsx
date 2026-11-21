@@ -163,7 +163,7 @@ export default function UitzendpartnerPage() {
         body="Maak een bedrijfsaccount aan en mail ons je KVK-nummer. Wij zetten je account op uitzendpartner."
         primaryHref="/register?type=bedrijf"
         primaryLabel="Meld je bureau aan"
-        secondaryHref="/uitzendbureau"
+        secondaryHref="/starten-als-uitzendkracht"
         secondaryLabel="Werken als uitzendkracht"
       />
     </>

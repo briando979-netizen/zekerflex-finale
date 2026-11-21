@@ -95,7 +95,8 @@ describe("Klussen: één kaart tegelijk", () => {
     // 21 nov, later (eigenaar: "haal regel je verificatie weg bij werknemer dashboard en die bericht nog geen echte klussen")
     expect(klussen).not.toContain("t.start.regelKop");
     expect(klussen).not.toContain("t.page.alleenTestTitle");
-    expect(klussen).toContain("nogVoorKlus.length > 0 ? null : (");
+    // ook geen reden-balk voor een uitzendkracht: die kan op uitzendklussen van een bureau al reageren (21 nov)
+    expect(klussen).toContain("nogVoorKlus.length > 0 || alleenUitzend ? null : (");
     // geen tweede startkaart, geen OnboardingProgress, geen filter dat de echte reden verbergt
     expect(klussen).not.toContain("<WerkerStartWizard");
     const profiel = lees("app/dashboard/start/profiel/page.tsx");

@@ -366,6 +366,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/nieuwsbrief","file":"app/(marketing)/nieuwsbrief/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/nieuwsbrief/afmelden","file":"app/(marketing)/nieuwsbrief/afmelden/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/nieuwsbrief/bevestigen","file":"app/(marketing)/nieuwsbrief/bevestigen/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/nog-geen-18","file":"app/(marketing)/nog-geen-18/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/online","file":"app/(marketing)/online/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/opbouwfase","file":"app/(marketing)/opbouwfase/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/open-diensten","file":"app/(marketing)/open-diensten/page.tsx","area":"Marketing","dynamic":false},

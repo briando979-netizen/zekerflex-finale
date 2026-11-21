@@ -23,6 +23,7 @@ import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
 import { documentNaamPast } from "@/lib/kyc/document-naam";
 import { chipLezing, wisChipGegevens } from "@/lib/kyc/chip/sessie";
 import { LEEFTIJD_TEKST, WERKRECHT_TEKST, leeftijdsgroep, werkrechtUitMrz } from "@/lib/kyc/werkrecht";
+import { WERKRECHT_AAN } from "@/lib/werkrecht/aan";
 import { documentHash } from "@/lib/kyc/document-hash";
 import { redenTekst } from "@/lib/onboarding/redenen";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
@@ -773,7 +774,10 @@ export async function submitFreelancerOnboarding(
   // de uitslag; de nationaliteit en de geboortedatum worden niet bewaard.
   const werkrecht = mrzGeldig ? werkrechtUitMrz(mrz) : null;
   const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : null;
-  if (werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
+  // Staat het recht om te werken uit (lib/werkrecht/aan.ts), dan geen controle "Recht om te werken" in de uitslag; de
+  // categorie gaat wel mee in rawPayload (lib/werkrecht/store.ts leest die als het weer aan gaat), en de automatische
+  // goedkeuring houdt er dan geen rekening mee (redenenNietAutomatisch, lib/onboarding/auto-redenen.ts).
+  if (WERKRECHT_AAN && werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
   if (leeftijd) checks.push({ label: "Leeftijd", ok: leeftijd === "volwassen", detail: LEEFTIJD_TEKST[leeftijd] });
   if (input.viaTweedeToestel) {
     const eerder = input.tweedeToestel?.zonderVlag === true;

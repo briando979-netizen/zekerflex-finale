@@ -7,6 +7,8 @@ import { recordAudit } from "@/lib/audit";
 import { fastPayAvailable, getFastPay, updateFastPay } from "@/lib/payouts/fastpay";
 import { directeSepaIngericht } from "@/lib/billing/sepa";
 import { stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
+import { BANK_AAN } from "@/lib/app-mode";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,9 +18,11 @@ const schema = z.object({ offerFastPay: z.boolean().optional(), advancesForUitze
 /**
  * Kan een loonvoorschot nu echt worden overgemaakt (16 nov 2026)? createPayrollAdvance (lib/payouts/advances.ts) betaalt alleen
  * via directe SEPA of via Stripe Connect zolang Stripe betaalt; anders slaat hij het voorschot stil over. Dan belooft het scherm
- * het ook niet (components/werkgever/FastPaySettings.tsx).
+ * het ook niet (components/werkgever/FastPaySettings.tsx). Een loonvoorschot voor uitzendkrachten bestaat alleen als ZekerFlex
+ * zelf uitzender is (lib/uitzend/model.ts) en de bank aan staat (lib/app-mode.ts, 21 nov 2026); anders verloont het bureau.
  */
 async function voorschotKan(): Promise<boolean> {
+  if (!ZEKERFLEX_UITZENDER || !BANK_AAN) return false;
   return directeSepaIngericht() || !(await stripeBetalenDicht());
 }
 

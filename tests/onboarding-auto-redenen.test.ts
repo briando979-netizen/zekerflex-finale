@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// sinds 21 nov staat het recht om te werken uit in de code (lib/werkrecht/aan.ts); deze test bewaakt het gedrag als het weer aan gaat
+// (het gedrag met de schakelaar uit staat in tests/uitzender-werkrecht-uit.test.ts)
+vi.mock("@/lib/werkrecht/aan", () => ({ WERKRECHT_AAN: true }));
+
 import { gezichtBeslist, idHardeAfwijzing, redenenNietAutomatisch, type AutoFeiten } from "@/lib/onboarding/auto-redenen";
 
 // Mag de eigen ID-controle zelf goedkeuren, en zo niet: waarom (12 nov 2026, eigenaar: "niet meer handmatig
