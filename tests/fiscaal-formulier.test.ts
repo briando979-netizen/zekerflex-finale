@@ -15,6 +15,7 @@ import { EMPTY_FISCAL, fiscaalIngevuld, getFiscal, isComplete, normaliseerFiscal
 import { computePayslip } from "@/lib/payroll/compute";
 import { loonstrookRegels } from "@/lib/payroll/loonstrook-pdf";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 // Het fiscale formulier vraagt niets dubbel meer (14 nov, punten 12, 5 en 7 van de kaart): het IBAN is daar optioneel, de
 // werkvorm staat vast ("je koos X"), en wat de aanmelding al invulde staat als samenvatting.
@@ -37,7 +38,8 @@ describe("het IBAN telt niet meer als 'mist' in het formulier", () => {
   it("de lijst bevat alleen btw en BSN, nooit het IBAN", () => {
     expect(formulierMist(feiten({ kind: "zzp" }))).toEqual(["btwZzp"]);
     expect(formulierMist(feiten({ kind: "flexwerker" }))).toEqual(["btwFlex"]);
-    expect(formulierMist(feiten({ kind: "uitzendkracht" }))).toEqual(["bsn"]);
+    // sinds 21 nov vraagt het uitzendbureau zelf het BSN (ZEKERFLEX_UITZENDER = false); met de schakelaar aan mist het weer
+    expect(formulierMist(feiten({ kind: "uitzendkracht" }))).toEqual(ZEKERFLEX_UITZENDER ? ["bsn"] : []);
   });
 
   it("alles ingevuld zonder IBAN: niets mist", () => {
