@@ -48,7 +48,7 @@ export function thuisVan(soort: Werkruimte): string {
 }
 
 /** Adressen die bij het dashboard personeel horen (klussen, uren, …). */
-const PERSONEEL_PADEN = ["/werkgever/diensten", "/werkgever/kalender", "/werkgever/planner", "/werkgever/favorieten", "/werkgever/geblokkeerd", "/werkgever/uren", "/werkgever/inchecken", "/werkgever/compliance", "/werkgever/overeenkomsten"];
+const PERSONEEL_PADEN = ["/werkgever/diensten", "/werkgever/kalender", "/werkgever/planner", "/werkgever/favorieten", "/werkgever/geblokkeerd", "/werkgever/uren", "/werkgever/inchecken", "/werkgever/compliance", "/werkgever/overeenkomsten", "/werkgever/uitzend"];
 
 /**
  * Bij welk dashboard een adres hoort, of null als het bij elk dashboard past (mail, facturen, …).
@@ -215,16 +215,30 @@ export type MenuSleutel =
   | "locatie"
   | "branche"
   | "afspraken"
-  | "klanten";
+  | "klanten"
+  /** het dashboard van een uitzendpartner (lib/uitzend/bureau-kern.ts): alleen als het bedrijf uitzendpartner is */
+  | "uitzendAanvragen"
+  | "uitzendKrachten"
+  | "uitzendVerloning"
+  | "uitzendKlanten"
+  | "uitzendBureau";
 
-export type MenuSectie = "beheer" | "klanten" | "administratie" | "rijschool" | "horeca";
+export type MenuSectie = "beheer" | "klanten" | "administratie" | "rijschool" | "horeca" | "uitzend";
 
 export const SECTIE_NAAM: Record<Exclude<MenuSectie, "beheer">, string> = {
   klanten: "Klanten en contact",
   administratie: "Administratie",
   rijschool: "Je rijschool",
   horeca: "Je zaak",
+  uitzend: "Uitzendbureau",
 };
+
+/**
+ * Het blok "Uitzendbureau" (21 nov 2026, eigenaar: "een aparte" voor de uitzendpartners): aanvragen, uitzendkrachten, uren
+ * voor de verloning, klanten en locaties, bureaugegevens. Alleen in het dashboard personeel van een uitzendpartner, tussen
+ * het hoofddeel en Beheer.
+ */
+export const UITZEND_SLEUTELS: readonly MenuSleutel[] = ["uitzendAanvragen", "uitzendKrachten", "uitzendVerloning", "uitzendKlanten", "uitzendBureau"];
 
 export interface MenuPlek {
   sleutel: MenuSleutel;
@@ -250,6 +264,8 @@ export interface MenuOpties {
   alleenFlexwerk?: boolean;
   /** het bedrijf plaatste nog nooit een klus: met de vlag aan dan een kort startmenu (zie NA_EERSTE_KLUS) */
   nogGeenKlussen?: boolean;
+  /** het bedrijf is uitzendpartner (lib/uitzend/partners.ts): dan het blok Uitzendbureau (UITZEND_SLEUTELS) */
+  uitzendPartner?: boolean;
 }
 
 /** De personeelsfuncties, in de volgorde van het gewone menu. Alleen in het dashboard personeel. */
@@ -323,6 +339,7 @@ function menuVoorBasis(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       return [
         { sleutel: "start" },
         ...(["klussen", "kalender", "planner", "agenda", ...afspraken, ...bank, "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
+        ...(o.uitzendPartner ? UITZEND_SLEUTELS.map(plek("uitzend")) : []),
         ...(["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
       ];
     case "rijschool":

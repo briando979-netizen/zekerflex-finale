@@ -36,6 +36,7 @@ import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { featureEnabled } from "@/lib/flags";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 import { heeftAfspraken } from "@/lib/afspraken/in-menu";
+import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 
 export const dynamic = "force-dynamic";
 
@@ -152,16 +153,24 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     // alleen in het menu als het bedrijf afspraken heeft ingericht (lib/afspraken/in-menu.ts); "Klantenkaart", want horeca en rijschool hebben al een groep "Klanten en contact"
     afspraken: { href: "/werkgever/afspraken", label: "Afspraken", icon: <ICalendar /> },
     klanten: { href: "/werkgever/klanten", label: "Klantenkaart", icon: <IUsers /> },
+    // het blok Uitzendbureau, alleen bij een uitzendpartner (lib/uitzend/bureau-kern.ts)
+    uitzendAanvragen: { href: "/werkgever/uitzend", label: locale === "en" ? "Requests" : "Aanvragen", icon: <IMail /> },
+    uitzendKrachten: { href: "/werkgever/uitzend/krachten", label: locale === "en" ? "Temp workers" : "Uitzendkrachten", icon: <IUsers /> },
+    uitzendVerloning: { href: "/werkgever/uitzend/verloning", label: locale === "en" ? "Hours for payroll" : "Uren voor verloning", icon: <IClock /> },
+    uitzendKlanten: { href: "/werkgever/uitzend/klanten", label: locale === "en" ? "Clients and locations" : "Klanten en locaties", icon: <IPin /> },
+    uitzendBureau: { href: "/werkgever/uitzend/bureau", label: locale === "en" ? "Agency details" : "Bureaugegevens", icon: <IShield /> },
   };
   // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
   const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });
   // de Op locatie-modules (portofoon, toegang, kluis, printen) ook (lib/locatie)
   const locatieAan = await featureEnabled("locatie-modules", { userId: principal.userId });
-  const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : SECTIE_NAAM[s]);
+  const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : s === "uitzend" && locale === "en" ? "Staffing agency" : SECTIE_NAAM[s]);
   // de beheerder: studio, rijschool- en horecabeheer, dashboards toevoegen
   const beheerder = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   // de volgorde uit de Site-ontwerper (Menu), alleen voor het dashboard personeel; zonder eigen volgorde of bij een storing exact het gewone menu
   const menuVolgorde = werkruimte.soort === "personeel" ? await getMenuVolgorde().catch(() => null) : null;
+  // uitzendpartner (lib/uitzend/partners.ts): dan het blok Uitzendbureau; een storing zegt nee
+  const uitzendPartner = await isUitzendPartnerTenant(tenantId).catch(() => false);
   const nav: NavItem[] = pasMenuVolgordeToe(
     menuVoor(werkruimte.soort, {
       heeftAfspraken: metAfspraken,
@@ -175,6 +184,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
       alleenFlexwerk,
       // nog geen klus geplaatst: een kort startmenu, de rest komt erbij na de eerste klus
       nogGeenKlussen: !werkruimte.heeftKlussen,
+      uitzendPartner,
     }),
     menuVolgorde,
   )

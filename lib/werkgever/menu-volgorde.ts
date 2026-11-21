@@ -97,6 +97,8 @@ export function pasMenuVolgordeToe(menu: MenuPlek[], volgorde: MenuVolgorde | nu
   const start = menu.filter((p) => !p.sectie && p.sleutel === "start");
   const hoofd = menu.filter((p) => !p.sectie && p.sleutel !== "start");
   const beheer = menu.filter((p) => p.sectie === "beheer");
-  const rest = menu.filter((p) => p.sectie && p.sectie !== "beheer");
-  return [...start, ...gesorteerd(hoofd, n.hoofd), ...gesorteerd(beheer, n.beheer), ...rest];
+  // het blok Uitzendbureau (alleen bij een uitzendpartner) houdt zijn plek tussen het hoofddeel en Beheer
+  const uitzend = menu.filter((p) => p.sectie === "uitzend");
+  const rest = menu.filter((p) => p.sectie && p.sectie !== "beheer" && p.sectie !== "uitzend");
+  return [...start, ...gesorteerd(hoofd, n.hoofd), ...uitzend, ...gesorteerd(beheer, n.beheer), ...rest];
 }
