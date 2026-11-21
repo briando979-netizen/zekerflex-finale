@@ -85,12 +85,15 @@ describe("de markering", () => {
   });
 
   it("opruimen: markeringen ouder dan 30 dagen, ook van geo; hooguit één keer per dag", async () => {
-    expect(await ruimPushMarkeringenOp(NOW)).toBe(6);
+    // vier voorvoegsels (volg, alert, geo en sinds 21 nov uren-bedrijf), de nep-KV wist er 2 per voorvoegsel
+    const perRonde = PUSH_MARKERING_VOORVOEGSELS.length * 2;
+    expect(PUSH_MARKERING_VOORVOEGSELS).toHaveLength(4);
+    expect(await ruimPushMarkeringenOp(NOW)).toBe(perRonde);
     expect(h.gewist.map((g) => g.voorvoegsel)).toEqual([...PUSH_MARKERING_VOORVOEGSELS]);
     expect(h.gewist.every((g) => g.voor.toISOString() === "2026-10-14T10:00:00.000Z")).toBe(true);
     expect(await ruimPushMarkeringenOp(new Date(NOW.getTime() + 3_600_000))).toBe(0);
-    expect(h.gewist).toHaveLength(3);
-    expect(await ruimPushMarkeringenOp(new Date(NOW.getTime() + DAG))).toBe(6);
+    expect(h.gewist).toHaveLength(PUSH_MARKERING_VOORVOEGSELS.length);
+    expect(await ruimPushMarkeringenOp(new Date(NOW.getTime() + DAG))).toBe(perRonde);
     h.kvFout = true;
     expect(await ruimPushMarkeringenOp(new Date(NOW.getTime() + 2 * DAG))).toBe(0);
   });

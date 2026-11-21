@@ -46,6 +46,9 @@ export function poortStappen(f: WerkerPoortFeiten, soort: WerkerSoort): PoortSta
  */
 export function klusStappen(k: KlusFeiten): PoortStap[] {
   const rijen: PoortStap[] = [];
+  // proefklussen (lib/fiscal/proefklussen-kern.ts): met ruimte houden KVK/btw/KOR en het rekeningnummer reageren niet tegen
+  const proef = !k.payroll && k.proefRuimte === true;
+  const PROEF_UITLEG = "Nog niet nodig om te reageren: de eerste 2 klussen mogen zonder. Uitbetalen wacht er wel op.";
   if (k.payroll) {
     rijen.push({ key: "bsn", label: "BSN", ok: k.bsn, uitleg: "Het BSN invullen (Verificatie, blok Voor je eerste klus).", eersteKlus: true });
     rijen.push({ key: "contract", label: "Uitzendovereenkomst getekend", ok: k.contract, uitleg: "De uitzendovereenkomst lezen en tekenen (Verificatie).", eersteKlus: true });
@@ -54,11 +57,19 @@ export function klusStappen(k: KlusFeiten): PoortStap[] {
       key: "bedrijf",
       label: "KVK-, btw-nummer of KOR",
       ok: k.bedrijf,
-      uitleg: k.kvkWacht ? "Het KVK-nummer is ingevuld; de controle bij de KVK wacht nog (gaat vanzelf opnieuw)." : "Een geldig KVK- of btw-nummer, of de KOR (Verificatie).",
+      uitleg: k.kvkWacht ? "Het KVK-nummer is ingevuld; de controle bij de KVK wacht nog (gaat vanzelf opnieuw)." : proef ? PROEF_UITLEG : "Een geldig KVK- of btw-nummer, of de KOR (Verificatie).",
       eersteKlus: true,
+      ...(proef && !k.bedrijf ? { optioneel: true } : {}),
     });
   }
-  rijen.push({ key: "iban", label: "Rekeningnummer (IBAN)", ok: k.iban, uitleg: "Het rekeningnummer invullen (Verificatie, Bankrekening).", eersteKlus: true });
+  rijen.push({
+    key: "iban",
+    label: "Rekeningnummer (IBAN)",
+    ok: k.iban,
+    uitleg: proef ? PROEF_UITLEG : "Het rekeningnummer invullen (Verificatie, Bankrekening).",
+    eersteKlus: true,
+    ...(proef && !k.iban ? { optioneel: true } : {}),
+  });
   if (k.werkrechtOpen) rijen.push({ key: "werkrecht", label: "Recht om te werken", ok: false, uitleg: "De verklaring aanvinken (vlag werkrecht-eis staat aan).", eersteKlus: true });
   rijen.push({ key: "idGoedgekeurd", label: "ID goedgekeurd", ok: k.idGoedgekeurd, uitleg: "Het ingestuurde ID moet nog worden nagekeken.", eersteKlus: true });
   return rijen;

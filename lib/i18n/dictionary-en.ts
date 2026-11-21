@@ -1993,6 +1993,7 @@ export const en: Dict = {
     bulkMisluktMeer: "{n} failed: approve those separately to see the reason.",
     bulkOvergeslagen: "{n} skipped: already processed, or a signal appeared.",
     bulkNiets: "There was nothing to approve.",
+    werkerBedrijf: "The worker first has to enter their business details. We have sent them a message; after that you can approve the hours.",
   },
   urenKnoppen: {
     signaalStandaard: "This timesheet has a signal.",

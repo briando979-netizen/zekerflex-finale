@@ -3,6 +3,8 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
 import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
+import { proefklusRuimte } from "@/lib/fiscal/proefklussen";
+import { AppError } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
 // Can this worker actually be paid for a klus? The rule differs by werkvorm:
@@ -13,6 +15,11 @@ import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
 // Identity (KYC) is checked separately by the caller. Daarna, op beide sporen:
 // het recht om in Nederland te werken (verklaring + bewijs, lib/werkrecht).
 // Alle diensten zijn nu in Nederland (Branch heeft geen land).
+//
+// Proefklussen (21 nov 2026, eigenaar; lib/fiscal/proefklussen-kern.ts): een zzp'er of flexwerker mag zijn eerste 2 klussen
+// aannemen zonder KVK/btw/KOR en zonder rekeningnummer; vanaf de derde geldt de regel hierboven weer. Alleen hier (zelf
+// reageren en een geaccepteerd tegenbod). Uitbetalen blijft wachten op de gegevens (lib/timesheets/approve.ts), en de
+// matching (pushaanbod, automatisch inplannen, spoed, geo) blijft KVK én btw eisen (lib/matching/geschikt.ts).
 // ---------------------------------------------------------------------------
 
 export interface PayoutEligibility {
@@ -22,6 +29,8 @@ export interface PayoutEligibility {
   reason: string | null;
   /** sleutel van de melding voor de vertaling in de werker-app (lib/i18n/fouten.ts); alleen bij sommige redenen */
   sleutel?: string;
+  /** alleen als reageren mag dankzij een proefklus (KVK/btw/KOR of het rekeningnummer ontbreekt nog): hoeveel er nog over zijn */
+  proef?: { over: number };
 }
 
 export async function payoutEligibility(userId: string): Promise<PayoutEligibility> {
@@ -42,39 +51,72 @@ async function fiscalEligibility(userId: string): Promise<PayoutEligibility> {
 
   const track: PayoutEligibility["track"] = invoiceModeFor(fiscal) === "payroll" ? "payroll" : "invoice";
 
-  if (track === "payroll") {
-    const hasBasics = Boolean(fiscal.bsnHash) && Boolean(fiscal.iban || profile?.payoutIban);
-    if (!hasBasics) {
-      return {
-        ok: false,
-        track,
-        reason: "Rond je uitzend-gegevens af (BSN en rekeningnummer) om op klussen te reageren.",
-        sleutel: "elig.uitzendGegevens",
-      };
-    }
-    const contract = await activeUitzendContract(userId);
-    return {
-      ok: Boolean(contract),
-      track,
-      reason: contract
-        ? null
-        : "Onderteken eerst je uitzendovereenkomst bij Verificatie om op klussen te reageren.",
-      ...(contract ? {} : { sleutel: "elig.contract" }),
-    };
-  }
+  if (track === "payroll") return payrollEligibility(userId, fiscal, profile?.payoutIban ?? null);
 
-  const ok = Boolean(profile?.kvkValid || profile?.vatValid || fiscal.vatValid || fiscal.korApplies);
-  if (!ok) {
+  const bedrijfOk = Boolean(profile?.kvkValid || profile?.vatValid || fiscal.vatValid || fiscal.korApplies);
+  // Het IBAN zit sinds 10 nov niet meer in de onboarding: zonder rekeningnummer kunnen we niet uitbetalen
+  const ibanOk = Boolean(profile?.payoutIban || fiscal.iban);
+  if (bedrijfOk && ibanOk) return { ok: true, track, reason: null };
+
+  // Er ontbreekt iets. De eerste 2 klussen mogen toch (proefklussen); de telling alleen hier, dus niet voor wie alles al
+  // heeft. Een storing in de telling geeft geen ruimte: dan geldt de gewone regel met de gewone melding.
+  const ruimte = await proefklusRuimte(userId);
+  if (ruimte.over > 0) return { ok: true, track, reason: null, proef: { over: ruimte.over } };
+
+  if (!bedrijfOk) {
     // sinds 13 nov hoort de KVK niet meer bij de aanmelding: hier pas. Wacht de controle (tegoed bij KVKBase op of de
     // minuutlimiet; lib/kvk/herkansing.ts probeert het opnieuw), zeg dat dan eerlijk in plaats van "nog geen KVK-nummer"
     if (await kvkWachtVan("werker", userId)) {
-      return { ok, track, reason: "We konden je KVK-nummer nog niet controleren bij de KVK. We proberen het vanzelf opnieuw; daarna kun je op deze klussen reageren.", sleutel: "elig.kvkWacht" };
+      return { ok: false, track, reason: "We konden je KVK-nummer nog niet controleren bij de KVK. We proberen het vanzelf opnieuw; daarna kun je op deze klussen reageren.", sleutel: "elig.kvkWacht" };
     }
-    return { ok, track, reason: "Voor deze klussen is een geldig KVK-nummer, btw-nummer of de KOR nodig. Vul het in bij Verificatie of Fiscale gegevens om te reageren.", sleutel: "elig.kvk" };
+    // de proefklussen zijn op (echt geteld, geen storing): zeg dat erbij, anders begrijpt de werker niet waarom het nu niet meer mag
+    if (ruimte.aangenomen !== null) {
+      return { ok: false, track, reason: "Je hebt je eerste 2 klussen aangenomen. Voor de volgende is een geldig KVK- of btw-nummer (of de KOR) en je rekeningnummer nodig. Vul ze in bij Verificatie.", sleutel: "elig.proefOp" };
+    }
+    return { ok: false, track, reason: "Voor deze klussen is een geldig KVK-nummer, btw-nummer of de KOR nodig. Vul het in bij Verificatie of Fiscale gegevens om te reageren.", sleutel: "elig.kvk" };
   }
-  // Het IBAN zit sinds 10 nov niet meer in de onboarding: zonder rekeningnummer kunnen we niet uitbetalen
-  if (!(profile?.payoutIban || fiscal.iban)) {
-    return { ok: false, track, reason: "Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren.", sleutel: "elig.iban" };
+  return { ok: false, track, reason: "Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren.", sleutel: "elig.iban" };
+}
+
+/** Het loonspoor (uitzendkracht): BSN, rekeningnummer en een getekende, geldende uitzendovereenkomst. Geen proefklussen. */
+async function payrollEligibility(
+  userId: string,
+  fiscal: Awaited<ReturnType<typeof getFiscal>>,
+  profielIban: string | null,
+): Promise<PayoutEligibility> {
+  const track = "payroll" as const;
+  const hasBasics = Boolean(fiscal.bsnHash) && Boolean(fiscal.iban || profielIban);
+  if (!hasBasics) {
+    return {
+      ok: false,
+      track,
+      reason: "Rond je uitzend-gegevens af (BSN en rekeningnummer) om op klussen te reageren.",
+      sleutel: "elig.uitzendGegevens",
+    };
   }
-  return { ok: true, track, reason: null };
+  const contract = await activeUitzendContract(userId);
+  return {
+    ok: Boolean(contract),
+    track,
+    reason: contract
+      ? null
+      : "Onderteken eerst je uitzendovereenkomst bij Verificatie om op klussen te reageren.",
+    ...(contract ? {} : { sleutel: "elig.contract" }),
+  };
+}
+
+/**
+ * Dezelfde controle van het loonspoor voor de twee paden die niet langs payoutEligibility lopen: een pushaanbod aannemen
+ * (app/api/shifts/[shiftId]/offer) en automatisch inplannen (lib/matching/engine.ts). Zonder BSN, rekeningnummer of
+ * getekende uitzendovereenkomst kon een uitzendkracht daar toch ingepland worden, terwijl zelf reageren het wél tegenhield.
+ * Gooit 412 met dezelfde reden en sleutel; voor het factuurspoor doet dit niets (daar beslist de matching, lib/matching/geschikt.ts).
+ */
+export async function eisUitzendGegevens(userId: string): Promise<void> {
+  const fiscal = await getFiscal(userId);
+  if (invoiceModeFor(fiscal) !== "payroll") return;
+  const profiel = await prisma.freelancerProfile.findUnique({ where: { userId }, select: { payoutIban: true } });
+  const uit = await payrollEligibility(userId, fiscal, profiel?.payoutIban ?? null);
+  if (uit.ok) return;
+  const fout = AppError.precondition(uit.reason ?? "Je kunt nog geen diensten aannemen.");
+  throw uit.sleutel ? fout.metSleutel(uit.sleutel) : fout;
 }

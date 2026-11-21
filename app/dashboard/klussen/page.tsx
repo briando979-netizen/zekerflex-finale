@@ -104,6 +104,15 @@ export default async function KlussenPage(
           </div>
         )
       )}
+      {/* proefklussen (21 nov, eigenaar; lib/fiscal/proefklussen-kern.ts): reageren mag al, het geld komt pas met de gegevens. Geen belofte over uitbetalen. */}
+      {m.canApply && m.proefklussenOver !== undefined && (
+        <p className="card mb-5 p-5 text-sm text-neutralx-600">
+          {t.start.proefHint}{" "}
+          <Link href="/dashboard/verificatie#gegevens-later-kop" className="text-brand-600 underline">
+            {t.start.proefKnop}
+          </Link>
+        </p>
+      )}
       {m.newSinceLastVisit > 0 && (
         <p className="mb-4">
           <StatusPill tone="ok">{t.page.newCount(m.newSinceLastVisit)}</StatusPill>

@@ -67,7 +67,7 @@ describe("de nieuwe pushteksten in vijf talen", () => {
         t.msBtwTitle, t.msUrenTitle, t.msUrenBody, t.msSpreidingTitle, t.msSpreidingBody("40% bij Acme"), t.msKorTitle,
         t.badge.SILVER.title, t.badge.SILVER.body, t.badge.GOLD.title, t.badge.GOLD.body, t.badge.PLATINUM.title, t.badge.PLATINUM.body,
         t.verifiedTitle, t.verifiedBody("Acme", "Bediening"), t.hoursReminderTitle, t.hoursReminderBody("Bediening", "Café", "09:00"),
-        t.payoutIncompleteTitle, t.payoutIncompleteBody("iban"), t.payoutIncompleteBody("dest"), t.payoutIncompleteBody("pending"),
+        t.payoutIncompleteTitle, t.payoutIncompleteBody("iban"), t.payoutIncompleteBody("dest"), t.payoutIncompleteBody("pending"), t.payoutBedrijfTitle, t.payoutBedrijfBody,
         t.welcomeTitle("Magazijn"), t.welcomeBody("12-AB-34"), t.testTitle, t.testBody,
         t.callTitle("Sam", false), t.callTitle("Sam", true), t.callBody, t.missedTitle("Sam"), t.missedVideoBody, t.missedBody, t.newMessage,
       ];
@@ -159,7 +159,7 @@ describe("geen losse Nederlandse tekst meer in de werker-pushes", () => {
     ["lib/worker/stats-sync.ts", ["Je bent nu Zilver", "Je bent nu Goud", "Je bent nu Platina"]],
     ["lib/company/verified.ts", ["Bedrijf geverifieerd — bevestig je klus"]],
     ["lib/autopilot/actions.ts", ["Vul je uren in"]],
-    ["lib/timesheets/approve.ts", ["Vul je gegevens aan om uitbetaald te worden", "er staat nog geen geldig rekeningnummer"]],
+    ["lib/timesheets/approve.ts", ["Vul je gegevens aan om uitbetaald te worden", "er staat nog geen geldig rekeningnummer", "Vul je bedrijfsgegevens in", "Je uren staan klaar"]],
     ["lib/locatie/toegang.ts", ["Je kenteken"]],
     ["app/api/me/push/test/route.ts", ["Testmelding van ZekerFlex"]],
     ["lib/messaging/notify.ts", ["belt je", "Gemiste oproep van", "Tik om op te nemen", "Nieuw bericht"]],

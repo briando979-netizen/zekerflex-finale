@@ -41,6 +41,8 @@ import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { eenmaligPush } from "@/lib/notifications/push-eenmalig";
+import { WERKER_BEDRIJF_MIST } from "@/lib/timesheets/bulk-goedkeuren";
 import { efactuurNaUitgifte } from "@/lib/efactuur/bezorging";
 import { pushHoursApproved } from "@/lib/notifications/approved-push";
 import { runAfter } from "@/lib/run-after";
@@ -104,6 +106,25 @@ async function notifyFreelancerProfileIncomplete(userId: string, reason: "iban" 
       title: t.payoutIncompleteTitle,
       body: t.payoutIncompleteBody(reason).slice(0, 180),
       data: { type: "PROFILE", url: "/dashboard/profiel", tag: "payout-incomplete" },
+      ttlSeconds: 7 * 24 * 3600,
+    }));
+  } catch {
+    /* best effort */
+  }
+}
+
+/**
+ * Hetzelfde voor een KVK- of btw-nummer dat nog niet geldig is: tot 21 nov hoorde de werker daar niets van en bleven zijn
+ * uren stil liggen. Eén keer per urenbriefje (de automatische goedkeuring en de werkgever proberen het vaker); een storing
+ * in de markering = gewoon sturen. Best effort, nooit blokkerend.
+ */
+async function notifyFreelancerBedrijfMist(userId: string, timesheetId: string): Promise<void> {
+  try {
+    if (!(await eenmaligPush("uren-bedrijf", timesheetId, userId))) return;
+    await sendLocalizedPush([userId], (t) => ({
+      title: t.payoutBedrijfTitle,
+      body: t.payoutBedrijfBody.slice(0, 180),
+      data: { type: "PROFILE", url: "/dashboard/verificatie#gegevens-later-kop", tag: "payout-bedrijf" },
       ttlSeconds: 7 * 24 * 3600,
     }));
   } catch {
@@ -281,6 +302,12 @@ async function approveTimesheetInner(
       ].includes(ts.dispute.status),
     });
     if (!payoutGate.released) {
+      // KVK/btw nog niet geldig (bijv. na een proefklus, lib/fiscal/proefklussen-kern.ts): de poort blijft dicht, maar de
+      // werker hoort het nu zelf (één keer per urenbriefje) en de werkgever leest een gewone zin.
+      if (!ts.freelancer.kvkValid || !ts.freelancer.vatValid) {
+        await notifyFreelancerBedrijfMist(ts.freelancer.userId, ts.id);
+        throw AppError.precondition(WERKER_BEDRIJF_MIST);
+      }
       throw AppError.precondition(
         `Payout geblokkeerd: ${payoutGate.reasons.join(", ")}`,
       );
