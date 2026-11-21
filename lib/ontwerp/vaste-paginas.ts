@@ -36,10 +36,13 @@ export const VASTE_PAGINAS = {
     naam: "Voor freelancers",
     pad: "/voor-freelancers",
     secties: [
-      { id: "voordelen", naam: "Wat je krijgt", uitleg: "De voordelen voor een freelancer, in een raster." },
-      { id: "stappen", naam: "Zo werkt het", uitleg: "De zes stappen van aanmelden tot uitbetaling." },
-      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden voor freelancers, met de link naar de rekentool." },
-      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
+      { id: "kenmerken", naam: "Drie kenmerken", uitleg: "Drie korte feiten onder de kop: gratis, vijf talen, één app." },
+      { id: "stappen", naam: "Zo werkt het", uitleg: "De vier stappen van aanmelden tot uitbetaling, elk met de app op een telefoon." },
+      { id: "voordelen", naam: "Functies van de app", uitleg: "Wat de app voor je doet, als kaarten met een pictogram." },
+      { id: "branches", naam: "Branches", uitleg: "De branches met een foto, naar de klussen per branche, en Alle klussen." },
+      { id: "overtuigd", naam: "Nog niet overtuigd?", uitleg: "Een foto met tekst over vrijheid en de knoppen naar de klussen en de rekentool." },
+      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden voor freelancers." },
+      { id: "slot", naam: "Slotoproep", uitleg: "De donkere band onderaan met de telefoon en de knoppen om te beginnen." },
     ],
   },
   prijzen: {

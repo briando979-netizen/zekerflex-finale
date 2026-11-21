@@ -19,7 +19,8 @@ const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").sp
 const PAGINAS = Object.keys(VASTE_PAGINAS) as VastePaginaId[];
 const OUD: Record<VastePaginaId, string[]> = {
   "voor-bedrijven": ["systeem", "cijfers", "rekentools", "faq", "slot"],
-  "voor-freelancers": ["voordelen", "stappen", "faq", "slot"],
+  // 21 nov 2026: nieuwe opbouw (kenmerken, stappen met telefoon, functies, branches, overtuigd), zonder video's
+  "voor-freelancers": ["kenmerken", "stappen", "voordelen", "branches", "overtuigd", "faq", "slot"],
   prijzen: ["tarieven", "api", "faq", "slot"],
   "over-ons": ["verhaal", "oprichter", "uitgangspunten", "werkenbij", "slot"],
   uitzendbureau: ["pijlers", "verwachtingen", "stappen", "fasen", "ervaring", "routes", "verloning", "werkgevers", "faq", "slot"],
@@ -66,7 +67,7 @@ describe("een eigen indeling", () => {
 
   it("onbekende en dubbele onderdelen vallen weg; wat ontbreekt komt achteraan", () => {
     const i = normalizePaginaIndeling("voor-freelancers", { volgorde: ["slot", "slot", "constructor", "systeem", 4, "faq"], verborgen: ["toString", "faq", "faq"] });
-    expect(i).toEqual({ volgorde: ["slot", "faq", "voordelen", "stappen"], verborgen: ["faq"] });
+    expect(i).toEqual({ volgorde: ["slot", "faq", "kenmerken", "stappen", "voordelen", "branches", "overtuigd"], verborgen: ["faq"] });
   });
 
   it("onleesbare invoer geeft de standaard", () => {

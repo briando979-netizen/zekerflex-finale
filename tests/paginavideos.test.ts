@@ -32,7 +32,6 @@ describe("paginavideo's", () => {
     // de voorpagina toont sinds 21 nov geen uitlegvideo meer (eigenaar: "haal de uitlegvideo's weg")
     const paginas: [string, string][] = [
       ["app/(marketing)/voor-bedrijven/page.tsx", "voor-bedrijven"],
-      ["app/(marketing)/voor-freelancers/page.tsx", "voor-freelancers"],
       ["app/(marketing)/uitzendbureau/page.tsx", "uitzendbureau"],
       ["app/(marketing)/prijzen/page.tsx", "prijzen"],
       ["app/(marketing)/rijschool-software/page.tsx", "rijschool-software"],

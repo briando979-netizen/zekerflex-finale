@@ -99,7 +99,7 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "vf.title", group: "Voor freelancers — hero", label: "Titel", default: "Werk dat bij je past. Geld dat op tijd komt." },
   { key: "vf.lead", group: "Voor freelancers — hero", label: "Introtekst", default: "Jij levert vakmanschap. Wij regelen de match, de overeenkomst, de factuur en de uitbetaling — zodat jij je op je werk kunt richten.", multiline: true },
   { key: "vf.cta1", group: "Voor freelancers — hero", label: "Knop 1", default: "Maak je profiel aan" },
-  { key: "vf.cta2", group: "Voor freelancers — hero", label: "Knop 2", default: "Bekijk de voorwaarden" },
+  { key: "vf.cta2", group: "Voor freelancers — hero", label: "Knop 2", default: "Bekijk de stappen" },
   { key: "vf.got.eyebrow", group: "Voor freelancers — secties", label: "Wat je krijgt: bovenregel", default: "Wat je krijgt" },
   { key: "vf.got.title", group: "Voor freelancers — secties", label: "Wat je krijgt: titel", default: "Alles geregeld, behalve het werk zelf" },
   { key: "vf.how.eyebrow", group: "Voor freelancers — secties", label: "Zo werkt het: bovenregel", default: "Zo werkt het" },
