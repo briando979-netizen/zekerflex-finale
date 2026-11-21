@@ -1,6 +1,7 @@
 import { AANBOD, aanbodHref, PIJLERS, type PijlerSleutel } from "@/lib/marketing/aanbod";
 import { APPS } from "@/lib/marketing/apps";
 import { NIET_FLEXWERK_NAV_KEYS, zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
+import { SECTORS, type Sector } from "@/lib/seo-sectors";
 
 // ---------------------------------------------------------------------------
 // Het hoofdmenu (bovenbalk) van de eigen site: de standaard. Puur en browser-
@@ -96,6 +97,13 @@ const OVER_ITEMS: MenuItem[] = [
   { title: "Werken bij ons", desc: "Stuur een open sollicitatie — goede mensen zijn altijd welkom.", href: "/over-ons#werken-bij" },
   { title: "Contact", desc: "Vragen of samenwerken? Mail info@zekerflex.com.", href: "mailto:info@zekerflex.com" },
 ];
+// 21 nov 2026 (eigenaar): Kennis bij werknemers alleen Informatie, Kennisbank, Blogs en FAQ (zoals YoungOnes)
+const KENNIS_WN: MenuItem[] = [
+  { title: "Informatie", desc: "De basis in één oogopslag: wat, voor wie, wat kost het.", href: "/kennis#informatie" },
+  { title: "Kennisbank", desc: "Uitgelegde onderwerpen: Wet DBA, StiPP, uitbetaling en meer.", href: "/kennis#kennisbank" },
+  { title: "Blogs", desc: "Achtergrond over flexibel werk en het platform.", href: "/kennis/blog" },
+  { title: "FAQ", desc: "Kort antwoord op de vragen die we het vaakst krijgen.", href: "/kennis/faq" },
+];
 const KENNIS_ITEMS: MenuItem[] = [
   { title: "Informatie", desc: "De basis in één oogopslag: wat, voor wie, wat kost het.", href: "/kennis#informatie" },
   { title: "Kennisbank", desc: "Uitgelegde onderwerpen: Wet DBA, StiPP, uitbetaling en meer.", href: "/kennis#kennisbank" },
@@ -109,6 +117,13 @@ const KENNIS_ITEMS: MenuItem[] = [
   { title: "Tarievenoverzicht", desc: "Richttarief per functie en branche, ook als pdf.", href: "/tarieven-overzicht" },
   { title: "Platformkosten berekenen", desc: "Wat je per maand betaalt bij jouw aantal uren.", href: "/rekentools/platformkosten-berekenen" },
 ];
+
+// Branches (21 nov 2026, eigenaar: "bij werknemers een menu Branches, zoals YoungOnes"): de branchepagina's uit lib/seo-sectors.ts.
+// Werknemers gaan naar de vacatures per branche, bedrijven naar personeel inhuren per branche.
+const BRANCHE_NAAM: Record<string, string> = { horeca: "Horeca & catering", logistiek: "Logistiek & magazijn" };
+const brancheNaam = (s: Sector): string => (Object.hasOwn(BRANCHE_NAAM, s.key) ? BRANCHE_NAAM[s.key]! : s.label);
+const BRANCHES_WN: MenuItem[] = SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.workerSlug}` }));
+const BRANCHES_BV: MenuItem[] = SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.slug}` }));
 
 // "Apps & spelletjes": de knoppen "Ga naar …" uit lib/marketing/apps.ts
 const APPS_MENU: MenuItem[] = APPS.map((a) => ({ title: a.knop, desc: a.tekst, href: a.href }));
@@ -197,6 +212,17 @@ export const NAV: NavEntry[] = [
     },
   },
   {
+    key: "branches",
+    href: "/voor-freelancers#branches",
+    label: "Branches",
+    match: "-vacatures",
+    overzicht: "Alle branches",
+    menu: {
+      werknemers: { eyebrow: "Branches uitgelicht", cta: CTA_WN, items: BRANCHES_WN },
+      bedrijven: { eyebrow: "Personeel per branche", cta: CTA_BV, items: BRANCHES_BV },
+    },
+  },
+  {
     key: "shop",
     href: "/shop",
     label: "Shop",
@@ -253,7 +279,7 @@ export const NAV: NavEntry[] = [
     match: "/kennis",
     overzicht: "Alle kennis",
     menu: {
-      werknemers: { eyebrow: "Kennis & informatie", cta: CTA_WN, items: KENNIS_ITEMS },
+      werknemers: { eyebrow: "Kennis & informatie", cta: CTA_WN, items: KENNIS_WN },
       bedrijven: { eyebrow: "Kennis & informatie", cta: CTA_BV, items: KENNIS_ITEMS },
     },
   },

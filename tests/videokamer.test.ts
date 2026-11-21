@@ -40,6 +40,16 @@ describe("de videokamer", () => {
     expect(items.some((i) => /3,50|zonder abonnement/i.test(i.title + i.desc))).toBe(false);
   });
 
+  it("Branches staat in het menu; Kennis bij werknemers is kort", () => {
+    const b = NAV.find((n) => n.key === "branches");
+    expect(b?.menu?.werknemers.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/horeca-vacatures", "/logistiek-vacatures", "/evenementen-vacatures", "/retail-vacatures", "/schoonmaak-vacatures"]));
+    expect(b?.menu?.werknemers.items[0]?.title).toBe("Horeca & catering");
+    expect(b?.menu?.bedrijven.items.map((i) => i.href)).toContain("/horeca-personeel-inhuren");
+    expect(NIET_FLEXWERK_NAV_KEYS).not.toContain("branches");
+    expect(NAV.find((n) => n.key === "kennis")?.menu?.werknemers.items.map((i) => i.title)).toEqual(["Informatie", "Kennisbank", "Blogs", "FAQ"]);
+    expect(lees("app/(marketing)/voor-freelancers/page.tsx")).toContain('id="branches"');
+  });
+
   it("Prijzen staat niet meer in de bovenbalk; tarievenoverzicht en rekenhulp staan onder Kennis; geen GPS- of facturatieregel", () => {
     expect(NIET_FLEXWERK_NAV_KEYS).toContain("prijzen");
     const kennis = NAV.find((n) => n.key === "kennis")?.menu?.bedrijven.items ?? [];

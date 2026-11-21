@@ -160,7 +160,9 @@ export default async function VoorFreelancersPage() {
     ),
     branches: (
       <Section tone="paper">
-        <SectionHead eyebrow="Branches" title="Werk in de branche die bij je past" />
+        <div id="branches" className="scroll-mt-24">
+          <SectionHead eyebrow="Branches" title="Werk in de branche die bij je past" />
+        </div>
         <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
           {SECTORS.map((s) => (
             <Link key={s.key} href={`/${s.workerSlug}`} className="group relative block aspect-[4/3] overflow-hidden rounded-2xl bg-ink">
