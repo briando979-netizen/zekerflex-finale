@@ -13,7 +13,9 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 export const PUSH_EENMALIG_DAGEN = 30;
 const DAG_MS = 86_400_000;
 
-export type PushKanaal = "volg" | "alert";
+// "uren-bedrijf" (21 nov): de melding "vul je KVK- en btw-nummer in" bij uren goedkeuren (lib/timesheets/approve.ts), één
+// keer per urenbriefje; daar staat het id van het urenbriefje op de plek van de klus.
+export type PushKanaal = "volg" | "alert" | "uren-bedrijf";
 
 /** Zelfde vorm als push-sent:geo:<klus>:<werker>. De werker staat achteraan: het voorvoegsel is van het kanaal. */
 export const pushSleutel = (kanaal: PushKanaal, shiftId: string, userId: string) => `push-sent:${kanaal}:${shiftId}:${userId}`;
@@ -38,8 +40,8 @@ export async function eenmaligPush(kanaal: PushKanaal, shiftId: string, userId: 
   return true;
 }
 
-/** De voorvoegsels die het opruimen raakt: de twee kanalen hierboven en "in de buurt". */
-export const PUSH_MARKERING_VOORVOEGSELS = ["push-sent:volg:", "push-sent:alert:", "push-sent:geo:"] as const;
+/** De voorvoegsels die het opruimen raakt: de kanalen hierboven en "in de buurt". */
+export const PUSH_MARKERING_VOORVOEGSELS = ["push-sent:volg:", "push-sent:alert:", "push-sent:geo:", "push-sent:uren-bedrijf:"] as const;
 const OPRUIM_SLEUTEL = "systeem:push-sent-opruim";
 
 /**

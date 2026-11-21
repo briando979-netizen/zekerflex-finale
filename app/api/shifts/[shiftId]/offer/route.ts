@@ -9,6 +9,7 @@ import { recordOfferResponse } from "@/lib/notifications/dispatcher";
 import { pushShiftTaken } from "@/lib/notifications/employer-push";
 import { runAfter } from "@/lib/run-after";
 import { eisWerkrecht } from "@/lib/werkrecht/store";
+import { eisUitzendGegevens } from "@/lib/fiscal/eligibility";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,8 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
       // eerst de onboarding (12 nov, eigenaar), dan het recht om te werken
       await eisOnboardingVoorReageren(principal.userId);
       await eisWerkrecht(principal.userId);
+      // een uitzendkracht: BSN, rekeningnummer en getekende overeenkomst, zoals bij zelf reageren (lib/fiscal/eligibility.ts)
+      await eisUitzendGegevens(principal.userId);
     }
     const result = await recordOfferResponse(shiftId, profile.id, decision);
     if (decision === "ACCEPTED") runAfter(() => pushShiftTaken(shiftId, principal.fullName));

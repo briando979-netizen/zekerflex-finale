@@ -8,6 +8,8 @@ import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 // canApply in lib/dashboard/marketplace.ts (ID geverifieerd, eligibility, niet geblokkeerd), plus
 // de poort van de werker-app (lib/onboarding/werker-poort.ts): zonder ingevulde start zie je de
 // klussen niet. Bij een storing: "nee", zonder reden; een mail belooft dan liever te weinig.
+// Proefklussen (21 nov, lib/fiscal/proefklussen-kern.ts) lopen via payoutEligibility mee: een zzp'er of flexwerker met
+// proefruimte kan reageren zonder KVK/btw/KOR en rekeningnummer, dus "je kunt vanaf nu reageren" klopt dan ook.
 // ---------------------------------------------------------------------------
 
 export interface KanReageren {

@@ -8,7 +8,19 @@ const h = vi.hoisted(() => ({
   profiel: { kvkValid: true, vatValid: false, payoutIban: null } as Record<string, unknown> | null,
   werkrecht: { ok: true, reden: null } as { ok: boolean; reden: string | null },
   gevraagd: [] as string[],
+  // proefklussen (lib/fiscal/proefklussen.ts): hier geen ruimte en niet te tellen, dus de regel van vóór 21 nov.
+  // De tak met ruimte staat in tests/proefklussen.test.ts.
+  ruimte: { over: 0, aangenomen: null } as { over: number; aangenomen: number | null },
+  geteld: 0,
 }));
+
+vi.mock("@/lib/fiscal/proefklussen", () => ({
+  proefklusRuimte: async () => {
+    h.geteld++;
+    return h.ruimte;
+  },
+}));
+vi.mock("@/lib/kvk/tegoed-opslag", () => ({ kvkWachtVan: async () => false }));
 
 vi.mock("@/lib/prisma", () => ({ prisma: { freelancerProfile: { findUnique: async () => h.profiel } } }));
 vi.mock("@/lib/fiscal/store", () => ({
@@ -29,12 +41,16 @@ describe("payoutEligibility + recht om te werken", () => {
     h.profiel = { kvkValid: true, vatValid: false, payoutIban: "NL00TEST0000000000" };
     h.werkrecht = { ok: true, reden: null };
     h.gevraagd = [];
+    h.ruimte = { over: 0, aangenomen: null };
+    h.geteld = 0;
   });
 
   it("alles in orde: ok", async () => {
     const { payoutEligibility } = await import("@/lib/fiscal/eligibility");
     expect(await payoutEligibility("u1")).toEqual({ ok: true, track: "invoice", reason: null });
     expect(h.gevraagd).toEqual(["NL"]);
+    // wie alles heeft ingevuld, wordt niet geteld
+    expect(h.geteld).toBe(0);
   });
 
   it("geen recht om te werken: niet ok, met de reden van het werkrecht (beide sporen)", async () => {

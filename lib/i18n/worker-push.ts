@@ -103,6 +103,9 @@ export interface WorkerPushTexts {
   /** uitbetaling geblokkeerd door een onvolledig profiel (lib/timesheets/approve.ts) */
   payoutIncompleteTitle: string;
   payoutIncompleteBody: (reason: "iban" | "dest" | "pending") => string;
+  /** uren staan klaar maar KVK/btw is nog niet geldig: de poort bij goedkeuren houdt ze tegen (lib/timesheets/approve.ts) */
+  payoutBedrijfTitle: string;
+  payoutBedrijfBody: string;
   /** kentekenherkenning bij de slagboom (lib/locatie/toegang.ts) */
   welcomeTitle: (venue: string) => string;
   welcomeBody: (plate: string) => string;
@@ -211,6 +214,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     payoutIncompleteTitle: "Vul je gegevens aan om uitbetaald te worden",
     payoutIncompleteBody: (r) =>
       `Je uren kunnen nog niet goedgekeurd en uitbetaald worden: ${r === "iban" ? "er staat nog geen geldig rekeningnummer (IBAN) op je profiel." : r === "dest" ? "er is nog geen uitbetaalbestemming op je profiel ingesteld." : "je rekeningnummer is recent gewijzigd en nog niet geverifieerd."} Vul je profiel 100% in (o.a. je bankrekening/IBAN).`,
+    payoutBedrijfTitle: "Vul je bedrijfsgegevens in",
+    payoutBedrijfBody: "Je uren staan klaar. Vul je KVK- en btw-nummer in, dan kan je opdrachtgever ze goedkeuren en krijg je je geld.",
     welcomeTitle: (v) => `👋 Welkom bij ${v}`,
     welcomeBody: (p) => `Je kenteken ${p} is herkend, de slagboom gaat open. Vergeet niet in te checken in de app.`,
     testTitle: "🔔 Testmelding van ZekerFlex",
@@ -312,6 +317,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     payoutIncompleteTitle: "Complete your details to get paid",
     payoutIncompleteBody: (r) =>
       `Your hours can't be approved and paid yet: ${r === "iban" ? "there is no valid bank account (IBAN) on your profile yet." : r === "dest" ? "no payout destination is set on your profile yet." : "your bank account was changed recently and isn't verified yet."} Complete your profile 100% (including your bank account/IBAN).`,
+    payoutBedrijfTitle: "Enter your business details",
+    payoutBedrijfBody: "Your hours are ready. Enter your KVK and VAT number, then your client can approve them and you get your money.",
     welcomeTitle: (v) => `👋 Welcome to ${v}`,
     welcomeBody: (p) => `Your licence plate ${p} was recognised, the barrier is opening. Don't forget to check in in the app.`,
     testTitle: "🔔 Test notification from ZekerFlex",
@@ -413,6 +420,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     payoutIncompleteTitle: "Uzupełnij dane, aby dostać wypłatę",
     payoutIncompleteBody: (r) =>
       `Twoje godziny nie mogą jeszcze zostać zatwierdzone i wypłacone: ${r === "iban" ? "w Twoim profilu nie ma jeszcze prawidłowego numeru konta (IBAN)." : r === "dest" ? "w Twoim profilu nie ustawiono jeszcze miejsca wypłaty." : "Twój numer konta został niedawno zmieniony i nie jest jeszcze zweryfikowany."} Uzupełnij profil w 100% (m.in. konto bankowe/IBAN).`,
+    payoutBedrijfTitle: "Wpisz dane swojej firmy",
+    payoutBedrijfBody: "Twoje godziny czekają. Wpisz numer KVK i numer VAT, wtedy zleceniodawca może je zatwierdzić i dostaniesz pieniądze.",
     welcomeTitle: (v) => `👋 Witamy w ${v}`,
     welcomeBody: (p) => `Twoja tablica ${p} została rozpoznana, szlaban się otwiera. Pamiętaj, aby zameldować się w aplikacji.`,
     testTitle: "🔔 Powiadomienie testowe od ZekerFlex",
@@ -514,6 +523,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     payoutIncompleteTitle: "Completează-ți datele ca să fii plătit",
     payoutIncompleteBody: (r) =>
       `Orele tale nu pot fi încă aprobate și plătite: ${r === "iban" ? "nu există încă un cont bancar (IBAN) valid în profilul tău." : r === "dest" ? "nu este setată încă o destinație de plată în profilul tău." : "contul tău bancar a fost modificat recent și nu este încă verificat."} Completează-ți profilul 100% (inclusiv contul bancar/IBAN).`,
+    payoutBedrijfTitle: "Completează datele firmei tale",
+    payoutBedrijfBody: "Orele tale sunt pregătite. Introdu numărul KVK și codul de TVA, apoi clientul le poate aproba și îți primești banii.",
     welcomeTitle: (v) => `👋 Bun venit la ${v}`,
     welcomeBody: (p) => `Numărul tău de înmatriculare ${p} a fost recunoscut, bariera se deschide. Nu uita să faci check-in în aplicație.`,
     testTitle: "🔔 Notificare de test de la ZekerFlex",
@@ -615,6 +626,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     payoutIncompleteTitle: "Доповни дані, щоб отримати виплату",
     payoutIncompleteBody: (r) =>
       `Твої години ще не можна схвалити й виплатити: ${r === "iban" ? "у твоєму профілі ще немає чинного номера рахунку (IBAN)." : r === "dest" ? "у твоєму профілі ще не вказано місце виплати." : "номер твого рахунку нещодавно змінено й ще не верифіковано."} Заповни профіль на 100% (зокрема банківський рахунок/IBAN).`,
+    payoutBedrijfTitle: "Введи дані свого бізнесу",
+    payoutBedrijfBody: "Твої години готові. Введи номер KVK і номер ПДВ, тоді замовник зможе їх схвалити й ти отримаєш гроші.",
     welcomeTitle: (v) => `👋 Ласкаво просимо до ${v}`,
     welcomeBody: (p) => `Твій номерний знак ${p} розпізнано, шлагбаум відкривається. Не забудь зареєструвати прихід у застосунку.`,
     testTitle: "🔔 Тестове сповіщення від ZekerFlex",

@@ -14,6 +14,7 @@ import { estimateTravel, fastestMode } from "@/lib/geo/travel-time";
 import { enqueueShiftMatching } from "@/lib/notifications/dispatcher";
 import { assertFreelancerMatchable } from "@/lib/compliance/dba";
 import { eisWerkrecht } from "@/lib/werkrecht/store";
+import { eisUitzendGegevens } from "@/lib/fiscal/eligibility";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { findOverlappingShift } from "@/lib/shifts/worker-overlap";
@@ -316,6 +317,9 @@ export async function runMatchingForShift(
           await assertFreelancerMatchable(c.freelancerId);
           // niet automatisch inplannen zonder recht om te werken (lib/werkrecht): dan overslaan
           await eisWerkrecht(c.userId, { voorWerkgever: true });
+          // een uitzendkracht zonder BSN, rekeningnummer of getekende overeenkomst niet automatisch inplannen (lib/fiscal/
+          // eligibility.ts, dezelfde controle als bij zelf reageren); ook bij een storing in die controle: overslaan
+          await eisUitzendGegevens(c.userId);
           await autoAssign(shift, c.freelancerId);
           autoAssignedIds.add(c.freelancerId);
           log.info("auto-assigned", {

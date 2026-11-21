@@ -2016,6 +2016,7 @@ export const nl = {
     bulkMisluktMeer: "{n} niet gelukt: keur die apart goed om de reden te zien.",
     bulkOvergeslagen: "{n} overgeslagen: al verwerkt, of er kwam een signaal bij.",
     bulkNiets: "Er was niets om goed te keuren.",
+    werkerBedrijf: "De werker moet eerst zijn bedrijfsgegevens invullen. We hebben hem een bericht gestuurd; daarna kun je de uren goedkeuren.",
   },
   urenKnoppen: {
     signaalStandaard: "Dit urenbriefje heeft een signaal.",

@@ -113,6 +113,11 @@ export interface MarketplaceData {
   prefs: UserPrefs;
   shifts: MarketplaceShift[];
   newSinceLastVisit: number;
+  /**
+   * alleen gezet als reageren mag dankzij een proefklus (lib/fiscal/proefklussen-kern.ts): KVK/btw/KOR of het rekeningnummer
+   * ontbreekt nog. Ontdekken toont dan de eerlijke regel dat het geld pas komt als die gegevens zijn ingevuld.
+   */
+  proefklussenOver?: number;
 }
 
 function daypartOf(d: Date): MarketplaceShift["daypart"] {
@@ -429,7 +434,16 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
       };
     });
 
-  return { canApply, blockReason, home, homeLabel, prefs, shifts, newSinceLastVisit };
+  return {
+    canApply,
+    blockReason,
+    home,
+    homeLabel,
+    prefs,
+    shifts,
+    newSinceLastVisit,
+    ...(canApply && eligibility.proef ? { proefklussenOver: eligibility.proef.over } : {}),
+  };
 }
 
 export interface AgreementSummary {

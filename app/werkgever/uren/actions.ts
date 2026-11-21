@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { approveTimesheet } from "@/lib/timesheets/approve";
-import { BULK_MAX, bulkBerichtT, schoneUren } from "@/lib/timesheets/bulk-goedkeuren";
+import { BULK_MAX, WERKER_BEDRIJF_MIST, bulkBerichtT, schoneUren } from "@/lib/timesheets/bulk-goedkeuren";
 import { getDict } from "@/lib/i18n/server";
 import { nl as nlDict, fmt } from "@/lib/i18n/dictionaries";
 import { fraudForTimesheets } from "@/lib/fraud/timesheet";
@@ -52,6 +52,8 @@ export async function approveTimesheetAction(
             : d.uitbetalingGestart,
     };
   } catch (err) {
+    // de werker mist zijn KVK- of btw-nummer (lib/timesheets/approve.ts): die zin in de taal van de werkgever
+    if (err instanceof AppError && err.message === WERKER_BEDRIJF_MIST) return { ok: false, message: d.werkerBedrijf };
     if (err instanceof AppError) return { ok: false, message: err.message };
     // Toon de echte oorzaak i.p.v. een generieke tekst, zodat een
     // onverwachte fout (bv. een wegvallende dienst) meteen zichtbaar is.

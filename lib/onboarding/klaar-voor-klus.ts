@@ -27,6 +27,12 @@ export interface KlusFeiten {
   iban: boolean;
   /** de vlag werkrecht-eis staat aan en het recht om te werken is nog niet aangetoond */
   werkrechtOpen: boolean;
+  /**
+   * proefklussen (lib/fiscal/proefklussen-kern.ts): een zzp'er of flexwerker mag zijn eerste 2 klussen aannemen zonder
+   * KVK/btw/KOR en rekeningnummer. true = hij heeft die ruimte nog; dan houden `bedrijf` en `iban` reageren niet tegen.
+   * Ontbreekt het veld, dan geldt de gewone regel.
+   */
+  proefRuimte?: boolean;
 }
 
 /**
@@ -36,14 +42,16 @@ export interface KlusFeiten {
  */
 export function nogVoorEersteKlus(f: KlusFeiten): KlusStuk[] {
   const lijst: KlusStuk[] = [];
+  // proefklussen: alleen op het factuurspoor; een uitzendkracht houdt BSN, overeenkomst en rekeningnummer
+  const proef = !f.payroll && f.proefRuimte === true;
   if (f.payroll) {
     if (!f.bsn) lijst.push("bsn");
     if (!f.contract) lijst.push("contract");
-  } else if (!f.bedrijf) {
+  } else if (!f.bedrijf && !proef) {
     // wacht de KVK-controle, zeg dat dan eerlijk in plaats van "vul je KVK-nummer in" (da, 15 nov)
     lijst.push(f.kvkWacht ? "kvkWacht" : "bedrijf");
   }
-  if (!f.iban) lijst.push("iban");
+  if (!f.iban && !proef) lijst.push("iban");
   if (f.werkrechtOpen) lijst.push("werkrecht");
   if (!f.idGoedgekeurd) lijst.push("idWacht");
   return lijst;

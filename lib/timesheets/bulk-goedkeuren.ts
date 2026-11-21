@@ -7,6 +7,14 @@
 // rij, zonder GPS-uitzondering. Puur (geen prisma): pagina en actie delen dit.
 // ---------------------------------------------------------------------------
 
+/**
+ * Wat de werkgever ziet als de werker zijn KVK- en btw-nummer nog niet (geldig) heeft: de poort bij goedkeuren blijft dicht
+ * (lib/timesheets/approve.ts, lib/billing/payout-gate.ts), maar hij leest een gewone zin in plaats van "Payout geblokkeerd".
+ * De actie (app/werkgever/uren/actions.ts) herkent deze tekst en toont hem in de taal van de werkgever (urenActies.werkerBedrijf).
+ */
+export const WERKER_BEDRIJF_MIST =
+  "De werker moet eerst zijn bedrijfsgegevens invullen. We hebben hem een bericht gestuurd; daarna kun je de uren goedkeuren.";
+
 /** Zoveel per klik: elke goedkeuring maakt facturen en start een uitbetaling. */
 export const BULK_MAX = 25;
 
