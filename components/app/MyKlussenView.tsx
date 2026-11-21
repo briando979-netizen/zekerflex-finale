@@ -1,6 +1,5 @@
 "use client";
 
-import { ColorLegend } from "@/components/app/ColorLegend";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { MyWorkItem } from "@/lib/dashboard/my-work";
@@ -11,6 +10,10 @@ import { dismissWorkItemAction, dismissWorkItemsAction } from "@/app/dashboard/d
 import { useFT } from "@/components/i18n/useFT";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
+
+// Mijn klussen in de opzet van de app van YoungOnes (21 nov 2026): een strakke tabbalk In afwachting · Uitgekozen ·
+// Gearchiveerd met een turquoise streep onder de actieve tab, de kaarten eronder, en een lege staat als gewone zin.
+// De kop "Mijn klussen" staat in de balk bovenaan (FreelancerShell), niet nog eens op de pagina.
 
 type TabId = "pending" | "active" | "history";
 
@@ -26,19 +29,20 @@ const dayKey = (d: Date) => amsterdamDayKey(d);
 export function MyKlussenView({
   work,
 }: {
-  /** notChosen: klussen you were not chosen for — shown under "In afwachting", not in the archive */
+  /** notChosen: klussen you were not chosen for — shown under "Gearchiveerd", apart from the real archive */
   work: { pending: MyWorkItem[]; active: MyWorkItem[]; history: MyWorkItem[]; notChosen?: MyWorkItem[] };
 }) {
   const ft = useFT();
   const w = ft.work;
+  // Open op Uitgekozen zodra er iets is uitgekozen; anders op wat er wel is; leeg → Uitgekozen (zoals YoungOnes).
   const [tab, setTab] = useState<TabId>(
-    work.pending.length > 0 || (work.notChosen?.length ?? 0) > 0
-      ? "pending"
-      : work.active.length > 0
-        ? "active"
-        : work.history.length > 0
+    work.active.length > 0
+      ? "active"
+      : work.pending.length > 0
+        ? "pending"
+        : work.history.length > 0 || (work.notChosen?.length ?? 0) > 0
           ? "history"
-          : "pending",
+          : "active",
   );
   const [panel, setPanel] = useState(false);
   const [order, setOrder] = useState<"asc" | "desc">("asc");
@@ -82,29 +86,30 @@ export function MyKlussenView({
     return out;
   }, [items, days, order]);
 
+  // niets te tonen op dit tabblad (Gearchiveerd met alleen niet-uitgekozen klussen toont die lijst, geen lege zin)
+  const toonLeeg = shown.length === 0 && !(tab === "history" && notChosen.length > 0);
+
   return (
     <div>
-      {/* Tabs */}
-      <div className="mb-4 flex gap-6 border-b border-hair">
+      {/* Tabs: drie even brede knoppen, turquoise streep onder de actieve (de tabbalk van YoungOnes) */}
+      <div role="tablist" className="mb-4 grid grid-cols-3 border-b border-hair">
         {TABS.map((t) => {
           const active = tab === t.id;
-          const n = work[t.id].length;
           return (
             <button
               key={t.id}
               type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => {
                 setTab(t.id);
                 setDays(new Set());
               }}
-              className={`-mb-px border-b-2 pb-2.5 text-sm font-semibold transition ${
-                active
-                  ? "border-brand-mint text-ink"
-                  : "border-transparent text-neutralx-400 hover:text-neutralx-600"
+              className={`-mb-px min-h-[44px] border-b-2 px-1 pb-2.5 pt-1 text-center text-sm transition ${
+                active ? "border-[#14D9C9] font-bold text-ink" : "border-transparent font-medium text-neutralx-400 hover:text-neutralx-600"
               }`}
             >
               {w[t.key]}
-              {n > 0 && <span className="ml-1.5 text-xs text-neutralx-400">{n}</span>}
             </button>
           );
         })}
@@ -209,7 +214,7 @@ export function MyKlussenView({
       )}
 
       {shown.length === 0 ? (
-        <Empty tab={tab} w={w} zoek={items.length === 0} />
+        toonLeeg ? <Empty tab={tab} w={w} zoek={items.length === 0} /> : null
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {shown.map((item) => (
@@ -238,8 +243,9 @@ export function MyKlussenView({
         </div>
       )}
 
-      {tab === "pending" && notChosen.length > 0 && (
-        <section className="mt-8" aria-labelledby="niet-gekozen-kop">
+      {/* niet uitgekozen: onder Gearchiveerd, apart van de echte historie (afgerond/geannuleerd) */}
+      {tab === "history" && notChosen.length > 0 && (
+        <section className={shown.length > 0 ? "mt-8" : ""} aria-labelledby="niet-gekozen-kop">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
               <h2 id="niet-gekozen-kop" className="font-display text-base font-bold text-ink">
@@ -265,12 +271,22 @@ export function MyKlussenView({
           </div>
         </section>
       )}
-      <ColorLegend className="mt-6" />
     </div>
   );
 }
 
+/** De regel onder een uitgekozen klus: "Dit is jouw klus! 🎉" met een pijl, zoals bij YoungOnes; ervoor eventueel
+ *  "De opdrachtgever heeft aanvullende informatie voor je achtergelaten" (de tekst zelf staat op de kluspagina). */
 function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
+  return (
+    <div className="space-y-2">
+      {item.shift.extraInfo && <p className="text-xs text-neutralx-500">{w.extraInfoLeft}</p>}
+      <ActiveAction item={item} w={w} />
+    </div>
+  );
+}
+
+function ActiveAction({ item, w }: { item: MyWorkItem; w: W }) {
   const startMs = new Date(item.shift.startsAt).getTime();
   const endMs = new Date(item.shift.endsAt).getTime();
 
@@ -293,7 +309,7 @@ function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
   // Op de dag van de klus: inchecken/uitchecken heeft voorrang (eigen pagina; uren pas na afloop).
   if (item.timesheetId && Date.now() >= startMs - 60 * 60_000 && Date.now() <= endMs) {
     return (
-      <Link href={`/dashboard/inchecken/${item.timesheetId}`} className="flex items-center justify-between rounded-xl bg-brand-500 px-3 py-2.5 text-sm font-semibold text-white">
+      <Link href={`/dashboard/inchecken/${item.timesheetId}`} className="btn-primary flex w-full items-center justify-between">
         <span>{w.checkInOut}</span>
         <span aria-hidden>→</span>
       </Link>
@@ -304,11 +320,8 @@ function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
   // eerlijke status, de kaart opent gewoon de klus.
   if (!item.assignmentId) {
     return (
-      <Link
-        href={`/dashboard/klussen/${item.shift.id}`}
-        className="flex items-center justify-between rounded-xl bg-paper-soft px-3 py-2.5 text-sm font-semibold text-neutralx-600"
-      >
-        <span>Reactie geaccepteerd — bekijk klus</span>
+      <Link href={`/dashboard/klussen/${item.shift.id}`} className="flex items-center justify-between text-sm font-semibold text-neutralx-600">
+        <span>{w.acceptedView}</span>
         <span aria-hidden>→</span>
       </Link>
     );
@@ -318,17 +331,8 @@ function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
   // vervanging, afzeggen, annuleringstermijn, extra info) staan op de
   // detailpagina — je ziet ze dus zodra je de klus aanklikt.
   return (
-    <Link
-      href={`/dashboard/klussen/${item.shift.id}`}
-      className="flex items-center justify-between rounded-xl bg-plan-soft px-3 py-2.5 text-sm font-semibold text-plan-ink"
-    >
-      <span className="flex items-center gap-2">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M8 3v4M16 3v4M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-        {w.yourJob}
-      </span>
+    <Link href={`/dashboard/klussen/${item.shift.id}`} className="flex items-center justify-between font-display text-base font-bold text-ink">
+      <span>{w.yourJob}</span>
       <span aria-hidden>→</span>
     </Link>
   );
@@ -372,7 +376,7 @@ function HistoryFooter({ item, onHide, w }: { item: MyWorkItem; onHide: (workKey
   // Archief-item uit een reactie (geaccepteerde reactie die voorbij is, of een
   // bedrijf dat niet inplande) — er is geen urenbriefje om in te vullen.
   if (!item.assignmentId) {
-    return <p className="text-sm font-semibold text-neutralx-500">Deze klus is voorbij.</p>;
+    return <p className="text-sm font-semibold text-neutralx-500">{w.over}</p>;
   }
   switch (item.timesheetStatus) {
     case "PAID":
@@ -401,14 +405,15 @@ function HistoryFooter({ item, onHide, w }: { item: MyWorkItem; onHide: (workKey
   }
 }
 
-// zoek: de lijst van dit tabblad is echt leeg (niet weggefilterd op dag) → een knop naar het zoeken van klussen
+// De lege staat van YoungOnes: één gewone zin, gecentreerd, veel lucht. zoek: de lijst van dit tabblad is echt leeg
+// (niet weggefilterd op dag) → ook een knop naar het zoeken van klussen.
 function Empty({ tab, w, zoek }: { tab: TabId; w: W; zoek: boolean }) {
   const text = tab === "pending" ? w.emptyPending : tab === "active" ? w.emptyActive : w.emptyHistory;
   return (
-    <div className="rounded-2xl border border-dashed border-hairstrong bg-white/60 px-5 py-12 text-center text-sm text-neutralx-500">
-      <p>{text}</p>
+    <div className="px-6 py-16 text-center">
+      <p className="mx-auto max-w-sm text-base leading-relaxed text-neutralx-500">{text}</p>
       {zoek && (
-        <Link href="/dashboard/klussen" className="btn-primary mt-4">
+        <Link href="/dashboard/klussen" className="btn-primary mt-6">
           {w.emptyCta}
         </Link>
       )}

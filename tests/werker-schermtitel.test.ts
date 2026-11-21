@@ -57,9 +57,10 @@ describe("de titel bovenaan volgt het scherm", () => {
 });
 
 describe("één kopstijl in de werker-app", () => {
+  // Mijn klussen (app/dashboard/diensten) heeft sinds 21 nov geen eigen kop meer: de naam staat in de balk bovenaan
+  // en de tabs beginnen meteen, zoals in de app van YoungOnes.
   const SCHERMEN = [
     "app/dashboard/klussen/page.tsx",
-    "app/dashboard/diensten/page.tsx",
     "app/dashboard/account/page.tsx",
     "app/dashboard/account/beveiliging/page.tsx",
     "app/dashboard/account/passkeys/page.tsx",

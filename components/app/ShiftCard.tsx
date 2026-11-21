@@ -4,14 +4,16 @@ import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { shiftCategory } from "@/lib/shifts/category";
 import { money, moneyExact } from "@/components/app/ui";
 import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
-import { WebOnly } from "@/components/app/WebOnly";
 import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
-// Shift card — YoungOnes-style: photo header with the category + a save heart,
-// then company · title · when/where, badges and the pay line.
-// Presentational; `action` / `footerOverride` drive the apply control.
+// Kluskaart — de kaart van de app van YoungOnes (21 nov 2026, eigenaar: "alles in de stijl van YoungOnes"):
+// foto bovenaan met alleen het hartje, bedrijfsnaam in turquoise, titel, "dag | tijd · uren | plaats", en in de
+// voet links de chips (Speciaal voor jou, Freelance/Uitzend, Invalklus, +N dagen, Neem je ID mee, favoriet) en
+// rechts het tarief groot met "Verdien ~" eronder. Wat op de kluspagina hoort (beoordeling van het bedrijf,
+// eerder gewerkt, volgen, snelle betaling) staat niet meer op de kaart.
+// Presentatie-onderdeel; `action` / `footerOverride` sturen de voet.
 // ---------------------------------------------------------------------------
 
 // Dutch wall-clock times, so the UTC server and any phone render the same text. Dag en tijden apart, zodat de kaart ze
@@ -20,6 +22,27 @@ function whenParts(start: Date, end: Date, t: FreelancerDict): [string, string] 
   const s = amsterdamParts(new Date(start));
   const day = `${t.date.wd[s.weekday]} ${s.day} ${t.date.mon[s.month - 1]}.`;
   return [day, `${amsterdamClock(start)}–${amsterdamClock(end)}`];
+}
+
+export type KlusChipTone = "teal" | "neutral" | "red" | "salmon" | "amber" | "blue";
+
+// Vaste kleuren, in licht en donker gelijk (de chips van YoungOnes: lichte vulling, donkere tekst, gekleurde rand).
+const CHIP: Record<KlusChipTone, string> = {
+  teal: "border-[#14D9C9] bg-[#DDF9F6] text-[#0B1238]",
+  neutral: "border-[#D9DEE7] bg-[#F7F8FA] text-[#0B1238]",
+  red: "border-[#E5484D] bg-[#FDE2E3] text-[#7F1D1D]",
+  salmon: "border-[#F28C6A] bg-[#FDE4DB] text-[#0B1238]",
+  amber: "border-[#F5C451] bg-[#FDF3D7] text-[#0B1238]",
+  blue: "border-[#60A5FA] bg-[#DBEAFE] text-[#0B1238]",
+};
+
+/** Een chip in de voet van de kluskaart (ook op Uren invullen voor de status van het urenbriefje). */
+export function KlusChip({ tone = "neutral", title, children }: { tone?: KlusChipTone; title?: string; children: ReactNode }) {
+  return (
+    <span title={title} className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-semibold ${CHIP[tone]}`}>
+      {children}
+    </span>
+  );
 }
 
 export function ShiftCard({
@@ -58,6 +81,7 @@ export function ShiftCard({
         : ribbon?.tone === "neutral"
           ? "rgba(12,14,18,.75)"
           : "rgba(14,92,74,.92)";
+  const [dag, tijden] = whenParts(shift.startsAt, shift.endsAt, t);
 
   return (
     <article
@@ -65,7 +89,7 @@ export function ShiftCard({
         dim ? "opacity-70" : ""
       }`}
     >
-      {/* photo */}
+      {/* foto: alleen het hartje erop (en een lint voor vervanging/dubbel ingepland) */}
       <div className="relative aspect-[16/9] overflow-hidden">
         {/* Decorative duplicate of the title link below — hidden from AT so the
             card exposes exactly one meaningful link. */}
@@ -77,25 +101,16 @@ export function ShiftCard({
               <img src={shift.companyLogoUrl} alt="" loading="lazy" decoding="async" className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105" />
             </span>
           ) : (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={cat.photo}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <span className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
-            </>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={cat.photo}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
           )}
         </Link>
-        <span
-          className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold text-white backdrop-blur"
-          style={{ background: `${cat.accent}cc` }}
-        >
-          {t.cat[cat.key]}
-        </span>
         <div className="absolute right-3 top-3">
           <SaveShiftHeart shiftId={shift.id} labels={{ save: c.save, unsave: c.unsave }} />
         </div>
@@ -112,112 +127,57 @@ export function ShiftCard({
       {/* body */}
       <div className="flex flex-1 flex-col p-4">
         <Link href={href} className="block">
-          <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-600">
+          <p className="flex items-center gap-1.5 text-sm font-bold text-brand-600">
             {shift.companyLogoUrl && !shift.useLogo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={shift.companyLogoUrl} alt="" loading="lazy" decoding="async" className="h-5 w-5 flex-shrink-0 rounded-full bg-[#ffffff] object-contain ring-1 ring-hair" />
             )}
             {/* de bedrijfsnaam, niet de vestiging ("Eenmalige locatie — adres"); waar het is, staat eronder */}
             <span className="truncate">{shift.company}</span>
-            {shift.companyRating && (
-              <span className="flex flex-shrink-0 items-center gap-0.5 rounded-full bg-money-soft px-1.5 py-0.5 text-[11px] font-bold text-money-ink" title={`${shift.companyRating.count}`}>
-                ★ {shift.companyRating.average.toFixed(1).replace(".", ",")}
-                <span className="font-medium text-money-ink/70">({shift.companyRating.count})</span>
-              </span>
-            )}
           </p>
-          <p className="mt-0.5 font-display text-base font-bold leading-snug text-ink">{shift.title}</p>
+          <p className="mt-0.5 font-display text-lg font-bold leading-snug text-ink">{shift.title}</p>
         </Link>
 
-        {/* dag | tijden | plaats, met streepjes ertussen zoals op de kaart van YoungOnes */}
+        {/* dag | tijden · uren | plaats, met streepjes ertussen zoals op de kaart van YoungOnes */}
         <p className="mt-2 flex flex-wrap items-center text-xs text-neutralx-500">
-          {(() => {
-            const [dag, tijden] = whenParts(shift.startsAt, shift.endsAt, t);
-            const delen = [dag, tijden, `${shift.city}${shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}`];
-            return delen.map((deel, i) => (
-              <span key={i} className={i === 0 ? "" : "border-l border-hairstrong pl-2 ml-2"}>{deel}</span>
-            ));
-          })()}
+          {[dag, `${tijden} · ${shift.hours} ${t.hoursPage.hShort}`, `${shift.city}${shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}`].map((deel, i) => (
+            <span key={i} className={i === 0 ? "" : "border-l border-hairstrong pl-2 ml-2"}>{deel}</span>
+          ))}
         </p>
 
         {/* extra informatie staat alleen bij de klus zelf, niet op de kaart (10 nov, eigenaar) */}
-
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          {/* testklus van ons eigen testbedrijf: geen echt werk (lib/shifts/testklus.ts) */}
-          {shift.testklus && (
-            <span title={c.testklusUitleg} className="rounded border border-hairstrong bg-paper-soft px-1.5 py-0.5 text-[11px] font-bold text-neutralx-700">
-              {c.testklus}
-            </span>
-          )}
-          {special && (
-            <span className="rounded border border-crit/30 px-1.5 py-0.5 text-[11px] font-semibold text-crit">
-              {c.specialForYou}
-            </span>
-          )}
-          {shift.viaUitzendbureau ? (
-            <span className="rounded border border-amber-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700">
-              {c.viaAgency}
-            </span>
-          ) : (
-            <span className="rounded border border-brand-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-brand-600">
-              {c.freelance}
-            </span>
-          )}
-          {shift.isReplacement && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-plan-soft px-2 py-0.5 text-[11px] font-bold text-plan-ink">
-              ⚡ {c.invalklus}
-            </span>
-          )}
-          {idReminder && (
-            <span className="rounded border border-trust/40 bg-trust-soft px-1.5 py-0.5 text-[11px] font-semibold text-trust-ink">
-              {c.bringId}
-            </span>
-          )}
-          {shift.series && shift.series.total > 1 && (
-            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
-              {c.plusDays(shift.series.total)}
-            </span>
-          )}
-          {shift.myOffer && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${shift.myOffer.reserve ? "bg-paper-soft text-neutralx-600" : "bg-warn/10 text-warn"}`}
-            >
-              {shift.myOffer.proposedRateCents === shift.hourlyRateCents
-                ? c.responseSent
-                : c.counterOffer(moneyExact(shift.myOffer.proposedRateCents))}{" "}
-              · {(shift.myOffer.reserve ? c.offer.reserve : c.offer[shift.myOffer.status]) ?? shift.myOffer.status}
-            </span>
-          )}
-          {shift.replacementNote && !ribbon && (
-            <span className="rounded-full bg-paper-soft px-2 py-0.5 text-[11px] text-neutralx-500">{shift.replacementNote}</span>
-          )}
-        </div>
 
         {shift.match?.belowDesiredRate && (
           <p className="mt-2 text-[11px] font-medium text-warn">{c.belowRate}</p>
         )}
         {shift.alert && <p className="mt-1 truncate text-[11px] font-semibold text-brand-700">🔔 {shift.alert}</p>}
         {shift.busy && <p className="mt-1 text-[11px] font-semibold text-neutralx-600">⏰ {c.busy}</p>}
-        {shift.followed && <p className="mt-1 text-[11px] font-medium text-neutralx-600">❤️ {t.follow.youFollow}</p>}
-        {/* het bedrijf heeft jou als favoriet (naar YoungOnes' "Je bent hier een favoriet · HOGE KANS") */}
-        {shift.favorietBijBedrijf && <p className="mt-1 text-[11px] font-semibold text-brand-700">⭐ {c.favorietHier}</p>}
-        {shift.workedHereBefore > 0 && (
-          <p className="mt-1 text-[11px] text-neutralx-400">{c.workedHere(shift.workedHereBefore)}</p>
-        )}
-        {shift.fastPay && (
-          <WebOnly>
-            <p className="mt-1 text-[11px] font-semibold text-brand-600">{c.fastPay}</p>
-          </WebOnly>
-        )}
 
-        {/* het tarief groot rechts met "Verdien ~" eronder, de uren links (de voet van de kaart van YoungOnes) */}
-        <div className="mt-3 flex items-end justify-between gap-3 border-t border-hair pt-3">
-          <span className="num rounded-lg bg-paper-soft px-2 py-1 text-xs font-semibold text-neutralx-600">
-            {c.hours(shift.hours)}
-          </span>
-          <div className="text-right">
-            <p className="num font-display text-lg font-bold text-ink">{moneyExact(shift.hourlyRateCents)} {c.perHour}</p>
-            {!compact && <p className="text-[11px] text-neutralx-400">{c.earn(money(shift.grossCents))}</p>}
+        {/* de voet: chips links, het tarief groot rechts met "Verdien ~" eronder */}
+        <div className="mt-3 flex items-end justify-between gap-3 border-t border-dashed border-hairstrong pt-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {/* testklus van ons eigen testbedrijf: geen echt werk (lib/shifts/testklus.ts) */}
+            {shift.testklus && <KlusChip title={c.testklusUitleg}>{c.testklus}</KlusChip>}
+            {special && <KlusChip tone="red">{c.specialForYou}</KlusChip>}
+            {shift.viaUitzendbureau ? <KlusChip tone="amber">{c.viaAgency}</KlusChip> : <KlusChip tone="teal">{c.freelance}</KlusChip>}
+            {shift.isReplacement && <KlusChip tone="salmon">{c.invalklus}</KlusChip>}
+            {shift.series && shift.series.total > 1 && <KlusChip>{c.plusDays(shift.series.total)}</KlusChip>}
+            {idReminder && <KlusChip>{c.bringId}</KlusChip>}
+            {/* het bedrijf heeft jou als favoriet (naar YoungOnes' "Je bent hier een favoriet · HOGE KANS") */}
+            {shift.favorietBijBedrijf && <KlusChip tone="teal">⭐ {c.favorietHier}</KlusChip>}
+            {shift.myOffer && (
+              <KlusChip tone={shift.myOffer.reserve ? "neutral" : "amber"}>
+                {shift.myOffer.proposedRateCents === shift.hourlyRateCents
+                  ? c.responseSent
+                  : c.counterOffer(moneyExact(shift.myOffer.proposedRateCents))}{" "}
+                · {(shift.myOffer.reserve ? c.offer.reserve : c.offer[shift.myOffer.status]) ?? shift.myOffer.status}
+              </KlusChip>
+            )}
+            {shift.replacementNote && !ribbon && <KlusChip>{shift.replacementNote}</KlusChip>}
+          </div>
+          <div className="flex-shrink-0 text-right">
+            <p className="num font-display text-lg font-bold text-ink">{moneyExact(shift.hourlyRateCents)}</p>
+            <p className="text-[11px] text-neutralx-400">{compact ? c.perHour : c.earn(money(shift.grossCents))}</p>
           </div>
         </div>
 
