@@ -19,6 +19,21 @@ import { INTRODUCTIE_TALEN } from "@/lib/introducties/teksten-talen";
 // ---------------------------------------------------------------------------
 
 const nl = {
+  // het scherm "Installeer de app" voor wie de werker-omgeving in een gewone browser opent (21 nov 2026, zoals YoungOnes)
+  appVereist: {
+    kop: "Installeer de ZekerFlex-app",
+    tekst: "Je werkersomgeving gebruik je in de app op je telefoon. Zo heb je je klussen, je uren en je chat altijd bij je. De app is nu nog een testversie.",
+    android: "Android: Google Play (testversie)",
+    androidUitleg: "Werkt voor testers. Staat je Gmail-adres nog niet op de lijst? Mail ons via de website, dan zetten we je erop.",
+    iphone: "iPhone: TestFlight",
+    iphoneUitleg: "Installeer eerst TestFlight uit de App Store en daarna de ZekerFlex-app via deze link.",
+    alKop: "Al geïnstalleerd?",
+    alTekst: "Open de ZekerFlex-app op je telefoon en log daar in. Heb je de website op je beginscherm gezet? Open hem dan vanaf dat pictogram.",
+    openen: "De app wordt geopend…",
+    werkgever: "Naar de werkgeversomgeving",
+    site: "Naar de website",
+    uitloggen: "Uitloggen",
+  },
   nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren invullen", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
   // de titel in de balk bovenaan voor schermen buiten de balk onderaan (lib/werker/schermtitel.ts); "overig" = een scherm dat we niet kennen
   schermTitel: { verificatie: "Verificatie", profiel: "Mijn gegevens", uitbetalingen: "Uitbetalingen", verloning: "Verloning", beschikbaarheid: "Beschikbaarheid", administratie: "Administratie", hulp: "Hulp", inchecken: "Inchecken", certificaten: "Certificaten", favorieten: "Favorieten", beoordelingen: "Beoordelingen", paspoort: "Werkpaspoort", ritten: "Kilometers", fiscaal: "Werkvorm", verzekering: "Verzekering", vooruitblik: "Vooruitblik", agenda: "Agenda", wifi: "Wifi", introduceren: "Introduceren", assistent: "Assistent", overig: "ZekerFlex" },
@@ -1675,6 +1690,20 @@ const nl = {
 export type FreelancerDict = typeof nl;
 
 const en: FreelancerDict = {
+  appVereist: {
+    kop: "Install the ZekerFlex app",
+    tekst: "You use your worker area in the app on your phone, so your jobs, hours and chat are always with you. The app is still a test version.",
+    android: "Android: Google Play (test version)",
+    androidUitleg: "Works for testers. Is your Gmail address not on the list yet? Email us via the website and we will add you.",
+    iphone: "iPhone: TestFlight",
+    iphoneUitleg: "First install TestFlight from the App Store, then the ZekerFlex app via this link.",
+    alKop: "Already installed?",
+    alTekst: "Open the ZekerFlex app on your phone and log in there. Did you add the website to your home screen? Open it from that icon.",
+    openen: "Opening the app…",
+    werkgever: "Go to the employer area",
+    site: "Go to the website",
+    uitloggen: "Log out",
+  },
   nav: { discover: "Discover", myJobs: "My jobs", hours: "Fill in hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
   schermTitel: { verificatie: "Verification", profiel: "My details", uitbetalingen: "Payouts", verloning: "Payroll", beschikbaarheid: "Availability", administratie: "Administration", hulp: "Help", inchecken: "Check in", certificaten: "Certificates", favorieten: "Favourites", beoordelingen: "Reviews", paspoort: "Work passport", ritten: "Mileage", fiscaal: "Work type", verzekering: "Insurance", vooruitblik: "Outlook", agenda: "Calendar", wifi: "Wi-Fi", introduceren: "Introductions", assistent: "Assistant", overig: "ZekerFlex" },
   los: {
@@ -3481,6 +3510,20 @@ const en: FreelancerDict = {
 };
 
 const pl: FreelancerDict = {
+  appVereist: {
+    kop: "Zainstaluj aplikację ZekerFlex",
+    tekst: "Z panelu pracownika korzystasz w aplikacji na telefonie. Dzięki temu zlecenia, godziny i czat masz zawsze przy sobie. Aplikacja jest jeszcze w wersji testowej.",
+    android: "Android: Google Play (wersja testowa)",
+    androidUitleg: "Działa dla testerów. Twojego adresu Gmail nie ma jeszcze na liście? Napisz do nas przez stronę, a dodamy Cię.",
+    iphone: "iPhone: TestFlight",
+    iphoneUitleg: "Najpierw zainstaluj TestFlight z App Store, a potem aplikację ZekerFlex przez ten link.",
+    alKop: "Masz już aplikację?",
+    alTekst: "Otwórz aplikację ZekerFlex na telefonie i zaloguj się tam. Dodałeś stronę do ekranu głównego? Otwórz ją z tej ikony.",
+    openen: "Otwieranie aplikacji…",
+    werkgever: "Do panelu pracodawcy",
+    site: "Do strony",
+    uitloggen: "Wyloguj",
+  },
   nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Wpisz godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
   schermTitel: { verificatie: "Weryfikacja", profiel: "Moje dane", uitbetalingen: "Wypłaty", verloning: "Wynagrodzenie", beschikbaarheid: "Dostępność", administratie: "Administracja", hulp: "Pomoc", inchecken: "Zameldowanie", certificaten: "Certyfikaty", favorieten: "Ulubione", beoordelingen: "Opinie", paspoort: "Paszport pracy", ritten: "Kilometry", fiscaal: "Forma pracy", verzekering: "Ubezpieczenie", vooruitblik: "Prognoza", agenda: "Kalendarz", wifi: "Wi-Fi", introduceren: "Polecenia", assistent: "Asystent", overig: "ZekerFlex" },
   los: {
@@ -5287,6 +5330,20 @@ const pl: FreelancerDict = {
 };
 
 const ro: FreelancerDict = {
+  appVereist: {
+    kop: "Instalează aplicația ZekerFlex",
+    tekst: "Zona ta de lucrător o folosești în aplicația de pe telefon. Așa ai joburile, orele și chatul mereu la tine. Aplicația este încă o versiune de test.",
+    android: "Android: Google Play (versiune de test)",
+    androidUitleg: "Funcționează pentru testeri. Adresa ta Gmail nu e încă pe listă? Scrie-ne prin site și te adăugăm.",
+    iphone: "iPhone: TestFlight",
+    iphoneUitleg: "Instalează mai întâi TestFlight din App Store, apoi aplicația ZekerFlex prin acest link.",
+    alKop: "Ai deja aplicația?",
+    alTekst: "Deschide aplicația ZekerFlex pe telefon și conectează-te acolo. Ai pus site-ul pe ecranul principal? Deschide-l de la acea pictogramă.",
+    openen: "Se deschide aplicația…",
+    werkgever: "Spre zona angajatorului",
+    site: "Spre site",
+    uitloggen: "Deconectare",
+  },
   nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Completează orele", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
   schermTitel: { verificatie: "Verificare", profiel: "Datele mele", uitbetalingen: "Plăți", verloning: "Salarizare", beschikbaarheid: "Disponibilitate", administratie: "Administrație", hulp: "Ajutor", inchecken: "Check-in", certificaten: "Certificate", favorieten: "Favorite", beoordelingen: "Recenzii", paspoort: "Pașaport de lucru", ritten: "Kilometri", fiscaal: "Forma de lucru", verzekering: "Asigurare", vooruitblik: "Previziune", agenda: "Calendar", wifi: "Wi-Fi", introduceren: "Recomandări", assistent: "Asistent", overig: "ZekerFlex" },
   los: {
@@ -7093,6 +7150,20 @@ const ro: FreelancerDict = {
 };
 
 const uk: FreelancerDict = {
+  appVereist: {
+    kop: "Встанови застосунок ZekerFlex",
+    tekst: "Кабінетом працівника ти користуєшся в застосунку на телефоні. Так робота, години та чат завжди з тобою. Застосунок поки що тестова версія.",
+    android: "Android: Google Play (тестова версія)",
+    androidUitleg: "Працює для тестувальників. Твоєї адреси Gmail ще немає в списку? Напиши нам через сайт, і ми додамо тебе.",
+    iphone: "iPhone: TestFlight",
+    iphoneUitleg: "Спочатку встанови TestFlight з App Store, а потім застосунок ZekerFlex за цим посиланням.",
+    alKop: "Уже встановлено?",
+    alTekst: "Відкрий застосунок ZekerFlex на телефоні та увійди там. Додав(-ла) сайт на головний екран? Відкрий його з тієї іконки.",
+    openen: "Відкриваємо застосунок…",
+    werkgever: "До кабінету роботодавця",
+    site: "На сайт",
+    uitloggen: "Вийти",
+  },
   nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Внести години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
   schermTitel: { verificatie: "Перевірка", profiel: "Мої дані", uitbetalingen: "Виплати", verloning: "Зарплата", beschikbaarheid: "Доступність", administratie: "Адміністрування", hulp: "Допомога", inchecken: "Відмітка", certificaten: "Сертифікати", favorieten: "Обране", beoordelingen: "Відгуки", paspoort: "Робочий паспорт", ritten: "Кілометри", fiscaal: "Форма роботи", verzekering: "Страхування", vooruitblik: "Прогноз", agenda: "Календар", wifi: "Wi-Fi", introduceren: "Рекомендації", assistent: "Асистент", overig: "ZekerFlex" },
   los: {

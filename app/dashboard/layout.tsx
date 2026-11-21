@@ -11,7 +11,9 @@ import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { clientDict, getLocale } from "@/lib/i18n/server";
-import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
+import { inAndroidApp, inEigenApp, inIosApp } from "@/lib/app-mode-server";
+import { werkerOmgevingToegestaan } from "@/lib/app-vereist";
+import { AppVereist } from "@/components/app/AppVereist";
 import { IosAppProvider } from "@/components/app/useInIosApp";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
@@ -41,6 +43,16 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // zonder eigen keuze donker, zoals de app van YoungOnes (20 nov, eigenaar); de themaknop in de kopbalk blijft
   const theme = await getTheme("dark");
   const locale = await getLocale();
+  // sinds 21 nov (eigenaar, zoals YoungOnes): de werker-omgeving alleen in de app (Android/iPhone/geïnstalleerde web-app);
+  // in een gewone browser het scherm "Installeer de app". Beheerders mogen altijd kijken (lib/app-vereist.ts).
+  const toegestaan = werkerOmgevingToegestaan({ inApp: await inEigenApp(), pwaCookie: false, beheerder: hasRole(principal, "PLATFORM_ADMIN") });
+  if (!toegestaan) {
+    return (
+      <I18nProvider locale={locale} t={clientDict(locale)}>
+        <AppVereist werkgever={hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER")} />
+      </I18nProvider>
+    );
+  }
   const [avatars, birthday] = await Promise.all([getUserAvatars([principal.userId]), birthdayToday(principal.userId).catch(() => false)]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
   // de stand van de onboarding (lib/onboarding/werker-poort.ts), alleen voor de mail "aanmelding compleet": sinds 12 nov
