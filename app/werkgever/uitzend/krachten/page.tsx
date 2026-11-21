@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { PageHeader, KpiCard, Panel, EmptyState, StatusPill, dateTime, dateShort } from "@/components/app/ui";
 import { BureauTabs, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
+import { fmt } from "@/lib/i18n/dictionaries";
+import { getDict } from "@/lib/i18n/server";
 import { bureauContext, krachtenVan } from "@/lib/uitzend/bureau";
 
 export const dynamic = "force-dynamic";
@@ -8,14 +10,15 @@ export const dynamic = "force-dynamic";
 // /werkgever/uitzend/krachten — Uitzendkrachten (21 nov 2026): iedereen die het bureau op een van zijn diensten inplande, met
 // de eerstvolgende dienst, het aantal diensten en de uren bij dit bureau.
 
-const uren = (minuten: number) => (minuten / 60).toLocaleString("nl-NL", { maximumFractionDigits: 1 });
+const uren = (minuten: number, intl: string) => (minuten / 60).toLocaleString(intl, { maximumFractionDigits: 1 });
 
 export default async function UitzendKrachtenPage() {
-  const ctx = await bureauContext();
+  const [ctx, dict] = await Promise.all([bureauContext(), getDict()]);
+  const u = dict.uitzendBureau;
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow="Uitzendbureau" title="Uitzendkrachten" />
+        <PageHeader eyebrow={u.eyebrow} title={u.tabs.krachten} />
         <GeenUitzendPartner />
       </>
     );
@@ -24,23 +27,25 @@ export default async function UitzendKrachtenPage() {
   const ingepland = krachten.filter((k) => k.volgende).length;
   const goedgekeurd = krachten.reduce((n, k) => n + k.goedgekeurdMinuten, 0);
   const wachten = krachten.reduce((n, k) => n + k.wachtMinuten, 0);
+  const t = u.krachten;
 
   return (
     <>
       <BureauTabs actief="krachten" />
-      <PageHeader eyebrow="Uitzendbureau" title="Uitzendkrachten" subtitle="Iedereen die je via ZekerFlex op een dienst inplande, met hun uren bij jouw bureau." />
+      <PageHeader eyebrow={u.eyebrow} title={u.tabs.krachten} subtitle={t.uitleg} />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Uitzendkrachten" value={String(krachten.length)} />
-        <KpiCard label="Met een volgende dienst" value={String(ingepland)} tone={ingepland > 0 ? "brand" : "default"} />
-        <KpiCard label="Goedgekeurde uren" value={uren(goedgekeurd)} hint={wachten > 0 ? `${uren(wachten)} uur wacht op goedkeuring` : "alles goedgekeurd"} tone={wachten > 0 ? "warn" : "default"} />
+        <KpiCard label={t.kpiAantal} value={String(krachten.length)} />
+        <KpiCard label={t.kpiVolgende} value={String(ingepland)} tone={ingepland > 0 ? "brand" : "default"} />
+        <KpiCard
+          label={t.kpiUren}
+          value={uren(goedgekeurd, u.intl)}
+          hint={wachten > 0 ? fmt(t.urenWachten, { uren: uren(wachten, u.intl) }) : t.allesGoedgekeurd}
+          tone={wachten > 0 ? "warn" : "default"}
+        />
       </div>
-      <Panel title="Je uitzendkrachten" subtitle="Wie een volgende dienst heeft, staat bovenaan">
+      <Panel title={t.lijstKop} subtitle={t.lijstUitleg}>
         {krachten.length === 0 ? (
-          <EmptyState
-            title="Nog geen uitzendkrachten"
-            body="Plan je iemand in vanuit Aanvragen, dan staat hij hier."
-            cta={{ href: "/werkgever/uitzend", label: "Naar de aanvragen" }}
-          />
+          <EmptyState title={t.geen} body={t.geenUitleg} cta={{ href: "/werkgever/uitzend", label: t.naarAanvragen }} />
         ) : (
           <ul className="divide-y divide-hair">
             {krachten.map((k) => (
@@ -48,7 +53,7 @@ export default async function UitzendKrachtenPage() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-ink">{k.naam}</p>
-                    {k.idGecontroleerd && <StatusPill tone="ok">ID gecontroleerd</StatusPill>}
+                    {k.idGecontroleerd && <StatusPill tone="ok">{u.idGecontroleerd}</StatusPill>}
                   </div>
                   <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                     {k.telefoon && (
@@ -61,17 +66,21 @@ export default async function UitzendKrachtenPage() {
                     </a>
                   </p>
                   <p className="mt-1 text-sm text-neutralx-600">
-                    {k.volgende ? `Volgende dienst: ${k.volgende.titel}, ${dateTime(k.volgende.startsAt)} (${k.volgende.locatie})` : k.laatste ? `Laatste dienst: ${k.laatste.titel}, ${dateShort(k.laatste.startsAt)}` : "Nog geen dienst"}
+                    {k.volgende
+                      ? fmt(t.volgende, { titel: k.volgende.titel, datum: dateTime(k.volgende.startsAt), locatie: k.volgende.locatie })
+                      : k.laatste
+                        ? fmt(t.laatste, { titel: k.laatste.titel, datum: dateShort(k.laatste.startsAt) })
+                        : t.geenDienst}
                   </p>
                 </div>
                 <div className="flex gap-6 text-sm md:text-right">
                   <div>
-                    <p className="text-xs text-neutralx-500">Diensten</p>
+                    <p className="text-xs text-neutralx-500">{t.diensten}</p>
                     <p className="num font-semibold text-ink">{k.klussen}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-neutralx-500">Uren goedgekeurd</p>
-                    <p className="num font-semibold text-ink">{uren(k.goedgekeurdMinuten)}</p>
+                    <p className="text-xs text-neutralx-500">{t.urenGoedgekeurd}</p>
+                    <p className="num font-semibold text-ink">{uren(k.goedgekeurdMinuten, u.intl)}</p>
                   </div>
                 </div>
               </li>
@@ -80,13 +89,13 @@ export default async function UitzendKrachtenPage() {
         )}
       </Panel>
       <p className="mt-4 text-sm text-neutralx-500">
-        Uren goedkeuren doe je bij{" "}
+        {t.voetVoor}{" "}
         <Link href="/werkgever/uren" className="text-brand-600 underline">
-          Uren
+          {t.voetUren}
         </Link>
-        . De goedgekeurde uren per week voor je loonpakket staan bij{" "}
+        {t.voetMidden}{" "}
         <Link href="/werkgever/uitzend/verloning" className="text-brand-600 underline">
-          Uren voor verloning
+          {u.tabs.verloning}
         </Link>
         .
       </p>

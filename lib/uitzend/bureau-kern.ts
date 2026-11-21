@@ -12,16 +12,8 @@ const DAG_MS = 864e5;
 // --- aanvragen ------------------------------------------------------------------
 
 /** Waar een aanvraag voor een uitzendcontract staat, gezien vanuit het bureau. */
+/** De labels per stap staan in het werkgeverswoordenboek (uitzendBureau.stap in lib/i18n/dictionaries.ts). */
 export type AanvraagStap = "nieuw" | "gebeld" | "ingepland" | "afgewezen" | "ingetrokken" | "verlopen";
-
-export const STAP_LABEL: Record<AanvraagStap, string> = {
-  nieuw: "Nieuw",
-  gebeld: "Gebeld",
-  ingepland: "Contract rond, ingepland",
-  afgewezen: "Afgewezen",
-  ingetrokken: "Ingetrokken door de werker",
-  verlopen: "Verlopen",
-};
 
 /** De stap uit de status van de reactie (lib/offers/store.ts) en of het bureau al belde. */
 export function stapVan(status: OfferStatus, gebeldOp: string | null | undefined): AanvraagStap {
@@ -110,12 +102,12 @@ export function recenteWeken(nu: Date, aantal = 8): string[] {
   return uit;
 }
 
-/** "17 nov – 23 nov 2026" bij een week. */
-export function weekTekst(sleutel: string): string {
+/** "17 nov – 23 nov 2026" bij een week; `intl` volgt de taal van de werkgeversapp (uitzendBureau.intl). */
+export function weekTekst(sleutel: string, intl = "nl-NL"): string {
   const g = weekGrenzen(sleutel);
   if (!g) return sleutel;
   const opmaak = (d: Date, metJaar: boolean) =>
-    d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", ...(metJaar ? { year: "numeric" } : {}), timeZone: "Europe/Amsterdam" });
+    d.toLocaleDateString(intl, { day: "numeric", month: "short", ...(metJaar ? { year: "numeric" } : {}), timeZone: "Europe/Amsterdam" });
   return `${opmaak(g.van, false)} – ${opmaak(new Date(g.tot.getTime() - 3600e3), true)}`;
 }
 

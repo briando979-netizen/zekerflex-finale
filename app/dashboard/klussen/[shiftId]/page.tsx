@@ -16,6 +16,7 @@ import { ShiftMap } from "@/components/app/ShiftMap";
 import { KlusRoute } from "@/components/app/KlusRoute";
 import { ReageerButton } from "@/components/app/ReageerModal";
 import { shiftCategory } from "@/lib/shifts/category";
+import { isTestklus } from "@/lib/shifts/testklus";
 import { MODE_ORDER, type TravelModeKey } from "@/lib/geo/travel-modes";
 import type { RouteModus } from "@/lib/geo/route-core";
 import { money, moneyExact } from "@/components/app/ui";
@@ -74,7 +75,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const shiftEnded = new Date(s.endsAt).getTime() < Date.now();
   const cat = shiftCategory(s.title, s.skill);
 
-  const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient] = await Promise.all([
+  const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient, andereKlussen] = await Promise.all([
     listCounterOffers(500),
     reviewSummary("company", s.clientTenantId),
     getOrgProfileExtra(s.clientTenantId),
@@ -92,7 +93,19 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     }),
     getFiscal(principal.userId),
     isFollowing(principal.userId, s.clientTenantId),
+    // "Misschien zijn deze klussen ook iets voor jou" onderaan (zoals YoungOnes, 21 nov): andere open klussen op de open markt
+    prisma.shift.findMany({
+      where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, visibility: "PUBLIC", startsAt: { gte: new Date() }, id: { not: s.id } },
+      select: { id: true, title: true, startsAt: true, hourlyRateCents: true, branch: { select: { city: true, tenant: { select: { name: true } } } } },
+      orderBy: { startsAt: "asc" },
+      take: 30,
+    }),
   ]);
+  // dezelfde soort werk eerst, echte klussen vóór testklussen, dan de eerstvolgende; hoogstens vier
+  const ookVoorJou = andereKlussen
+    .map((k) => ({ ...k, zelfdeSoort: shiftCategory(k.title, null).key === cat.key, test: isTestklus({ title: k.title, bedrijf: k.branch.tenant.name }) }))
+    .sort((a, b) => Number(a.test) - Number(b.test) || Number(b.zelfdeSoort) - Number(a.zelfdeSoort) || a.startsAt.getTime() - b.startsAt.getTime())
+    .slice(0, 4);
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
   const reactionCount = offers.filter((o) => o.shiftId === s.id && o.status === "pending").length;
 
@@ -468,11 +481,6 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               lat={s.branchLat}
               lng={s.branchLng}
               label={`${s.address}, ${s.city}`}
-              schatting={{
-                auto: { minutes: s.travel.byMode.driving.minutes, km: s.travel.byMode.driving.distanceKm },
-                fiets: { minutes: s.travel.byMode.bicycling.minutes, km: s.travel.byMode.bicycling.distanceKm },
-                lopen: { minutes: s.travel.byMode.walking.minutes, km: s.travel.byMode.walking.distanceKm },
-              }}
               begin={ROUTE_BEGIN[s.travel.fastest.mode]}
             />
           ) : (
@@ -681,6 +689,27 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <div className="mt-3">
             <MessageEmployerButton shiftId={s.id} label={D.messageEmployer} />
           </div>
+        )}
+
+        {/* andere klussen, zoals "Misschien zijn deze klussen ook iets voor jou" bij YoungOnes (21 nov) */}
+        {ookVoorJou.length > 0 && (
+          <section className="mt-8 border-t border-hair pt-5">
+            <h2 className="font-display text-base font-bold text-ink">{D.alsoForYou}</h2>
+            <ul className="mt-3 grid grid-cols-2 gap-2.5">
+              {ookVoorJou.map((k) => (
+                <li key={k.id} className="min-w-0">
+                  <Link href={`/dashboard/klussen/${k.id}`} className="block h-full rounded-xl border border-hair bg-white p-3 hover:bg-paper-soft">
+                    <p className="truncate text-xs font-semibold text-brand-600">{k.branch.tenant.name}</p>
+                    <p className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug text-ink">{k.title}</p>
+                    <p className="mt-1 text-xs text-neutralx-500">
+                      {fmtDay(k.startsAt)} · {k.branch.city}
+                    </p>
+                    <p className="num mt-1.5 text-sm font-bold text-ink">{moneyExact(k.hourlyRateCents)}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
 

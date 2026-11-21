@@ -2,14 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 import type { BureauGegevens, Cao, Keurmerk } from "@/lib/uitzend/bureau-kern";
 
 /**
  * Bureaugegevens van een uitzendpartner (/werkgever/uitzend/bureau → POST /api/werkgever/uitzend/bureau). Na het opslaan neemt
  * het formulier de bewaarde versie van de server over (het akkoord krijgt daar datum en account), en ververst de pagina de
- * meldingen erboven.
+ * meldingen erboven. Tekst: uitzendBureau.form in het werkgeverswoordenboek; de partnervoorwaarden zelf blijven Nederlands.
  */
 export function BureauGegevensForm({ begin, versie, voorwaardenPad }: { begin: BureauGegevens; versie: string; voorwaardenPad: string }) {
+  const u = useT().uitzendBureau;
+  const f = u.form;
   const router = useRouter();
   const [g, setG] = useState<BureauGegevens>(begin);
   const [akkoord, setAkkoord] = useState(false);
@@ -43,31 +47,31 @@ export function BureauGegevensForm({ begin, versie, voorwaardenPad }: { begin: B
       setOpgeslagen(true);
       router.refresh();
     } else {
-      setFout(d?.error?.message ?? "Opslaan lukte niet. Probeer het opnieuw.");
+      setFout(d?.error?.message ?? f.opslaanMislukt);
     }
     setBezig(false);
   }
 
-  const akkoordDatum = g.akkoord ? new Date(g.akkoord.op).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" }) : null;
+  const akkoordDatum = g.akkoord ? new Date(g.akkoord.op).toLocaleDateString(u.intl, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" }) : "";
 
   return (
     <form onSubmit={(e) => void opslaan(e)} className="space-y-5 text-sm">
       <label className="flex items-start gap-3">
         <input type="checkbox" className="mt-0.5" checked={g.uitlener} onChange={(e) => setG({ ...g, uitlener: e.target.checked })} />
         <span>
-          <span className="font-medium text-ink">Mijn bureau staat in het Handelsregister met de registratie als uitlener</span>
-          <span className="block text-neutralx-500">Verplicht voor elk bedrijf dat arbeidskrachten uitleent.</span>
+          <span className="font-medium text-ink">{f.uitlener}</span>
+          <span className="block text-neutralx-500">{f.uitlenerUitleg}</span>
         </span>
       </label>
 
       <fieldset>
-        <legend className="font-medium text-ink">Keurmerk of toelating</legend>
+        <legend className="font-medium text-ink">{f.keurmerk}</legend>
         <div className="mt-2 flex flex-wrap gap-4">
           {(
             [
-              ["sna", "SNA-keurmerk (NEN 4400-1)"],
-              ["wtta", "Wtta-toelating"],
-              ["geen", "Nog geen van beide"],
+              ["sna", f.keurmerkSna],
+              ["wtta", f.keurmerkWtta],
+              ["geen", f.keurmerkGeen],
             ] as const satisfies readonly (readonly [Keurmerk, string])[]
           ).map(([waarde, label]) => (
             <label key={waarde} className="inline-flex items-center gap-2">
@@ -80,28 +84,28 @@ export function BureauGegevensForm({ begin, versie, voorwaardenPad }: { begin: B
 
       {g.keurmerk !== "geen" && (
         <label className="block max-w-xs">
-          <span className="font-medium text-ink">{g.keurmerk === "sna" ? "SNA-keurmerk geldig tot" : "Wtta-toelating geldig tot"}</span>
+          <span className="font-medium text-ink">{g.keurmerk === "sna" ? f.snaTot : f.wttaTot}</span>
           <input type="date" className="field-input mt-1 w-full" value={g.keurmerkTot ?? ""} onChange={(e) => setG({ ...g, keurmerkTot: e.target.value || null })} />
         </label>
       )}
 
       <label className="block max-w-xs">
-        <span className="font-medium text-ink">Cao</span>
+        <span className="font-medium text-ink">{f.cao}</span>
         <select className="field-input mt-1 w-full" value={g.cao} onChange={(e) => setG({ ...g, cao: e.target.value as Cao })}>
-          <option value="">Kies een cao</option>
-          <option value="abu">ABU-cao</option>
-          <option value="nbbu">NBBU-cao</option>
-          <option value="anders">Een andere cao</option>
+          <option value="">{f.caoKies}</option>
+          <option value="abu">{f.caoAbu}</option>
+          <option value="nbbu">{f.caoNbbu}</option>
+          <option value="anders">{f.caoAnders}</option>
         </select>
       </label>
 
       <label className="block max-w-xs">
-        <span className="font-medium text-ink">Bedrijfsaansprakelijkheidsverzekering loopt tot</span>
+        <span className="font-medium text-ink">{f.verzekeringTot}</span>
         <input type="date" className="field-input mt-1 w-full" value={g.verzekeringTot ?? ""} onChange={(e) => setG({ ...g, verzekeringTot: e.target.value || null })} />
       </label>
 
       <label className="block max-w-xs">
-        <span className="font-medium text-ink">Loonheffingennummer</span>
+        <span className="font-medium text-ink">{f.loonheffingennummer}</span>
         <input
           type="text"
           className="field-input mt-1 w-full"
@@ -114,18 +118,16 @@ export function BureauGegevensForm({ begin, versie, voorwaardenPad }: { begin: B
 
       <div className="rounded-xl border border-hair bg-paper-soft p-4">
         {alAkkoord ? (
-          <p className="text-neutralx-700">
-            Je bureau accepteerde de partnervoorwaarden (versie {versie}) op {akkoordDatum}.
-          </p>
+          <p className="text-neutralx-700">{fmt(f.akkoordGegeven, { versie, datum: akkoordDatum })}</p>
         ) : (
           <label className="flex items-start gap-3">
             <input type="checkbox" className="mt-0.5" checked={akkoord} onChange={(e) => setAkkoord(e.target.checked)} />
             <span className="text-neutralx-700">
-              Ik heb de{" "}
+              {f.akkoordVoor}{" "}
               <a href={voorwaardenPad} target="_blank" rel="noopener" className="font-medium text-brand-600 underline">
-                partnervoorwaarden (versie {versie})
+                {fmt(f.akkoordLink, { versie })}
               </a>{" "}
-              gelezen en ga er namens mijn bureau mee akkoord.
+              {f.akkoordNa}
             </span>
           </label>
         )}
@@ -133,9 +135,9 @@ export function BureauGegevensForm({ begin, versie, voorwaardenPad }: { begin: B
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" className="btn-primary" disabled={bezig}>
-          {bezig ? "Bezig met opslaan" : "Opslaan"}
+          {bezig ? f.bezig : f.opslaan}
         </button>
-        {opgeslagen && <span className="text-ok">Opgeslagen.</span>}
+        {opgeslagen && <span className="text-ok">{f.opgeslagen}</span>}
       </div>
       {fout && (
         <p role="alert" className="text-crit">

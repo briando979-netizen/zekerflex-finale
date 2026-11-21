@@ -2,8 +2,10 @@ import Link from "next/link";
 import { PageHeader, KpiCard, Panel, EmptyState, StatusPill, dateTime, moneyExact } from "@/components/app/ui";
 import { BureauTabs, BureauMeldingen, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
 import { AanvraagKnoppen } from "@/components/werkgever/uitzend/AanvraagKnoppen";
+import { fmt, type Dict } from "@/lib/i18n/dictionaries";
+import { getDict } from "@/lib/i18n/server";
 import { aanvragenVan, bureauContext, leesBureauStand, type AanvraagRij } from "@/lib/uitzend/bureau";
-import { STAP_LABEL, bureauMeldingen, isOpen } from "@/lib/uitzend/bureau-kern";
+import { bureauMeldingen, isOpen } from "@/lib/uitzend/bureau-kern";
 import { TERMIJN } from "@/lib/uitzend/voorwaarden";
 
 export const dynamic = "force-dynamic";
@@ -21,28 +23,28 @@ const TOON: Record<AanvraagRij["stap"], "ok" | "warn" | "crit" | "neutral"> = {
   verlopen: "neutral",
 };
 
-function Rij({ a }: { a: AanvraagRij }) {
+function Rij({ a, u }: { a: AanvraagRij; u: Dict["uitzendBureau"] }) {
   const open = isOpen(a.stap);
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-ink">{a.werker.naam}</p>
-          {a.werker.idGecontroleerd && <StatusPill tone="ok">ID gecontroleerd</StatusPill>}
-          <StatusPill tone={a.teLaat ? "crit" : TOON[a.stap]}>{a.teLaat ? `Wacht al ${a.werkdagen} werkdagen` : STAP_LABEL[a.stap]}</StatusPill>
+          {a.werker.idGecontroleerd && <StatusPill tone="ok">{u.idGecontroleerd}</StatusPill>}
+          <StatusPill tone={a.teLaat ? "crit" : TOON[a.stap]}>{a.teLaat ? fmt(u.aanvragen.wachtAl, { n: a.werkdagen }) : u.stap[a.stap]}</StatusPill>
         </div>
         <p className="mt-1 text-sm text-neutralx-700">
           <Link href={`/werkgever/diensten/${a.klus.id}`} className="font-medium text-brand-600 underline">
             {a.klus.titel}
           </Link>{" "}
-          · {dateTime(a.klus.startsAt)} · {a.klus.locatie} · {moneyExact(a.klus.uurloonCents)} per uur
+          · {dateTime(a.klus.startsAt)} · {a.klus.locatie} · {fmt(u.aanvragen.perUur, { bedrag: moneyExact(a.klus.uurloonCents) })}
         </p>
-        <p className="mt-1 text-xs text-neutralx-500">Aangemeld op {dateTime(a.at)}</p>
+        <p className="mt-1 text-xs text-neutralx-500">{fmt(u.aanvragen.aangemeldOp, { datum: dateTime(a.at) })}</p>
         {(a.werker.telefoon || a.werker.email) && (
           <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
             {a.werker.telefoon && (
               <a href={`tel:${a.werker.telefoon.replace(/\s+/g, "")}`} className="font-medium text-brand-600 underline">
-                Bel {a.werker.telefoon}
+                {fmt(u.aanvragen.bel, { telefoon: a.werker.telefoon })}
               </a>
             )}
             {a.werker.email && (
@@ -59,11 +61,12 @@ function Rij({ a }: { a: AanvraagRij }) {
 }
 
 export default async function UitzendAanvragenPage() {
-  const ctx = await bureauContext();
+  const [ctx, dict] = await Promise.all([bureauContext(), getDict()]);
+  const u = dict.uitzendBureau;
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow="Uitzendbureau" title="Aanvragen" />
+        <PageHeader eyebrow={u.eyebrow} title={u.tabs.aanvragen} />
         <GeenUitzendPartner />
       </>
     );
@@ -75,43 +78,44 @@ export default async function UitzendAanvragenPage() {
   const teLaat = open.filter((a) => a.teLaat).length;
   const dertigDagen = nu.getTime() - 30 * 864e5;
   const ingepland = aanvragen.filter((a) => a.stap === "ingepland" && new Date(a.at).getTime() >= dertigDagen).length;
+  const t = u.aanvragen;
 
   return (
     <>
       <BureauTabs actief="aanvragen" />
       <PageHeader
-        eyebrow="Uitzendbureau"
-        title="Aanvragen"
-        subtitle={`Werkers die zich aanmeldden voor je diensten. Bel ze, neem ze aan op je eigen uitzendcontract en plan ze in. Reageer binnen ${TERMIJN.reactieWerkdagen} werkdagen.`}
+        eyebrow={u.eyebrow}
+        title={u.tabs.aanvragen}
+        subtitle={fmt(t.uitleg, { n: TERMIJN.reactieWerkdagen })}
         action={
           <Link href="/werkgever/diensten/nieuw" className="btn-primary">
-            Dienst plaatsen
+            {u.dienstPlaatsen}
           </Link>
         }
       />
       <BureauMeldingen meldingen={bureauMeldingen(stand.gegevens, nu)} />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Open aanvragen" value={String(open.length)} tone={open.length > 0 ? "brand" : "default"} />
-        <KpiCard label={`Langer dan ${TERMIJN.reactieWerkdagen} werkdagen`} value={String(teLaat)} tone={teLaat > 0 ? "crit" : "default"} hint="nog niet gebeld" />
-        <KpiCard label="Ingepland (30 dagen)" value={String(ingepland)} />
+        <KpiCard label={t.kpiOpen} value={String(open.length)} tone={open.length > 0 ? "brand" : "default"} />
+        <KpiCard label={fmt(t.kpiTeLaat, { n: TERMIJN.reactieWerkdagen })} value={String(teLaat)} tone={teLaat > 0 ? "crit" : "default"} hint={t.kpiTeLaatHint} />
+        <KpiCard label={t.kpiIngepland} value={String(ingepland)} />
       </div>
       <div className="space-y-6">
-        <Panel title="Open" subtitle="De oudste aanvraag staat bovenaan">
+        <Panel title={t.openKop} subtitle={t.openUitleg}>
           {open.length === 0 ? (
-            <EmptyState title="Geen open aanvragen" body="Zodra een werker zich aanmeldt voor een van je diensten, staat hij hier. Je krijgt ook een mail." />
+            <EmptyState title={t.geenOpen} body={t.geenOpenUitleg} />
           ) : (
             <ul className="divide-y divide-hair">
               {open.map((a) => (
-                <Rij key={a.offerId} a={a} />
+                <Rij key={a.offerId} a={a} u={u} />
               ))}
             </ul>
           )}
         </Panel>
         {eerder.length > 0 && (
-          <Panel title="Eerder" subtitle="Ingepland, afgewezen, ingetrokken of verlopen">
+          <Panel title={t.eerderKop} subtitle={t.eerderUitleg}>
             <ul className="divide-y divide-hair">
               {eerder.map((a) => (
-                <Rij key={a.offerId} a={a} />
+                <Rij key={a.offerId} a={a} u={u} />
               ))}
             </ul>
           </Panel>

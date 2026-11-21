@@ -73,7 +73,8 @@ export const WERK_VOORDELEN: { icoon: WerkIcoon; titel: string; tekst: string }[
 /** De vragen van een werker (de antwoorden komen van de homepagina voor bedrijven, zonder wat bedrijven betalen). */
 export const WERK_FAQ: { q: string; a: string }[] = [
   { q: "Kost het mij iets?", a: "Nee. Meedoen als werker is gratis." },
-  { q: "Kan ik werken zonder KVK?", a: "Ja. Dan werk je als uitzendkracht via een aangesloten uitzendbureau. Het uitzendbureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao. In de app vraag je met één knop een uitzendcontract aan bij het bureau van de klus." },
+  // 21 nov (eigenaar): geen aparte pagina over uitzendwerk meer, "gewoon een stukje bij vragen: ga in de app, filter uitzend"
+  { q: "Kan ik werken zonder KVK?", a: "Ja, als uitzendkracht via een aangesloten uitzendbureau. Open de app, tik op het filter en zet bij Type klus alleen Uitzendklussen aan. Meld je aan voor een dienst: het uitzendbureau neemt contact met je op en neemt je aan op een uitzendcontract. Het bureau is dan je werkgever en regelt je loon, vakantiegeld en pensioen volgens zijn cao." },
   { q: "Hoe snel word ik als zzp'er betaald?", a: "Dat kies je zelf. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder, dan kies je een snellere uitbetaling tegen een fee: betaalopdracht direct indienen (4% van de factuur) of binnen 3 werkdagen indienen (2%)." },
   { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan, met de juiste btw-behandeling." },
   { q: "In welke talen werkt de app?", a: "In het Nederlands, Engels, Pools, Roemeens en Oekraïens." },

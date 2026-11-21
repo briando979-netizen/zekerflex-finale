@@ -23,6 +23,9 @@ import { hulpTeksten } from "@/lib/hulp/teksten";
 import { SUPPORT_CHAT } from "@/lib/hulp/hulpjes";
 import { BANK_AAN } from "@/lib/app-mode";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { ProfielFotoKnop } from "@/components/app/ProfielFotoKnop";
+import { PROFIELFOTO_TEKSTEN } from "@/lib/i18n/profielfoto";
+import { basisLocale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
 
@@ -181,16 +184,8 @@ export default async function AccountPage() {
       {/* Profile header: de ronde foto steekt boven de kaart uit, zoals in de app van YoungOnes */}
       <section className="relative mt-14 rounded-2xl border border-hair bg-white px-5 pb-6 pt-16 text-center shadow-card">
         <div className="absolute -top-12 left-1/2 grid h-24 w-24 -translate-x-1/2 place-items-center overflow-hidden rounded-full border border-hair bg-paper-soft">
-          {card?.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={card.avatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ink" aria-hidden>
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="10" r="3.2" />
-              <path d="M6.2 18.4c1.3-2.2 3.3-3.4 5.8-3.4s4.5 1.2 5.8 3.4" />
-            </svg>
-          )}
+          {/* tik op de foto: Foto maken, Kiezen uit bibliotheek, Verwijderen, Annuleren (zoals YoungOnes, 21 nov) */}
+          <ProfielFotoKnop userId={principal.userId} fotoUrl={card?.avatarUrl ?? null} teksten={PROFIELFOTO_TEKSTEN[basisLocale(locale)]} />
         </div>
         <p className="font-display text-2xl font-bold text-ink">{card?.name ?? principal.email}</p>
 

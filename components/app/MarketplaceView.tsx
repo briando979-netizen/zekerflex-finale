@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { SHIFT_CATEGORIES, shiftCategory, type ShiftCategoryKey } from "@/lib/shifts/category";
@@ -13,6 +13,7 @@ import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { SAVED_EVENT, deviceStore, readSaved } from "@/lib/shifts/bewaard";
 import { echteKlussenEerst } from "@/lib/shifts/testklus";
 import { KLUS_TYPE_EMOJI } from "@/lib/shifts/klus-type";
+import { ALLE_BRANCHES_ICOON, brancheIcoon } from "@/lib/shifts/branche-keuze";
 
 type Sort = "match" | "soonest" | "pay" | "near";
 
@@ -25,8 +26,10 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
     Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-const DAYPARTS = ["morning", "afternoon", "evening"] as const;
 const TYPE_EMOJI = KLUS_TYPE_EMOJI;
+/** Type klus in het filter (zoals YoungOnes, 21 nov): beide staan standaard aan */
+type KlusType = "freelance" | "uitzend";
+const ALLE_TYPEN: readonly KlusType[] = ["freelance", "uitzend"];
 
 function KlusTypeExplainer() {
   const t = useFT();
@@ -40,7 +43,7 @@ function KlusTypeExplainer() {
     rows: readonly (readonly [string, string])[];
     tone: "freelance" | "uitzenden";
   }) => (
-    <div className="rounded-xl border border-hair bg-paper-soft/50 p-3.5">
+    <div className="min-w-0 rounded-xl border border-hair bg-paper-soft/50 p-2.5 sm:p-3.5">
       <span
         className={`inline-block rounded-lg border px-2.5 py-1 text-xs font-semibold ${
           tone === "freelance"
@@ -50,9 +53,9 @@ function KlusTypeExplainer() {
       >
         {label}
       </span>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-2.5 space-y-1.5 sm:mt-3 sm:space-y-2">
         {rows.map(([emoji, text]) => (
-          <li key={text} className="flex items-start gap-2.5 text-sm text-neutralx-700">
+          <li key={text} className="flex items-start gap-1.5 text-xs text-neutralx-700 sm:gap-2.5 sm:text-sm">
             <span aria-hidden>{emoji}</span>
             <span>{text}</span>
           </li>
@@ -78,13 +81,38 @@ function KlusTypeExplainer() {
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </summary>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      {/* 21 nov (eigenaar): Freelance en Uitzenden naast elkaar, ook op de telefoon */}
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
         <Column label={t.market.freelanceLabel} rows={zip(TYPE_EMOJI.freelance, t.market.typeFreelance)} tone="freelance" />
         <Column label={t.market.uitzendLabel} rows={zip(TYPE_EMOJI.uitzenden, t.market.typeUitzend)} tone="uitzenden" />
       </div>
     </details>
   );
 }
+/** Een rij met een vinkje in het filter (Type klus, branches), zoals in de app van YoungOnes. */
+function VinkRij({ label, aan, onClick, icoon, rechts }: { label: string; aan: boolean; onClick: () => void; icoon?: string; rechts?: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={aan}
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm ${aan ? "border-brand-500" : "border-hairstrong"}`}
+    >
+      <span aria-hidden className={`grid h-5 w-5 flex-shrink-0 place-items-center rounded-md border ${aan ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong bg-white"}`}>
+        {aan && (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12l5 5 9-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      {icoon && <span aria-hidden>{icoon}</span>}
+      <span className="min-w-0 flex-1 font-medium text-ink">{label}</span>
+      {rechts}
+    </button>
+  );
+}
+
 // Days in Dutch time: the list is rendered on the UTC server first, and a shift
 // at 00:30 belongs to the Dutch day whatever zone the phone is in.
 const dayKey = (d: Date) => amsterdamDayKey(d);
@@ -138,7 +166,8 @@ export function MarketplaceView({
   const [sort, setSort] = useState<Sort>(home ? "match" : "soonest");
   const [q, setQ] = useState(initialQuery);
   const [minRate, setMinRate] = useState<number>(defaultMinRateCents ? Math.round(defaultMinRateCents / 100) : 0);
-  const [dayparts, setDayparts] = useState<Set<string>>(new Set());
+  // "Tijden" (ochtend/middag/avond) staat sinds 21 nov niet meer in het filter (eigenaar: "haal tijden weg in de filter")
+  const [typen, setTypen] = useState<Set<KlusType>>(new Set(ALLE_TYPEN));
   // Branches (sectors) — multi-select over the full list, not just what happens to be on screen.
   const [branches, setBranches] = useState<Set<ShiftCategoryKey>>(new Set(defaultBranches));
   const [quick, setQuick] = useState<Set<string>>(new Set());
@@ -198,11 +227,11 @@ export function MarketplaceView({
     ...(home ? [{ k: "near" as Sort, l: mk.sortNear }] : []),
   ];
   const activeFilters =
-    quick.size + dates.size + dayparts.size + (minRate ? 1 : 0) + (branches.size ? 1 : 0) + (loc ? 1 : 0);
+    quick.size + dates.size + (typen.size < ALLE_TYPEN.length ? 1 : 0) + (minRate ? 1 : 0) + (branches.size ? 1 : 0) + (loc ? 1 : 0);
   function clearAll() {
     setQuick(new Set());
     setDates(new Set());
-    setDayparts(new Set());
+    setTypen(new Set(ALLE_TYPEN));
     setMinRate(0);
     setBranches(new Set());
     setLoc(null);
@@ -231,7 +260,7 @@ export function MarketplaceView({
       if (q && !`${s.title} ${s.company} ${s.branch} ${s.city}`.toLowerCase().includes(q.toLowerCase())) return false;
       if (minRate && s.hourlyRateCents < minRate * 100) return false;
       if (loc && loc.maxKm < 60 && haversineKm(loc, { lat: s.branchLat, lng: s.branchLng }) > loc.maxKm) return false;
-      if (dayparts.size && !dayparts.has(s.daypart)) return false;
+      if (!typen.has(s.viaUitzendbureau || s.uitzendPartner ? "uitzend" : "freelance")) return false;
       if (branches.size && !branches.has(categoryOf.get(s.id) ?? "algemeen")) return false;
       const d = new Date(s.startsAt);
       // Favorieten: bedrijven die je volgt (❤️) of waar je al eerder werkte.
@@ -256,7 +285,7 @@ export function MarketplaceView({
       return a.startsAt < b.startsAt ? -1 : 1;
     });
     return out;
-  }, [shifts, q, minRate, loc, dayparts, branches, categoryOf, sort, quick, dates, hidden, saved]);
+  }, [shifts, q, minRate, loc, typen, branches, categoryOf, sort, quick, dates, hidden, saved]);
   const savedCount = useMemo(() => shifts.filter((s) => saved.has(s.id)).length, [shifts, saved]);
 
   const Chip = ({ id, label, count, active }: { id: string; label: string; count?: number; active?: boolean }) => {
@@ -330,7 +359,7 @@ export function MarketplaceView({
             <span className="text-[9px]" aria-hidden>▾</span>
           </button>
           <Chip id="branch" label={mk.branches} count={branches.size} />
-          <Chip id="times" label={mk.times} count={dayparts.size} />
+          <Chip id="type" label={mk.filterTypeKop} active={typen.size < ALLE_TYPEN.length} />
           <Chip id="rate" label={mk.rate} active={minRate > 0} />
           {(savedCount > 0 || quick.has("saved")) && (
             <button
@@ -390,19 +419,25 @@ export function MarketplaceView({
                 ))}
               </div>
             )}
-            {(openChip === "times" || openChip === "all") && (
+            {(openChip === "type" || openChip === "all") && (
               <div className={openChip === "all" ? "mt-3" : ""}>
-                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{mk.times}</p>}
-                <div className="flex flex-wrap gap-2">
-                  {DAYPARTS.map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => toggle(setDayparts)(d)}
-                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${dayparts.has(d) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"}`}
-                    >
-                      {mk[d]}
-                    </button>
+                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{mk.filterTypeKop}</p>}
+                <div className="space-y-2">
+                  {ALLE_TYPEN.map((k) => (
+                    <VinkRij
+                      key={k}
+                      label={k === "freelance" ? mk.filterFreelance : mk.filterUitzend}
+                      aan={typen.has(k)}
+                      onClick={() =>
+                        setTypen((prev) => {
+                          const n = new Set(prev);
+                          if (n.has(k)) n.delete(k);
+                          else n.add(k);
+                          // minstens één type: anders zie je niets
+                          return n.size === 0 ? prev : n;
+                        })
+                      }
+                    />
                   ))}
                 </div>
               </div>
@@ -432,41 +467,29 @@ export function MarketplaceView({
             )}
             {(openChip === "branch" || openChip === "all") && (
               <div className={openChip === "all" ? "mt-3" : ""}>
-                <div className="mb-1.5 flex items-center gap-3">
-                  {openChip === "all" && <p className="text-xs font-semibold text-neutralx-500">{mk.branches}</p>}
-                  <button type="button" onClick={() => setBranches(new Set(SHIFT_CATEGORIES.map((c) => c.key)))} className="text-xs font-semibold text-brand-600 hover:underline">
-                    {mk.selectAll}
-                  </button>
-                  {branches.size > 0 && (
-                    <button type="button" onClick={() => setBranches(new Set())} className="text-xs text-neutralx-500 hover:underline">
-                      {mk.clear}
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {SHIFT_CATEGORIES.map((c) => {
-                    const n = branchCounts.get(c.key) ?? 0;
-                    const on = branches.has(c.key);
-                    return (
-                      <button
-                        key={c.key}
-                        type="button"
-                        onClick={() =>
-                          setBranches((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(c.key)) next.delete(c.key);
-                            else next.add(c.key);
-                            return next;
-                          })
-                        }
-                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${on ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong"} ${n === 0 && !on ? "opacity-50" : ""}`}
-                      >
-                        <span className="h-2 w-2 rounded-full" style={{ background: c.accent }} aria-hidden />
-                        {c.key === "algemeen" ? t.cat.overig : t.cat[c.key]}
-                        <span className="text-[10px] text-neutralx-400">{n}</span>
-                      </button>
-                    );
-                  })}
+                {openChip === "all" && <p className="mb-1.5 text-xs font-semibold text-neutralx-500">{mk.branches}</p>}
+                {/* zoals YoungOnes: "Alle branches" bovenaan, dan elke branche met een vinkje; alles staat standaard aan.
+                    Intern betekent een lege lijst "alle branches". */}
+                <div className="space-y-2">
+                  <VinkRij icoon={ALLE_BRANCHES_ICOON} label={t.start.alleBranches} aan={branches.size === 0} onClick={() => setBranches(new Set())} />
+                  {SHIFT_CATEGORIES.map((c) => (
+                    <VinkRij
+                      key={c.key}
+                      icoon={brancheIcoon(c.key)}
+                      label={c.key === "algemeen" ? t.cat.overig : t.cat[c.key]}
+                      aan={branches.size === 0 || branches.has(c.key)}
+                      rechts={<span className="text-xs text-neutralx-400">{branchCounts.get(c.key) ?? 0}</span>}
+                      onClick={() =>
+                        setBranches((prev) => {
+                          const alle = SHIFT_CATEGORIES.map((x) => x.key);
+                          const next = new Set(prev.size === 0 ? alle : prev);
+                          if (next.has(c.key)) next.delete(c.key);
+                          else next.add(c.key);
+                          return next.size === 0 || next.size === alle.length ? new Set<ShiftCategoryKey>() : next;
+                        })
+                      }
+                    />
+                  ))}
                 </div>
               </div>
             )}

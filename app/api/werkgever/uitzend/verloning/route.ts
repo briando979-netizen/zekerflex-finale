@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { bureauContext, verloningVan } from "@/lib/uitzend/bureau";
 import { verloningCsv, weekGrenzen } from "@/lib/uitzend/bureau-kern";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request): Promise<Response> {
   try {
     const ctx = await bureauContext();
+    requireRole(ctx.principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
     if (!ctx.tenantId || !ctx.partnerSinds) throw AppError.precondition("Dit kan alleen bij een uitzendpartner.");
     const week = new URL(request.url).searchParams.get("week") ?? "";
     const grenzen = weekGrenzen(week);

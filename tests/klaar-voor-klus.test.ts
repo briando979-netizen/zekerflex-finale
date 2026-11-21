@@ -86,14 +86,16 @@ describe("Verificatie: het eindscherm is de plek om het in te vullen", () => {
 
 describe("Klussen: één kaart tegelijk", () => {
   const klussen = lees("app/dashboard/klussen/page.tsx");
-  it("eerst de kaart naar de stappen, dan de kaart naar Klaar voor je eerste klus, anders de echte reden", () => {
+  it("eerst de kaart naar de stappen, anders de echte reden; geen kaart Regel je verificatie en geen melding over testklussen", () => {
     // 21 nov (eigenaar: in de stijl van YoungOnes): op Ontdekken één turquoise kaart; de stappen zelf staan op /dashboard/start/profiel
     const stappen = klussen.indexOf("<GeldVerdienenKaart kop={t.start.geldKop}");
-    const klaar = klussen.indexOf("<GeldVerdienenKaart kop={t.start.regelKop}");
     const reden = klussen.indexOf("translateBlockReason(m.blockReason, t)} {t.page.applyWhenDone}");
     expect(stappen).toBeGreaterThan(0);
-    expect(klaar).toBeGreaterThan(stappen);
-    expect(reden).toBeGreaterThan(klaar);
+    expect(reden).toBeGreaterThan(stappen);
+    // 21 nov, later (eigenaar: "haal regel je verificatie weg bij werknemer dashboard en die bericht nog geen echte klussen")
+    expect(klussen).not.toContain("t.start.regelKop");
+    expect(klussen).not.toContain("t.page.alleenTestTitle");
+    expect(klussen).toContain("nogVoorKlus.length > 0 ? null : (");
     // geen tweede startkaart, geen OnboardingProgress, geen filter dat de echte reden verbergt
     expect(klussen).not.toContain("<WerkerStartWizard");
     const profiel = lees("app/dashboard/start/profiel/page.tsx");

@@ -91,11 +91,11 @@ export default async function KlussenPage(
       {/* Sinds 21 nov (eigenaar: "alles weg en in de stijl van YoungOnes, alleen de chat bewaren"): bovenaan één turquoise kaart,
           de stappen zelf staan op /dashboard/start/profiel. De pushkaart, "eerste indruk" en de tip staan op Account.
           Het recht om te werken zit niet in de start (10 nov); aannemen vraagt het wel (lib/werkrecht). */}
+      {/* 21 nov (eigenaar: "haal regel je verificatie weg bij werknemer dashboard"): geen kaart "Regel je verificatie" meer; wat er
+          nog mist, zie je bij het reageren en op /dashboard/start/profiel. Dan ook niet de reden-balk eronder. */}
       {poort && onboardingOpen ? (
         <GeldVerdienenKaart kop={t.start.geldKop} tekst={t.start.geldTekst} knop={t.start.geldKnop} href="/dashboard/start/profiel" />
-      ) : nogVoorKlus.length > 0 ? (
-        <GeldVerdienenKaart kop={t.start.regelKop} tekst={t.start.regelTekst} knop={t.start.regelKnop} href="/dashboard/start/profiel" />
-      ) : (
+      ) : nogVoorKlus.length > 0 ? null : (
         // iets anders houdt reageren tegen (bijv. de KVK-controle wacht, of matching is tijdelijk beperkt): de echte reden
         !m.canApply &&
         m.blockReason && (
@@ -119,12 +119,7 @@ export default async function KlussenPage(
         </p>
       )}
 
-      {alleenTest && (
-        <div className="card mb-5 p-5 text-sm">
-          <p className="font-medium text-ink">{t.page.alleenTestTitle}</p>
-          <p className="mt-1 text-neutralx-600">{t.page.alleenTestBody}</p>
-        </div>
-      )}
+      {/* 21 nov (eigenaar): de melding "Nog geen echte klussen bij jou in de buurt" is weg; testklussen staan wel onderaan (echteKlussenEerst) */}
 
       {/* ook zonder klussen staat de filterbalk met het zoekveld er (YoungOnes; het vergrootglas in de balk springt naar #zoeken).
           Het lege vak heeft één actie: naar de meldingen. De knop zelf staat sinds 21 nov op Account (daar kent hij zijn stand op dit apparaat). */}

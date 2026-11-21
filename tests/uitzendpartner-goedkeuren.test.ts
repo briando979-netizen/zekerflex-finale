@@ -40,7 +40,7 @@ vi.mock("@/lib/prisma", () => {
     invoice: {
       create: async ({ data }: { data: { number: string; type: string; recipientTenantId: string; totalCents: number } }) => {
         h.facturen.push({ type: data.type, recipientTenantId: data.recipientTenantId, totalCents: data.totalCents });
-        return { id: `inv-${h.facturen.length}`, number: data.number, ...data };
+        return { id: `inv-${h.facturen.length}`, ...data };
       },
     },
     payment: { create: async () => void h.betalingen++ },

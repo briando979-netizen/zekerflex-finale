@@ -49,7 +49,6 @@ import { isLiveActief, startLive, type Plek } from "@/lib/messaging/live-locatie
 import { AfstandProvider } from "./AfstandContext";
 import { useLiveLocatieZender } from "./live-locatie-zender";
 import { GeplandBalk } from "./GeplandBalk";
-import { StatusRij } from "./StatusRij";
 import { ZakelijkPaneel } from "./ZakelijkPaneel";
 import { labelKlasse, labelsMetVoorstellen } from "@/lib/chat/zakelijk";
 import type { GeplandBericht } from "@/lib/messaging/gepland-tijd";
@@ -102,8 +101,6 @@ interface InboxPageProps {
    * Zonder deze prop (opdrachtgever, beheer) verandert er niets.
    */
   tabsBoven?: boolean;
-  /** "Mijn status" als één smalle regel boven de gesprekken (werker-app); zonder: de gewone rij */
-  statusCompact?: boolean;
 }
 
 // De teksten komen uit een context: de inhoud draait daarom binnen de provider.
@@ -125,7 +122,6 @@ function InboxPageInner({
   bedrijfsnaam = "",
   demoNotice,
   tabsBoven = false,
-  statusCompact = false,
 }: Omit<InboxPageProps, "texts">) {
   const chat = useChatTeksten();
   const ib = chat.inbox;
@@ -1224,8 +1220,8 @@ function InboxPageInner({
               )}
               {!q && view === "main" && (
                 <>
-                  {/* status van je contacten, zoals in WhatsApp (lib/messaging/status.ts) */}
-                  {me && <StatusRij myUserId={me.userId} myName={me.name} avatars={avatars} onReageer={(uid) => void startThreadWith(uid)} compact={statusCompact} />}
+                  {/* 21 nov (eigenaar: "haal bij chat weg mijn status, niet relevant"): geen statusrij zoals in WhatsApp meer
+                      boven de gesprekken (components/chat/StatusRij.tsx blijft bestaan, maar staat nergens meer) */}
                   {chatPrefs.lockedCount > 0 && (
                     <button type="button" onClick={() => setPinAsk({ mode: "unlock" })} className={rowBtn}>
                       <span className="w-10 text-center" aria-hidden>🔒</span>{ib.vergrendeldeChats} <span className="ml-auto text-xs text-neutralx-400">{chatPrefs.lockedCount}</span>

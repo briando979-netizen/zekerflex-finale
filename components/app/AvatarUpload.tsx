@@ -16,7 +16,7 @@ export interface AvatarUploadTexts {
 }
 
 /** Vierkant bijsnijden rond het midden (max 800 px, JPEG) vóór het uploaden; lukt dat niet (bijv. HEIC), dan gaat het origineel mee. */
-async function snijdVierkant(file: File): Promise<File> {
+export async function snijdVierkant(file: File): Promise<File> {
   try {
     const bmp = await createImageBitmap(file);
     const zijde = Math.min(bmp.width, bmp.height);

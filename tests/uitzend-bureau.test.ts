@@ -22,6 +22,8 @@ import {
 import { PARTNER_VOORWAARDEN_VERSIE } from "@/lib/uitzend/voorwaarden";
 import { UITZEND_SLEUTELS, dashboardVanPad, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
 import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
+import { fmt, nl } from "@/lib/i18n/dictionaries";
+import { en } from "@/lib/i18n/dictionary-en";
 
 // Het dashboard van een uitzendpartner (21 nov 2026, eigenaar: "bouw van 1 tot 5"): aanvragen, uitzendkrachten, uren voor de
 // verloning, klanten en locaties, bureaugegevens. Alle datums met een zone, "nu" wordt doorgegeven: geen tijdbom.
@@ -201,6 +203,42 @@ describe("het menu Uitzendbureau", () => {
       expect(existsSync(path.join(ROOT, `app${pad}/page.tsx`)), pad).toBe(true);
       expect(dashboardVanPad(pad), pad).toBe("personeel");
     }
+  });
+});
+
+describe("de tekst staat in het werkgeverswoordenboek, in het Nederlands en Engels (uitzendBureau)", () => {
+  const plaats = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(",");
+  const plat = (o: object, pad = ""): [string, string][] =>
+    Object.entries(o).flatMap(([k, v]): [string, string][] => (typeof v === "string" ? [[`${pad}${k}`, v]] : plat(v as object, `${pad}${k}.`)));
+
+  it("Engels heeft dezelfde sleutels en plaatshouders en is echt vertaald", () => {
+    const a = new Map(plat(nl.uitzendBureau));
+    const b = new Map(plat(en.uitzendBureau));
+    expect([...b.keys()].sort()).toEqual([...a.keys()].sort());
+    for (const [k, tekst] of a) {
+      const x = b.get(k) ?? "";
+      expect(x.length, k).toBeGreaterThan(0);
+      expect(plaats(x), `${k} plaatshouders`).toBe(plaats(tekst));
+      if (tekst.split(/\s+/).length >= 6) expect(x, `${k} is niet vertaald`).not.toBe(tekst);
+    }
+  });
+
+  it("elke stap heeft een label en het Nederlands is gelijk aan wat er stond", () => {
+    const u = nl.uitzendBureau;
+    expect(Object.keys(u.stap).sort()).toEqual(["afgewezen", "gebeld", "ingepland", "ingetrokken", "nieuw", "verlopen"]);
+    expect(u.stap.ingepland).toBe("Contract rond, ingepland");
+    expect(fmt(u.aanvragen.wachtAl, { n: 3 })).toBe("Wacht al 3 werkdagen");
+    expect(fmt(u.bureau.uitleg, { naam: "Bureau Zon", datum: "21 november 2026", kvk: fmt(u.bureau.kvk, { nummer: "12345678" }), dagen: 30 })).toBe(
+      "Bureau Zon is uitzendpartner sinds 21 november 2026 · KVK 12345678. Houd deze gegevens actueel: we waarschuwen je 30 dagen voordat iets verloopt.",
+    );
+    expect(weekTekst("2026-W47", en.uitzendBureau.intl)).toMatch(/^16 Nov – 22 Nov 2026$/);
+  });
+
+  it("de schermen halen hun tekst uit het woordenboek: pagina's met getDict, de knoppen en het formulier met useT", () => {
+    for (const p of ["", "/krachten", "/verloning", "/klanten", "/bureau"]) expect(lees(`app/werkgever/uitzend${p}/page.tsx`), p).toContain("getDict()");
+    expect(lees("components/werkgever/uitzend/BureauKop.tsx")).toContain("(await getDict()).uitzendBureau");
+    expect(lees("components/werkgever/uitzend/AanvraagKnoppen.tsx")).toContain("useT().uitzendBureau.knoppen");
+    expect(lees("components/werkgever/uitzend/BureauGegevensForm.tsx")).toContain("useT().uitzendBureau");
   });
 });
 

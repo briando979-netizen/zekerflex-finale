@@ -40,7 +40,8 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
       { href: "/personeel-inhuren", label: "Personeel inhuren" },
       { href: "/voor-freelancers", label: "Voor freelancers" },
       { href: "/leren/klussen-krijgen", label: "Leren: zo krijg je klussen" },
-      { href: "/uitzendbureau", label: "Werken via uitzendbureau" },
+      // 21 nov: "Werken via uitzendbureau" weg (eigenaar: geen aparte pagina; uitzendklussen staan in de app)
+      { href: "/uitzendpartner", label: "Voor uitzendbureaus" },
       { href: "/voor-bedrijven", label: "Voor bedrijven" },
       { href: "/leren/personeel-krijgen", label: "Leren: zo krijg je goede mensen" },
       { href: "/producten", label: "Producten & losse modules" },

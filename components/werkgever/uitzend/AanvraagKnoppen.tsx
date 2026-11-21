@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { respondToOfferAction } from "@/app/werkgever/diensten/[shiftId]/actions";
+import { useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 /**
  * De knoppen bij een open aanvraag (/werkgever/uitzend). "Gebeld" onthoudt het bureau zelf (POST /api/werkgever/uitzend/gebeld);
  * inplannen en afwijzen gaan langs dezelfde weg als bij elke reactie op een klus (respondToOfferAction). Daarna haalt de pagina
- * de stand opnieuw van de server (router.refresh), niet uit de klik.
+ * de stand opnieuw van de server (router.refresh), niet uit de klik. Tekst: uitzendBureau.knoppen in het werkgeverswoordenboek.
  */
 export function AanvraagKnoppen({ offerId, gebeld, naam }: { offerId: string; gebeld: boolean; naam: string }) {
+  const k = useT().uitzendBureau.knoppen;
   const router = useRouter();
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -26,7 +29,7 @@ export function AanvraagKnoppen({ offerId, gebeld, naam }: { offerId: string; ge
     if (r?.ok) router.refresh();
     else {
       const d = (await r?.json().catch(() => null)) as { error?: { message?: string } } | null;
-      setFout(d?.error?.message ?? "Opslaan lukte niet. Probeer het opnieuw.");
+      setFout(d?.error?.message ?? k.opslaanMislukt);
     }
     setBezig(false);
   }
@@ -38,7 +41,7 @@ export function AanvraagKnoppen({ offerId, gebeld, naam }: { offerId: string; ge
     if (r?.ok) {
       setAfwijzen(false);
       router.refresh();
-    } else setFout(r?.message ?? "Dat lukte niet. Probeer het opnieuw.");
+    } else setFout(r?.message ?? k.mislukt);
     setBezig(false);
   }
 
@@ -46,24 +49,24 @@ export function AanvraagKnoppen({ offerId, gebeld, naam }: { offerId: string; ge
     <div className="flex flex-col items-stretch gap-2 sm:items-end">
       {afwijzen ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-neutralx-600">{naam} afwijzen?</span>
+          <span className="text-sm text-neutralx-600">{fmt(k.afwijzenVraag, { naam })}</span>
           <button type="button" className="btn-ghost" disabled={bezig} onClick={() => void beslis("declined")}>
-            Ja, afwijzen
+            {k.jaAfwijzen}
           </button>
           <button type="button" className="btn-ghost" disabled={bezig} onClick={() => setAfwijzen(false)}>
-            Nee
+            {k.nee}
           </button>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2 sm:justify-end">
           <button type="button" className="btn-primary" disabled={bezig} onClick={() => void beslis("accepted")}>
-            Contract rond: inplannen
+            {k.inplannen}
           </button>
           <button type="button" className="btn-ghost" disabled={bezig} onClick={() => void markeer()}>
-            {gebeld ? "Toch nog niet gebeld" : "Gebeld"}
+            {gebeld ? k.nietGebeld : k.gebeld}
           </button>
           <button type="button" className="btn-ghost" disabled={bezig} onClick={() => setAfwijzen(true)}>
-            Afwijzen
+            {k.afwijzen}
           </button>
         </div>
       )}

@@ -12,7 +12,8 @@ const bron = readFileSync(join(__dirname, "..", "app/dashboard/account/page.tsx"
 describe("werker — scherm Account", () => {
   it("toont Ziek melden met een geplande of eerder aangenomen klus (ook tijdens een lopende klus), zonder extra vraag aan de database", () => {
     expect(bron).toContain("const heeftGeplandeKlus = overview.kpis.upcoming > 0;");
-    expect(bron).toContain("{isUitzend && (heeftGeplandeKlus || matched > 0) && (");
+    // sinds ZEKERFLEX_UITZENDER = false (21 nov 2026) meldt een uitzendkracht zich ziek bij zijn uitzendbureau, niet bij ZekerFlex
+    expect(bron).toContain("{isUitzend && ZEKERFLEX_UITZENDER && (heeftGeplandeKlus || matched > 0) && (");
     expect(bron).not.toContain("{isUitzend && heeftGeplandeKlus && (");
     expect(bron).not.toMatch(/\{isUitzend && \(\s*<div className="mb-4">\s*<ZiekMelden/);
   });

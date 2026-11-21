@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { PageHeader, KpiCard, Panel, EmptyState, StatusPill } from "@/components/app/ui";
 import { BureauTabs, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
+import { fmt } from "@/lib/i18n/dictionaries";
+import { getDict } from "@/lib/i18n/server";
 import { bureauContext, locatiesVan } from "@/lib/uitzend/bureau";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +12,12 @@ export const dynamic = "force-dynamic";
 // pagina Locaties (/werkgever/locaties, adres zoeken via PDOK); hier per locatie de komende diensten en de uren.
 
 export default async function UitzendKlantenPage() {
-  const ctx = await bureauContext();
+  const [ctx, dict] = await Promise.all([bureauContext(), getDict()]);
+  const u = dict.uitzendBureau;
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow="Uitzendbureau" title="Klanten en locaties" />
+        <PageHeader eyebrow={u.eyebrow} title={u.tabs.klanten} />
         <GeenUitzendPartner />
       </>
     );
@@ -24,32 +27,29 @@ export default async function UitzendKlantenPage() {
   const los = locaties.filter((l) => !l.vast);
   const open = locaties.reduce((n, l) => n + l.openPlekken, 0);
   const komend = locaties.reduce((n, l) => n + l.komendeKlussen, 0);
+  const k = u.klanten;
 
   return (
     <>
       <BureauTabs actief="klanten" />
       <PageHeader
-        eyebrow="Uitzendbureau"
-        title="Klanten en locaties"
-        subtitle="Maak per klant een locatie aan, met de naam van de klant en het adres waar je uitzendkrachten werken. Daar checken ze in en daar staat de dienst."
+        eyebrow={u.eyebrow}
+        title={u.tabs.klanten}
+        subtitle={k.uitleg}
         action={
           <Link href="/werkgever/locaties" className="btn-primary">
-            Klant toevoegen
+            {k.toevoegen}
           </Link>
         }
       />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Klanten" value={String(vast.length)} />
-        <KpiCard label="Komende diensten" value={String(komend)} />
-        <KpiCard label="Open plekken" value={String(open)} tone={open > 0 ? "warn" : "default"} hint="nog niemand ingepland" />
+        <KpiCard label={k.kpiKlanten} value={String(vast.length)} />
+        <KpiCard label={k.kpiKomend} value={String(komend)} />
+        <KpiCard label={k.kpiOpen} value={String(open)} tone={open > 0 ? "warn" : "default"} hint={k.kpiOpenHint} />
       </div>
-      <Panel title="Je klanten" subtitle="Elke locatie is een klant of een vestiging van een klant">
+      <Panel title={k.lijstKop} subtitle={k.lijstUitleg}>
         {vast.length === 0 ? (
-          <EmptyState
-            title="Nog geen klanten"
-            body="Voeg je eerste klant toe: de naam (bijvoorbeeld 'Bakkerij De Vries, Veendam') en het adres. Bij een nieuwe dienst kies je daarna die klant."
-            cta={{ href: "/werkgever/locaties", label: "Klant toevoegen" }}
-          />
+          <EmptyState title={k.geen} body={k.geenUitleg} cta={{ href: "/werkgever/locaties", label: k.toevoegen }} />
         ) : (
           <ul className="divide-y divide-hair">
             {vast.map((l) => (
@@ -60,12 +60,12 @@ export default async function UitzendKlantenPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   <span>
-                    <span className="num font-semibold text-ink">{l.komendeKlussen}</span> komende {l.komendeKlussen === 1 ? "dienst" : "diensten"}
+                    <span className="num font-semibold text-ink">{l.komendeKlussen}</span> {l.komendeKlussen === 1 ? k.komendeEen : k.komendeMeer}
                   </span>
-                  {l.openPlekken > 0 && <StatusPill tone="warn">{l.openPlekken} open</StatusPill>}
-                  <span className="text-neutralx-500">{l.urenAfgelopen4Weken.toLocaleString("nl-NL")} uur in 4 weken</span>
+                  {l.openPlekken > 0 && <StatusPill tone="warn">{fmt(k.open, { n: l.openPlekken })}</StatusPill>}
+                  <span className="text-neutralx-500">{fmt(k.urenVierWeken, { uren: l.urenAfgelopen4Weken.toLocaleString(u.intl) })}</span>
                   <Link href="/werkgever/diensten/nieuw" className="font-semibold text-brand-600 underline">
-                    Dienst plaatsen
+                    {u.dienstPlaatsen}
                   </Link>
                 </div>
               </li>
@@ -75,7 +75,7 @@ export default async function UitzendKlantenPage() {
       </Panel>
       {los.length > 0 && (
         <div className="mt-6">
-          <Panel title="Losse adressen" subtitle="Adressen die bij een losse dienst zijn ingevuld">
+          <Panel title={k.losKop} subtitle={k.losUitleg}>
             <ul className="divide-y divide-hair">
               {los.map((l) => (
                 <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
