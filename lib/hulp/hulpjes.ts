@@ -40,6 +40,8 @@ export interface HulpTeksten {
     chat: [string, string];
     mail: [string, string];
     feedback: [string, string];
+    /** de ZekerFlex community (Google Groep, COMMUNITY_URL) */
+    community: [string, string];
     status: { titel: string; ok: string; traag: string; storing: string; onbekend: string };
   };
   hulp: { titel: string; leeg: string; vraagHet: string; alles: string };
@@ -57,6 +59,9 @@ export const SUPPORT_CHAT = "/dashboard/berichten?support=1";
 export const SUPPORT_CHAT_WERKGEVER = "/werkgever/berichten?support=1";
 /** Zolang de onboarding loopt, is de chat dicht (lib/onboarding/werker-poort.ts): dan mailen. */
 export const SUPPORT_MAIL = "mailto:support@zekerflex.com";
+
+/** De ZekerFlex community: een Google Groep waar iedereen zelf lid van wordt (21 nov 2026, eigenaar). Ledenlijst alleen voor beheerders. */
+export const COMMUNITY_URL = "https://groups.google.com/g/zekerflex-community";
 /** localStorage: id van het nieuwste nieuwsbericht dat de werker heeft gezien. */
 export const HULP_NIEUWS_GEZIEN = "zf-hulp-nieuws";
 

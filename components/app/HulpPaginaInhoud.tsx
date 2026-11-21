@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import {
+  COMMUNITY_URL,
   HULP_NIEUWS_GEZIEN,
   SUPPORT_CHAT,
   SUPPORT_CHAT_WERKGEVER,
@@ -116,6 +117,10 @@ export function HulpPaginaInhoud({
           <span className="block text-sm font-semibold text-ink">{t.home.feedback[0]}</span>
           <span className="mt-1 block text-xs text-neutralx-500">{t.home.feedback[1]}</span>
         </button>
+        <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className={kaart}>
+          <span className="block text-sm font-semibold text-ink">{t.home.community[0]}</span>
+          <span className="mt-1 block text-xs text-neutralx-500">{t.home.community[1]}</span>
+        </a>
         <Link href="/status" className={kaart}>
           <span className="block text-sm font-semibold text-ink">{t.home.status.titel}</span>
           <span className="mt-1 block text-xs text-neutralx-500">{t.home.status.onbekend}</span>

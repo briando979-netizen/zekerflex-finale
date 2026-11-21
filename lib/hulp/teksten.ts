@@ -28,6 +28,7 @@ const nl: HulpTeksten = {
     chat: ["Chat met ons", "Direct contact met ons team"],
     mail: ["Mail ons", "Lukt het aanmelden niet? We helpen je."],
     feedback: ["Geef ons feedback", "Wat kan beter? We lezen alles."],
+    community: ["ZekerFlex community","Nieuws, vragen en ideeën in onze groep"],
     status: {
       titel: "Status",
       ok: "Alles werkt zoals het hoort",
@@ -218,6 +219,7 @@ const en: HulpTeksten = {
     chat: ["Chat with us", "Direct contact with our team"],
     mail: ["Email us", "Trouble signing up? We'll help you."],
     feedback: ["Give us feedback", "What could be better? We read everything."],
+    community: ["ZekerFlex community","News, questions and ideas in our group"],
     status: {
       titel: "Status",
       ok: "Everything is working as it should",
@@ -408,6 +410,7 @@ const pl: HulpTeksten = {
     chat: ["Czat z nami", "Bezpośredni kontakt z naszym zespołem"],
     mail: ["Napisz do nas", "Problem z rejestracją? Pomożemy Ci."],
     feedback: ["Podziel się opinią", "Co możemy poprawić? Czytamy wszystko."],
+    community: ["Społeczność ZekerFlex","Nowości, pytania i pomysły w naszej grupie"],
     status: {
       titel: "Status",
       ok: "Wszystko działa jak należy",
@@ -598,6 +601,7 @@ const ro: HulpTeksten = {
     chat: ["Scrie-ne pe chat", "Contact direct cu echipa noastră"],
     mail: ["Trimite-ne un e-mail", "Nu reușești să te înscrii? Te ajutăm."],
     feedback: ["Spune-ne părerea ta", "Ce putem îmbunătăți? Citim tot."],
+    community: ["Comunitatea ZekerFlex","Noutăți, întrebări și idei în grupul nostru"],
     status: {
       titel: "Stare",
       ok: "Totul funcționează cum trebuie",
@@ -788,6 +792,7 @@ const uk: HulpTeksten = {
     chat: ["Напишіть нам у чат", "Прямий зв'язок з нашою командою"],
     mail: ["Напишіть нам листа", "Не вдається зареєструватися? Ми допоможемо."],
     feedback: ["Залиште відгук", "Що можна покращити? Ми читаємо все."],
+    community: ["Спільнота ZekerFlex","Новини, запитання та ідеї в нашій групі"],
     status: {
       titel: "Стан",
       ok: "Усе працює як слід",

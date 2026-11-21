@@ -26,6 +26,7 @@ const nl: HulpTeksten = {
     chat: ["Chat met ons", "Direct contact met ons team"],
     mail: ["Mail ons", "Lukt iets niet? We helpen je."],
     feedback: ["Geef ons feedback", "Wat kan beter? We lezen alles."],
+    community: ["ZekerFlex community","Nieuws, vragen en ideeën in onze groep"],
     status: {
       titel: "Status",
       ok: "Alles werkt zoals het hoort",
@@ -189,6 +190,7 @@ const en: HulpTeksten = {
     chat: ["Chat with us", "Direct contact with our team"],
     mail: ["Email us", "Something not working? We will help."],
     feedback: ["Give us feedback", "What could be better? We read everything."],
+    community: ["ZekerFlex community","News, questions and ideas in our group"],
     status: {
       titel: "Status",
       ok: "Everything works as it should",

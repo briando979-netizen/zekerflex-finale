@@ -7,6 +7,7 @@ import { Section, SectionHead } from "@/components/marketing/primitives";
 import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
 import { canonical, CONTACTS, GOOGLE_PROFIEL, SITE } from "@/lib/seo";
+import { COMMUNITY_URL } from "@/lib/hulp/hulpjes";
 
 const TITLE = "Contact — ZekerFlex";
 const DESCRIPTION =
@@ -64,6 +65,9 @@ export default async function ContactPage() {
           </Link>
           <a href={`mailto:${CONTACTS.klachten}`} className="btn-ghost">
             Klacht indienen ({CONTACTS.klachten})
+          </a>
+          <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+            Praat mee in de ZekerFlex community
           </a>
         </div>
       </Section>
