@@ -189,7 +189,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
         </ul>
       </Section>
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title={inhurenHubKop(s)} />
+        <SectionHead eyebrow="Veelgestelde vragen" title={`Vragen over ${inhurenHubKop(s).toLowerCase()}`} />
         <div className="mt-8 max-w-3xl">
           <FaqList items={faq} />
         </div>
@@ -267,7 +267,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
         <StadBlok kop={`${s.label} in ${c.name}`} c={c} />
       </Section>
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title={`${inhurenKop(s)} in ${c.name}`} />
+        <SectionHead eyebrow="Veelgestelde vragen" title={`Vragen over ${inhurenKop(s).toLowerCase()} in ${c.name}`} />
         <div className="mt-8 max-w-3xl">
           <FaqList items={faq} />
         </div>
@@ -396,7 +396,7 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
         primaryHref="/register?type=freelancer"
         primaryLabel="Gratis aanmelden"
         secondaryHref={`/${s.slug}`}
-        secondaryLabel={`Werkgever? ${inhurenHubKop(s)}`}
+        secondaryLabel={`Werkgever? ${inhurenKop(s)}`}
       />
     </>
   );
