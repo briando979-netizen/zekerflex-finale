@@ -49,10 +49,10 @@ const config: Config = {
         },
         hair: "#E6E7E1",
         hairstrong: "#D6D7CF",
-        // De openbare site in de opzet van YoungOnes (20 nov 2026, eigenaar): nachtblauw, turquoise, een rode krabbel
-        // en een lichtlila vlak. tealInk = turquoise donker genoeg voor kleine tekst op wit (≥ 4,5:1 is het niet: gebruik
-        // navy op teal, nooit teal-tekst op wit kleiner dan 24 px).
-        yo: { navy: "#000440", teal: "#10D1BB", tealInk: "#08B39F", red: "#E8352E", grey: "#F1F1F8", night: "#0B1238" },
+        // De openbare site in de opzet van YoungOnes (20 nov 2026) maar met de oude ZekerFlex-kleuren (21 nov, eigenaar:
+        // "alleen de kleuren wel behouden die van de oude"): navy = ons donker, teal = ons mint, tealInk = ons groen (AA op wit),
+        // grey = ons zachte papier; de rode krabbel blijft als accent.
+        yo: { navy: "#0C0E12", teal: "#4FE0A0", tealInk: "#0E5C4A", red: "#E8352E", grey: "#F4F5F1", night: "#0C0E12" },
         mintwash: "#E4F8EF",
         ok: "#15803D",
         warn: "#B45309",

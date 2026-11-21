@@ -69,7 +69,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
       {/* ───────────────────────────────────────────────────────────── KOP (21 nov, in de opzet van de bedrijvenpagina van YoungOnes: links een
           nachtblauw-naar-teal vlak met de kop in kapitalen, drie vinkjes en twee knoppen; rechts onze eigen foto met de rode krabbel) */}
       <section className="grid overflow-hidden text-white md:grid-cols-2">
-        <div className="relative bg-[linear-gradient(135deg,#000440_0%,#0E3A62_60%,#0F5566_100%)] px-6 py-12 md:px-12 lg:px-16 lg:py-20">
+        <div className="hero-ink relative px-6 py-12 md:px-12 lg:px-16 lg:py-20">
           <Link
             href="/"
             className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/85 backdrop-blur transition hover:bg-white/15"
