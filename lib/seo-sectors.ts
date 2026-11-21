@@ -84,6 +84,29 @@ export const SECTORS: Sector[] = [
     peak: "een drukke periode of uitverkoop",
     serviceType: "Retail flexwerk- en uitzendplatform",
   },
+  // 21 nov 2026 (eigenaar: "branches zoals YoungOnes", ook Promotie en Bezorging, met de regio's)
+  {
+    slug: "promotie-personeel-inhuren",
+    workerSlug: "promotie-vacatures",
+    key: "promotie",
+    label: "Promotie",
+    worker: "promotiemedewerker",
+    roles: "promotiemedewerkers, samplers, beurspromotors en straatwervers",
+    rolesShort: "sampling · beurs · winkel · straat",
+    peak: "een actieweek, beurs of productlancering",
+    serviceType: "Promotie flexwerk- en uitzendplatform",
+  },
+  {
+    slug: "bezorging-personeel-inhuren",
+    workerSlug: "bezorging-vacatures",
+    key: "bezorging",
+    label: "Bezorging",
+    worker: "bezorger",
+    roles: "bezorgers en koeriers op de fiets, scooter of in een bestelbus",
+    rolesShort: "fiets · scooter · bus · pakketten",
+    peak: "een drukke avond of de feestdagen",
+    serviceType: "Bezorging flexwerk- en uitzendplatform",
+  },
 ];
 
 export function sectorBySlug(slug: string): Sector | undefined {

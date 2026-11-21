@@ -44,6 +44,8 @@ describe("de videokamer", () => {
     const b = NAV.find((n) => n.key === "branches");
     expect(b?.menu?.werknemers.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/horeca-vacatures", "/logistiek-vacatures", "/evenementen-vacatures", "/retail-vacatures", "/schoonmaak-vacatures"]));
     expect(b?.menu?.werknemers.items[0]?.title).toBe("Horeca & catering");
+    // 21 nov 2026: ook Promotie en Bezorging, met eigen pagina's per stad
+    expect(b?.menu?.werknemers.items.map((i) => i.href)).toEqual(expect.arrayContaining(["/promotie-vacatures", "/bezorging-vacatures"]));
     expect(b?.menu?.bedrijven.items.map((i) => i.href)).toContain("/horeca-personeel-inhuren");
     expect(NIET_FLEXWERK_NAV_KEYS).not.toContain("branches");
     expect(NAV.find((n) => n.key === "kennis")?.menu?.werknemers.items.map((i) => i.title)).toEqual(["Informatie", "Kennisbank", "Blogs", "FAQ"]);

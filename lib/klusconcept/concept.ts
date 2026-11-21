@@ -153,6 +153,8 @@ export const SECTOR_TEMPLATE: Record<string, string> = {
   schoonmaak: "schoonmaak",
   evenementen: "horeca",
   retail: "vakkenvuller",
+  promotie: "promotie",
+  bezorging: "bezorger",
 };
 
 /** /klus-plaatsen with the function and place already filled in, for the sector and city pages. */

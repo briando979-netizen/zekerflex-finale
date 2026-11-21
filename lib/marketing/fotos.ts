@@ -132,6 +132,8 @@ const SECTOR_FOTOS: Record<string, readonly string[]> = {
   retail: ["campagne-kledingrek", "campagne-vouwen", "campagne-schap"],
   evenementen: ["campagne-festival-crew", "campagne-podium", "campagne-crew-pauze"],
   schoonmaak: ["campagne-ramen", "campagne-hotelbed"],
+  promotie: ["campagne-promotie"],
+  bezorging: ["campagne-bezorger", "campagne-aanbellen", "campagne-bestelbus"],
   // de overzichtspagina's: bedrijven die personeel zoeken, en werkers die klussen zoeken
   algemeen: ["campagne-ondernemer", "campagne-rooster", "campagne-eigenaar", "campagne-bouw", "campagne-klembord", "campagne-monteur"],
   freelance: ["campagne-deuropening", "campagne-bezorger", "campagne-aanbellen", "campagne-autowassen", "campagne-wasstraat", "campagne-barista", "campagne-scanner"],

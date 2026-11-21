@@ -82,6 +82,8 @@ const BRANCHE_FOTO: Record<string, string> = {
   schoonmaak: "campagne-ramen.jpg",
   evenementen: "campagne-festival-crew.jpg",
   retail: "campagne-kledingrek.jpg",
+  promotie: "campagne-promotie.jpg",
+  bezorging: "campagne-bezorger.jpg",
 };
 
 const FAQ = [

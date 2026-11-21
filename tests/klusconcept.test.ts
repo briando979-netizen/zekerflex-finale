@@ -85,7 +85,7 @@ describe("klusconcept: vanaf de sectorpagina's", () => {
 
   it("has a template for every sector page", () => {
     // keys must exist in SHIFT_TEMPLATES (lib/shifts/create.ts)
-    const templateKeys = ["vakkenvuller", "kassa", "magazijn", "schoonmaak", "horeca", "receptie"];
+    const templateKeys = ["vakkenvuller", "kassa", "magazijn", "schoonmaak", "horeca", "receptie", "promotie", "bezorger"];
     for (const s of SECTORS) expect(templateKeys, s.key).toContain(SECTOR_TEMPLATE[s.key]);
   });
 });
