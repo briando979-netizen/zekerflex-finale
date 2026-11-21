@@ -57,6 +57,8 @@ export function MobileMenu({
     const html = document.documentElement;
     const vorige = html.style.overflow;
     html.style.overflow = "hidden";
+    // zolang het menu open is, ligt de cookiebalk er niet overheen (app/globals.css: html[data-menu-open])
+    html.dataset.menuOpen = "1";
     const header = panel?.closest("header");
     if (header) setBoven(Math.max(0, Math.round(header.getBoundingClientRect().bottom)));
     const buren = header?.parentElement
@@ -65,6 +67,7 @@ export function MobileMenu({
     for (const el of buren) el.inert = true;
     return () => {
       html.style.overflow = vorige;
+      delete html.dataset.menuOpen;
       for (const el of buren) el.inert = false;
     };
   }, []);

@@ -113,7 +113,7 @@ export function CookieConsent() {
     {!opOs && <div aria-hidden data-cookie-ruimte style={{ height: ruimte }} />}
     {/* De laag is schermbreed, de kaart niet: klikken naast de kaart gaan door naar wat eronder ligt
         (zoals de chatknop rechtsonder); alleen de kaart zelf vangt ze op. */}
-    <div ref={laag} className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 sm:px-6">
+    <div ref={laag} data-cookie-laag className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 sm:px-6">
       <div role="region" aria-label={c.label} className="pointer-events-auto mx-auto max-w-2xl rounded-2xl border border-hair bg-white p-5 shadow-lift">
         <p className="text-sm leading-relaxed text-ink">
           {c.body}{" "}
