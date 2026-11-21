@@ -3,6 +3,8 @@
 // public/videos/pagina/CREDITS.md), een stuk echt scherm van de pagina en onze eigen stem (Piper). De mensen in beeld praten niet zelf:
 // de stem is die van ZekerFlex, en dat staat onder elke video. De tekst die wordt voorgelezen staat er ook als tekst bij.
 // Sinds 17 nov 2026 is het beeld van onze eigen campagnefoto's, in de stijl van de reclamevideo's (geen fotobank meer).
+// Sinds 21 nov 2026 (eigenaar: "een mooie Nederlandse stem") spreekt een Nederlandse mannenstem (Chatterbox, zelf gedraaid) de
+// flexwerkvideo's in, met ware tekst: ZekerFlex is zelf geen uitzendbureau en geen werkgever.
 // Puur: geen prisma of kv.
 
 export interface PaginaVideo {
@@ -20,78 +22,77 @@ export const PAGINA_VIDEOS: Record<string, PaginaVideo> = {
     slug: "home",
     titel: "ZekerFlex in een halve minuut",
     samenvatting: "Wat ZekerFlex is, voor werkers en voor bedrijven.",
-    seconden: 27,
+    seconden: 32,
     tekst: [
-      "Welkom bij ZekerFlex, het Nederlandse platform voor flexwerk.",
-      "Als werker kies je zelf klussen bij jou in de buurt. Je ziet vooraf wat je verdient, je checkt in met je telefoon en je geld komt op je eigen rekening.",
-      "Ben je een bedrijf? Plaats een klus, en ZekerFlex stelt passende, geverifieerde krachten voor.",
-      "Jij kiest wie je inroostert, en je betaalt alleen voor gewerkte uren.",
+      "Welkom bij ZekerFlex, het platform voor flexwerk in Nederland.",
+      "Als werker kies je zelf klussen bij jou in de buurt, en je ziet vooraf wat je verdient.",
+      "Als bedrijf plaats je een klus, en jij kiest wie er voor je werkt.",
+      "Bedrijven betalen drie euro vijftig platformkosten per gewerkt uur, zonder abonnement, en de eerste maand is gratis.",
       "Maak een gratis account en begin vandaag."
     ],
   },
   "voor-bedrijven": {
     slug: "voor-bedrijven",
     titel: "Personeel inhuren met ZekerFlex",
-    samenvatting: "Een klus plaatsen, krachten kiezen en wat het kost.",
-    seconden: 28,
+    samenvatting: "Een klus plaatsen, kiezen wie er komt en wat het kost.",
+    seconden: 38,
     tekst: [
-      "Een gat in je rooster, of een drukke periode? Plaats een klus in een paar minuten.",
-      "Je stelt de klus samen en ziet meteen wat hij kost. Een account heb je pas nodig als je hem plaatst.",
-      "ZekerFlex stelt passende, geverifieerde krachten in de buurt voor. Jij kiest wie je inroostert.",
-      "Je betaalt het uurtarief van de kracht plus drie euro vijftig platformkosten per gewerkt uur, zonder abonnement.",
-      "En de uren, de facturen en de papieren zijn geregeld."
+      "Een gat in je rooster? Plaats een klus in een paar minuten.",
+      "ZekerFlex stelt passende, betrouwbare krachten in de buurt voor, en jij kiest wie er komt.",
+      "Je betaalt het uurtarief plus drie euro vijftig platformkosten per gewerkt uur, zonder abonnement. De eerste maand is gratis.",
+      "De kracht checkt in met de QR-code die jij ophangt, jij keurt de uren goed, en ZekerFlex maakt de facturen.",
+      "Plaats vandaag nog je eerste klus."
     ],
   },
   "voor-freelancers": {
     slug: "voor-freelancers",
     titel: "Werken via ZekerFlex",
-    samenvatting: "Klussen in de buurt, met of zonder KVK.",
-    seconden: 26,
+    samenvatting: "Klussen in de buurt, als zzp'er of als uitzendkracht via een aangesloten uitzendbureau.",
+    seconden: 34,
     tekst: [
-      "Wil je werken wanneer het jou uitkomt? Met ZekerFlex zie je klussen bij jou in de buurt.",
-      "Je ziet vooraf wat je verdient, en je geld komt op je eigen rekening.",
-      "Meedoen is gratis, en je bent in een paar minuten klaar. De app is er in vijf talen.",
-      "Met of zonder KVK: als zelfstandige, of als uitzendkracht via een aangesloten uitzendbureau.",
+      "Werken wanneer het jou uitkomt? In de app zie je klussen bij jou in de buurt.",
+      "Je ziet vooraf wat je verdient, en de app is er in vijf talen.",
+      "Als zzp'er stuur je geen facturen, want die maakt ZekerFlex, en je kiest zelf hoe snel je wordt uitbetaald.",
+      "Zonder KVK werk je als uitzendkracht, via een aangesloten uitzendbureau.",
       "Maak gratis een profiel aan en begin vandaag."
     ],
   },
-  // 21 nov 2026: ZekerFlex is zelf geen uitzendbureau meer (uitzenden via aangesloten uitzendbureaus). uitzendbureau.mp4 en
-  // voor-freelancers.mp4 zijn met deze tekst opnieuw ingesproken (Piper nl-vrouw) en het beeld van uitzendbureau.mp4 zegt nu
-  // "Het uitzendbureau is je werkgever".
+  // 21 nov 2026: ZekerFlex is zelf geen uitzendbureau (uitzenden via aangesloten uitzendbureaus); de tekst van elke video zegt dat.
   "uitzendbureau": {
     slug: "uitzendbureau",
     titel: "Uitzendwerk via ZekerFlex",
-    samenvatting: "Werken zonder KVK, via een aangesloten uitzendbureau.",
-    seconden: 24,
+    samenvatting: "Werken zonder KVK, via een aangesloten uitzendbureau: dat bureau is je werkgever.",
+    seconden: 33,
     tekst: [
-      "Werken zonder KVK? Dan werk je als uitzendkracht via een aangesloten uitzendbureau.",
-      "Het uitzendbureau is je werkgever. Het regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.",
-      "Jij kiest je diensten en werkt wanneer het jou uitkomt, met de rechten van een dienstverband.",
-      "In de app zet je het filter op Uitzendklussen en vraag je bij een klus een uitzendcontract aan."
+      "Werken zonder KVK? Dan werk je als uitzendkracht, via een uitzendbureau dat bij ZekerFlex is aangesloten.",
+      "Dat uitzendbureau is je werkgever. Het regelt je contract en betaalt je loon, met vakantiegeld en pensioen volgens zijn cao.",
+      "ZekerFlex is zelf geen uitzendbureau: in de app vind je de klussen.",
+      "Kies in de app bij Type klus voor Uitzendklussen, en vraag bij een klus een uitzendcontract aan."
     ],
   },
   "prijzen": {
     slug: "prijzen",
     titel: "Wat kost ZekerFlex?",
-    samenvatting: "Geen abonnement: je betaalt per gewerkt uur.",
-    seconden: 21,
+    samenvatting: "Geen abonnement: € 3,50 platformkosten per gewerkt uur, en de eerste maand is gratis.",
+    seconden: 31,
     tekst: [
       "Wat kost ZekerFlex? Eerlijk en voorspelbaar.",
-      "Geen abonnement. Je betaalt alleen voor gewerkte uren, en bij meer uren daalt de platformfee volgens een vaste staffel.",
-      "Voor personeel betaal je het uurtarief van de kracht plus drie euro vijftig per gewerkt uur.",
-      "Wil je het zelf uitrekenen? Gebruik de gratis rekentools."
+      "Je betaalt geen abonnement en geen opstartkosten, alleen voor uren die echt gewerkt zijn.",
+      "Bovenop het uurtarief betaal je drie euro vijftig platformkosten per gewerkt uur.",
+      "En de eerste maand is gratis: dertig dagen vanaf je eerste dienst.",
+      "Reken het zelf uit met de gratis rekentools."
     ],
   },
   "horeca": {
     slug: "horeca-personeel",
     titel: "Horecapersoneel inhuren",
-    samenvatting: "Bediening, keuken en bar binnen uren in de buurt.",
-    seconden: 25,
+    samenvatting: "Bediening, keuken en bar: plaats een klus en kies wie er komt.",
+    seconden: 28,
     tekst: [
       "Uitval, no-shows of een drukke avond in de horeca?",
-      "Plaats een klus, en ZekerFlex vindt binnen uren betrouwbare bedieners, afwassers, koks, barpersoneel en runners in de buurt.",
-      "Je betaalt het uurtarief van de kracht plus drie euro vijftig per gewerkt uur, zonder uitzendmarge en zonder abonnement.",
-      "Krachten die goed bevallen zet je bij je favorieten, en je roostert ze met één tik opnieuw in."
+      "Plaats een klus voor bediening, keuken of bar, en ZekerFlex stelt passende krachten in de buurt voor.",
+      "Je betaalt het uurtarief plus drie euro vijftig per gewerkt uur, zonder abonnement, en de eerste maand is gratis.",
+      "Krachten die goed bevallen, zet je bij je favorieten. Zo bouw je een vaste ploeg."
     ],
   },
   "rijschool-software": {
