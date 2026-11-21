@@ -61,5 +61,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     delivered: result.delivered,
     transport: result.transport,
     ...(result.error ? { error: result.error } : {}),
+    // de bevestiging dat dit als verkoopmail ging (via de verkoopmailbox): een oudere server kent het veld niet en mailt via info@
+    ...(verkoop ? { soort: "verkoop" } : {}),
   });
 });

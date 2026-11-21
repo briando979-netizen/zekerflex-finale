@@ -42,6 +42,7 @@ describe("POST /api/admin/mail/send", () => {
 
     expect(res.status).toBe(200);
     expect(body.delivered).toBe(true);
+    expect(body.soort).toBeUndefined();
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({ to: "freelancer@example.nl", replyTo: "admin@zekerflex.com", kind: "admin-bericht", subject: "Over je klus" }),
     );
@@ -58,6 +59,7 @@ describe("POST /api/admin/mail/send", () => {
     expect(res.status).toBe(200);
     expect(body.delivered).toBe(false);
     expect(body.error).toContain("verkoopmailbox");
+    expect(body.soort).toBe("verkoop");
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({ to: "eigenaar@bedrijf.nl", kind: "sales-outreach", from: "sales@zekerflex.com", replyTo: "sales@zekerflex.com" }),
     );
