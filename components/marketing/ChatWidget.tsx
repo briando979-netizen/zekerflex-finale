@@ -58,6 +58,21 @@ function conversationId(): string {
   }
 }
 
+/** Een nieuw gesprek: een nieuwe token, zodat het oude (gesloten) ticket dicht blijft en de assistent opnieuw begint. */
+function nieuwGesprek(): void {
+  try {
+    localStorage.setItem("zf-webchat-id", `wc-${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`);
+  } catch {
+    /* geen opslag: het volgende gesprek krijgt vanzelf een nieuwe token */
+  }
+}
+
+/** Na het sluiten door een collega (21 nov 2026, eigenaar): een nieuw gesprek met de assistent, met één zin uitleg. */
+const NA_SLUITEN: Msg = {
+  role: "assistant",
+  content: "Het gesprek met onze collega is afgesloten. Heb je nog een vraag? Stel hem gerust: de assistent helpt je meteen verder.",
+};
+
 export function ChatWidget() {
   const [agentCount, setAgentCount] = useState(0);
   const [human, setHuman] = useState(false);
@@ -84,6 +99,15 @@ export function ChatWidget() {
       const r = await fetch(`/api/chat/conversation/${id}`, { cache: "no-store" }).catch(() => null);
       if (!r?.ok) return;
       const d: { status: string; messages: { content: string; by: string }[] } = await r.json();
+      // Een collega sloot het gesprek (Beheer → Webchat → Sluiten): begin een nieuw gesprek met de assistent, in plaats van
+      // het oude ticket te laten staan (dat ging bij het volgende bericht weer open, bij de collega).
+      if (d.status === "closed") {
+        nieuwGesprek();
+        setHuman(false);
+        setAgentCount(0);
+        setMessages([GREETING, NA_SLUITEN]);
+        return;
+      }
       setHuman(d.status === "human");
       if (d.messages.length > agentCount) {
         const fresh = d.messages.slice(agentCount);
