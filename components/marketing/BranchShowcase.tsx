@@ -1,21 +1,25 @@
 import Link from "next/link";
 import { Reveal } from "@/components/marketing/Reveal";
+import { SECTORS } from "@/lib/seo-sectors";
+import { topSteden } from "@/lib/seo-cities";
 
 interface Branch {
   key: string;
   label: string;
   photo: string;
   blurb: string;
+  /** de branche in lib/seo-sectors.ts met een eigen pagina (werkers: /<branche>-vacatures, bedrijven: /<branche>-personeel-inhuren) */
+  sector?: string;
 }
 
 // Ingang per branche. Geen verzonnen waarderingen of richtprijzen: alleen het
 // echte minimum-uurtarief dat een opdrachtgever mag instellen (env.MIN_SHIFT_RATE_CENTS).
 const BRANCHES: Branch[] = [
-  { key: "logistiek", label: "Logistiek", photo: "/shifts/campagne-logistiek.jpg", blurb: "Orderpicken, magazijn, inpakken en sorteren." },
-  { key: "retail", label: "Retail", photo: "/shifts/campagne-retail.jpg", blurb: "Vakkenvullen, kassa en verkoop op de winkelvloer." },
-  { key: "horeca", label: "Horeca", photo: "/shifts/campagne-horeca.jpg", blurb: "Bediening, bar, keuken en catering." },
-  { key: "evenement", label: "Evenement", photo: "/shifts/campagne-evenement.jpg", blurb: "Festivals, beurzen, hosting en crew." },
-  { key: "schoonmaak", label: "Schoonmaak", photo: "/shifts/campagne-schoonmaak.jpg", blurb: "Housekeeping, glasbewassing en oplevering." },
+  { key: "logistiek", label: "Logistiek", photo: "/shifts/campagne-logistiek.jpg", blurb: "Orderpicken, magazijn, inpakken en sorteren.", sector: "logistiek" },
+  { key: "retail", label: "Retail", photo: "/shifts/campagne-retail.jpg", blurb: "Vakkenvullen, kassa en verkoop op de winkelvloer.", sector: "retail" },
+  { key: "horeca", label: "Horeca", photo: "/shifts/campagne-horeca.jpg", blurb: "Bediening, bar, keuken en catering.", sector: "horeca" },
+  { key: "evenement", label: "Evenement", photo: "/shifts/campagne-evenement.jpg", blurb: "Festivals, beurzen, hosting en crew.", sector: "evenementen" },
+  { key: "schoonmaak", label: "Schoonmaak", photo: "/shifts/campagne-schoonmaak.jpg", blurb: "Housekeeping, glasbewassing en oplevering.", sector: "schoonmaak" },
   { key: "zorg", label: "Zorg", photo: "/shifts/campagne-zorg.jpg", blurb: "Ondersteuning, begeleiding en welzijn." },
   { key: "kantoor", label: "Kantoor", photo: "/shifts/campagne-kantoor.jpg", blurb: "Receptie, administratie en klantenservice." },
   { key: "bouw", label: "Bouw & techniek", photo: "/shifts/campagne-bouw.jpg", blurb: "Montage, installatie, grond- en sloopwerk." },
@@ -23,10 +27,17 @@ const BRANCHES: Branch[] = [
 
 const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
 
-function Card({ b, minRateCents, t }: { b: Branch; minRateCents: number; t: (typeof TEKST)[Voor] }) {
+/** Waar een kaart heen gaat (22 nov 2026): de branchepagina als die er is, anders de algemene ingang. */
+function kaartHref(b: Branch, voor: Voor): string {
+  const s = SECTORS.find((x) => x.key === b.sector);
+  if (!s) return TEKST[voor].kaartHref;
+  return voor === "werkers" ? `/${s.workerSlug}` : `/${s.slug}`;
+}
+
+function Card({ b, minRateCents, t, voor }: { b: Branch; minRateCents: number; t: (typeof TEKST)[Voor]; voor: Voor }) {
   return (
     <Link
-      href={t.kaartHref}
+      href={kaartHref(b, voor)}
       className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-hair bg-paper shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e3"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -63,17 +74,21 @@ function Card({ b, minRateCents, t }: { b: Branch; minRateCents: number; t: (typ
 }
 
 // Twee versies (14 nov): voor werkers op de homepagina (/), voor bedrijven op /bedrijven (alleen voor bedrijven).
+// 22 nov 2026: werkers naar /freelance-werk (met de nieuwste klussen) in plaats van /klussen, dat met de vlag
+// publiek-alleen-flexwerk op noindex staat; en onder de knop de links per stad (lib/seo-cities.ts: TOP_STEDEN).
 type Voor = "werkers" | "bedrijven";
 const TEKST = {
   werkers: {
     titel: "Werk in de branche die bij je past",
     lead: "Van magazijn tot bediening. Elke klus met foto, reistijd en een helder uurtarief — zodat je precies weet waar je aan toe bent voordat je reageert.",
     vanaf: "minimaal",
-    kaartHref: "/klussen",
+    kaartHref: "/freelance-werk",
     kaartKnop: "Bekijk klussen",
-    knopHref: "/klussen",
+    knopHref: "/freelance-werk",
     knop: "Bekijk alle klussen",
     noot: "Gratis aanmelden — je zit nergens aan vast.",
+    stedenKop: "Werk per stad",
+    stadHref: (slug: string) => `/freelance-werk/${slug}`,
   },
   bedrijven: {
     titel: "Personeel in jouw branche",
@@ -84,8 +99,13 @@ const TEKST = {
     knopHref: "/klus-plaatsen",
     knop: "Klus plaatsen",
     noot: "Samenstellen zonder account — je betaalt alleen voor gewerkte uren.",
+    stedenKop: "Personeel per stad",
+    stadHref: (slug: string) => `/personeel-inhuren/${slug}`,
   },
 } as const;
+
+/** Zoveel steden onder de branches: een korte rij, het overzicht heeft ze allemaal. */
+const STEDEN_IN_RIJ = 10;
 
 export function BranchShowcase({ minRateCents, voor = "werkers" }: { minRateCents: number; voor?: Voor }) {
   const t = TEKST[voor];
@@ -108,7 +128,7 @@ export function BranchShowcase({ minRateCents, voor = "werkers" }: { minRateCent
               delay={i * 70}
               className="w-[78%] flex-none snap-start sm:w-auto max-sm:![transform:none] max-sm:![transition-delay:0ms]"
             >
-              <Card b={b} minRateCents={minRateCents} t={t} />
+              <Card b={b} minRateCents={minRateCents} t={t} voor={voor} />
             </Reveal>
           ))}
         </div>
@@ -124,6 +144,23 @@ export function BranchShowcase({ minRateCents, voor = "werkers" }: { minRateCent
             <span className="text-sm text-neutralx-500">{t.noot}</span>
           </div>
         </Reveal>
+        <nav aria-label={t.stedenKop} className="mt-6">
+          <p className="text-sm font-semibold text-ink">{t.stedenKop}</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {topSteden(STEDEN_IN_RIJ).map((c) => (
+              <li key={c.slug}>
+                <Link href={t.stadHref(c.slug)} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href={voor === "werkers" ? "/freelance-werk" : "/personeel-inhuren"} className="inline-block px-1 py-1 text-sm font-semibold text-brand-600 hover:underline">
+                Alle steden →
+              </Link>
+            </li>
+          </ul>
+        </nav>
       </div>
     </section>
   );

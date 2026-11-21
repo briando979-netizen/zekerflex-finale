@@ -45,6 +45,7 @@
     "tests/route-exports.test.ts",
     "tests/rondgang-lijst-actueel.test.ts",
     "tests/seizoen-foto.test.ts",
+    "tests/seo-interne-links.test.ts",
     "tests/shop-categorieen.test.ts",
     "tests/sitechat-regels.test.ts",
     "tests/sitemap-dekking.test.ts",

@@ -27,7 +27,7 @@ export const VASTE_PAGINAS = {
     secties: [
       { id: "systeem", naam: "Het systeem", uitleg: "De kaarten met wat ZekerFlex voor een bedrijf regelt." },
       { id: "cijfers", naam: "Kosten in cijfers", uitleg: "De donkere band met € 3,50 per uur en € 0 opstartkosten." },
-      { id: "rekentools", naam: "Rekentools", uitleg: "De kaarten met links naar de rekentools." },
+      { id: "rekentools", naam: "Rekentools", uitleg: "De kaarten met links naar de rekentools, en daaronder personeel per branche en per stad." },
       { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden voor bedrijven." },
       { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
     ],
@@ -39,7 +39,7 @@ export const VASTE_PAGINAS = {
       { id: "kenmerken", naam: "Drie kenmerken", uitleg: "Drie korte feiten onder de kop: gratis, vijf talen, één app." },
       { id: "stappen", naam: "Zo werkt het", uitleg: "De vier stappen van aanmelden tot uitbetaling, elk met de app op een telefoon." },
       { id: "voordelen", naam: "Functies van de app", uitleg: "Wat de app voor je doet, als kaarten met een pictogram." },
-      { id: "branches", naam: "Branches", uitleg: "De branches met een foto, naar de klussen per branche, en Alle klussen." },
+      { id: "branches", naam: "Branches", uitleg: "De branches met een foto, naar de klussen per branche, en Alle klussen, met daaronder het werk per stad." },
       { id: "overtuigd", naam: "Nog niet overtuigd?", uitleg: "Een foto met tekst over vrijheid en de knoppen naar de klussen en de rekentool." },
       { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden voor freelancers." },
       { id: "slot", naam: "Slotoproep", uitleg: "De donkere band onderaan met de telefoon en de knoppen om te beginnen." },

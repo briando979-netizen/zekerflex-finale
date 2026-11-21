@@ -56,3 +56,28 @@ export const REGIO_STEDEN = ["veendam", "hoogezand", "winschoten", "stadskanaal"
 export function cityBySlug(slug: string): City | undefined {
   return CITIES.find((c) => c.slug === slug);
 }
+
+/** De steden waar in Google het meest op gezocht wordt, meeste eerst (Search Console, 28 dagen tot 22 nov 2026). Voor de
+ *  links "per stad" op de voorpagina, /voor-freelancers en /voor-bedrijven; op de site staat alleen de volgorde, geen cijfer. */
+export const TOP_STEDEN = [
+  "eindhoven",
+  "enschede",
+  "breda",
+  "rotterdam",
+  "haarlem",
+  "groningen",
+  "amsterdam",
+  "amersfoort",
+  "arnhem",
+  "tilburg",
+  "zwolle",
+  "utrecht",
+  "maastricht",
+  "leiden",
+  "apeldoorn",
+] as const;
+
+/** De eerste `aantal` steden uit TOP_STEDEN, als City. */
+export function topSteden(aantal: number = TOP_STEDEN.length): City[] {
+  return TOP_STEDEN.slice(0, aantal).flatMap((slug) => cityBySlug(slug) ?? []);
+}

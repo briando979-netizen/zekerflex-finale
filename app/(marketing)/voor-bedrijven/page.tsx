@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
+import { PerBrancheEnStad } from "@/components/marketing/PerBrancheEnStad";
 import { SceneApprove } from "@/components/marketing/Scene";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { contentKeys, getContentMap } from "@/lib/content/store";
@@ -126,6 +127,8 @@ export default async function VoorBedrijvenPage() {
             </Link>
           ))}
         </div>
+        {/* 22 nov 2026: naar personeel inhuren per branche en per stad */}
+        <PerBrancheEnStad voor="bedrijven" />
       </Section>
     ),
     faq: (

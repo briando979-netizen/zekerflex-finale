@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CITIES, cityBySlug } from "@/lib/seo-cities";
+import { CITIES, TOP_STEDEN, cityBySlug, topSteden } from "@/lib/seo-cities";
 
 // De stadspagina's (freelance-werk, personeel-inhuren en 5 sectoren × 2) komen uit deze lijst; elke stad draagt
 // één eigen, ware regel lokale tekst. De regio van de eigen vestiging (Zuidbroek, Midden-Groningen) hoort erin.
@@ -34,6 +34,12 @@ describe("seo-cities: de lijst waar de stadspagina's uit komen", () => {
       const zonderWegen = c.local.replace(/[AN][0-9]+/g, "");
       expect(zonderWegen, slug).not.toMatch(/[0-9]/);
     }
+  });
+
+  it("de steden waar het meest op gezocht wordt (voor de links per stad) hebben allemaal een eigen pagina", () => {
+    expect(new Set(TOP_STEDEN).size).toBe(TOP_STEDEN.length);
+    expect(topSteden().map((c) => c.slug)).toEqual([...TOP_STEDEN]);
+    expect(topSteden(3).map((c) => c.name)).toEqual(["Eindhoven", "Enschede", "Breda"]);
   });
 
   it("kent de regio van de eigen vestiging: Veendam, Hoogezand-Sappemeer, Winschoten, Stadskanaal en Assen", () => {

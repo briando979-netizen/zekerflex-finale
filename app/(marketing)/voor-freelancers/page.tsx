@@ -7,6 +7,7 @@ import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneWork } from "@/components/marketing/Scene";
 import { FreelanceTelefoon, type FreelanceScherm } from "@/components/marketing/FreelanceTelefoon";
+import { PerBrancheEnStad } from "@/components/marketing/PerBrancheEnStad";
 import { FOTO_MAP } from "@/lib/marketing/fotos";
 import { SECTORS } from "@/lib/seo-sectors";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
@@ -190,6 +191,8 @@ export default async function VoorFreelancersPage() {
             <span className="mt-0.5 text-xs text-white/85">Bekijk wat er nu open staat →</span>
           </Link>
         </div>
+        {/* 22 nov 2026: ook per stad (de branches staan er al als foto's hierboven) */}
+        <PerBrancheEnStad voor="werkers" branches={false} />
       </Section>
     ),
     overtuigd: (
