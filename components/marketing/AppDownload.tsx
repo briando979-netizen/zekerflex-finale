@@ -188,10 +188,15 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
                 .
               </p>
             )}
+            {/* de knoppen rechtsboven sturen werkers hierheen (KOP_KNOPPEN): hier dus ook inloggen en een account aanmaken */}
             <p className="mt-4 text-xs text-white/65">
-              Ook zonder installeren werkt alles gewoon in je browser via{" "}
+              Ook zonder installeren werkt alles gewoon in je browser:{" "}
               <Link href="/login" className="underline hover:text-white/80">
                 inloggen
+              </Link>{" "}
+              of{" "}
+              <Link href="/register" className="underline hover:text-white/80">
+                een account aanmaken
               </Link>
               .
             </p>

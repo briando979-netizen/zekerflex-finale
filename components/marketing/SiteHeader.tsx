@@ -7,10 +7,10 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { MobileMenu } from "@/components/marketing/MobileMenu";
 import {
   ALLES_ONLINE,
+  KOP_KNOPPEN,
   VOORBEELDSITES,
   eigenLinks,
   isExternal,
-  startHref,
   zichtbareAanbodKolommen,
   zichtbareNav,
   type Audience,
@@ -98,6 +98,8 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
       : pathname.startsWith("/voor-freelancers") || pathname === "/"
         ? "werknemers"
         : stored ?? "werknemers";
+
+  const knoppen = KOP_KNOPPEN[audience];
 
   const pick = useCallback((a: Audience) => {
     setStored(a);
@@ -235,29 +237,30 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           </Link>
         </div>
 
+        {/* per kant (KOP_KNOPPEN): werkers naar de app, bedrijven inloggen of aanmelden — zoals YoungOnes */}
         <div className="ml-auto hidden items-center gap-2 lg:ml-0 lg:flex xl:gap-3">
           <Link
-            href="/login"
+            href={knoppen.eerste.href}
             className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-[13px] font-bold text-ink transition hover:bg-white/90 xl:px-4 xl:text-sm"
           >
-            Inloggen
+            {knoppen.eerste.label}
           </Link>
           <Link
-            href={startHref(audience)}
+            href={knoppen.tweede.href}
             className="whitespace-nowrap rounded-full bg-brand-mint px-3 py-2 text-[13px] font-bold text-ink transition hover:brightness-105 xl:px-4 xl:text-sm"
           >
-            Start vandaag
+            {knoppen.tweede.label}
           </Link>
         </div>
 
-        {/* telefoon/tablet: inloggen altijd binnen handbereik, naast de menuknop */}
+        {/* telefoon/tablet: de belangrijkste knop altijd binnen handbereik, naast de menuknop */}
         <div className="ml-auto flex items-center gap-2 lg:hidden">
           {!open && (
             <Link
-              href="/login"
+              href={knoppen.mobiel.href}
               className="whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-sm font-bold text-ink transition hover:bg-white/90 max-[359px]:hidden"
             >
-              Inloggen
+              {knoppen.mobiel.label}
             </Link>
           )}
           <button

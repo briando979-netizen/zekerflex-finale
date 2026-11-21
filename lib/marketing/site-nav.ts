@@ -35,6 +35,29 @@ export interface NavEntry {
 export const CTA_WN = { label: "Account aanmaken", href: "/register" };
 export const CTA_BV = { label: "Organisatie aanmelden", href: "/register?type=bedrijf" };
 
+export interface KopKnop {
+  label: string;
+  href: string;
+}
+
+/**
+ * De twee knoppen rechtsboven in de kopbalk, per kant (21 nov 2026, eigenaar: "bij YoungOnes staat pas bij bedrijven inloggen
+ * en start vandaag, bij werknemers leidt het naar de app"). Werkers gaan naar de app (/app: installeren, en daar ook inloggen of
+ * een account aanmaken in de browser); bedrijven loggen in of melden zich aan. `mobiel` is de korte knop naast de menuknop.
+ */
+export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; mobiel: KopKnop }> = {
+  werknemers: {
+    eerste: { label: "Ga naar de app", href: "/app" },
+    tweede: { label: "Start vandaag", href: "/app" },
+    mobiel: { label: "Naar de app", href: "/app" },
+  },
+  bedrijven: {
+    eerste: { label: "Inloggen", href: "/login" },
+    tweede: { label: "Start vandaag", href: CTA_BV.href },
+    mobiel: { label: "Inloggen", href: "/login" },
+  },
+};
+
 const OVER_ITEMS: MenuItem[] = [
   { title: "Ons verhaal", desc: "Waarom ZekerFlex bestaat en wat we anders doen.", href: "/over-ons#verhaal" },
   { title: "Drie uitgangspunten", desc: "Onafhankelijk, zeker en transparant.", href: "/over-ons#uitgangspunten" },

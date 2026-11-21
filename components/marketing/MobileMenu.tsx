@@ -9,7 +9,7 @@ import {
   VOORBEELDSITES,
   eigenLinks,
   isExternal,
-  startHref,
+  KOP_KNOPPEN,
   zichtbareAanbodKolommen,
   type Audience,
   type MenuItem,
@@ -249,11 +249,12 @@ export function MobileMenu({
       {/* altijd in beeld, ook met de duimen onderaan het scherm */}
       <div className="border-t border-white/10 bg-black/25 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <div className="shell grid grid-cols-2 gap-2.5">
-          <Link href="/login" className="rounded-full bg-white px-4 py-3 text-center text-sm font-bold text-ink transition hover:bg-white/90">
-            Inloggen
+          {/* per kant (KOP_KNOPPEN): werkers naar de app, bedrijven inloggen of aanmelden */}
+          <Link href={KOP_KNOPPEN[doel].eerste.href} className="rounded-full bg-white px-4 py-3 text-center text-sm font-bold text-ink transition hover:bg-white/90">
+            {KOP_KNOPPEN[doel].eerste.label}
           </Link>
-          <Link href={startHref(doel)} className="rounded-full bg-brand-mint px-4 py-3 text-center text-sm font-bold text-ink transition hover:brightness-105">
-            Start vandaag
+          <Link href={KOP_KNOPPEN[doel].tweede.href} className="rounded-full bg-brand-mint px-4 py-3 text-center text-sm font-bold text-ink transition hover:brightness-105">
+            {KOP_KNOPPEN[doel].tweede.label}
           </Link>
         </div>
       </div>
