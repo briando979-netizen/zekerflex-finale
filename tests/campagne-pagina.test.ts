@@ -93,11 +93,10 @@ describe("de schuivende strook op de voorpagina", () => {
     expect(WERK_STROOK.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("beweegt met alleen CSS, staat stil bij 'minder beweging', en de herhaling is verborgen voor schermlezers en het toetsenbord", () => {
+  it("staat sinds 21 nov niet meer op de voorpagina (eigenaar: weg), en de marquee staat stil bij 'minder beweging' waar hij nog wordt gebruikt", () => {
     const home = lees("app/(marketing)/page.tsx");
-    expect(home).toContain('className="marquee gap-3 pr-3"');
-    expect(home).toContain("aria-hidden={ronde > 0 ? true : undefined}");
-    expect(home).toContain("tabIndex={ronde > 0 ? -1 : undefined}");
+    expect(home).not.toContain('className="marquee gap-3 pr-3"');
+    expect(home).not.toContain("WERK_STROOK");
     expect(lees("app/globals.css")).toContain("@media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }");
   });
 });

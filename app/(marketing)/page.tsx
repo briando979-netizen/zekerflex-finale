@@ -10,7 +10,6 @@ import { FaqList } from "@/components/marketing/primitives";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
-import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 import { KopClip } from "@/components/marketing/KopClip";
 import { VoorWieKaarten } from "@/components/marketing/VoorWieKaarten";
 import {
@@ -21,12 +20,10 @@ import {
   WERK_HERO,
   WERK_SLOT,
   WERK_STAPPEN,
-  WERK_STROOK,
   WERK_VOORDELEN,
   werkFaqJsonLd,
   type WerkIcoon,
 } from "@/lib/marketing/werk-home";
-import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 // ---------------------------------------------------------------------------
@@ -49,7 +46,6 @@ export default async function WerkHomePage() {
   // vlag `publiek-alleen-flexwerk`: de voorpagina blijft, maar de knop "Bekijk klussen" en de "Bezorgen"-chip (→ /klussen,
   // nu verborgen) vallen weg; de bezoeker gaat via "Maak gratis je profiel" naar het aanmelden.
   const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
-  const strook = alleenFlexwerk ? WERK_STROOK.filter((s) => !isNietFlexwerkPad(s.href)) : WERK_STROOK;
   return (
     <>
       <script
@@ -79,13 +75,8 @@ export default async function WerkHomePage() {
         </div>
         <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
           <div className="max-w-xl md:max-w-sm lg:max-w-xl">
-            <Link
-              href={BEDRIJVEN_HOME}
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur transition hover:bg-white/15"
-            >
-              {WERK_HERO.wissel.vraag} <span className="text-brand-mint">{WERK_HERO.wissel.knop} →</span>
-            </Link>
-            <p className="eyebrow mt-5 text-brand-mint">{WERK_HERO.eyebrow}</p>
+            {/* de pil "Ben je een bedrijf? Ik zoek personeel" staat hier niet meer (21 nov, eigenaar); de schakelaar in de kopbalk doet dat */}
+            <p className="eyebrow text-brand-mint">{WERK_HERO.eyebrow}</p>
             <h1 className="fluid-hero mt-3 text-balance font-display font-bold">
               {WERK_HERO.kop}{" "}
               <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">{WERK_HERO.kopAccent}</span>
@@ -113,26 +104,7 @@ export default async function WerkHomePage() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────── schuivende strook: de soorten werk (alleen CSS; staat stil bij "minder beweging") */}
-      <nav aria-label="Soorten werk" className="overflow-hidden border-y border-white/10 bg-[#0C0E12] py-3">
-        <ul className="marquee gap-3 pr-3">
-          {[0, 1, 2, 3].map((ronde) =>
-            strook.map((s) => (
-              <li key={`${ronde}-${s.naam}`} aria-hidden={ronde > 0 ? true : undefined}>
-                <Link
-                  href={s.href}
-                  tabIndex={ronde > 0 ? -1 : undefined}
-                  className="inline-block whitespace-nowrap rounded-full border border-white/15 px-4 py-1.5 font-display text-sm font-semibold text-white/85 transition hover:border-brand-mint hover:text-brand-mint"
-                >
-                  {s.naam}
-                </Link>
-              </li>
-            )),
-          )}
-        </ul>
-      </nav>
-
-      <PaginaVideoBlok id="home" />
+      {/* de schuivende strook met soorten werk en de uitlegvideo staan hier niet meer (21 nov, eigenaar: "haal dit allemaal weg") */}
 
       {/* ───────────────────────────────────────────────── branches (met het minimumuurloon) */}
       <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />

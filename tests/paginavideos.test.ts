@@ -29,8 +29,8 @@ describe("paginavideo's", () => {
   });
 
   it("elke pagina die een video wil tonen, kent hem", () => {
+    // de voorpagina toont sinds 21 nov geen uitlegvideo meer (eigenaar: "haal de uitlegvideo's weg")
     const paginas: [string, string][] = [
-      ["app/(marketing)/page.tsx", "home"],
       ["app/(marketing)/voor-bedrijven/page.tsx", "voor-bedrijven"],
       ["app/(marketing)/voor-freelancers/page.tsx", "voor-freelancers"],
       ["app/(marketing)/uitzendbureau/page.tsx", "uitzendbureau"],

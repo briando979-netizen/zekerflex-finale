@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { HOME_SECTIES, MAX_EIGEN_BLOKKEN, eigenSleutel, isSectie, isStandaardHomeIndeling, normalizeHomeIndeling, standaardHomeIndeling, zichtbareSecties } from "@/lib/ontwerp/home";
+import { HOME_SECTIES, MAX_EIGEN_BLOKKEN, STANDAARD_VERBORGEN, eigenSleutel, isSectie, isStandaardHomeIndeling, normalizeHomeIndeling, standaardHomeIndeling, zichtbareSecties } from "@/lib/ontwerp/home";
 import { leegBlok } from "@/lib/ontwerp/paginas";
 
 const ALLE = HOME_SECTIES.map((s) => s.id);
 
 describe("homepage-indeling uit de Site-ontwerper", () => {
-  it("zonder eigen indeling precies de standaardvolgorde", () => {
-    expect(zichtbareSecties(null)).toEqual(ALLE);
-    expect(zichtbareSecties(undefined)).toEqual(ALLE);
-    expect(zichtbareSecties(standaardHomeIndeling())).toEqual(ALLE);
+  it("zonder eigen indeling precies de standaardvolgorde, zonder de drie blokken die sinds 21 nov standaard verborgen zijn", () => {
+    // 21 nov 2026 (eigenaar: "haal dit allemaal weg"): vertrouwensbalk, "Waar ben je naar op zoek?" en de functiekaarten
+    const ZICHTBAAR = ALLE.filter((id) => !STANDAARD_VERBORGEN.includes(id));
+    expect(STANDAARD_VERBORGEN).toEqual(["vertrouwen", "aanbod", "functies"]);
+    expect(zichtbareSecties(null)).toEqual(ZICHTBAAR);
+    expect(zichtbareSecties(undefined)).toEqual(ZICHTBAAR);
+    expect(zichtbareSecties(standaardHomeIndeling())).toEqual(ZICHTBAAR);
     expect(isStandaardHomeIndeling(standaardHomeIndeling())).toBe(true);
     // de volgorde van vóór de ontwerper, met sinds 11 nov de voordeur "Wat wil je doen?" vooraan, en sinds 14 nov
     // zonder de blokken voor werkers (freelancers, werkvormen, app): /bedrijven is alleen voor bedrijven

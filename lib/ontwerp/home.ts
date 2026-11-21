@@ -42,8 +42,14 @@ const IDS = HOME_SECTIES.map((s) => s.id) as HomeSectie[];
 export const isSectie = (v: unknown): v is HomeSectie => typeof v === "string" && (IDS as string[]).includes(v);
 export const eigenSleutel = (b: Blok): HomeItem => `blok:${b.id}`;
 
+/**
+ * Standaard verborgen (21 nov 2026, eigenaar: "haal dit allemaal weg"): de vertrouwensbalk met de lopende band, het blok
+ * "Waar ben je naar op zoek?" (het brede aanbod) en de zes functiekaarten. Ze blijven in de Site-ontwerper aan te zetten.
+ */
+export const STANDAARD_VERBORGEN: readonly HomeSectie[] = ["vertrouwen", "aanbod", "functies"];
+
 export function standaardHomeIndeling(): HomeIndeling {
-  return { volgorde: [...IDS], verborgen: [], eigen: [] };
+  return { volgorde: [...IDS], verborgen: [...STANDAARD_VERBORGEN], eigen: [] };
 }
 
 /**
@@ -63,7 +69,8 @@ export function normalizeHomeIndeling(raw: unknown): HomeIndeling {
   for (const v of Array.isArray(r.volgorde) ? r.volgorde : []) if (typeof v === "string" && bekend.has(v) && !volgorde.includes(v as HomeItem)) volgorde.push(v as HomeItem);
   // een nieuw vast blok komt achteraan, behalve de voordeur: die hoort bovenaan ook bij een eigen volgorde
   for (const id of [...IDS, ...eigen.map(eigenSleutel)]) if (!volgorde.includes(id)) (id === "voordeur" ? volgorde.unshift(id) : volgorde.push(id));
-  const ruwVerborgen = Array.isArray(r.verborgen) ? r.verborgen : [];
+  // zonder eigen lijst "verborgen" gelden de standaard verborgen blokken; een eigen (ook lege) lijst wint
+  const ruwVerborgen: unknown[] = Array.isArray(r.verborgen) ? r.verborgen : [...STANDAARD_VERBORGEN];
   const verborgen = volgorde.filter((id) => ruwVerborgen.includes(id));
   return { volgorde, verborgen, eigen };
 }
@@ -74,7 +81,7 @@ export function isStandaardHomeIndeling(i: HomeIndeling): boolean {
 
 /** De blokken die de homepage toont, in volgorde. Zonder eigen indeling precies de standaard. */
 export function zichtbareSecties(indeling: HomeIndeling | null | undefined): HomeItem[] {
-  if (!indeling) return [...IDS];
+  if (!indeling) return IDS.filter((id) => !STANDAARD_VERBORGEN.includes(id));
   const n = normalizeHomeIndeling(indeling);
   return n.volgorde.filter((id) => !n.verborgen.includes(id));
 }
