@@ -57,9 +57,8 @@ describe("de titel bovenaan volgt het scherm", () => {
 });
 
 describe("één kopstijl in de werker-app", () => {
-  // Ontdekken heeft sinds 21 nov (stijl YoungOnes) geen eigen kop meer: de balk bovenaan zegt al "Vind jouw klus"
+  // Ontdekken en Mijn klussen hebben sinds 21 nov (stijl YoungOnes) geen eigen kop meer: de naam staat in de balk bovenaan
   const SCHERMEN = [
-    "app/dashboard/diensten/page.tsx",
     "app/dashboard/account/page.tsx",
     "app/dashboard/account/beveiliging/page.tsx",
     "app/dashboard/account/passkeys/page.tsx",

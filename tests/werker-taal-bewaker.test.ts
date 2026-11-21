@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 const BASISLIJN: Record<string, { max: number; reden: string }> = {
   "app/dashboard/klussen/[shiftId]/page.tsx": { max: 1, reden: "omschrijving van het agenda-item (.ics): een agenda-item volgt niet de app-taal" },
   "components/app/AvatarUpload.tsx": { max: 1, reden: "de Nederlandse standaard van de texts-prop; de werker-app geeft zijn eigen taal mee" },
-  "components/app/ColorLegend.tsx": { max: 1, reden: "de Nederlandse kolom van de eigen vijftalige tabel" },
+  // ColorLegend.tsx: sinds 21 nov 2026 niet meer in de werker-app (Mijn klussen volgt de opzet van YoungOnes, zonder legenda)
   "components/kaart/VolgKaart.tsx": { max: 1, reden: "de Nederlandse standaard van de teksten-prop (de klantpagina blijft Nederlands)" },
   // ErasureScopeInfo.tsx: weg sinds 15 nov 2026, de Nederlandse standaard staat nu in components/privacy/erasure-texts.ts
 };
