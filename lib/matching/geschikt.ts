@@ -21,11 +21,15 @@ import { zzpGeschikt } from "@/lib/matching/onderneming";
  *
  * Dus: een gewone klus kan naar een zzp'er met een geldige inschrijving of naar
  * een uitzendkracht; een klus via het uitzendbureau alleen naar een uitzendkracht.
+ * Een klus van een uitzendpartner (lib/uitzend/partners-kern.ts) mag naar iedereen: het bureau is daar de werkgever
+ * en sluit zelf het contract, dus KVK of een ZekerFlex-uitzendovereenkomst doet er niet toe.
  */
 export async function isMatchEligibleWorker(
   profile: { userId: string; vatValid: boolean; kvkValid: boolean; country: string },
   viaUitzendbureau: boolean,
+  uitzendPartner = false,
 ): Promise<boolean> {
+  if (uitzendPartner) return true;
   const zzpEligible = zzpGeschikt(profile);
   if (zzpEligible && !viaUitzendbureau) return true;
   const fiscal = await getFiscal(profile.userId);

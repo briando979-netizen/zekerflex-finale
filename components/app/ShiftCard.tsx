@@ -24,7 +24,7 @@ function whenParts(start: Date, end: Date, t: FreelancerDict): [string, string] 
   return [day, `${amsterdamClock(start)}–${amsterdamClock(end)}`];
 }
 
-export type KlusChipTone = "teal" | "neutral" | "red" | "salmon" | "amber" | "blue";
+export type KlusChipTone = "teal" | "neutral" | "red" | "salmon" | "amber" | "blue" | "violet";
 
 // Vaste kleuren, in licht en donker gelijk (de chips van YoungOnes: lichte vulling, donkere tekst, gekleurde rand).
 const CHIP: Record<KlusChipTone, string> = {
@@ -34,6 +34,8 @@ const CHIP: Record<KlusChipTone, string> = {
   salmon: "border-[#F28C6A] bg-[#FDE4DB] text-[#0B1238]",
   amber: "border-[#F5C451] bg-[#FDF3D7] text-[#0B1238]",
   blue: "border-[#60A5FA] bg-[#DBEAFE] text-[#0B1238]",
+  // uitzenden: lila, zoals de chip "Uitzenden" bij YoungOnes en de kolom in het vergelijkblok op Ontdekken (21 nov)
+  violet: "border-[#A78BFA] bg-[#EDE9FE] text-[#0B1238]",
 };
 
 /** Een chip in de voet van de kluskaart (ook op Uren invullen voor de status van het urenbriefje). */
@@ -147,7 +149,8 @@ export function ShiftCard({
 
         {/* extra informatie staat alleen bij de klus zelf, niet op de kaart (10 nov, eigenaar) */}
 
-        {shift.match?.belowDesiredRate && (
+        {/* niet bij uitzenden: daar geldt een vast uurloon, geen eigen tarief (21 nov) */}
+        {shift.match?.belowDesiredRate && !shift.viaUitzendbureau && !shift.uitzendPartner && (
           <p className="mt-2 text-[11px] font-medium text-warn">{c.belowRate}</p>
         )}
         {shift.alert && <p className="mt-1 truncate text-[11px] font-semibold text-brand-700">🔔 {shift.alert}</p>}
@@ -159,7 +162,7 @@ export function ShiftCard({
             {/* testklus van ons eigen testbedrijf: geen echt werk (lib/shifts/testklus.ts) */}
             {shift.testklus && <KlusChip title={c.testklusUitleg}>{c.testklus}</KlusChip>}
             {special && <KlusChip tone="red">{c.specialForYou}</KlusChip>}
-            {shift.viaUitzendbureau ? <KlusChip tone="amber">{c.viaAgency}</KlusChip> : <KlusChip tone="teal">{c.freelance}</KlusChip>}
+            {shift.viaUitzendbureau || shift.uitzendPartner ? <KlusChip tone="violet">{t.market.uitzendLabel}</KlusChip> : <KlusChip tone="teal">{c.freelance}</KlusChip>}
             {shift.isReplacement && <KlusChip tone="salmon">{c.invalklus}</KlusChip>}
             {shift.series && shift.series.total > 1 && <KlusChip>{c.plusDays(shift.series.total)}</KlusChip>}
             {idReminder && <KlusChip>{c.bringId}</KlusChip>}

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { EigenTestSchakelaar } from "@/components/admin/EigenTestSchakelaar";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { UitzendPartnerSchakelaar } from "@/components/admin/UitzendPartnerSchakelaar";
+import { leesUitzendPartners } from "@/lib/uitzend/partners";
 import { prisma } from "@/lib/prisma";
 import { companyActivity } from "@/lib/admin/insights/detail";
 import { count, dateNl, dateTimeNl, euro, euroExact, percentOf } from "@/lib/admin/format";
@@ -77,6 +79,8 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
   const blocked = tenant.memberships.length > 0 && tenant.memberships.every((m) => m.user.disabledAt);
   // "eigen test (telt niet mee)": een bedrijf van de eigenaar zelf, zonder het te hernoemen (lib/admin/eigen-test-kern.ts)
   const eigenTest = await leesEigenTest();
+  // uitzendpartner: het bureau is de werkgever bij zijn eigen klussen (lib/uitzend/partners-kern.ts)
+  const uitzendPartners = await leesUitzendPartners();
 
   const invoiceRows: TableRow[] = activity.invoices.map((inv) => ({
     id: inv.id,
@@ -138,6 +142,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
               </Pill>
             </div>
             <EigenTestSchakelaar soort="tenant" id={tenant.id} sinds={eigenTest.tenants[tenant.id] ?? null} />
+            <UitzendPartnerSchakelaar id={tenant.id} sinds={Object.hasOwn(uitzendPartners, tenant.id) ? (uitzendPartners[tenant.id] ?? null) : null} />
           </div>
         </div>
         {hqAdmin && <CompanyActions tenantId={tenant.id} contactUserId={hqAdmin.id} blocked={blocked} verifiedVia={verification.via} />}

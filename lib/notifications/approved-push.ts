@@ -11,7 +11,7 @@ const euro = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ","
 export interface ApprovedSummary {
   timesheetId: string;
   billableMinutes: number;
-  track: "invoice" | "payroll";
+  track: "invoice" | "payroll" | "partner";
   payout: { amountCents: number } | null;
   payroll: { weekLabel: string } | null;
   advance: { netCents: number } | null;
@@ -22,7 +22,10 @@ export function approvedPushText(r: ApprovedSummary, shiftTitle: string, t: Work
   const hours = (Math.round((r.billableMinutes / 60) * 100) / 100).toString().replace(".", ",");
   const week = r.payroll?.weekLabel ?? "";
   const next =
-    r.track === "payroll"
+    // klus van een uitzendpartner: het bureau betaalt het loon, ZekerFlex belooft hier geen uitbetaling
+    r.track === "partner"
+      ? t.approvedPartner
+      : r.track === "payroll"
       ? r.advance && r.advance.netCents > 0
         ? t.approvedAdvance(euro(r.advance.netCents), week)
         : t.approvedPayroll(week)
@@ -41,7 +44,11 @@ export async function pushHoursApproved(r: ApprovedSummary): Promise<void> {
   const shiftTitle = ts.assignment?.shift.title ?? "ZekerFlex";
   await sendLocalizedPush([ts.freelancer.userId], (t) => ({
     ...approvedPushText(r, shiftTitle, t),
-    data: { type: "SHIFT", url: r.track === "payroll" ? "/dashboard/verloning" : "/dashboard/uitbetalingen", tag: `goedgekeurd-${r.timesheetId}` },
+    data: {
+      type: "SHIFT",
+      url: r.track === "payroll" ? "/dashboard/verloning" : r.track === "partner" ? "/dashboard/diensten" : "/dashboard/uitbetalingen",
+      tag: `goedgekeurd-${r.timesheetId}`,
+    },
     ttlSeconds: 3 * 86_400,
   }));
 }

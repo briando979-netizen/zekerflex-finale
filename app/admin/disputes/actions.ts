@@ -69,7 +69,9 @@ export async function resolveDisputeAction(
         overrideGpsCheck: true,
       });
       extra =
-        approval.track === "payroll"
+        approval.track === "partner"
+          ? ` Timesheet ${approval.status.toLowerCase()}, het uitzendbureau betaalt het loon (alleen platformkosten).`
+          : approval.track === "payroll"
           ? ` Timesheet ${approval.status.toLowerCase()}, verloning via payroll (week ${approval.payroll?.weekLabel ?? "?"}).`
           : ` Timesheet ${approval.status.toLowerCase()}, uitbetaling ${approval.payout?.status.toLowerCase() ?? "-"}.`;
     }

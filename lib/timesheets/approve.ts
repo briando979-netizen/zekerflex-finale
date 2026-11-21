@@ -13,7 +13,8 @@ import { recordAudit } from "@/lib/audit";
 import { recordPayout, recordTimesheetApproved } from "@/lib/metrics";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
 import { nextInvoiceNumber } from "@/lib/billing/numbering";
-import { buildReverseBillingInvoices, buildUitzendInvoice } from "@/lib/billing/self-billing";
+import { buildPlatformFeeInvoice, buildReverseBillingInvoices, buildUitzendInvoice } from "@/lib/billing/self-billing";
+import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 import { applyPendingTenantCredits } from "@/lib/billing/credits";
 import {
   isValidIban,
@@ -69,8 +70,10 @@ export interface ApproveTimesheetResult {
    * payout. "payroll" = uitzendkracht: one UITZEND_FEE invoice to the client
    * (gross wage + uitzendopslag); the worker's own pay flows into the weekly
    * payroll run and lands on a loonstrook, not an invoice.
+   * "partner" = klus van een uitzendpartner (lib/uitzend/partners-kern.ts): het bureau is de werkgever en betaalt het loon;
+   * ZekerFlex stuurt het bureau alleen de PLATFORM_FEE-factuur, zonder uitbetaling en zonder loonstrook.
    */
-  track: "invoice" | "payroll";
+  track: "invoice" | "payroll" | "partner";
   invoices: {
     id: string;
     number: string;
@@ -248,6 +251,13 @@ async function approveTimesheetInner(
       throw AppError.precondition(
         `Handmatige controle nodig: ${blockingFraud.map((f) => f.message).join(" ")}`,
       );
+    }
+
+    // --- Uitzendpartner: het bureau is werkgever en betaalt het loon; ZekerFlex rekent alleen de platformkosten ---
+    // Vóór de keuze op de werker: ook een uitzendkracht of zzp'er die bij een partner werkte, krijgt van ZekerFlex geen
+    // uitbetaling, geen factuur op zijn naam en geen loonstrook (lib/payroll/engine.ts slaat deze briefjes ook over).
+    if (await isUitzendPartnerTenant(ts.branch.tenantId)) {
+      return approveViaPartner({ ts, principal, billableMinutes, input, log });
     }
 
     // --- Fork: uitzendkracht → payroll, everyone else → invoice + payout ---
@@ -537,6 +547,133 @@ async function approveTimesheetInner(
   } finally {
     await unlock();
   }
+}
+
+/**
+ * Klus van een uitzendpartner (lib/uitzend/partners-kern.ts): het bureau is de werkgever en regelt het loon zelf. Het
+ * urenbriefje wordt goedgekeurd en het bureau krijgt alleen de PLATFORM_FEE-factuur (met dezelfde staffel, gratis
+ * bedrijven, introductie- en partnerdeal-vrijstelling als het factuurspoor). Geen IBAN-controle, geen factuur op naam
+ * van de werker, geen uitbetaling, geen voorschot.
+ */
+async function approveViaPartner(args: {
+  ts: {
+    id: string;
+    branchId: string;
+    scheduledStart: Date;
+    branch: { name: string; tenantId: string; tenant: { name: string; country: string; vatNumber: string | null } };
+    freelancerId: string;
+    freelancer: { userId: string; user: { fullName: string } };
+    dispute: { id: string; status: string } | null;
+  };
+  principal: Principal;
+  billableMinutes: number;
+  input: ApproveTimesheetInput;
+  log: ReturnType<typeof logger.child>;
+}): Promise<ApproveTimesheetResult> {
+  const { ts, principal, billableMinutes, input, log } = args;
+
+  const platformTenant = await prisma.tenant.findFirst({ where: { type: "PLATFORM" }, select: { id: true } });
+  if (!platformTenant) throw AppError.precondition("De platformorganisatie is niet ingesteld.");
+
+  // dezelfde fee-regels als het factuurspoor
+  const monthHours = await monthHoursFor(ts.branch.tenantId);
+  const freeFee = await isCompTenant(ts.branch.tenantId);
+  const introductieVrij = !freeFee && (await introductieZonderFee(ts.branch.tenantId, ts.scheduledStart));
+  const partnerdealVrij = !freeFee && !introductieVrij && (await partnerdealZonderFee(ts.branch.tenantId, ts.scheduledStart));
+
+  const { feeInvoice, computed } = await prisma.$transaction(async (tx) => {
+    await tx.timesheet.update({
+      where: { id: ts.id },
+      data: { status: TimesheetStatus.APPROVED, approvedAt: new Date(), approvedById: principal.userId, billableMinutes },
+    });
+    if (ts.dispute && ts.dispute.status !== "RESOLVED_APPROVED" && ts.dispute.status !== "RESOLVED_OVERRULED") {
+      await tx.dispute.update({
+        where: { id: ts.dispute.id },
+        data: {
+          status: input.correctedBillableMinutes === undefined ? "RESOLVED_APPROVED" : "RESOLVED_OVERRULED",
+          resolvedMinutes: billableMinutes,
+          resolvedById: principal.userId,
+          resolvedAt: new Date(),
+          resolutionNote: input.correctionNote ?? "Resolved during timesheet approval",
+        },
+      });
+    }
+    const computed = buildPlatformFeeInvoice({
+      timesheetId: ts.id,
+      billableMinutes,
+      recipientTenantId: ts.branch.tenantId,
+      recipientCountry: ts.branch.tenant.country,
+      recipientVatValidForReverseCharge: Boolean(ts.branch.tenant.vatNumber),
+      platformTenantId: platformTenant.id,
+      shiftTitle: `Shift @ ${ts.branch.name}`,
+      invoiceNumber: await nextInvoiceNumber(tx, "PLATFORM_FEE"),
+      platformFeePerHourCents: freeFee || introductieVrij || partnerdealVrij ? 0 : feePerHourFor(monthHours),
+      volumeTierName: tierFor(monthHours).tier.name,
+      ...(introductieVrij ? { platformFeeReden: INTRODUCTIE_FEE_REDEN } : {}),
+      ...(partnerdealVrij ? { platformFeeReden: PARTNERDEAL_FEE_REDEN } : {}),
+    });
+    const feeInvoice = await persistInvoice(tx, computed, { paid: computed.totalCents === 0 });
+    await applyPendingTenantCredits(tx, ts.branch.tenantId, feeInvoice.id, computed.totalCents);
+    return { feeInvoice, computed };
+  });
+
+  log.info("timesheet approved (uitzendpartner)", { billableMinutes, feeInvoice: feeInvoice.number });
+
+  await recordAudit({
+    category: "TIMESHEET",
+    action: "timesheet.approved",
+    actorUserId: principal.userId,
+    actorLabel: "user",
+    severity: input.overrideGpsCheck ? "warning" : "info",
+    summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - uitzendpartner ${ts.branch.tenant.name} betaalt het loon`,
+    targetType: "timesheet",
+    targetId: ts.id,
+    metadata: {
+      track: "partner",
+      billableMinutes,
+      correctedBillableMinutes: input.correctedBillableMinutes ?? null,
+      overrodeGpsCheck: Boolean(input.overrideGpsCheck),
+      freelancerId: ts.freelancerId,
+      platformFeeInvoice: feeInvoice.number,
+      resolvedDisputeId: ts.dispute?.id ?? null,
+    },
+  });
+
+  recordTimesheetApproved("partner");
+
+  void dispatchWebhook("timesheet.approved", ts.branch.tenantId, { timesheetId: ts.id, billableMinutes, track: "partner" }).catch((err) =>
+    logger.warn("webhook-aflevering mislukt", { event: "timesheet.approved", tenantId: ts.branch.tenantId, error: (err as Error).message }),
+  );
+  void dispatchWebhook("invoice.issued", ts.branch.tenantId, {
+    invoiceId: feeInvoice.id,
+    number: feeInvoice.number,
+    type: "PLATFORM_FEE",
+    totalCents: computed.totalCents,
+  }).catch((err) => logger.warn("webhook-aflevering mislukt", { event: "invoice.issued", tenantId: ts.branch.tenantId, error: (err as Error).message }));
+
+  if (computed.totalCents > 0) {
+    await notifyInvoiceIssued({
+      tenantId: ts.branch.tenantId,
+      orgName: ts.branch.tenant.name,
+      invoiceNumber: feeInvoice.number,
+      totalCents: computed.totalCents,
+      description: `platformkosten, shift @ ${ts.branch.name}`,
+      log,
+    });
+    void efactuurNaUitgifte(feeInvoice.id, ts.branch.tenantId);
+  }
+
+  return {
+    timesheetId: ts.id,
+    status: TimesheetStatus.APPROVED,
+    billableMinutes,
+    track: "partner",
+    invoices: [{ id: feeInvoice.id, number: feeInvoice.number, type: "PLATFORM_FEE", totalCents: computed.totalCents, vatCents: computed.vatCents }],
+    payout: null,
+    payroll: null,
+    advance: null,
+    dba: null,
+  };
 }
 
 /**

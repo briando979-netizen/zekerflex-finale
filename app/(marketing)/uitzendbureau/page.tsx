@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { canonical } from "@/lib/seo";
 import { Fragment, type ReactNode } from "react";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
@@ -357,6 +358,14 @@ export default async function UitzendbureauPage() {
               Via het ZekerFlex-uitzendbureau huur je uitzendkrachten in zonder gedoe met loonadministratie:
               ZekerFlex is de formele werkgever, jij regelt alleen de bezetting. Vul het formulier in en we nemen
               contact op om de mogelijkheden te bespreken.
+            </p>
+            {/* 21 nov 2026: uitzendbureaus zelf kunnen hun klussen op ZekerFlex zetten en werkgever blijven */}
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-soft">
+              Ben je zelf een uitzendbureau?{" "}
+              <Link href="/uitzendpartner" className="font-semibold text-brand-600 underline">
+                Zet je uitzendklussen op ZekerFlex
+              </Link>
+              .
             </p>
           </div>
           <UitzendbureauContactForm />

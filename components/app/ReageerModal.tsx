@@ -40,6 +40,7 @@ export function ReageerButton({
   full = false,
   fixedRate = false,
   blokkade = null,
+  toestemming,
 }: {
   shiftId: string;
   listedRateCents: number;
@@ -58,6 +59,8 @@ export function ReageerButton({
   fixedRate?: boolean;
   /** de reden van de server waarom de werker nog niet mag reageren: dan opent de knop een uitleg-sheet */
   blokkade?: { reden: string; stap: ReageerStap } | null;
+  /** klus van een uitzendpartner: welke gegevens met het bureau gedeeld worden als de werker op de knop tikt (YoungOnes-stijl) */
+  toestemming?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ft = useFT();
@@ -76,6 +79,7 @@ export function ReageerButton({
         {notReadyReason && !blokkade && (
           <span className="max-w-[240px] text-right text-[11px] leading-snug text-neutralx-400">{notReadyReason}</span>
         )}
+        {toestemming && <span className="text-center text-[11px] leading-snug text-neutralx-500">{toestemming}</span>}
       </div>
       {open && blokkade && <ReageerBlokSheet reden={blokkade.reden} stap={blokkade.stap} onClose={() => setOpen(false)} />}
       {open && !blokkade && (

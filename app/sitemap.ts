@@ -64,6 +64,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/bedrijven", 0.9, "weekly"),
     entry("/voor-freelancers", 0.9, "monthly"),
     entry("/uitzendbureau", 0.9, "weekly"),
+    // voor uitzendbureaus die hun klussen op ZekerFlex zetten (21 nov 2026, lib/uitzend/partners-kern.ts)
+    entry("/uitzendpartner", 0.7, "monthly"),
     entry("/voor-bedrijven", 0.9, "monthly"),
     // de eigen apps (spelletjes, Talkaro, FlikFlak, webshop) als aparte categorie (lib/marketing/apps.ts)
     entry("/apps-en-spelletjes", 0.7, "monthly"),

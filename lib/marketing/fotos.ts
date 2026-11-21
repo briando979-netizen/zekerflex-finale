@@ -158,6 +158,8 @@ const PAGINA_FOTOS: Record<string, string> = {
   "sales-partner": "campagne-crew-pauze",
   demo: "campagne-rooster",
   intercedenten: "campagne-eigenaar",
+  // /uitzendpartner (21 nov 2026): voor uitzendbureaus die hun klussen op ZekerFlex zetten
+  uitzendpartner: "campagne-rooster",
   verkopen: "campagne-inpakken",
   rekentools: "campagne-vouwen",
   "review-check": "campagne-bediening",

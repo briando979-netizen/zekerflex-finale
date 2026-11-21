@@ -2002,6 +2002,8 @@ export const nl = {
     payroll: "Goedgekeurd. De uren worden verloond in de payroll van week {week}.",
     uitbetalingOpnieuw: "Goedgekeurd. De uitbetaling wordt automatisch opnieuw geprobeerd.",
     uitbetalingGestart: "Goedgekeurd en uitbetaling gestart.",
+    // uitzendpartner (lib/uitzend/partners-kern.ts): het bureau betaalt zelf het loon
+    partner: "Goedgekeurd. Het loon betaal je zelf als werkgever; ZekerFlex stuurt alleen de factuur voor de platformkosten.",
     mislukt: "Goedkeuren mislukt: {reden}",
     onbekendeFout: "onbekende fout",
     geenUren: "Er zijn geen uren gekozen.",

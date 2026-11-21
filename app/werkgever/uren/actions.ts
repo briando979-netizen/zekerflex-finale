@@ -43,7 +43,9 @@ export async function approveTimesheetAction(
     return {
       ok: true,
       message:
-        result.track === "payroll"
+        result.track === "partner"
+          ? d.partner
+          : result.track === "payroll"
           ? result.advance
             ? fmt(d.voorschot, { bedrag: (result.advance.netCents / 100).toFixed(2).replace(".", ","), week: result.payroll?.weekLabel ?? "" }).trim()
             : fmt(d.payroll, { week: result.payroll?.weekLabel ?? "" }).trim()

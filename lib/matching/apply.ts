@@ -15,6 +15,7 @@ import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { isTestwerker } from "@/lib/testwerker/adres";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { dienstUren, pastBinnenMaxUren, urenBijBedrijf } from "@/lib/werkgever/max-uren";
+import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -57,13 +58,16 @@ export async function applyToShift(
   if (profile.user.kycStatus !== "VERIFIED") {
     throw AppError.precondition("Je kunt pas diensten aannemen als je identiteit is geverifieerd.").metSleutel("apply.identiteit");
   }
+  // De eisen van ZekerFlex als werkgever of uitbetaler (KVK/btw/IBAN, of BSN en de ZekerFlex-uitzendovereenkomst). Bij een
+  // klus van een uitzendpartner gelden ze niet: daar is het bureau de werkgever (lib/uitzend/partners-kern.ts). Dat weten
+  // we pas als de klus geladen is; de fout volgt daarom hieronder.
   const eligible = await payoutEligibility(userId);
-  if (!eligible.ok) {
+  const nietKlaar = (): AppError => {
     const fout = AppError.precondition(eligible.reason ?? "Je kunt nog geen diensten aannemen.");
     // een eigen reden zonder sleutel (bv. het recht om te werken) blijft Nederlands; de algemene melding krijgt de sleutel
     const sleutel = eligible.reason ? eligible.sleutel : "apply.nietKlaar";
-    throw sleutel ? fout.metSleutel(sleutel) : fout;
-  }
+    return sleutel ? fout.metSleutel(sleutel) : fout;
+  };
   if (profile.isBlacklisted) throw AppError.forbidden("Je account kan momenteel geen diensten aannemen.").metSleutel("apply.geblokkeerd");
   if (profile.matchingBlockedUntil && profile.matchingBlockedUntil.getTime() > Date.now()) {
     throw AppError.precondition("Matching is tijdelijk beperkt vanwege Wet DBA-signalen.").metSleutel("apply.dba");
@@ -87,12 +91,15 @@ export async function applyToShift(
     },
   });
   if (!shift) throw AppError.notFound("Deze dienst bestaat niet meer.").metSleutel("apply.bestaatNiet");
+  const partnerKlus = await isUitzendPartnerTenant(shift.branch.tenantId);
+  if (!partnerKlus && !eligible.ok) throw nietKlaar();
   // het testwerkeraccount van de eigenaar (lib/testwerker/adres.ts) reageert alleen op testklussen, nooit op echt werk
   const eigenTestKlus = isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
   if (isTestwerker(profile.user.email) && !isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
     throw AppError.forbidden("Met het testaccount kun je alleen op testklussen reageren.").metSleutel("apply.alleenTestklus");
   }
-  if (shift.viaUitzendbureau && eligible.track !== "payroll") {
+  // een gewone uitzendklus is alleen voor uitzendkrachten van ZekerFlex; bij een uitzendpartner mag iedereen een contract aanvragen
+  if (shift.viaUitzendbureau && !partnerKlus && eligible.track !== "payroll") {
     throw AppError.forbidden("Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau.").metSleutel("apply.uitzendOnly");
   }
   if (await isBlockedByAny([shift.branch.tenantId], userId)) {

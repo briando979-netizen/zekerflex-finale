@@ -26,6 +26,7 @@ import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
+import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 import {
   resolveMatchingConfig,
   scoreCandidateSignals,
@@ -130,6 +131,7 @@ async function loadCandidatePool(shift: {
   startsAt: Date;
   endsAt: Date;
   viaUitzendbureau: boolean;
+  uitzendPartner?: boolean;
   restrictToUserIds?: string[] | null;
 }): Promise<CandidateInput[]> {
   const now = new Date();
@@ -179,7 +181,7 @@ async function loadCandidatePool(shift: {
   });
 
   const checks = await Promise.all(
-    profiles.map((p) => isMatchEligibleWorker(p, shift.viaUitzendbureau)),
+    profiles.map((p) => isMatchEligibleWorker(p, shift.viaUitzendbureau, shift.uitzendPartner ?? false)),
   );
   const eligible = profiles.filter((_, i) => checks[i]);
 
@@ -261,6 +263,10 @@ export async function runMatchingForShift(
       restrictToUserIds = (restrictToUserIds ?? [...intern]).filter((id) => intern.has(id));
     }
 
+    // Klus van een uitzendpartner (lib/uitzend/partners-kern.ts): iedereen mag hem zien, maar het bureau kiest zelf en sluit
+    // eerst een contract. Dus scoren wel (voor "Speciaal voor jou"), maar niemand automatisch inplannen en geen aanbod dat
+    // met één tik een plek geeft: de werker vraagt een uitzendcontract aan op de kluspagina.
+    const uitzendPartner = await isUitzendPartnerTenant(shift.branch.tenantId);
     const loaded = await loadCandidatePool({
       id: shift.id,
       requiredSkillId: shift.requiredSkillId,
@@ -268,6 +274,7 @@ export async function runMatchingForShift(
       endsAt: shift.endsAt,
       restrictToUserIds,
       viaUitzendbureau: shift.viaUitzendbureau,
+      uitzendPartner,
     });
     // The worker's own settings (min rate, available dayparts, max travel): no offer outside them.
     const prefsByUser = await loadWorkerPrefs(loaded.map((c) => c.userId)).catch(() => new Map<string, Partial<WorkerPrefs>>());
@@ -304,7 +311,7 @@ export async function runMatchingForShift(
     const autoAssignedIds = new Set<string>();
     const aa = config.autoAcceptance;
     // never auto-schedule anyone on a not-yet-verified company's test klus
-    if (aa?.enabled && (await isTenantVerified(shift.branch.tenantId))) {
+    if (!uitzendPartner && aa?.enabled && (await isTenantVerified(shift.branch.tenantId))) {
       const limit = Math.min(seatsRemaining, aa.maxSeatsToAutoFill);
       for (const c of ranked) {
         if (autoAssignedIds.size >= limit) break;
@@ -338,7 +345,7 @@ export async function runMatchingForShift(
     // ---- Notification waves (delegated to the realtime dispatcher) -----
     const seatsAfterAuto = seatsRemaining - autoAssignedIds.size;
     let notified = 0;
-    if (seatsAfterAuto > 0) {
+    if (seatsAfterAuto > 0 && !uitzendPartner) {
       const waveQueue = ranked
         .filter((c) => !autoAssignedIds.has(c.freelancerId))
         .map((c) => ({

@@ -17,6 +17,7 @@ import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } 
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 import { ANNULEER_TERMIJNEN, isAnnuleerTermijn, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { zetKlusAutoAccept } from "@/lib/shifts/auto-accept";
+import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 
 // The fixed klus-templates live in a pure module (lib/shifts/catalogus.ts) so the
 // browser forms can read them too; re-exported here for the existing imports.
@@ -124,6 +125,9 @@ export async function createShift(
     branch = found;
   }
 
+  // Een uitzendpartner (lib/uitzend/partners-kern.ts) plaatst altijd uitzendklussen: het bureau is de werkgever.
+  const viaUitzendbureau = input.viaUitzendbureau || (await isUitzendPartnerTenant(branch.tenantId));
+
   let pool: { id: string; name: string } | null = null;
   if (input.poolId) {
     const found = (await listPools(branch.tenantId)).find((p) => p.id === input.poolId);
@@ -138,7 +142,7 @@ export async function createShift(
     throw AppError.validation("Ongeldige datum/tijd.");
   }
   if (endsAt <= startsAt) throw AppError.validation("De eindtijd moet na de starttijd liggen.");
-  const lengthProblem = shiftLengthProblem({ startsAt, endsAt, breakMinutes: input.breakMinutes, viaUitzendbureau: input.viaUitzendbureau });
+  const lengthProblem = shiftLengthProblem({ startsAt, endsAt, breakMinutes: input.breakMinutes, viaUitzendbureau });
   if (lengthProblem) throw AppError.validation(lengthProblem);
   if (startsAt.getTime() < Date.now() - 60_000) throw AppError.validation("De starttijd ligt in het verleden.");
 
@@ -170,7 +174,7 @@ export async function createShift(
             ...(input.description ? { description: input.description } : {}),
             ...(input.dresscode ? { dresscode: input.dresscode } : {}),
             ...(input.extraInfo ? { extraInfo: input.extraInfo } : {}),
-            viaUitzendbureau: input.viaUitzendbureau,
+            viaUitzendbureau,
             startsAt: w.startsAt,
             endsAt: w.endsAt,
             breakMinutes: input.breakMinutes,

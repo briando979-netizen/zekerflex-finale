@@ -9,6 +9,8 @@ import { payrollAdvancesForWeek, reconcilePayrollAdvances } from "@/lib/payouts/
 import { generateSepaBatch, type SepaExportResult } from "@/lib/payroll/sepa-export";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { alBetaaldeRegels, regelSleutel } from "@/lib/payroll/al-betaald";
+import { leesUitzendPartners } from "@/lib/uitzend/partners";
+import { isUitzendPartner } from "@/lib/uitzend/partners-kern";
 import {
   buurweken,
   isoWeekBereik,
@@ -78,13 +80,15 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
         select: { id: true, userId: true, user: { select: { fullName: true, email: true } } },
       },
       assignment: { select: { shift: { select: { id: true, title: true } } } },
-      branch: { select: { name: true, matchingConfig: true, tenant: { select: { name: true } } } },
+      branch: { select: { name: true, tenantId: true, matchingConfig: true, tenant: { select: { name: true } } } },
     },
   });
 
   // Vangnet: wat al in een afgeronde loonrun van de week ervoor of erna staat, niet nog eens (lib/payroll/al-betaald.ts)
   const alBetaald = alBetaaldeRegels(await Promise.all(buurweken(week).map((w) => getRun(isoWeekId(w)))));
   let overgeslagen = 0;
+  // Uren bij een uitzendpartner (lib/uitzend/partners-kern.ts) verloont het bureau zelf: nooit op een ZekerFlex-loonstrook
+  const partners = await leesUitzendPartners();
 
   // Group by worker (userId).
   const byUser = new Map<
@@ -93,6 +97,7 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
   >();
   for (const t of timesheets) {
     const userId = t.freelancer.userId;
+    if (isUitzendPartner(partners, t.branch?.tenantId)) continue;
     if (alBetaald.has(regelSleutel(userId, t.assignment?.shift?.id ?? t.id))) {
       overgeslagen++;
       continue;

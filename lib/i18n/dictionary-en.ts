@@ -1979,6 +1979,7 @@ export const en: Dict = {
     payroll: "Approved. The hours will be paid through the payroll of week {week}.",
     uitbetalingOpnieuw: "Approved. The payout will be retried automatically.",
     uitbetalingGestart: "Approved and payout started.",
+    partner: "Approved. You pay the wage yourself as the employer; ZekerFlex only sends the invoice for the platform fee.",
     mislukt: "Approving failed: {reden}",
     onbekendeFout: "unknown error",
     geenUren: "No hours were selected.",

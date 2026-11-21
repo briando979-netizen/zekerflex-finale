@@ -21,6 +21,8 @@ import { getKlusBeelden, type KlusBeeld } from "@/lib/profile/store";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { leesUitzendPartners } from "@/lib/uitzend/partners";
+import { isUitzendPartner } from "@/lib/uitzend/partners-kern";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -93,6 +95,11 @@ export interface MarketplaceShift {
   fastPay: boolean;
   /** only uitzendkrachten (payroll-track) can react to this shift */
   viaUitzendbureau: boolean;
+  /**
+   * klus van een uitzendpartner (lib/uitzend/partners-kern.ts): het bureau (company) is de werkgever, iedereen kan een
+   * uitzendcontract aanvragen. Alleen gezet als het zo is.
+   */
+  uitzendPartner?: true;
   /** klus van ons eigen testbedrijf (lib/shifts/testklus.ts): geen echt werk, de kaart zegt dat */
   testklus: boolean;
   /** what other freelancers rated this company (null = no reviews yet) */
@@ -108,6 +115,8 @@ export interface MarketplaceShift {
 export interface MarketplaceData {
   canApply: boolean;
   blockReason: string | null;
+  /** hetzelfde voor een klus van een uitzendpartner, zonder de eisen van ZekerFlex als werkgever (lib/uitzend/partners-kern.ts) */
+  partner?: { canApply: boolean; blockReason: string | null };
   home: { lat: number; lng: number } | null;
   homeLabel: string | null;
   prefs: UserPrefs;
@@ -230,6 +239,21 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
           : matchingBlocked
             ? "Matching is tijdelijk beperkt vanwege Wet DBA-signalen."
             : null;
+  // Bij een klus van een uitzendpartner (lib/uitzend/partners-kern.ts) gelden de eisen van ZekerFlex als werkgever of
+  // uitbetaler niet (KVK/btw/IBAN, BSN, ZekerFlex-uitzendovereenkomst): de rest wel.
+  const partnerCanApply =
+    onboardingKlaar && !!profile && profile.user.kycStatus === "VERIFIED" && !profile.isBlacklisted && !matchingBlocked;
+  const partnerBlockReason = partnerCanApply
+    ? null
+    : !onboardingKlaar
+      ? ONBOARDING_EERST
+      : !profile
+        ? "Rond eerst je verificatie af om diensten aan te nemen."
+        : profile.user.kycStatus !== "VERIFIED"
+          ? "Je kunt pas aannemen als je identiteit is geverifieerd."
+          : profile.isBlacklisted
+            ? "Je account kan momenteel geen diensten aannemen."
+            : "Matching is tijdelijk beperkt vanwege Wet DBA-signalen.";
 
   const thuis =
     profile && Number.isFinite(profile.homeLatitude) && !(profile.homeLatitude === 0 && profile.homeLongitude === 0)
@@ -376,6 +400,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   const beeldByTenant = await getKlusBeelden(visible.map((s) => s.branch.tenantId)).catch(() => new Map<string, KlusBeeld>());
   // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
   const eigenTest = await leesEigenTest();
+  const uitzendPartners = await leesUitzendPartners();
   const shifts: MarketplaceShift[] = visible.map((s) => {
       const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3_600_000 - s.breakMinutes / 60;
       const testklus = isTestklus({ title: s.title, bedrijf: s.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.branch.tenantId, createdAt: s.createdAt }) });
@@ -420,6 +445,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         myOffer: offerByShift.get(s.id) ?? null,
         fastPay: fastPayByTenant.get(s.branch.tenantId) ?? false,
         viaUitzendbureau: s.viaUitzendbureau,
+        ...(isUitzendPartner(uitzendPartners, s.branch.tenantId) ? { uitzendPartner: true as const } : {}),
         testklus,
         companyRating: ratingByTenant.get(s.branch.tenantId) ?? null,
         companyLogoUrl: beeldByTenant.get(s.branch.tenantId)?.logoUrl ?? null,
@@ -437,6 +463,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   return {
     canApply,
     blockReason,
+    partner: { canApply: partnerCanApply, blockReason: partnerBlockReason },
     home,
     homeLabel,
     prefs,
@@ -643,6 +670,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       myOffer: null,
       fastPay: (await fastPayAvailableFor([row.branch.tenantId])).get(row.branch.tenantId) ?? false,
       viaUitzendbureau: row.viaUitzendbureau,
+      ...(isUitzendPartner(await leesUitzendPartners(), row.branch.tenantId) ? { uitzendPartner: true as const } : {}),
       testklus: isTestklus({ title: row.title, bedrijf: row.branch.tenant.name, eigenTest: isEigenTestKlus(await leesEigenTest(), { tenantId: row.branch.tenantId, createdAt: row.createdAt }) }),
     } satisfies MarketplaceShift);
   if (ownOffer && ownOffer.status !== "withdrawn") {
@@ -668,8 +696,9 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
     address: row.branch.addressLine,
     postalCode: row.branch.postalCode,
     geofenceRadiusMeters: row.branch.geofenceRadiusMeters,
-    canApply: market.canApply,
-    blockReason: market.blockReason,
+    // klus van een uitzendpartner: zonder de eisen van ZekerFlex als werkgever (lib/uitzend/partners-kern.ts)
+    canApply: base.uitzendPartner && market.partner ? market.partner.canApply : market.canApply,
+    blockReason: base.uitzendPartner && market.partner ? market.partner.blockReason : market.blockReason,
     alreadyApplied,
     agreement,
     agreementType,

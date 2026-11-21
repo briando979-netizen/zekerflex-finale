@@ -152,15 +152,59 @@ export function buildReverseBillingInvoices(
 
   // Employer platform fee: a flat amount per billable hour (e.g. EUR 3,50/uur),
   // billed to the client, never deducted from the freelancer.
+  const platformFeeInvoice = buildPlatformFeeInvoice({
+    timesheetId: input.timesheetId,
+    billableMinutes: input.billableMinutes,
+    recipientTenantId: input.recipientTenantId,
+    recipientCountry: input.recipientCountry,
+    recipientVatValidForReverseCharge: input.freelancerVatValid,
+    platformTenantId: input.platformTenantId,
+    shiftTitle: input.shiftTitle,
+    invoiceNumber: input.platformInvoiceNumber,
+    ...(input.platformFeePerHourCents !== undefined ? { platformFeePerHourCents: input.platformFeePerHourCents } : {}),
+    ...(input.volumeTierName !== undefined ? { volumeTierName: input.volumeTierName } : {}),
+    platformFeeReden: input.platformFeeReden,
+  });
+
+  return {
+    freelancerInvoice,
+    platformFeeInvoice,
+    freelancerPayoutCents: freelancerInvoice.totalCents,
+  };
+}
+
+export interface PlatformFeeInput {
+  timesheetId: string;
+  billableMinutes: number;
+  /** Tenant that receives (and settles) the fee invoice. */
+  recipientTenantId: string;
+  recipientCountry: string;
+  /** Reverse charge alleen als de ontvanger de btw zelf kan verleggen (intra-EU met geldig btw-nummer). */
+  recipientVatValidForReverseCharge: boolean;
+  platformTenantId: string;
+  shiftTitle: string;
+  invoiceNumber: string;
+  /** Staffelkorting: the client's fee per hour this month (lib/pricing/volume.ts); default = full fee. */
+  platformFeePerHourCents?: number;
+  volumeTierName?: string;
+  platformFeeReden?: string | undefined;
+}
+
+/**
+ * Alleen de PLATFORM_FEE-factuur: een vast bedrag per gewerkt uur aan het bedrijf. Gebruikt door de twee facturen van het
+ * factuurspoor hierboven, en los bij een klus van een uitzendpartner (lib/uitzend/partners-kern.ts): daar is het bureau de
+ * werkgever en betaalt het zelf het loon, dus ZekerFlex stuurt alleen deze factuur.
+ */
+export function buildPlatformFeeInvoice(input: PlatformFeeInput): ComputedInvoice {
+  const hours = input.billableMinutes / 60;
   const feePerHourCents = input.platformFeePerHourCents ?? env.PLATFORM_FEE_PER_HOUR_CENTS;
   const discounted = feePerHourCents < env.PLATFORM_FEE_PER_HOUR_CENTS;
   const toelichting = input.platformFeeReden ? `, ${input.platformFeeReden}` : discounted ? `, staffel ${input.volumeTierName ?? "volume"}` : "";
-  const feeVat = resolveVat("NL", input.recipientCountry, input.freelancerVatValid);
-
-  const platformFeeInvoice = assemble(
+  const feeVat = resolveVat("NL", input.recipientCountry, input.recipientVatValidForReverseCharge);
+  return assemble(
     {
       type: "PLATFORM_FEE",
-      number: input.platformInvoiceNumber,
+      number: input.invoiceNumber,
       timesheetId: input.timesheetId,
       recipientTenantId: input.recipientTenantId,
       issuerTenantId: input.platformTenantId,
@@ -176,12 +220,6 @@ export function buildReverseBillingInvoices(
     ],
     feeVat,
   );
-
-  return {
-    freelancerInvoice,
-    platformFeeInvoice,
-    freelancerPayoutCents: freelancerInvoice.totalCents,
-  };
 }
 
 export interface UitzendInvoiceInput {

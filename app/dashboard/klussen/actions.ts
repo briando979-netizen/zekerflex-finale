@@ -13,6 +13,8 @@ import { pushShiftTaken } from "@/lib/notifications/employer-push";
 import { runAfter } from "@/lib/run-after";
 import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
+import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
+import { meldUitzendcontractAanvraag } from "@/lib/uitzend/aanvraag";
 
 const moneyExact = (c: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
@@ -106,9 +108,6 @@ export async function counterOfferAction(
     }
 
     const eligible = await payoutEligibility(principal.userId);
-    if (!eligible.ok) {
-      return { ok: false, message: eligible.reason ?? "Je kunt nog niet op klussen reageren." };
-    }
 
     const shift = await prisma.shift.findUnique({
       where: { id: shiftId },
@@ -119,13 +118,20 @@ export async function counterOfferAction(
         startsAt: true,
         endsAt: true,
         viaUitzendbureau: true,
-        branch: { select: { name: true, tenantId: true } },
+        branch: { select: { name: true, tenantId: true, tenant: { select: { name: true } } } },
       },
     });
     if (!shift) return { ok: false, message: "Deze dienst bestaat niet meer." };
+    // Klus van een uitzendpartner (lib/uitzend/partners-kern.ts): het bureau is de werkgever. De eisen van ZekerFlex
+    // (KVK/IBAN, of BSN en de ZekerFlex-uitzendovereenkomst) gelden dan niet, en de reactie is een aanvraag voor een
+    // uitzendcontract tegen het vaste uurloon.
+    const partnerKlus = await isUitzendPartnerTenant(shift.branch.tenantId);
+    if (!partnerKlus && !eligible.ok) {
+      return { ok: false, message: eligible.reason ?? "Je kunt nog niet op klussen reageren." };
+    }
     // Uitzendkrachten work for the listed wage (CAO) — no counter-offers.
-    if (eligible.track === "payroll") proposedRateCents = shift.hourlyRateCents;
-    if (shift.viaUitzendbureau && eligible.track !== "payroll") {
+    if (eligible.track === "payroll" || partnerKlus) proposedRateCents = shift.hourlyRateCents;
+    if (shift.viaUitzendbureau && !partnerKlus && eligible.track !== "payroll") {
       return { ok: false, message: "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau." };
     }
     if (!["OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status)) {
@@ -152,6 +158,9 @@ export async function counterOfferAction(
       note: note.slice(0, 500),
     });
 
+    // uitzendpartner: de werker gaf bij de knop toestemming; het bureau krijgt zijn contactgegevens (lib/uitzend/aanvraag.ts)
+    if (partnerKlus) runAfter(() => meldUitzendcontractAanvraag({ workerUserId: principal.userId, shiftId }));
+
     // vaste schil (lib/pools/vaste-schil.ts): lid van een pool met "direct inplannen" en het geplaatste tarief → meteen ingepland
     const schil = await probeerVasteSchil(offer, shift.branch.tenantId).catch(() => ({ ingepland: false as const }));
     if (schil.ingepland) {
@@ -167,6 +176,9 @@ export async function counterOfferAction(
     }).catch(() => undefined);
 
     bust();
+    if (partnerKlus) {
+      return { ok: true, message: `Je aanvraag is verstuurd naar ${shift.branch.tenant.name}. Het uitzendbureau neemt contact met je op over het contract. Je ziet de klus terug bij Mijn klussen.` };
+    }
     return { ok: true, message: `Tegenbod van ${moneyExact(proposedRateCents)}/u verstuurd. Je ziet 'm terug bij Mijn klussen.` };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
