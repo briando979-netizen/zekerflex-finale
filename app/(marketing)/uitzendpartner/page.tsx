@@ -6,6 +6,7 @@ import { paginaFoto } from "@/lib/marketing/fotos";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { BASE_FEE_PER_HOUR_CENTS } from "@/lib/pricing/tiers";
+import { PARTNER_VOORWAARDEN_PAD } from "@/lib/uitzend/voorwaarden";
 
 const title = "Voor uitzendbureaus: zet je uitzendklussen op ZekerFlex";
 const description =
@@ -28,7 +29,7 @@ const STAPPEN = [
   { titel: "Maak een bedrijfsaccount aan", tekst: "Gratis en in een paar minuten. Je vult je bedrijfsgegevens in, net als elk ander bedrijf op ZekerFlex." },
   {
     titel: "Wij zetten je account op uitzendpartner",
-    tekst: "Mail ons je KVK-nummer en je inschrijvingen als uitlener. Na een korte controle staat je account op uitzendpartner.",
+    tekst: "Mail ons je KVK-nummer, je inschrijvingen als uitlener en dat je akkoord gaat met de partnervoorwaarden. Na een korte controle staat je account op uitzendpartner.",
   },
   {
     titel: "Plaats je uitzendklussen",
@@ -63,6 +64,10 @@ const FAQ = [
     a: "Als een werker op je klus een uitzendcontract aanvraagt, geeft hij toestemming om zijn contactgegevens met je bureau te delen. Daarmee neem je contact op over het contract en de voorwaarden.",
   },
   {
+    q: "Welke regels gelden er, en wat als een bureau zich er niet aan houdt?",
+    a: "Alles staat in de partnervoorwaarden: wie partner kan worden, de regels voor klussen en voor de gegevens van werkers, de kosten, de boetes en hoe ZekerFlex handhaaft (eerst een waarschuwing, dan een schorsing, dan het einde van de samenwerking; bij ernstige overtredingen direct).",
+  },
+  {
     q: "Kan ik ook freelance klussen plaatsen?",
     a: "Een uitzendpartner plaatst uitzendklussen. Wil je ook freelance klussen plaatsen, dan kan dat met een gewoon bedrijfsaccount.",
   },
@@ -92,6 +97,9 @@ export default function UitzendpartnerPage() {
             <a href="mailto:uitzendbureau@zekerflex.com?subject=Uitzendpartner%20worden" className="btn-ghost">
               Mail ons
             </a>
+            <Link href={PARTNER_VOORWAARDEN_PAD} className="btn-ghost">
+              Lees de partnervoorwaarden
+            </Link>
           </div>
         </HeroMetFoto>
       </Section>
@@ -138,7 +146,11 @@ export default function UitzendpartnerPage() {
           <FaqList items={FAQ} />
         </div>
         <p className="mt-8 text-sm text-neutralx-500">
-          Vragen? Mail{" "}
+          De regels, de boetes en het beleid staan in de{" "}
+          <Link href={PARTNER_VOORWAARDEN_PAD} className="text-brand-600 underline">
+            partnervoorwaarden voor uitzendbureaus
+          </Link>
+          . Vragen? Mail{" "}
           <a href="mailto:uitzendbureau@zekerflex.com" className="text-brand-600 underline">
             uitzendbureau@zekerflex.com
           </a>

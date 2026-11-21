@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PARTNER_VOORWAARDEN_PAD, PARTNER_VOORWAARDEN_VERSIE } from "@/lib/uitzend/voorwaarden";
 
 /**
  * Beheer → Bedrijf: "Uitzendpartner" (POST /api/admin/uitzendpartner, lib/uitzend/partners.ts). Een uitzendpartner is
@@ -44,8 +45,11 @@ export function UitzendPartnerSchakelaar({ id, sinds: beginSinds }: { id: string
       <p className="mt-1" style={{ color: "var(--a-mute)" }}>
         {aan
           ? `Sinds ${datum}: de klussen van dit bedrijf zijn uitzendklussen op naam van het bureau. Werkers vragen er een uitzendcontract aan, het bureau betaalt het loon; ZekerFlex stuurt alleen de factuur voor de platformkosten.`
-          : "Uit: een gewoon bedrijf. Zet dit pas aan als je de inschrijving van het bureau als uitlener hebt gecontroleerd."}
+          : `Uit: een gewoon bedrijf. Zet dit pas aan als je de eisen uit artikel 3 hebt gecontroleerd (KVK, registratie als uitlener, SNA-keurmerk of Wtta-toelating, cao, verzekering) en het bureau akkoord gaf op de partnervoorwaarden, versie ${PARTNER_VOORWAARDEN_VERSIE}.`}
       </p>
+      <a href={PARTNER_VOORWAARDEN_PAD} target="_blank" rel="noopener" className="mt-1 inline-block underline" style={{ color: "var(--a-accent-ink)" }}>
+        Partnervoorwaarden voor uitzendbureaus
+      </a>
       {fout && (
         <p role="alert" className="mt-1" style={{ color: "var(--a-crit, #b42318)" }}>
           {fout}
