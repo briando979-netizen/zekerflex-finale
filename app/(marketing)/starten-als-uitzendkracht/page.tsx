@@ -3,19 +3,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { Section, SectionHead, FaqList } from "@/components/marketing/primitives";
 import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { PerBrancheEnStad } from "@/components/marketing/PerBrancheEnStad";
 import { UitzendTelefoon, type UitzendScherm } from "@/components/marketing/UitzendTelefoon";
 import { FOTO_MAP, paginaFoto } from "@/lib/marketing/fotos";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 
-const title = "Starten als uitzendkracht: werken zonder KVK via de ZekerFlex-app";
+// 22 nov 2026: korter (met " · ZekerFlex" erachter paste de oude titel niet in Google) en met "uitzendbureau" erin: daar
+// zoeken mensen op (Search Console: 2.500 vertoningen voor "uitzendbureau …"). /uitzendbureau stuurt hierheen; deze pagina
+// was tot 22 nov per ongeluk geblokkeerd in robots.txt ("/start").
+const title = "Starten als uitzendkracht via een uitzendbureau";
 const description =
   "Zo start je als uitzendkracht: download de app, zet het filter op Uitzendklussen en meld je aan. Je werkt op contract bij een uitzendbureau, met vakantiegeld en pensioen, en kiest zelf je diensten.";
 
 export const metadata: Metadata = {
   title,
   description,
-  keywords: ["starten als uitzendkracht", "uitzendwerk", "werken zonder KVK", "uitzendklussen", "uitzendkracht app"],
+  keywords: ["starten als uitzendkracht", "uitzendwerk", "uitzendbureau", "werken zonder KVK", "uitzendklussen", "uitzendkracht app"],
   ...canonical("/starten-als-uitzendkracht", { title, description }),
 };
 
@@ -77,6 +81,10 @@ const FAQ = [
   {
     q: "Kan ik ook freelance klussen doen?",
     a: "Ja, als je een KVK-nummer hebt. In het filter zet je dan bij Type klus ook Freelance klussen aan.",
+  },
+  {
+    q: "Is ZekerFlex een uitzendbureau?",
+    a: "Nee. ZekerFlex is zelf geen uitzendbureau, maar de app waarin uitzendbureaus hun diensten zetten. Je contract teken je bij het uitzendbureau van de dienst, en dat bureau betaalt je loon.",
   },
 ];
 
@@ -152,6 +160,8 @@ export default function StartenAlsUitzendkrachtPage() {
         <div className="mt-8 max-w-3xl">
           <FaqList items={FAQ} />
         </div>
+        {/* 22 nov 2026: naar het werk per branche en per stad (daar staan uitzendklussen en freelance klussen samen) */}
+        <PerBrancheEnStad voor="werkers" />
       </Section>
 
       <Section>
