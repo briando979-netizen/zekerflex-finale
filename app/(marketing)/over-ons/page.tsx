@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Fragment, type ReactNode } from "react";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
 import { Photo } from "@/components/marketing/Photo";
@@ -34,14 +35,31 @@ export default async function OverOnsPage() {
       <Section tone="paper">
         <div id="oprichter" className="scroll-mt-24" />
         <SectionHead eyebrow={v("oo.opr.eyebrow")} title={v("oo.opr.title")} cms={{ eyebrow: "oo.opr.eyebrow", title: "oo.opr.title" }} />
-        <div className="mt-8 max-w-2xl space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
-          <p>
-            ZekerFlex is opgebouwd, bedacht en zelf geschreven door{" "}
-            <strong className="text-ink">Briando van Essen</strong> — van het eerste idee tot de code die je nu
-            gebruikt. Geen team van investeerders, geen overgenomen platform: één persoon die het hele systeem van de
-            grond af heeft neergezet, omdat het eerlijker en simpeler kon.
-          </p>
-          <p data-cms-key="oo.opr.tekst" data-cms-ml="1">{v("oo.opr.tekst")}</p>
+        {/* 22 nov 2026, eigenaar: "gooi mijn foto bij over ons bij Briando van Essen" (zijn zakelijke portret, ook op Facebook) */}
+        <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-12">
+          <figure className="flex items-center gap-4 lg:order-last lg:flex-col lg:items-stretch lg:rounded-xl2 lg:border lg:border-hair lg:bg-white lg:p-5 lg:shadow-sm">
+            <Image
+              src="/team/briando-van-essen.webp"
+              alt="Briando van Essen, oprichter van ZekerFlex"
+              width={400}
+              height={400}
+              sizes="(max-width: 1024px) 96px, 220px"
+              className="h-24 w-24 shrink-0 rounded-full object-cover lg:h-auto lg:w-full lg:rounded-2xl"
+            />
+            <figcaption>
+              <span className="block font-display text-lg font-semibold text-ink">Briando van Essen</span>
+              <span className="block text-sm text-neutralx-600">Oprichter en directeur</span>
+            </figcaption>
+          </figure>
+          <div className="max-w-2xl space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
+            <p>
+              ZekerFlex is opgebouwd, bedacht en zelf geschreven door{" "}
+              <strong className="text-ink">Briando van Essen</strong>, van het eerste idee tot de code die je nu
+              gebruikt. Geen team van investeerders, geen overgenomen platform: één persoon die het hele systeem van de
+              grond af heeft neergezet, omdat het eerlijker en simpeler kon.
+            </p>
+            <p data-cms-key="oo.opr.tekst" data-cms-ml="1">{v("oo.opr.tekst")}</p>
+          </div>
         </div>
       </Section>
     ),
