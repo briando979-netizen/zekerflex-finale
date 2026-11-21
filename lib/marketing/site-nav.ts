@@ -41,14 +41,15 @@ export interface KopKnop {
 }
 
 /**
- * De twee knoppen rechtsboven in de kopbalk, per kant (21 nov 2026, eigenaar: "bij YoungOnes staat pas bij bedrijven inloggen
- * en start vandaag, bij werknemers leidt het naar de app"). Werkers gaan naar de app (/app: installeren, en daar ook inloggen of
- * een account aanmaken in de browser); bedrijven loggen in of melden zich aan. `mobiel` is de korte knop naast de menuknop.
+ * De twee knoppen rechtsboven in de kopbalk, per kant (21 nov 2026, eigenaar: "die login knopje bedoelde ik, bij werknemers moet
+ * daar staan ga naar de app"). Bij werkers wordt Inloggen "Ga naar de app" (/app: installeren, en daar ook inloggen of een account
+ * aanmaken in de browser); Start vandaag blijft account aanmaken. Bedrijven loggen in of melden zich aan. `mobiel` is de korte
+ * knop naast de menuknop.
  */
 export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; mobiel: KopKnop }> = {
   werknemers: {
     eerste: { label: "Ga naar de app", href: "/app" },
-    tweede: { label: "Start vandaag", href: "/app" },
+    tweede: { label: "Start vandaag", href: CTA_WN.href },
     mobiel: { label: "Naar de app", href: "/app" },
   },
   bedrijven: {

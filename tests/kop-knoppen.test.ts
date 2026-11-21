@@ -3,17 +3,17 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { KOP_KNOPPEN } from "@/lib/marketing/site-nav";
 
-// De knoppen rechtsboven op de site (21 nov 2026, eigenaar: "bij YoungOnes staat pas bij bedrijven inloggen en start vandaag,
-// bij werknemers leidt het naar de app"). Werkers gaan naar /app, bedrijven loggen in of melden zich aan.
+// De knoppen rechtsboven op de site (21 nov 2026, eigenaar: "die login knopje bedoelde ik, bij werknemers moet daar staan ga naar
+// de app"). Werkers: Ga naar de app + Start vandaag (account aanmaken); bedrijven: Inloggen + Start vandaag (aanmelden).
 
 const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8");
 
 describe("knoppen in de kopbalk per kant", () => {
-  it("werkers: beide knoppen naar de app, geen inloggen", () => {
+  it("werkers: in plaats van Inloggen staat er Ga naar de app; Start vandaag blijft account aanmaken", () => {
     const w = KOP_KNOPPEN.werknemers;
-    expect([w.eerste.href, w.tweede.href, w.mobiel.href]).toEqual(["/app", "/app", "/app"]);
-    expect(w.eerste.label).toBe("Ga naar de app");
-    expect(w.tweede.label).toBe("Start vandaag");
+    expect(w.eerste).toEqual({ label: "Ga naar de app", href: "/app" });
+    expect(w.mobiel.href).toBe("/app");
+    expect(w.tweede).toEqual({ label: "Start vandaag", href: "/register" });
   });
 
   it("bedrijven: inloggen en start vandaag (aanmelden als bedrijf)", () => {
