@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 const KENMERKEN = [
   { kop: "Geen KVK", tekst: "Je hoeft geen eigen bedrijf te hebben. Je werkt op contract bij een uitzendbureau." },
   { kop: "8%", tekst: "Vakantiegeld bovenop je loon, en pensioen volgens de cao van het uitzendbureau." },
-  { kop: "1 app", tekst: "Al je diensten, je inchecken en je uren op één plek op je telefoon." },
+  { kop: "1 app", tekst: "Al je diensten, je chat en je uren op één plek op je telefoon." },
 ];
 
 const STAPPEN: { titel: string; tekst: string; scherm?: UitzendScherm; app?: boolean }[] = [
@@ -52,7 +52,7 @@ const STAPPEN: { titel: string; tekst: string; scherm?: UitzendScherm; app?: boo
   },
   {
     titel: "Werk wanneer het jou uitkomt",
-    tekst: "Kies zelf welke diensten je doet. Op de dag zelf check je in op locatie, met de app.",
+    tekst: "Kies zelf welke diensten je doet en houd alles bij in de app.",
     scherm: "lijst",
   },
   {
@@ -64,7 +64,7 @@ const STAPPEN: { titel: string; tekst: string; scherm?: UitzendScherm; app?: boo
 const FAQ = [
   {
     q: "Wie is mijn werkgever?",
-    a: "Het uitzendbureau van de dienst. Je tekent je uitzendcontract bij dat bureau en het bureau betaalt je loon. ZekerFlex is de app waarin je de diensten vindt, incheckt en je uren doorgeeft.",
+    a: "Het uitzendbureau van de dienst. Je tekent je uitzendcontract bij dat bureau en het bureau betaalt je loon. ZekerFlex is de app waarin je de diensten vindt en je uren doorgeeft.",
   },
   {
     q: "Heb ik een KVK-nummer nodig?",

@@ -24,9 +24,10 @@ export const SEO_STANDAARD = {
   },
   "/bedrijven": {
     naam: "Homepage voor bedrijven",
-    titel: "Personeel, website en software voor je bedrijf",
+    // 21 nov 2026: alleen flexwerk in Google (eigenaar zag "website" en "software" in de zoekresultaten)
+    titel: "Flexkrachten, zzp'ers en uitzendkrachten voor je bedrijf",
     omschrijving:
-      "Flexwerkers, uitzendkrachten en zzp'ers inhuren, plus een eigen website en software voor je branche. Personeel € 3,50 per gewerkt uur, zonder abonnement.",
+      "Plaats een klus en flexwerkers, zzp'ers en uitzendkrachten in de buurt reageren. Je betaalt € 3,50 per gewerkt uur, zonder abonnement of opstartkosten.",
     absoluut: false,
   },
   "/voor-bedrijven": {

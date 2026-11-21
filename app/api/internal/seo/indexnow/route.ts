@@ -6,6 +6,8 @@ import { SITE } from "@/lib/seo";
 import { pingIndexNow } from "@/lib/seo/indexnow";
 import { bingDienBatchIn } from "@/lib/seo/bing-webmaster";
 import sitemap from "@/app/sitemap";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { verwijderdePaden } from "@/lib/seo/verwijderd";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +17,7 @@ export const maxDuration = 120;
 // zodat ze net zo snel geïndexeerd raken als bij Google. No-op zonder INDEXNOW_KEY.
 const PATHS = [
   "/", "/voor-bedrijven", "/voor-freelancers", "/prijzen", "/klussen",
-  "/open-diensten", "/shop", "/starten-als-uitzendkracht", "/kennis", "/over-ons", "/app",
+  "/starten-als-uitzendkracht", "/kennis", "/over-ons", "/app",
   "/rekentools", "/rekentools/zzp-uurtarief-berekenen", "/rekentools/kosten-uitzendkracht-berekenen", "/rekentools/wet-dba-check",
 ];
 
@@ -23,7 +25,9 @@ async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
   try {
-    const result = await pingIndexNow(PATHS.map((p) => `${SITE.url}${p}`));
+    // plus de pagina's die uit de zoekmachines moeten (lib/seo/verwijderd.ts): opnieuw ophalen = de noindex zien
+    const weg = (await alleenFlexwerkAan().catch(() => false)) ? verwijderdePaden() : [];
+    const result = await pingIndexNow([...PATHS, ...weg].map((p) => `${SITE.url}${p}`));
     recordCronRun("indexnow", result.ok);
 
     // Daarnaast een ronde sitemap-URL's rechtstreeks bij Bing indienen (naast IndexNow), binnen het dagquotum en met

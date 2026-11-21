@@ -75,6 +75,9 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   // De eigenaar wil ze dicht (20 nov); ze linken alleen naar elkaar.
   "/nieuwe-home",
   "/flexwerk",
+  // 21 nov 2026 (eigenaar: "alleen flexwerk en de regio's in Google"): de maandabonnementen met modules en de voorbeeldwebsites
+  "/abonnementen",
+  "/voorbeeldsites",
 ];
 
 /**

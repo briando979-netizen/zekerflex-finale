@@ -42,7 +42,8 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: "*", allow: "/", disallow: PRIVATE },
       { userAgent: AI_AGENTS, allow: ["/", "/llms.txt"], disallow: PRIVATE },
     ],
-    sitemap: `${SITE.url}/sitemap.xml`,
+    // 21 nov 2026: plus de pagina's die uit Google moeten (app/sitemap-verwijderd.xml), zodat Google ze snel opnieuw ophaalt
+    sitemap: [`${SITE.url}/sitemap.xml`, `${SITE.url}/sitemap-verwijderd.xml`],
     host: SITE.url,
   };
 }

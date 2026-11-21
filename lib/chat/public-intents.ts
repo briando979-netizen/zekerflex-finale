@@ -96,7 +96,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   {
     // vóór de betaalpas-regel: Apple Pay en Google Pay zijn er wél, als betaalwijze
     re: /apple pay|google pay/i,
-    answer: { reply: "In de webshop en bij afrekenen aan tafel in de horeca kun je met Apple Pay en Google Pay betalen, net als met iDEAL of je pas. Een eigen ZekerFlex-pas in je Wallet is er niet.", suggestions: ["Hoe snel word ik uitbetaald?", "Ik zoek werk"] },
+    answer: { reply: "Een eigen ZekerFlex-pas in je Wallet is er niet. Je verdiensten gaan altijd naar je eigen bankrekening (IBAN), en die gebruik je gewoon met Apple Pay of Google Pay.", suggestions: ["Hoe snel word ik uitbetaald?", "Ik zoek werk"] },
   },
   {
     re: /betaalpas|pinpas|debitcard|kaart aanvragen/i,
@@ -118,7 +118,7 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /uren (invullen|indienen|schrijven)|inchecken|uitchecken|urenbrief|timesheet/i,
-    answer: { reply: "Op de dag van je klus check je in en uit op locatie met één knop. Daarna vul je je uren in stappen in: gewerkt? → kloppen de uren? → eventuele extra kosten → beoordeling → hoe snel je betaald wilt worden → indienen.", suggestions: ["Hoe snel word ik uitbetaald?", "Wat als ik niet kon werken?"] },
+    answer: { reply: "Hangt het bedrijf een QR-code op, dan check je in door die met je telefoon te scannen. Na je klus vul je je uren in stappen in: gewerkt? → kloppen de uren? → eventuele extra kosten → beoordeling → hoe snel je betaald wilt worden → indienen.", suggestions: ["Hoe snel word ik uitbetaald?", "Wat als ik niet kon werken?"] },
   },
   {
     re: /annuleer|annuleren|afzeggen|niet (kan|kon) (werken|komen)|ziek/i,
@@ -162,7 +162,8 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /webshop|winkel|kleding|veiligheidsschoen|pbm|werkkleding/i,
-    answer: { reply: "In de ZekerFlex-webshop vind je werkkleding en persoonlijke beschermingsmiddelen (zoals veiligheidsschoenen en hesjes), en bij elke klus zie je welke spullen je nodig hebt.", suggestions: ["Ik zoek werk"] },
+    // 21 nov 2026: de webshop staat uit (lib/shop/aan.ts)
+    answer: { reply: "ZekerFlex heeft geen webshop meer. Bij elke klus zie je wel welke spullen je nodig hebt, zoals werkkleding of veiligheidsschoenen.", suggestions: ["Ik zoek werk"] },
   },
   {
     re: /veilig|privacy|data|gegevens|avg|gdpr/i,

@@ -31,7 +31,7 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
     });
     // de vorige homepagina, nu voor bedrijven
     const bv = await seoMetadata("/bedrijven");
-    expect(bv.title).toBe("Personeel, website en software voor je bedrijf");
+    expect(bv.title).toBe("Flexkrachten, zzp'ers en uitzendkrachten voor je bedrijf");
     expect(bv.description).toContain("€ 3,50 per gewerkt uur");
   });
 

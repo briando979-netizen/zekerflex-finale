@@ -7,17 +7,22 @@ import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
 import { canonical } from "@/lib/seo";
 import { SaasPlans } from "@/components/marketing/SaasPlans";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const title = "Abonnementen — ZekerFlex voor bedrijven";
 const description =
   "Gratis starten en € 3,50 per gewerkt uur, of een maandabonnement met AI-recruiter en snelle uitbetaling. Geen opstartkosten, maandelijks opzegbaar.";
 
-export const metadata: Metadata = {
-  title,
-  description,
-  keywords: ["zekerflex abonnement", "uitzendsoftware prijs", "recruitment software maandabonnement", "flexpool software"],
-  ...canonical("/abonnementen", { title, description }),
-};
+// met de vlag publiek-alleen-flexwerk uit Google (lib/marketing/flexwerk-only.ts)
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title,
+    description,
+    keywords: ["zekerflex abonnement", "uitzendsoftware prijs", "recruitment software maandabonnement", "flexpool software"],
+    ...canonical("/abonnementen", { title, description }),
+    ...(await robotsVerborgen("/abonnementen")),
+  };
+}
 
 const FAQ = [
   { q: "Moet ik een abonnement nemen?", a: "Nee. Starter is gratis; je betaalt alleen €3,50 per gewerkt uur. Een abonnement (Pro/Business) ontsluit extra modules als je die wilt." },

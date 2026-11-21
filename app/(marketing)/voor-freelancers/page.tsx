@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const KENMERKEN = [
   { kop: "€ 0", tekst: "Gratis voor werkers. De opdrachtgever betaalt de platformkosten." },
   { kop: "5 talen", tekst: "De app in het Nederlands, Engels, Pools, Roemeens en Oekraïens." },
-  { kop: "1 app", tekst: "Klussen, chat, inchecken, uren en facturen op één plek." },
+  { kop: "1 app", tekst: "Klussen, chat, uren en facturen op één plek." },
 ];
 
 const STAPPEN: { titel: string; tekst: string; scherm: FreelanceScherm; app?: boolean }[] = [
@@ -58,7 +58,7 @@ const STAPPEN: { titel: string; tekst: string; scherm: FreelanceScherm; app?: bo
   },
   {
     titel: "Werk en krijg je geld",
-    tekst: "Check in op locatie, vul na afloop je uren in en kies hoe snel je wordt uitbetaald. De factuur maakt ZekerFlex voor je.",
+    tekst: "Doe je klus, vul na afloop je uren in en kies hoe snel je wordt uitbetaald. De factuur maakt ZekerFlex voor je.",
     scherm: "uren",
   },
 ];
@@ -67,7 +67,8 @@ const FUNCTIES = [
   { icoon: "📍", titel: "Klussen in de buurt", tekst: "Bij elke klus zie je hoe lang je erover doet met de fiets, de auto of het ov." },
   { icoon: "💬", titel: "Chat met de opdrachtgever", tekst: "Vraag het direct in de app, vóór en na je klus." },
   { icoon: "🤝", titel: "Doe een tegenbod", tekst: "Vind je het tarief te laag? Bij freelance klussen stel je zelf een ander uurtarief voor." },
-  { icoon: "✅", titel: "Inchecken met je telefoon", tekst: "Op de dag zelf check je in en uit op locatie. Zo kloppen je uren altijd." },
+  // 21 nov 2026 (eigenaar): inchecken alleen met een geprinte QR-code die de werker scant; geen kastjes, tablets of NFC
+  { icoon: "📱", titel: "Inchecken met een QR-code", tekst: "Hangt de opdrachtgever een QR-code op, dan scan je die bij aankomst met je telefoon. Zo kloppen je uren." },
   { icoon: "⏱️", titel: "Uren in een paar tikken", tekst: "Na je klus vul je je uren in. De opdrachtgever keurt ze goed in de app." },
   { icoon: "🧾", titel: "Geen facturen maken", tekst: "ZekerFlex maakt je factuur automatisch, met de juiste btw." },
   { icoon: "💸", titel: "Kies hoe snel je geld komt", tekst: "Gratis wachten tot de opdrachtgever betaalt (binnen 30 dagen), of sneller tegen een kleine fee." },
@@ -89,7 +90,7 @@ const FAQ = [
   { q: "Kost het mij iets?", a: "Nee. Meedoen als freelancer is volledig gratis. De platformfee wordt bij de opdrachtgever in rekening gebracht." },
   { q: "Wanneer krijg ik precies betaald?", a: "Dat bepaal je zelf per dienst. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder je geld, dan kies je een snellere uitbetaling tegen een fee: betaalopdracht direct indienen (4% van de factuur) of binnen 3 werkdagen indienen (2%)." },
   { q: "Vanaf welke leeftijd kan ik werken?", a: "Vanaf 18 jaar. Ben je 16 of 17? Laat dan je e-mailadres achter op zekerflex.com/nog-geen-18, dan krijg je bericht zodra je bij ons aan de slag kunt." },
-  { q: "Wat als er een geschil is over mijn uren?", a: "Dan wordt de betaling voor die dienst aangehouden tot een dispuutmanager ernaar heeft gekeken. Je GPS check-in en de goedgekeurde planning wegen daarin mee." },
+  { q: "Wat als er een geschil is over mijn uren?", a: "Dan wordt de betaling voor die dienst aangehouden tot een dispuutmanager ernaar heeft gekeken. Je check-in, de goedgekeurde planning en de afspraken in de chat wegen daarin mee." },
 ];
 
 export default async function VoorFreelancersPage() {

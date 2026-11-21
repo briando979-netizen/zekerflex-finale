@@ -143,7 +143,7 @@ function Uren() {
             </div>
           ))}
         </dl>
-        <p className="mt-2 rounded-md bg-paper-soft px-2 py-1 text-[9px] text-neutralx-600">✓ Ingecheckt op locatie om 10:56</p>
+        <p className="mt-2 rounded-md bg-paper-soft px-2 py-1 text-[9px] text-neutralx-600">✓ QR-code gescand om 10:56</p>
       </div>
       <div className="mt-2 rounded-xl border border-hair bg-white p-2.5">
         <p className="text-[9px] text-neutralx-500">7,5 uur × € 22,50</p>
