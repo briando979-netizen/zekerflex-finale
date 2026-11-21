@@ -69,10 +69,13 @@ describe("de tegels", () => {
 describe("de pagina", () => {
   const src = bron("app/admin/webshop/page.tsx");
 
-  it("is alleen voor de platformbeheerder en staat in het menu, bovenaan Webshop & merk", () => {
+  it("is alleen voor de platformbeheerder en staat in het menu, als eerste webshop-pagina onder Overig (verborgen)", () => {
     expect(src).toContain('hasRole(principal, "PLATFORM_ADMIN")');
-    const merk = ADMIN_HUBS.find((h) => h.id === "merk");
-    expect(merk?.pages[0]).toEqual({ href: "/admin/webshop", label: "Mijn winkel" });
+    // 21 nov 2026: het beheer gaat alleen nog over flexwerk; de webshop staat in het dichtgeklapte onderdeel "Overig"
+    const overig = ADMIN_HUBS.find((h) => h.id === "overig");
+    expect(overig?.verborgen).toBe(true);
+    const webshop = overig?.pages.filter((p) => p.href === "/admin/webshop" || p.href === "/admin/shop") ?? [];
+    expect(webshop[0]).toEqual({ href: "/admin/webshop", label: "Mijn winkel" });
   });
 
   it("alleen lezen: tellen en optellen, niets schrijven", () => {

@@ -1,10 +1,15 @@
 // ---------------------------------------------------------------------------
-// De indeling van de beheeromgeving: acht onderdelen, elk met eigen pagina's die
-// als tabbladen boven de pagina staan. Alleen data, dus ook bruikbaar in de
-// zoekbalk en in tests (die controleren dat elke pagina hier in staat).
+// De indeling van de beheeromgeving. Sinds 21 nov 2026 (eigenaar: "geef admin een
+// betere gebruiksinterface, haal al die extra dingen weg") gaat het beheer alleen
+// nog over het flexwerk-platform: zeven onderdelen, elk met eigen pagina's die als
+// tabbladen boven de pagina staan. Alles wat publiek verborgen is (webshop,
+// websites maken, telefonie, rijschool, horeca, AI-trader, bank …) staat onderaan
+// in één dichtgeklapt onderdeel "Overig (verborgen)": de pagina's blijven bestaan
+// en bereikbaar, maar liggen niet meer in de weg. Alleen data, dus ook bruikbaar
+// in de zoekbalk en in tests (die controleren dat elke pagina hier in staat).
 // ---------------------------------------------------------------------------
 
-export type HubIcon = "overview" | "people" | "money" | "growth" | "chat" | "shop" | "ai" | "shield";
+export type HubIcon = "overview" | "people" | "jobs" | "money" | "chat" | "ai" | "shield" | "more";
 
 export interface AdminPageLink {
   href: string;
@@ -17,77 +22,143 @@ export interface AdminHub {
   blurb: string;
   icon: HubIcon;
   pages: AdminPageLink[];
+  /** Alleen opengeklapt zichtbaar, onderaan het menu: pagina's buiten het flexwerk-platform. */
+  verborgen?: boolean;
 }
 
 export const ADMIN_HUBS: AdminHub[] = [
   {
     id: "overzicht",
     label: "Overzicht",
-    blurb: "Het hele bedrijf in één oogopslag",
+    blurb: "Het platform in één oogopslag",
     icon: "overview",
     pages: [
       { href: "/admin", label: "Controlecentrum" },
       { href: "/admin/te-doen", label: "Te doen" },
       { href: "/admin/cockpit", label: "Cockpit" },
-      { href: "/admin/vooruitblik", label: "Vooruitblik" },
       { href: "/admin/bi", label: "Rapportages (BI)" },
+      { href: "/admin/analytics", label: "Verkeer" },
       { href: "/admin/agenda", label: "Agenda" },
-      { href: "/admin/kantoor", label: "Live kantoor" },
-      { href: "/admin/sim", label: "De Sim" },
     ],
   },
   {
     id: "mensen",
     label: "Mensen & bedrijven",
-    blurb: "Accounts, opdrachtgevers en kandidaten",
+    blurb: "Werkers, bedrijven, verificatie en instroom",
     icon: "people",
     pages: [
       { href: "/admin/gebruikers", label: "Gebruikers" },
-      { href: "/admin/meetkamer", label: "Meetkamer" },
       { href: "/admin/onboarding", label: "Onboarding" },
       { href: "/admin/bedrijven", label: "Bedrijven" },
-      { href: "/admin/tenants", label: "Klanten & white-label" },
       { href: "/admin/uitzendbureau", label: "Uitzendbureau" },
-      { href: "/admin/sollicitaties", label: "Sollicitaties" },
+      { href: "/admin/werker-trechter", label: "Werkerstrechter" },
+      { href: "/admin/werkgever-trechter", label: "Werkgeverstrechter" },
+      { href: "/admin/meetkamer", label: "Meetkamer" },
+      { href: "/admin/sales", label: "Sales-pijplijn" },
+    ],
+  },
+  {
+    id: "klussen",
+    label: "Klussen & uren",
+    blurb: "Klussen, bezetting, uren en disputen",
+    icon: "jobs",
+    pages: [
+      { href: "/admin/vooruitblik", label: "Klussen & bezetting" },
+      { href: "/admin/disputes", label: "Disputen" },
+      { href: "/admin/fraude", label: "Fraude & signalen" },
     ],
   },
   {
     id: "geld",
-    label: "Financiën",
-    blurb: "Omzet, facturen, betalingen en aangiftes",
+    label: "Geld",
+    blurb: "Facturen, verloning, betalingen en aangiftes",
     icon: "money",
     pages: [
-      { href: "/admin/winstplan", label: "Weg naar winst" },
-      { href: "/admin/financien", label: "Financiën & winst" },
-      { href: "/admin/accountant", label: "Accountant" },
-      { href: "/admin/boekhouding", label: "Boekhouding" },
       { href: "/admin/facturen", label: "Facturen" },
-      { href: "/admin/efacturen", label: "E-facturen" },
+      { href: "/admin/verloning", label: "Verloning" },
+      { href: "/admin/financien", label: "Financiën & winst" },
+      { href: "/admin/winstplan", label: "Weg naar winst" },
       { href: "/admin/stripe", label: "Stripe" },
       { href: "/admin/stripe/klanten", label: "Stripe-klanten" },
+      { href: "/admin/boekhouding", label: "Boekhouding" },
+      { href: "/admin/accountant", label: "Accountant" },
+      { href: "/admin/pensioen", label: "Pensioen" },
+      { href: "/admin/fiscaal", label: "Werkvormen & btw" },
+      { href: "/admin/kosten", label: "Kosten" },
+    ],
+  },
+  {
+    id: "communicatie",
+    label: "Communicatie",
+    blurb: "Alle gesprekken met bedrijven en flexwerkers",
+    icon: "chat",
+    pages: [
+      { href: "/admin/berichten", label: "Berichten" },
+      { href: "/admin/webchat", label: "Website-chat" },
+      { href: "/admin/mail", label: "Mailbox" },
+      { href: "/admin/mijn-mail", label: "Mijn mailbox" },
+      { href: "/admin/zekerflex-mail", label: "ZekerFlex Mail" },
+      { href: "/admin/whatsapp", label: "WhatsApp" },
+    ],
+  },
+  {
+    id: "ai",
+    label: "ZekerFlex AI",
+    blurb: "Sleutel, modelkeuze, alles gratis en wat vanzelf loopt",
+    icon: "ai",
+    pages: [
+      { href: "/admin/zekerflex-ai", label: "ZekerFlex AI" },
+      { href: "/admin/zekerflex-ai/mijn-ai", label: "Mijn AI" },
+      { href: "/admin/zekerflex-ai/medewerkers", label: "AI-medewerkers" },
+      { href: "/admin/gratis", label: "Alles gratis" },
+      { href: "/admin/automatisch", label: "Automatisch gedaan" },
+      { href: "/admin/autopilot", label: "Autopilot" },
+      { href: "/admin/kennisbank", label: "Kennisbank" },
+      { href: "/admin/bronnen", label: "Bronnen" },
+    ],
+  },
+  {
+    id: "systeem",
+    label: "Systeem",
+    blurb: "Foutmeldingen, taken, beveiliging, live zetten en de site zelf",
+    icon: "shield",
+    pages: [
+      { href: "/admin/systeem", label: "Systeem" },
+      { href: "/admin/beveiliging", label: "Beveiliging" },
+      { href: "/admin/prestaties", label: "Prestaties" },
+      { href: "/admin/audit", label: "Auditspoor" },
+      { href: "/admin/hosting", label: "Hosting & domein" },
+      { href: "/admin/integraties", label: "API & integraties" },
+      { href: "/admin/stripe-account", label: "Stripe-account" },
+      { href: "/admin/google-play", label: "Google Play" },
+      { href: "/admin/ontwerper", label: "Site-ontwerper" },
+      { href: "/admin/huisstijl", label: "Huisstijl" },
+      { href: "/admin/beheer", label: "Instellingen" },
+    ],
+  },
+  {
+    id: "overig",
+    label: "Overig (verborgen)",
+    blurb: "Buiten het flexwerk-platform: webshop, websites, telefonie, modules en proeven",
+    icon: "more",
+    verborgen: true,
+    pages: [
+      // overzicht en mensen
+      { href: "/admin/kantoor", label: "Live kantoor" },
+      { href: "/admin/sim", label: "De Sim" },
+      { href: "/admin/tenants", label: "Klanten & white-label" },
+      { href: "/admin/sollicitaties", label: "Sollicitaties" },
+      // geld
+      { href: "/admin/efacturen", label: "E-facturen" },
       { href: "/admin/stripe/werkbank", label: "Stripe-werkbank" },
       { href: "/admin/horeca-betalingen", label: "Horeca-betalingen" },
       { href: "/admin/bank", label: "Bank (gestopt)" },
       { href: "/admin/betalingen", label: "AI-betalingen" },
-      { href: "/admin/verloning", label: "Verloning" },
-      { href: "/admin/pensioen", label: "Pensioen" },
-      { href: "/admin/fiscaal", label: "Werkvormen & btw" },
       { href: "/admin/icp", label: "ICP-opgave" },
-      { href: "/admin/kosten", label: "Kosten" },
       { href: "/admin/kosteloos", label: "Kosteloze accounts" },
-    ],
-  },
-  {
-    id: "groei",
-    label: "Sales & groei",
-    blurb: "Leads, gesprekken, campagnes en verkeer",
-    icon: "growth",
-    pages: [
-      { href: "/admin/sales", label: "Pijplijn" },
+      // sales en marketing
       { href: "/admin/sales/partners", label: "Partnercampagnes" },
       { href: "/admin/aanbestedingen", label: "Aanbestedingen (TenderNed)" },
-      { href: "/admin/werkgever-trechter", label: "Werkgeverstrechter" },
-      { href: "/admin/werker-trechter", label: "Werkerstrechter" },
       { href: "/admin/websitevoorstellen", label: "Websitevoorstellen" },
       { href: "/admin/scans", label: "Scans & deals" },
       { href: "/admin/advertentie-op-maat", label: "Advertenties en logo's op maat" },
@@ -107,31 +178,8 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/ads", label: "Advertenties" },
       { href: "/admin/campagnes", label: "Campagnepagina's" },
       { href: "/admin/nieuwsbrief", label: "Nieuwsbrief" },
-      { href: "/admin/analytics", label: "Verkeer" },
-    ],
-  },
-  {
-    id: "communicatie",
-    label: "Communicatie",
-    blurb: "Alle gesprekken met klanten en flexwerkers",
-    icon: "chat",
-    pages: [
-      { href: "/admin/berichten", label: "Berichten" },
-      { href: "/admin/webchat", label: "Website-chat" },
-      { href: "/admin/mail", label: "Mailbox" },
-      { href: "/admin/mijn-mail", label: "Mijn mailbox" },
-      { href: "/admin/zekerflex-mail", label: "ZekerFlex Mail" },
-      { href: "/admin/whatsapp", label: "WhatsApp" },
-    ],
-  },
-  {
-    id: "merk",
-    label: "Webshop & merk",
-    blurb: "Producten, bestellingen, beeld en huisstijl",
-    icon: "shop",
-    pages: [
+      // webshop en websites
       { href: "/admin/webshop", label: "Mijn winkel" },
-      { href: "/admin/ontwerper", label: "Site-ontwerper" },
       { href: "/admin/shop", label: "Webshop" },
       { href: "/admin/verkoop-via-ai", label: "Verkoop via AI" },
       { href: "/admin/shop-ai", label: "Winkel-AI" },
@@ -140,51 +188,17 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/verkopers", label: "Verkopers" },
       { href: "/admin/studio", label: "Studio" },
       { href: "/admin/video", label: "Video-editor" },
-      { href: "/admin/huisstijl", label: "Huisstijl" },
       { href: "/admin/website-beheer", label: "Website-beheer" },
       { href: "/admin/domeinen", label: "Domeinen" },
-    ],
-  },
-  {
-    id: "ai",
-    label: "AI & automatisering",
-    blurb: "Modellen, specialisten en wat vanzelf loopt",
-    icon: "ai",
-    pages: [
-      { href: "/admin/zekerflex-ai", label: "ZekerFlex AI" },
-      { href: "/admin/zekerflex-ai/mijn-ai", label: "Mijn AI" },
-      { href: "/admin/zekerflex-ai/medewerkers", label: "AI-medewerkers" },
-      { href: "/admin/automatisch", label: "Automatisch gedaan" },
-      { href: "/admin/gratis", label: "Alles gratis" },
+      // AI-proeven
       { href: "/admin/ai-trader", label: "AI-trader" },
       { href: "/admin/specialisten", label: "Specialisten" },
       { href: "/admin/ai-teams", label: "AI-teams" },
-      { href: "/admin/autopilot", label: "Autopilot" },
       { href: "/admin/kennisgraaf", label: "Kennisgraaf" },
-      { href: "/admin/bronnen", label: "Bronnen" },
-      { href: "/admin/kennisbank", label: "Kennisbank" },
       { href: "/admin/laptop-jarvis", label: "Laptop-Jarvis" },
       { href: "/admin/audio", label: "Audio naar tekst" },
-    ],
-  },
-  {
-    id: "veiligheid",
-    label: "Risico & systeem",
-    blurb: "Geschillen, fraude, beveiliging en techniek",
-    icon: "shield",
-    pages: [
-      { href: "/admin/systeem", label: "Systeem" },
-      { href: "/admin/prestaties", label: "Prestaties" },
-      { href: "/admin/disputes", label: "Disputen" },
-      { href: "/admin/fraude", label: "Fraude" },
-      { href: "/admin/audit", label: "Auditspoor" },
-      { href: "/admin/beveiliging", label: "Beveiliging" },
-      { href: "/admin/hosting", label: "Hosting & domein" },
-      { href: "/admin/integraties", label: "API & integraties" },
-      { href: "/admin/stripe-account", label: "Stripe-account" },
-      { href: "/admin/google-play", label: "Google Play" },
+      // techniek
       { href: "/admin/dev", label: "Terminal" },
-      { href: "/admin/beheer", label: "Instellingen" },
     ],
   },
 ];

@@ -45,4 +45,27 @@ describe("indeling van de beheeromgeving", () => {
     expect(locateAdminPage("/admin/gebruikers/abc123")?.page.href).toBe("/admin/gebruikers");
     expect(locateAdminPage("/admin/bestaat-niet")).toBeNull();
   });
+
+  // 21 nov 2026 (eigenaar: "haal al die extra dingen weg"): het beheer gaat alleen nog over het flexwerk-platform.
+  // Zeven zichtbare onderdelen in vaste volgorde; alles buiten flexwerk staat in één dichtgeklapt onderdeel onderaan.
+  it("zeven flexwerk-onderdelen in vaste volgorde, met één verborgen onderdeel onderaan", () => {
+    expect(ADMIN_HUBS.map((hub) => hub.id)).toEqual(["overzicht", "mensen", "klussen", "geld", "communicatie", "ai", "systeem", "overig"]);
+    expect(ADMIN_HUBS.filter((hub) => hub.verborgen).map((hub) => hub.id)).toEqual(["overig"]);
+    expect(ADMIN_HUBS.at(-1)?.verborgen).toBe(true);
+  });
+
+  it("de zichtbare onderdelen blijven rustig: nooit meer dan twaalf pagina's per onderdeel", () => {
+    for (const hub of ADMIN_HUBS.filter((h) => !h.verborgen)) expect(hub.pages.length, hub.id).toBeLessThanOrEqual(12);
+  });
+
+  it("webshop, websites, telefonie, bank en AI-proeven staan niet in een zichtbaar onderdeel", () => {
+    const zichtbaar = new Set(ADMIN_HUBS.filter((h) => !h.verborgen).flatMap((h) => h.pages.map((p) => p.href)));
+    for (const href of ["/admin/webshop", "/admin/shop", "/admin/website-beheer", "/admin/websitevoorstellen", "/admin/telefonie", "/admin/talkaro", "/admin/bank", "/admin/ai-trader", "/admin/sim", "/admin/kantoor", "/admin/horeca-betalingen"]) {
+      expect(zichtbaar.has(href), href).toBe(false);
+    }
+    // wat wél bij flexwerk hoort, staat zichtbaar: ook de Site-ontwerper en de huisstijl van de eigen site
+    for (const href of ["/admin/gebruikers", "/admin/bedrijven", "/admin/onboarding", "/admin/vooruitblik", "/admin/disputes", "/admin/facturen", "/admin/berichten", "/admin/zekerflex-ai", "/admin/gratis", "/admin/systeem", "/admin/te-doen", "/admin/ontwerper", "/admin/huisstijl"]) {
+      expect(zichtbaar.has(href), href).toBe(true);
+    }
+  });
 });

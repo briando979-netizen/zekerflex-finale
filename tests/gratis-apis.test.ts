@@ -92,8 +92,9 @@ describe("TenderNed", () => {
     expect(dagenTot("2026-12-01T13:00", nu)).toBe(15);
   });
 
-  it("de pagina staat in het beheermenu onder Sales & groei, alleen voor platformbeheerders", () => {
-    expect(ADMIN_HUBS.find((h) => h.id === "groei")?.pages.some((p) => p.href === "/admin/aanbestedingen")).toBe(true);
+  it("de pagina staat in het beheermenu onder Overig (verborgen), alleen voor platformbeheerders", () => {
+    // 21 nov 2026: aanbestedingen horen niet bij het flexwerk-beheer en staan in het dichtgeklapte onderdeel "Overig"
+    expect(ADMIN_HUBS.find((h) => h.id === "overig")?.pages.some((p) => p.href === "/admin/aanbestedingen")).toBe(true);
     expect(lees("app/admin/aanbestedingen/page.tsx")).toContain('hasRole(principal, "PLATFORM_ADMIN")');
   });
 });

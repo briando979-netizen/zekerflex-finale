@@ -9,7 +9,7 @@ import { ViewAsSwitcher } from "@/components/admin/ViewAsControls";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { PushSelfHeal } from "@/components/app/PushToggle";
 import { LogoGlyph } from "@/components/brand/Logo";
-import { IGrid, IUsers, IWallet, IRocket, IChat, IPulse, IShield, IBriefcase } from "@/components/app/icons";
+import { IGrid, IUsers, IWallet, IChat, IPulse, IShield, IBriefcase } from "@/components/app/icons";
 
 const THEME_KEY = "zf-admin-theme";
 const COLLAPSE_KEY = "zf-admin-collapsed";
@@ -17,12 +17,12 @@ const COLLAPSE_KEY = "zf-admin-collapsed";
 const HUB_ICONS: Record<HubIcon, ReactNode> = {
   overview: <IGrid />,
   people: <IUsers />,
+  jobs: <IBriefcase />,
   money: <IWallet />,
-  growth: <IRocket />,
   chat: <IChat />,
-  shop: <IBriefcase />,
   ai: <IPulse />,
   shield: <IShield />,
+  more: <MoreIcon />,
 };
 
 export function AdminShell({
@@ -47,7 +47,7 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   // null = volg de actieve pagina; anders heeft de gebruiker zelf iets open of dicht gezet.
   const [openHub, setOpenHub] = useState<string | null>(null);
-  // Wat per onderdeel om aandacht vraagt: open disputen, mislukte betalingen, open AI-bevindingen.
+  // Wat per onderdeel om aandacht vraagt: open disputen (Klussen & uren), mislukte betalingen (Geld), open AI-bevindingen.
   const [badges, setBadges] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export function AdminShell({
         .then((r) => (r.ok ? r.json() : null))
         .then((o: { queues?: { openDisputes?: number; failedPayments?: number; openFindings?: number } } | null) => {
           if (!alive || !o?.queues) return;
-          setBadges({ veiligheid: o.queues.openDisputes ?? 0, geld: o.queues.failedPayments ?? 0, ai: o.queues.openFindings ?? 0 });
+          setBadges({ klussen: o.queues.openDisputes ?? 0, geld: o.queues.failedPayments ?? 0, ai: o.queues.openFindings ?? 0 });
         })
         .catch(() => undefined);
     void load();
@@ -98,6 +98,25 @@ export function AdminShell({
   const hubs = visibleHubs(limited);
   const activeHub = located?.hub.id ?? hubs[0]?.id ?? "";
   const shownHub = openHub ?? activeHub;
+  // De flexwerk-onderdelen bovenaan; "Overig (verborgen)" apart onderaan, standaard dicht.
+  const gewoon = hubs.filter((hub) => !hub.verborgen);
+  const verborgen = hubs.filter((hub) => hub.verborgen);
+  const hubLink = (hub: AdminHub) => (
+    <HubLink
+      key={hub.id}
+      hub={hub}
+      badge={badges[hub.id] ?? 0}
+      active={hub.id === activeHub}
+      open={!collapsed && hub.id === shownHub}
+      collapsed={collapsed}
+      pathname={pathname}
+      onToggle={() => {
+        // in het smalle menu klapt een verborgen onderdeel eerst het menu uit, anders is de lijst nergens te zien
+        if (hub.verborgen && collapsed) toggleCollapsed();
+        setOpenHub((cur) => ((cur ?? activeHub) === hub.id && !(hub.verborgen && collapsed) ? "" : hub.id));
+      }}
+    />
+  );
 
   return (
     <div className="admin-scope min-h-screen" data-theme={theme}>
@@ -126,18 +145,12 @@ export function AdminShell({
         </div>
 
         <nav aria-label="Hoofdnavigatie" className="a-scroll-x flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4 pt-1">
-          {hubs.map((hub) => (
-            <HubLink
-              key={hub.id}
-              hub={hub}
-              badge={badges[hub.id] ?? 0}
-              active={hub.id === activeHub}
-              open={!collapsed && hub.id === shownHub}
-              collapsed={collapsed}
-              pathname={pathname}
-              onToggle={() => setOpenHub((cur) => ((cur ?? activeHub) === hub.id ? "" : hub.id))}
-            />
-          ))}
+          {gewoon.map(hubLink)}
+          {verborgen.length > 0 && (
+            <div className="mt-3 space-y-0.5 pt-2" style={{ borderTop: "1px solid var(--a-side-line)" }}>
+              {verborgen.map(hubLink)}
+            </div>
+          )}
         </nav>
 
         <div className="flex-shrink-0 space-y-0.5 px-2.5 py-2.5" style={{ borderTop: "1px solid var(--a-side-line)" }}>
@@ -225,7 +238,8 @@ export function AdminShell({
               <UserMenu userName={userName} userMeta={userMeta} avatarUrl={avatarUrl ?? null} />
             </div>
           </div>
-          {located && !limited && located.hub.pages.length > 1 && <SectionTabs hub={located.hub} current={located.page.href} />}
+          {/* geen tabbladen voor het verborgen onderdeel: vijftig tabbladen zeggen niets */}
+          {located && !limited && !located.hub.verborgen && located.hub.pages.length > 1 && <SectionTabs hub={located.hub} current={located.page.href} />}
         </header>
 
         <main id="main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1500px] flex-1 px-3 pb-14 pt-5 outline-none sm:px-5 lg:px-7 lg:pt-6">
@@ -238,7 +252,10 @@ export function AdminShell({
   );
 }
 
-/** Een onderdeel in het zijmenu. De naam gaat naar de eerste pagina, het pijltje klapt alleen uit. */
+/**
+ * Een onderdeel in het zijmenu. De naam gaat naar de eerste pagina, het pijltje klapt alleen uit.
+ * Het verborgen onderdeel heeft geen eigen startpagina: daar klapt de naam zelf open en dicht.
+ */
 function HubLink({
   hub,
   badge,
@@ -257,29 +274,37 @@ function HubLink({
   pathname: string;
   onToggle: () => void;
 }) {
+  const naamKlasse = `flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] ${collapsed ? "lg:justify-center" : ""}`;
+  const naamStijl = { color: active ? "#ffffff" : hub.verborgen ? "var(--a-side-mute)" : "var(--a-side-text)", fontWeight: active ? 600 : 500 };
+  const inhoud = (
+    <>
+      <span className="relative flex-shrink-0" style={{ color: active ? "rgb(var(--brand-mint-rgb))" : "var(--a-side-mute)" }}>
+        {HUB_ICONS[hub.icon]}
+        {badge > 0 && collapsed && <span className="absolute -right-1 -top-1 hidden h-2 w-2 rounded-full lg:block" style={{ background: "var(--a-warn)" }} aria-hidden />}
+      </span>
+      <span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{hub.label}</span>
+      {badge > 0 && (
+        <span className={`num ml-auto rounded-full px-1.5 text-[0.6875rem] font-semibold ${collapsed ? "lg:hidden" : ""}`} style={{ background: "var(--a-warn)", color: "#1a1204" }} aria-label={`${badge} vragen aandacht`}>
+          {badge}
+        </span>
+      )}
+    </>
+  );
   return (
     <div>
       <div
         className={`group relative flex items-center rounded-lg transition-colors ${active ? "" : "hover:bg-[var(--a-side-hover)]"}`}
         style={active ? { background: "var(--a-side-active)" } : undefined}
       >
-        <Link
-          href={hub.pages[0]!.href}
-          title={collapsed ? hub.label : undefined}
-          className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-2 text-[0.8125rem] ${collapsed ? "lg:justify-center" : ""}`}
-          style={{ color: active ? "#ffffff" : "var(--a-side-text)", fontWeight: active ? 600 : 500 }}
-        >
-          <span className="relative flex-shrink-0" style={{ color: active ? "rgb(var(--brand-mint-rgb))" : "var(--a-side-mute)" }}>
-            {HUB_ICONS[hub.icon]}
-            {badge > 0 && collapsed && <span className="absolute -right-1 -top-1 hidden h-2 w-2 rounded-full lg:block" style={{ background: "var(--a-warn)" }} aria-hidden />}
-          </span>
-          <span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{hub.label}</span>
-          {badge > 0 && (
-            <span className={`num ml-auto rounded-full px-1.5 text-[0.6875rem] font-semibold ${collapsed ? "lg:hidden" : ""}`} style={{ background: "var(--a-warn)", color: "#1a1204" }} aria-label={`${badge} vragen aandacht`}>
-              {badge}
-            </span>
-          )}
-        </Link>
+        {hub.verborgen ? (
+          <button type="button" onClick={onToggle} title={collapsed ? hub.label : undefined} className={`${naamKlasse} text-left`} style={naamStijl} aria-expanded={open}>
+            {inhoud}
+          </button>
+        ) : (
+          <Link href={hub.pages[0]!.href} title={collapsed ? hub.label : undefined} className={naamKlasse} style={naamStijl}>
+            {inhoud}
+          </Link>
+        )}
         <button
           type="button"
           onClick={onToggle}
@@ -411,5 +436,6 @@ function BarsIcon() { return <svg {...S}><path d="M4 6h16M4 12h16M4 18h16" strok
 function SearchIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
 function SunIcon() { return <svg {...S}><circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="2" /><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
 function MoonIcon() { return <svg {...S}><path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>; }
+function MoreIcon() { return <svg {...S}><circle cx="5" cy="12" r="1.8" fill="currentColor" /><circle cx="12" cy="12" r="1.8" fill="currentColor" /><circle cx="19" cy="12" r="1.8" fill="currentColor" /></svg>; }
 function GlobeIcon() { return <svg {...S}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function CollapseIcon({ flipped }: { flipped: boolean }) { return <svg {...S} className={flipped ? "rotate-180" : ""}><rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2" /><path d="M9 4v16M16 9.5 13.5 12l2.5 2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
