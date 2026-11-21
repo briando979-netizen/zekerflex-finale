@@ -22,6 +22,8 @@ vi.mock("@/lib/storage/local", () => ({ deleteUpload: vi.fn(), readUpload: vi.fn
 vi.mock("@/lib/storage/validate", () => ({ sniffAndVerifyUploadType: vi.fn() }));
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: () => undefined }));
 vi.mock("@/lib/flags", () => ({ featureEnabled: async () => h.vlag }));
+// sinds 21 nov staat het recht om te werken uit in de code (lib/werkrecht/aan.ts); deze test bewaakt het gedrag als het weer aan gaat
+vi.mock("@/lib/werkrecht/aan", () => ({ WERKRECHT_AAN: true }));
 
 import { idStand, idVrij, werkrechtOverzicht, werkrechtVoorWerk } from "@/lib/werkrecht/store";
 

@@ -23,6 +23,7 @@ import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { leesUitzendPartners } from "@/lib/uitzend/partners";
 import { isUitzendPartner } from "@/lib/uitzend/partners-kern";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -401,7 +402,10 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
   const eigenTest = await leesEigenTest();
   const uitzendPartners = await leesUitzendPartners();
-  const shifts: MarketplaceShift[] = visible.map((s) => {
+  // ZekerFlex is geen uitzender (lib/uitzend/model.ts): een oude uitzendklus van een bedrijf dat geen uitzendpartner is, heeft
+  // geen bureau om een contract bij aan te vragen. Die laten we niet meer zien (reageren zou alleen een foutmelding geven).
+  const zichtbaar = ZEKERFLEX_UITZENDER ? visible : visible.filter((s) => !s.viaUitzendbureau || isUitzendPartner(uitzendPartners, s.branch.tenantId));
+  const shifts: MarketplaceShift[] = zichtbaar.map((s) => {
       const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3_600_000 - s.breakMinutes / 60;
       const testklus = isTestklus({ title: s.title, bedrijf: s.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.branch.tenantId, createdAt: s.createdAt }) });
       // "3 nieuw" telt alleen echt werk, geen testklussen

@@ -29,6 +29,7 @@ import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
 import { werkrechtEisTodo } from "@/lib/admin/todo-werkrecht";
+import { WERKRECHT_AAN } from "@/lib/werkrecht/aan";
 import { bonnenMailTodo, type BonnenMailStand } from "@/lib/admin/todo-bonnen-mail";
 import { autoUitrolTodos } from "@/lib/admin/todo-auto-uitrol";
 import { leesAutoStand } from "@/lib/bouwer/auto-uitrol-opslag";
@@ -320,7 +321,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const introductieBeloningen = introductieTodos(await verschuldigdeBeloningen().catch(() => []), manual);
   // Auto-uitrol: geweigerd, migratie wacht of main loopt >30 min achter (lib/bouwer/auto-uitrol-regels.ts); een leesfout geeft geen taak
   const autoUitrol = autoUitrolTodos(await leesAutoStand().then(async (s) => autoUitrolMeldingen(s, liveVersie()?.sha ?? null, Date.now(), await featureEnabled("auto-uitrol").catch(() => false)), () => undefined));
-  const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
+  // sinds 21 nov staat het recht om te werken uit in de code (lib/werkrecht/aan.ts, eigenaar): dan geen taak om de vlag aan te zetten
+  const werkrechtEis = werkrechtEisTodo(WERKRECHT_AAN ? await featureEnabled("werkrecht-eis").catch(() => undefined) : undefined);
   // bonnetjesmail (lib/boekhouding/bonnen/mail-taak.ts): staat de vlag aan terwijl er geen mailbox of administratie is? Een leesfout geeft geen taak
   const bonnenMail = bonnenMailTodo(await bonnenMailStand().catch((): undefined => undefined));
   // twee functies die droog draaien tot de eigenaar ja zegt (14 nov, lib/admin/todo-besluiten.ts): de stand van de vlag plus

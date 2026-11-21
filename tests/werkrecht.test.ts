@@ -152,6 +152,8 @@ vi.mock("@/lib/storage/local", () => ({
 }));
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: () => undefined }));
 vi.mock("@/lib/flags", () => ({ featureEnabled: async () => true }));
+// sinds 21 nov staat het recht om te werken uit in de code (lib/werkrecht/aan.ts); deze test bewaakt het gedrag als het weer aan gaat
+vi.mock("@/lib/werkrecht/aan", () => ({ WERKRECHT_AAN: true }));
 
 const PNG = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
 

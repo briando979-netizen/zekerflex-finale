@@ -35,6 +35,37 @@ export interface NavEntry {
 export const CTA_WN = { label: "Account aanmaken", href: "/register" };
 export const CTA_BV = { label: "Organisatie aanmelden", href: "/register?type=bedrijf" };
 
+/**
+ * Bij welke kant een pagina hoort (21 nov 2026, eigenaar: "bij bedrijven moet inloggen via het web blijven"). Op een
+ * bedrijvenpagina staat rechtsboven Inloggen (web) en Start vandaag (aanmelden als bedrijf); op een werkerspagina Ga naar de
+ * app. Een pagina die bij geen van beide hoort (over ons, kennis, …) volgt de laatste keuze in deze browser.
+ */
+const BEDRIJVEN_PADEN = [
+  "/bedrijven",
+  "/voor-bedrijven",
+  "/partners",
+  "/uitzendpartner",
+  "/personeel-inhuren",
+  "/klus-plaatsen",
+  "/demo",
+  "/intercedenten",
+  "/tarieven-overzicht",
+  "/voor-bureaus",
+  "/producten",
+  "/prijzen",
+  "/kennis/werkgevers",
+  "/leren/personeel-krijgen",
+] as const;
+const WERKNEMERS_PADEN = ["/voor-freelancers", "/starten-als-uitzendkracht", "/freelance-werk", "/klussen", "/open-diensten", "/app", "/leren/klussen-krijgen"] as const;
+
+export function kantVanPad(pad: string): Audience | null {
+  const onder = (basis: string) => pad === basis || pad.startsWith(`${basis}/`);
+  if (pad === "/") return "werknemers";
+  if (BEDRIJVEN_PADEN.some(onder)) return "bedrijven";
+  if (WERKNEMERS_PADEN.some(onder)) return "werknemers";
+  return null;
+}
+
 export interface KopKnop {
   label: string;
   href: string;

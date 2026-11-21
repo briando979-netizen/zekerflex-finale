@@ -11,6 +11,7 @@ import {
   VOORBEELDSITES,
   eigenLinks,
   isExternal,
+  kantVanPad,
   zichtbareAanbodKolommen,
   zichtbareNav,
   type Audience,
@@ -90,14 +91,9 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
   };
   const toggleMenu = (key: string) => setMenu((m) => (m === key ? null : key));
 
-  // URL wins; otherwise the last explicit choice; default werknemers.
-  // Since 11 Nov 2026 the home (/) is the workers' page and /bedrijven the companies' one.
-  const audience: Audience =
-    pathname.startsWith("/voor-bedrijven") || pathname === "/bedrijven"
-      ? "bedrijven"
-      : pathname.startsWith("/voor-freelancers") || pathname === "/"
-        ? "werknemers"
-        : stored ?? "werknemers";
+  // URL wins (kantVanPad: elke bedrijvenpagina, ook /partners/uitzend en /prijzen); otherwise the last explicit choice;
+  // default werknemers. Since 11 Nov 2026 the home (/) is the workers' page and /bedrijven the companies' one.
+  const audience: Audience = kantVanPad(pathname) ?? stored ?? "werknemers";
 
   const knoppen = KOP_KNOPPEN[audience];
 

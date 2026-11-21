@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { KOP_KNOPPEN } from "@/lib/marketing/site-nav";
+import { KOP_KNOPPEN, kantVanPad } from "@/lib/marketing/site-nav";
 
 // De knoppen rechtsboven op de site (21 nov 2026, eigenaar: "die login knopje bedoelde ik, bij werknemers moet daar staan ga naar
 // de app"). Werkers: Ga naar de app + Start vandaag (account aanmaken); bedrijven: Inloggen + Start vandaag (aanmelden).
@@ -22,6 +22,15 @@ describe("knoppen in de kopbalk per kant", () => {
     expect(b.tweede.label).toBe("Start vandaag");
     expect(b.tweede.href).toContain("type=bedrijf");
     expect(b.mobiel.href).toBe("/login");
+  });
+
+  it("elke bedrijvenpagina telt als bedrijven (Inloggen via het web), werkerspagina's als werkers", () => {
+    for (const pad of ["/bedrijven", "/voor-bedrijven", "/partners/uitzend", "/uitzendpartner/voorwaarden", "/prijzen", "/personeel-inhuren/groningen", "/klus-plaatsen"]) {
+      expect(kantVanPad(pad), pad).toBe("bedrijven");
+    }
+    for (const pad of ["/", "/voor-freelancers", "/starten-als-uitzendkracht", "/klussen", "/app"]) expect(kantVanPad(pad), pad).toBe("werknemers");
+    for (const pad of ["/over-ons", "/kennis", "/contact"]) expect(kantVanPad(pad), pad).toBeNull();
+    expect(lees("components/marketing/SiteHeader.tsx")).toContain('kantVanPad(pathname) ?? stored ?? "werknemers"');
   });
 
   it("de kopbalk en het mobiele menu gebruiken de knoppen per kant, niet een vaste inlogknop", () => {

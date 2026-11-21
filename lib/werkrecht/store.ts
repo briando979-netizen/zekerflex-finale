@@ -5,6 +5,7 @@ import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 import { amsterdamDayKey, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { featureEnabled } from "@/lib/flags";
+import { WERKRECHT_AAN } from "@/lib/werkrecht/aan";
 import {
   BESTAAND_TOT,
   VERKLARING_VERSIE,
@@ -135,6 +136,8 @@ export async function werkrechtOverzicht(userId: string, nu = new Date()): Promi
 /** De controle vóór een (betaalde) dienst in een land. */
 /** Eist het platform het recht om te werken vóór een klus? Een storing in de vlag telt als uit: niemand loopt vast. */
 export async function werkrechtEisAan(): Promise<boolean> {
+  // 21 nov 2026 (eigenaar): helemaal uit in de code (lib/werkrecht/aan.ts); de vlag telt pas weer als WERKRECHT_AAN true is
+  if (!WERKRECHT_AAN) return false;
   return featureEnabled("werkrecht-eis").catch(() => false);
 }
 

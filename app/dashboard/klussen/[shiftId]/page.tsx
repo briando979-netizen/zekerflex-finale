@@ -646,70 +646,78 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </section>
         )}
 
-        {/* Over de opdrachtgever: alleen wat er echt is (beoordelingen, eigen tekst, website) en al zijn klussen */}
-        {(orgReviews.count > 0 || orgExtra.about || orgExtra.websiteUrl) && (
-          <section className="mt-8 border-t border-hair pt-5">
-            <h2 className="font-display text-base font-bold text-ink">{D.about(s.company)}</h2>
-            {orgReviews.count > 0 && (
-              <p className="mt-1.5 flex items-center gap-2 text-sm">
-                <span className="text-amber-500">
-                  {"★★★★★".slice(0, Math.round(orgReviews.average))}
-                  <span className="text-neutralx-300">{"★★★★★".slice(Math.round(orgReviews.average))}</span>
-                </span>
-                <span className="text-neutralx-500">
-                  {D.reviews(orgReviews.count)}
-                </span>
-              </p>
-            )}
-            {orgExtra.about && (
-              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{orgExtra.about}</p>
-            )}
-            {orgExtra.websiteUrl && (
-              <a
-                href={orgExtra.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline"
-              >
-                {D.website(s.company)}
-              </a>
-            )}
-          </section>
-        )}
+        {/* Over de opdrachtgever (21 nov, eigenaar: "je hebt veel weggehaald boven Alle klussen van"): het blok staat er weer altijd,
+            zoals bij YoungOnes: beoordelingen (grijze sterren zolang er geen zijn), eigen tekst en website als die er zijn, drie
+            regels over hoe het bedrijf werkt, en daaronder Alle klussen van … */}
+        <section className="mt-8 border-t border-hair pt-5">
+          <h2 className="font-display text-base font-bold text-ink">{D.about(s.company)}</h2>
+          <p className="mt-1.5 flex items-center gap-2 text-sm">
+            <span className="text-amber-500">
+              {"★★★★★".slice(0, Math.round(orgReviews.average))}
+              <span className="text-neutralx-300">{"★★★★★".slice(Math.round(orgReviews.average))}</span>
+            </span>
+            <span className="text-neutralx-500">{D.reviews(orgReviews.count)}</span>
+          </p>
+          {orgExtra.about && <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{orgExtra.about}</p>}
+          {orgExtra.websiteUrl && (
+            <a
+              href={orgExtra.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline"
+            >
+              {D.website(s.company)}
+            </a>
+          )}
 
-        <Link
-          href={`/dashboard/klussen?employer=${encodeURIComponent(s.company)}`}
-          className="mt-6 block rounded-xl border border-hairstrong px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-paper-soft"
-        >
-          {D.allJobsOf(s.company)}
-        </Link>
-
-        {/* de chat met de opdrachtgever blijft altijd (eigenaar, 20 nov) */}
-        {!settled && (
-          <div className="mt-3">
-            <MessageEmployerButton shiftId={s.id} label={D.messageEmployer} />
+          <div className="mt-4 divide-y divide-hair rounded-xl bg-paper-soft">
+            <StatRow icon="🕐">{D.stat1}</StatRow>
+            <StatRow icon="🙂">{D.stat2}</StatRow>
+            <StatRow icon="🐖">{agencyTerms ? D.stat3Agency : D.stat3}</StatRow>
           </div>
-        )}
 
-        {/* andere klussen, zoals "Misschien zijn deze klussen ook iets voor jou" bij YoungOnes (21 nov) */}
+          <Link
+            href={`/dashboard/klussen?employer=${encodeURIComponent(s.company)}`}
+            className="mt-4 block rounded-xl border border-hairstrong px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-paper-soft"
+          >
+            {D.allJobsOf(s.company)}
+          </Link>
+        </section>
+
+        {/* andere klussen, zoals "Misschien zijn deze klussen ook iets voor jou" bij YoungOnes: vegende kaarten met een foto */}
         {ookVoorJou.length > 0 && (
-          <section className="mt-8 border-t border-hair pt-5">
-            <h2 className="font-display text-base font-bold text-ink">{D.alsoForYou}</h2>
-            <ul className="mt-3 grid grid-cols-2 gap-2.5">
+          <section className="mt-8">
+            <h2 className="mb-3 font-display text-base font-bold text-ink">{D.alsoForYou}</h2>
+            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
               {ookVoorJou.map((k) => (
-                <li key={k.id} className="min-w-0">
-                  <Link href={`/dashboard/klussen/${k.id}`} className="block h-full rounded-xl border border-hair bg-white p-3 hover:bg-paper-soft">
+                <Link
+                  key={k.id}
+                  href={`/dashboard/klussen/${k.id}`}
+                  className="w-60 flex-shrink-0 snap-start overflow-hidden rounded-2xl border border-hair bg-white shadow-card"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={shiftCategory(k.title, null).photo} alt="" className="h-28 w-full object-cover" />
+                  <div className="p-3">
                     <p className="truncate text-xs font-semibold text-brand-600">{k.branch.tenant.name}</p>
-                    <p className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug text-ink">{k.title}</p>
-                    <p className="mt-1 text-xs text-neutralx-500">
+                    <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-ink">{k.title}</p>
+                    <p className="mt-1 text-[11px] text-neutralx-400">
                       {fmtDay(k.startsAt)} · {k.branch.city}
                     </p>
                     <p className="num mt-1.5 text-sm font-bold text-ink">{moneyExact(k.hourlyRateCents)}</p>
-                  </Link>
-                </li>
+                  </div>
+                </Link>
               ))}
-            </ul>
+            </div>
           </section>
+        )}
+
+        <div className="mt-6 rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-500">{agencyTerms ? D.footerAgency : D.footer}</div>
+
+        {/* de chat met de opdrachtgever blijft altijd (eigenaar, 20 nov) */}
+        {!settled && (
+          <div className="mt-4">
+            <MessageEmployerButton shiftId={s.id} label={D.messageEmployer} />
+          </div>
         )}
       </div>
 
@@ -781,7 +789,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 blokkade={applyBlokkade}
                 full
                 fixedRate={agencyTerms}
-                {...(partner ? { label: D.partnerKnop, toestemming: metBureau(D.partnerToestemming) } : {})}
+                {...(partner ? { label: D.partnerKnop, toestemming: metBureau(D.partnerToestemming), uitzendBureau: bureau } : {})}
               />
             </div>
           )}
@@ -792,6 +800,15 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatRow({ icon, children }: { icon: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3 text-sm text-neutralx-600">
+      <span className="text-base leading-none">{icon}</span>
+      <span>{children}</span>
     </div>
   );
 }

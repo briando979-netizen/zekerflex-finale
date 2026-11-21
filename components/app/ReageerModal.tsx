@@ -8,6 +8,7 @@ import { counterOfferAction } from "@/app/dashboard/klussen/actions";
 import { moneyExact } from "@/components/app/ui";
 import { useFT } from "@/components/i18n/useFT";
 import { ReageerBlokSheet } from "@/components/app/ReageerBlokSheet";
+import { UitzendAanvraagSheet } from "@/components/app/UitzendAanvraagSheet";
 import type { ReageerStap } from "@/lib/onboarding/laat-weten";
 
 export interface OtherShiftOption {
@@ -41,6 +42,7 @@ export function ReageerButton({
   fixedRate = false,
   blokkade = null,
   toestemming,
+  uitzendBureau,
 }: {
   shiftId: string;
   listedRateCents: number;
@@ -61,6 +63,8 @@ export function ReageerButton({
   blokkade?: { reden: string; stap: ReageerStap } | null;
   /** klus van een uitzendpartner: welke gegevens met het bureau gedeeld worden als de werker op de knop tikt (YoungOnes-stijl) */
   toestemming?: string;
+  /** klus van een uitzendpartner: de naam van het bureau; dan opent de knop het venster "Vraag uitzendcontract aan" */
+  uitzendBureau?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ft = useFT();
@@ -82,7 +86,19 @@ export function ReageerButton({
         {toestemming && <span className="text-center text-[11px] leading-snug text-neutralx-500">{toestemming}</span>}
       </div>
       {open && blokkade && <ReageerBlokSheet reden={blokkade.reden} stap={blokkade.stap} onClose={() => setOpen(false)} />}
-      {open && !blokkade && (
+      {open && !blokkade && uitzendBureau && (
+        <UitzendAanvraagSheet
+          shiftId={shiftId}
+          listedRateCents={listedRateCents}
+          klant={clientName}
+          bureau={uitzendBureau}
+          startTime={startTime}
+          endTime={endTime}
+          toestemming={toestemming}
+          onClose={() => setOpen(false)}
+        />
+      )}
+      {open && !blokkade && !uitzendBureau && (
         <Modal
           shiftId={shiftId}
           listedRateCents={listedRateCents}
