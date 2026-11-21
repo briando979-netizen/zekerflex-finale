@@ -125,9 +125,8 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
         scrolled ? "shadow-[0_10px_30px_-18px_rgba(0,0,0,0.7)]" : ""
       }`}
       style={{
-        // sinds 21 nov nachtblauw, zoals de balk van de website van YoungOnes (eigenaar: "dezelfde website-weergave");
-        // de kleur "Donkere vlakken" uit de Site-ontwerper (--zf-inkt-rgb) geldt voor de andere donkere vlakken
-        background: solid && !open ? "rgb(0 4 64 / 0.94)" : "rgb(0 4 64)",
+        // --zf-inkt-rgb: de kleur "Donkere vlakken" uit de Site-ontwerper (lib/ontwerp/thema.ts); standaard 12 14 18 = #0C0E12
+        background: solid && !open ? "rgb(var(--zf-inkt-rgb, 12 14 18) / 0.94)" : "rgb(var(--zf-inkt-rgb, 12 14 18))",
         backdropFilter: solid && !open ? "blur(10px)" : undefined,
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
@@ -137,7 +136,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           <span className="transition-transform hover:rotate-6">
             <LogoGlyph size={30} tone="light" />
           </span>
-          <span className="font-display text-lg font-extrabold uppercase tracking-tight">ZekerFlex</span>
+          <span className="font-display text-lg font-bold tracking-tight">ZekerFlex</span>
         </Link>
 
         {/* With every label on one line the full bar needs ~1.500px. Below
@@ -167,8 +166,8 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
                 <Link
                   href={n.href}
                   onFocus={() => hasMenu && showMenu(n.key)}
-                  className={`flex items-center whitespace-nowrap py-2 pl-1.5 text-[13px] font-bold transition-colors xl:pl-0 xl:text-sm ${
-                    active || menu === n.key ? "text-yo-teal" : "text-white/85 hover:text-white"
+                  className={`flex items-center whitespace-nowrap py-2 pl-1.5 text-[13px] font-semibold transition-colors xl:pl-0 xl:text-sm ${
+                    active || menu === n.key ? "text-brand-mint" : "text-white/75 hover:text-white"
                   }`}
                 >
                   {n.label}
@@ -213,14 +212,14 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           })}
         </nav>
 
-        {/* de schakelaar Werkers | Bedrijven: een pil in het midden, zoals bij YoungOnes; met de vlag alleen flexwerk is het
-            menu kort genoeg om hem al vanaf een laptop te tonen */}
-        <div className="ml-auto hidden items-center rounded-full bg-white/[0.08] p-1 lg:flex">
+        {/* audience toggle */}
+        {/* de schakelaar Werkers | Bedrijven: zoals bij YoungOnes al vanaf een laptop zichtbaar (met de vlag alleen flexwerk is het menu kort genoeg) */}
+        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 lg:flex">
           <Link
             href="/"
             onClick={() => pick("werknemers")}
-            className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
-              audience === "werknemers" ? "bg-white/20 text-white" : "text-white/55 hover:text-white/80"
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+              audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
             }`}
           >
             Werkers
@@ -228,24 +227,24 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           <Link
             href="/bedrijven"
             onClick={() => pick("bedrijven")}
-            className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
-              audience === "bedrijven" ? "bg-white/20 text-white" : "text-white/55 hover:text-white/80"
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+              audience === "bedrijven" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
             }`}
           >
             Bedrijven
           </Link>
         </div>
 
-        <div className="ml-auto hidden items-center gap-2 lg:flex xl:gap-3">
+        <div className="ml-auto hidden items-center gap-2 lg:ml-0 lg:flex xl:gap-3">
           <Link
             href="/login"
-            className="whitespace-nowrap rounded-md bg-white px-3 py-2 text-[13px] font-bold text-yo-navy transition hover:bg-white/90 xl:px-4 xl:text-sm"
+            className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-[13px] font-bold text-ink transition hover:bg-white/90 xl:px-4 xl:text-sm"
           >
             Inloggen
           </Link>
           <Link
             href={startHref(audience)}
-            className="whitespace-nowrap rounded-md bg-yo-teal px-3 py-2 text-[13px] font-bold text-yo-night transition hover:brightness-105 xl:px-4 xl:text-sm"
+            className="whitespace-nowrap rounded-full bg-brand-mint px-3 py-2 text-[13px] font-bold text-ink transition hover:brightness-105 xl:px-4 xl:text-sm"
           >
             Start vandaag
           </Link>
@@ -256,7 +255,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           {!open && (
             <Link
               href="/login"
-              className="whitespace-nowrap rounded-md bg-white px-3.5 py-2 text-sm font-bold text-yo-navy transition hover:bg-white/90 max-[359px]:hidden"
+              className="whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-sm font-bold text-ink transition hover:bg-white/90 max-[359px]:hidden"
             >
               Inloggen
             </Link>
