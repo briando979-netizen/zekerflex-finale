@@ -32,6 +32,8 @@ const BASISLIJN: Record<string, string> = {
   ...groep("al gedekt als koppeling: Stripe (betalen) en pdok/OSM/VIES/Google/Apple op de afgesproken lijst; hier alleen link of inlog", [
     "dashboard.stripe.com", "stripe.com", "ec.europa.eu", "accounts.google.com", "oauth2.googleapis.com",
     "openidconnect.googleapis.com", "www.googleapis.com", "appleid.apple.com", "apps.apple.com", "play.google.com",
+    // de testversie van de iPhone-app (TestFlight): een link voor de werker, geen aanroep (lib/app-vereist.ts)
+    "testflight.apple.com",
   ]),
   ...groep("standaardadres in lib/env.ts dat nergens wordt aangeroepen", ["api.openov.nl"]),
   ...groep("link naar de console van een gratis AI-dienst om een sleutel te maken (lib/ai/ketting.ts), geen aanroep", [

@@ -44,6 +44,7 @@ export const GEPLAATSTE_COOKIES: readonly GeplaatsteCookie[] = [
   { namen: ["zf_welkom"], doel: "onthoudt dat je het welkomstscherm al hebt gezien", looptijd: JAAR },
   { namen: ["zf_balk_dicht"], doel: "onthoudt dat je de aankondigingsbalk hebt weggeklikt", looptijd: 30 * DAG },
   { namen: ["zf_app", "zf_app_ios", "zf_app_chip"], doel: "onthoudt dat je de Android- of iPhone-app gebruikt (en of die de chip van een ID-kaart kan lezen), zodat je de app-weergave krijgt", looptijd: JAAR },
+  { namen: ["zf_pwa"], doel: "onthoudt dat je ZekerFlex als geïnstalleerde web-app op je telefoon gebruikt, zodat je als werker het dashboard krijgt in plaats van het scherm 'Installeer de app'", looptijd: JAAR },
   { namen: ["zf_taal_geteld"], doel: "zorgt dat de taal van je browser maar één keer per bezoek anoniem wordt meegeteld; zonder id", looptijd: "sessie" },
   { namen: ["zf_horeca_scherm"], doel: "koppelt een tablet of scherm aan een horecazaak, alleen op dat apparaat", looptijd: JAAR },
   { namen: ["zf_rijles"], doel: "houdt een leerling ingelogd in de omgeving van een rijschool", looptijd: 60 * DAG },

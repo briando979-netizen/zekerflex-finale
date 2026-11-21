@@ -70,6 +70,8 @@ const VERWACHT: Record<string, Verwacht> = {
   zf_app: { bron: "lib/app-mode.ts", looptijd: () => uit("middleware.ts", new RegExp(`res\\.cookies\\.set\\(APP_COOKIE, "1", \\{ path: "/", maxAge: ${SOM},`)) },
   zf_app_ios: { bron: "lib/app-mode.ts", looptijd: () => uit("middleware.ts", new RegExp(`res\\.cookies\\.set\\(APP_IOS_COOKIE, "1", \\{ path: "/", maxAge: ${SOM},`)) },
   zf_app_chip: { bron: "lib/app-mode.ts", looptijd: () => uit("middleware.ts", new RegExp(`res\\.cookies\\.set\\(APP_CHIP_COOKIE, "1", \\{ path: "/", maxAge: ${SOM},`)) },
+  // de geïnstalleerde web-app (21 nov 2026): components/app/AppVereist.tsx zet hem zodra de pagina standalone draait
+  zf_pwa: { bron: "lib/app-vereist.ts", looptijd: () => constante("lib/app-vereist.ts", "PWA_COOKIE_MAX_AGE") },
   zf_taal_geteld: {
     bron: "lib/i18n/taal-vraag.ts",
     looptijd: () => {
@@ -100,6 +102,7 @@ const ZETTERS: Record<string, number> = {
   "app/api/werkgever/werkruimte/route.ts": 1,
   "app/r/[code]/route.ts": 1,
   "app/voorbeeld/sluiten/route.ts": 1,
+  "components/app/AppVereist.tsx": 1,
   "components/i18n/I18nProvider.tsx": 1,
   "components/marketing/AankondigingsBalk.tsx": 1,
   "components/marketing/CookieConsent.tsx": 1,
