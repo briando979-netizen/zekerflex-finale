@@ -18,6 +18,7 @@ import { hoursCorrectionProposedEmailT } from "@/lib/mail/werker/geschil";
 
 export { escapeHtml };
 import { categoryBySlug, isAutomatedKind, isOptionalCategory, mailCategoryForKind } from "@/lib/mail/categories";
+import { VERKOOP_NIET_INGESTELD, verkoopLogin } from "@/lib/mail/verkoop-mailbox";
 import { getMailPrefs, mailAllowed } from "@/lib/mail/prefs";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { BOUNCE_OPSCHORTING, blokBijBounce } from "@/lib/mail/bounce";
@@ -288,6 +289,18 @@ async function deliverWithRetry(
 }
 
 /**
+ * De login waarmee een mail van deze categorie de deur uit gaat. Verkoopmail (21 nov 2026, lib/mail/verkoop-mailbox.ts) logt
+ * in met de eigen verkoopmailbox; zonder die mailbox gaat hij NIET via de gewone (de grens van TransIP geldt per mailbox, en
+ * de mail van de app gaat voor): dan geen login, met de fout erbij.
+ */
+async function smtpVoorCategorie(category: string, cfg: SmtpConfig): Promise<{ cfg: SmtpConfig | null; fout?: string }> {
+  if (category !== "sales-outreach") return { cfg };
+  const login = await verkoopLogin().catch(() => null);
+  if (!login) return { cfg: null, fout: VERKOOP_NIET_INGESTELD };
+  return { cfg: { ...cfg, user: login.adres, pass: login.wachtwoord } };
+}
+
+/**
  * Re-send a mail from the admin mailbox that failed over SMTP, exactly as it
  * was stored (its text already carries any footer). Updates the record.
  */
@@ -296,8 +309,10 @@ export async function resendStoredMail(id: string): Promise<{ delivered: boolean
   if (!rec) return { delivered: false, error: "Bericht niet gevonden." };
   if (rec.delivered) return { delivered: true };
   if (rec.suppressed) return { delivered: false, error: `Ontvanger is ${rec.suppressed}.` };
-  const cfg = smtpConfig();
-  if (!cfg) return { delivered: false, error: "Geen mailserver ingesteld." };
+  const basis = smtpConfig();
+  if (!basis) return { delivered: false, error: "Geen mailserver ingesteld." };
+  const { cfg, fout } = await smtpVoorCategorie(mailCategoryForKind(rec.kind), basis);
+  if (!cfg) return { delivered: false, error: fout ?? "Geen mailserver ingesteld." };
   const to = rec.to[0]!;
   const { header } = fromHeader(rec.from);
   const raw = buildRaw(
@@ -387,13 +402,20 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   let transport: "smtp" | "mailbox" = "mailbox";
   let error: string | undefined;
 
-  const cfg = smtpConfig();
+  const basis = smtpConfig();
   // .test/.example/.invalid/.localhost can never be delivered (RFC 2606/6761): keep it in the local
   // mailbox instead of bouncing at the mail server — and a test can never reach a real inbox
-  if (cfg && !suppressed && !isReservedTestAddress(input.to)) {
-    transport = "smtp";
-    ({ delivered, error } = await deliverWithRetry(cfg, addr, input.to, raw));
-    if (!delivered) logger.warn("smtp delivery failed - mail kept in local mailbox", { domein: ontvangerDomeinen(input.to), error: zonderAdressen(error) });
+  if (basis && !suppressed && !isReservedTestAddress(input.to)) {
+    // verkoopmail alleen via de eigen verkoopmailbox (smtpVoorCategorie); zonder die blijft hij in de eigen postbus, met de fout
+    const { cfg, fout } = await smtpVoorCategorie(category, basis);
+    if (cfg) {
+      transport = "smtp";
+      ({ delivered, error } = await deliverWithRetry(cfg, addr, input.to, raw));
+      if (!delivered) logger.warn("smtp delivery failed - mail kept in local mailbox", { domein: ontvangerDomeinen(input.to), error: zonderAdressen(error) });
+    } else {
+      error = fout;
+      logger.warn("verkoopmail niet verstuurd - geen verkoopmailbox", { domein: ontvangerDomeinen(input.to) });
+    }
   }
 
   const rec: SentRecord = {

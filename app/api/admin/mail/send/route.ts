@@ -4,6 +4,7 @@ import { z } from "zod";
 import { sendMail, mailShell } from "@/lib/mail";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,9 @@ const bodySchema = z.object({
   to: z.string().trim().email().max(200),
   subject: z.string().trim().min(1).max(200),
   text: z.string().trim().min(1).max(10_000),
+  /** "verkoop" (21 nov 2026): een verkoopbericht. Gaat als "sales-outreach" via de eigen verkoopmailbox, met afmeldregel, van
+   * en met antwoorden naar sales@; zonder verkoopmailbox wordt hij niet verstuurd (lib/mail/verkoop-mailbox.ts). */
+  soort: z.enum(["verkoop"]).optional(),
 });
 
 // POST /api/admin/mail/send — an admin composing and sending an ad-hoc,
@@ -31,10 +35,11 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
       .join(""),
   );
 
+  const verkoop = parsed.soort === "verkoop";
   const result = await sendMail({
     to,
-    replyTo: principal.email,
-    kind: "admin-bericht",
+    ...(verkoop ? { from: env.MAIL_SALES_FROM, replyTo: env.MAIL_SALES_FROM } : { replyTo: principal.email }),
+    kind: verkoop ? "sales-outreach" : "admin-bericht",
     subject,
     text,
     html,
@@ -48,7 +53,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     summary: `${principal.email} stuurde een e-mail naar ${to}: "${subject}"`,
     targetType: "mail",
     targetId: to,
-    metadata: { subject, delivered: result.delivered, transport: result.transport },
+    metadata: { subject, delivered: result.delivered, transport: result.transport, ...(verkoop ? { soort: "verkoop" } : {}) },
   });
 
   return NextResponse.json({

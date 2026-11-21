@@ -50,6 +50,19 @@ describe("POST /api/admin/mail/send", () => {
     );
   });
 
+  it("soort verkoop (21 nov 2026): gaat als sales-outreach, van en met antwoorden naar sales@", async () => {
+    requirePrincipal.mockResolvedValue(ADMIN);
+    sendMail.mockResolvedValue({ delivered: false, transport: "mailbox", error: "Geen verkoopmailbox ingesteld" });
+    const res = await POST(req({ to: "eigenaar@bedrijf.nl", subject: "Kennismaking", text: "Hoi", soort: "verkoop" }), { params: Promise.resolve({}) });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.delivered).toBe(false);
+    expect(body.error).toContain("verkoopmailbox");
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "eigenaar@bedrijf.nl", kind: "sales-outreach", from: "sales@zekerflex.com", replyTo: "sales@zekerflex.com" }),
+    );
+  });
+
   it("rejects an invalid recipient address", async () => {
     requirePrincipal.mockResolvedValue(ADMIN);
     const res = await POST(req({ to: "not-an-email", subject: "x", text: "y" }), { params: Promise.resolve({}) });

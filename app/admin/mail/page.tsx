@@ -2,6 +2,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { PageHead } from "@/components/admin/kit";
 import { Mailbox } from "@/components/admin/Mailbox";
 import { InfoMailPanel } from "@/components/admin/InfoMailPanel";
+import { VerkoopMailbox } from "@/components/admin/VerkoopMailbox";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function MailPage() {
   }
   return (
     <Mailbox>
+      <VerkoopMailbox />
       <InfoMailPanel />
     </Mailbox>
   );

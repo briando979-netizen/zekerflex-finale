@@ -285,6 +285,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const stripeFotoSleutel = await stripeFotoSleutelInfo().catch(() => null);
   // ZekerFlex Mail-adressen van gewiste accounts (AVG) die bij TransIP nog een mailbox hebben
   const zfMailOpheffen = await import("@/lib/mail/zf-accounts").then((m) => m.teOpheffenBijTransip()).catch((): string[] => []);
+  // de eigen mailbox voor verkoopmail (lib/mail/verkoop-mailbox.ts): zonder die mailbox gaat er geen verkoopmail de deur uit
+  const verkoopBox = await import("@/lib/mail/verkoop-mailbox").then((m) => m.verkoopMailboxStand()).catch(() => null);
   // weigerde Stripe Identity voor het hele account (lib/kyc/stripe-weigering.ts)? Dan staat ZekerFlex het 24 uur uit
   const stripeWeigering = await actieveWeigering().catch(() => null);
   // het live Stripe-account: kan het betalingen ontvangen en uitbetalen (elke 15 min gemeten, lib/billing/stripe-betalen.ts)?
@@ -757,6 +759,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Kies het hoofddomein (bv. https://zekerflex.com). Pagina's op www sturen nu al door naar het adres zonder www.", "Wil je een ander hoofddomein, vraag het aan Claude: die zet APP_BASE_URL op de server en past de doorverwijzing aan."],
       auto: true,
       done: /^https:\/\//.test(base) && !/localhost/.test(base),
+    },
+    {
+      id: "verkoop-mailbox",
+      group: "Beheer & veiligheid",
+      title: "Een eigen mailbox voor verkoopmail maken (sales@zekerflex.com)",
+      why: "Op 21 nov gingen ±1000 verkoopmails via dezelfde mailbox als de app. TransIP staat ±1000 ontvangers per dag per mailbox toe en weigerde daarna alles, ook inlogcodes en 'wachtwoord vergeten'. Verkoopmail gaat nu alleen nog via een eigen mailbox; zolang die er niet is, gaat er geen verkoopmail de deur uit.",
+      how: [
+        "Log in bij TransIP en ga naar E-mail → zekerflex.com.",
+        "Staat sales@zekerflex.com daar als doorstuuradres (naar info@)? Haal dat doorsturen weg en maak sales@zekerflex.com aan als echte mailbox, met een sterk wachtwoord.",
+        "Zet bij die mailbox automatisch doorsturen naar info@zekerflex.com aan, zodat antwoorden van bedrijven en teruggestuurde mails bij info@ blijven binnenkomen.",
+        "Ga in ZekerFlex naar Beheer → Mail → Verkoopmailbox, typ het adres en het wachtwoord en klik 'Testen en opslaan'. Deze taak vinkt zichzelf af.",
+      ],
+      auto: true,
+      done: Boolean(verkoopBox?.ingesteld),
+      ...(verkoopBox?.ingesteld ? { doneNote: `verkoopmail gaat via ${verkoopBox.adres ?? "de eigen mailbox"}` } : { eerst: { reden: "bezorging" } }),
     },
     {
       id: "mail-microsoft",
