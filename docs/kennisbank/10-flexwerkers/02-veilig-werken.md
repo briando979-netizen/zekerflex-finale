@@ -21,7 +21,7 @@ Je werkt op steeds andere plekken. Dit zijn de afspraken die overal gelden.
 
 ## Ongeval
 
-Meld elk ongeval dezelfde dag in de app, ook een klein. Werk je als uitzendkracht, dan ben je via ZekerFlex verzekerd; als zzp'er regel je je eigen verzekering (zie de rekentools op de site voor wat dat kost).
+Meld elk ongeval dezelfde dag in de app, ook een klein. Werk je als uitzendkracht, meld het dan ook bij je uitzendbureau: dat is je werkgever en weet wat er voor jou geregeld is. Als zzp'er regel je je eigen verzekering (zie de rekentools op de site voor wat dat kost).
 
 ## Pauzes en werktijden
 

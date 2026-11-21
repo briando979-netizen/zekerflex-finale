@@ -7,7 +7,9 @@
 // Puur bestand: de feiten komen van lib/onboarding/klaar-voor-klus-server.ts.
 // ---------------------------------------------------------------------------
 
-export type KlusStuk = "bsn" | "contract" | "bedrijf" | "kvkWacht" | "iban" | "werkrecht" | "idWacht";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
+
+export type KlusStuk ="bsn" | "contract" | "bedrijf" | "kvkWacht" | "iban" | "werkrecht" | "idWacht";
 
 export interface KlusFeiten {
   soort: "zzp" | "flexwerker" | "uitzendkracht" | null;
@@ -44,14 +46,17 @@ export function nogVoorEersteKlus(f: KlusFeiten): KlusStuk[] {
   const lijst: KlusStuk[] = [];
   // proefklussen: alleen op het factuurspoor; een uitzendkracht houdt BSN, overeenkomst en rekeningnummer
   const proef = !f.payroll && f.proefRuimte === true;
+  // ZekerFlex is sinds 21 nov zelf geen uitzender (lib/uitzend/model.ts): het uitzendbureau vraagt een uitzendkracht zelf om
+  // BSN, contract en rekeningnummer, dus ZekerFlex niet meer
+  const zfVerloont = f.payroll && ZEKERFLEX_UITZENDER;
   if (f.payroll) {
-    if (!f.bsn) lijst.push("bsn");
-    if (!f.contract) lijst.push("contract");
+    if (zfVerloont && !f.bsn) lijst.push("bsn");
+    if (zfVerloont && !f.contract) lijst.push("contract");
   } else if (!f.bedrijf && !proef) {
     // wacht de KVK-controle, zeg dat dan eerlijk in plaats van "vul je KVK-nummer in" (da, 15 nov)
     lijst.push(f.kvkWacht ? "kvkWacht" : "bedrijf");
   }
-  if (!f.iban && !proef) lijst.push("iban");
+  if (!f.iban && !proef && (!f.payroll || zfVerloont)) lijst.push("iban");
   if (f.werkrechtOpen) lijst.push("werkrecht");
   if (!f.idGoedgekeurd) lijst.push("idWacht");
   return lijst;

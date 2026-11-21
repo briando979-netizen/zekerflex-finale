@@ -72,7 +72,7 @@ export const YO_WERK = {
       {
         label: "Uitzendwerk",
         titel: "Werken als uitzendkracht",
-        tekst: "Geen KVK? Dan werk je via ons uitzendbureau, met elke week een echte loonstrook, vakantiegeld en pensioen. Je kiest nog steeds zelf welke klussen je doet.",
+        tekst: "Geen KVK? Dan werk je via een aangesloten uitzendbureau. Dat bureau is je werkgever en regelt je loonstrook, vakantiegeld en pensioen volgens zijn cao. Je kiest nog steeds zelf welke klussen je doet.",
         foto: "/werk/campagne-uitzend.jpg",
         alt: "Een medewerker duwt een steekkar met dozen",
         knop: { label: "Start als uitzendkracht", href: "/register?type=freelancer" },
@@ -142,11 +142,11 @@ export const YO_BEDRIJF = {
       {
         label: "Uitzendkrachten",
         titel: "Werken met uitzendkrachten",
-        tekst: "Liever iemand in loondienst? Via ons uitzendbureau is ZekerFlex de werkgever: wij verlonen elke week, jij houdt de regie over wie er komt en wanneer.",
+        tekst: "Liever iemand in loondienst? Dan krijg je uitzendkrachten via een aangesloten uitzendbureau: het bureau is de werkgever en regelt contract en loon, jij houdt de regie over wie er komt en wanneer.",
         foto: "/werk/campagne-uitzend.jpg",
         alt: "Een medewerker duwt een steekkar met dozen",
-        knop: { label: "Plaats een klus", href: "/klus-plaatsen" },
-        knop2: { label: "Bekijk tarieven", href: "/prijzen" },
+        knop: { label: "Vraag uitzendkrachten aan", href: "/uitzendbureau#werkgevers" },
+        knop2: { label: "Zo werkt uitzenden", href: "/uitzendbureau" },
       },
     ] satisfies YoTab[],
   },

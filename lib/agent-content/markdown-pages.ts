@@ -18,7 +18,7 @@ ${SITE.description}
 
 - Gratis account, gratis matching op vak en reistijd.
 - Kies per dienst hoe snel de betaalopdracht wordt ingediend: direct na goedkeuring, binnen 3 werkdagen, of gratis wachten tot de opdrachtgever betaalt. Externe bankverwerking kan langer duren.
-- ZekerFlex legt afspraken per relatie vast en signaleert Wet DBA-risico's. Dit geeft geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend. Zonder KVK kun je als uitzendkracht via het ZekerFlex-uitzendbureau werken (wekelijkse verloning, StiPP-pensioen, ABU-fasensysteem).
+- ZekerFlex legt afspraken per relatie vast en signaleert Wet DBA-risico's. Dit geeft geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend. Zonder KVK kun je als uitzendkracht werken via een aangesloten uitzendbureau; dat bureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.
 - Meer: ${SITE.url}/voor-freelancers
 
 ## Voor werkgevers
@@ -33,7 +33,7 @@ ${SITE.description}
 - **Hoe snel word ik uitbetaald?** Zelf te kiezen per dienst nadat je uren zijn goedgekeurd: betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%), of gratis wachten tot de opdrachtgever betaalt (binnen 30 dagen). Externe bankverwerking kan daarna langer duren.
 - **Wat kost ZekerFlex voor bedrijven?** € 3,50 per gewerkt uur, alleen als er iemand werkt. Freelancers: gratis.
 - **Hoe zit het met de Wet DBA?** ZekerFlex legt afspraken vast en bewaakt risicosignalen. De feitelijke werkwijze blijft bepalend voor de beoordeling van de arbeidsrelatie.
-- **Kan ik werken zonder KVK?** Ja, als uitzendkracht via het ZekerFlex-uitzendbureau.
+- **Kan ik werken zonder KVK?** Ja, als uitzendkracht via een aangesloten uitzendbureau. Het uitzendbureau is dan je werkgever.
 
 ## Voor ontwikkelaars en agents
 

@@ -69,7 +69,7 @@ export const GUIDES: Article[] = [
       {
         heading: "Wanneer bouw je op?",
         paragraphs: [
-          "Werk je via ZekerFlex als uitzendkracht, dan val je onder StiPP — het pensioenfonds voor de uitzendbranche. Vanaf de 9e gewerkte week start de basisregeling.",
+          "Werk je als uitzendkracht via een uitzendbureau, dan val je meestal onder StiPP — het pensioenfonds voor de uitzendbranche. Vanaf de 9e gewerkte week start de basisregeling. Op ZekerFlex regelt het aangesloten uitzendbureau, als je werkgever, je pensioen volgens zijn cao.",
           "Na 78 gewerkte weken ga je over naar de plusregeling. Daarin ligt de premie hoger en betaalt de werkgever een deel mee.",
         ],
       },
@@ -78,7 +78,7 @@ export const GUIDES: Article[] = [
         paragraphs: [
           "Basisregeling: je bouwt pensioen op over je brutoloon plus vakantiegeld. De premie wordt op je loon ingehouden.",
           "Plusregeling: hogere opbouw, met een indicatieve werkgeversbijdrage bovenop je loon. Die bijdrage wordt niet op jouw nettoloon ingehouden.",
-          "Je actuele regeling, opgebouwde weken en de exacte bedragen staan elke week op je loonstrook in het dashboard onder Verloning.",
+          "Je actuele regeling, opgebouwde weken en de exacte bedragen staan op de loonstrook die je van je uitzendbureau krijgt.",
         ],
       },
     ],
@@ -88,7 +88,7 @@ export const GUIDES: Article[] = [
     category: "Uitzenden",
     title: "Het ABU-fasensysteem, stap voor stap",
     excerpt:
-      "Fase A, B en C bepalen hoeveel zekerheid je opbouwt als uitzendkracht. Zo werkt het bij ZekerFlex.",
+      "Fase A, B en C bepalen hoeveel zekerheid je opbouwt als uitzendkracht onder de ABU-cao. Zo werkt het.",
     readMinutes: 5,
     updated: "2026-07-15",
     body: [
@@ -108,7 +108,7 @@ export const GUIDES: Article[] = [
         heading: "Fase C",
         paragraphs: [
           "Na fase B krijg je een contract voor onbepaalde tijd bij het uitzendbureau. Maximale zekerheid, met behoud van de flexibiliteit in het soort werk dat je doet.",
-          "ZekerFlex volgt de ABU-cao. Je fase en opgebouwde weken zijn altijd actueel zichtbaar in je dashboard; bij een aankomende contractwissel krijg je automatisch bericht.",
+          "Op ZekerFlex werk je als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is je werkgever en volgt zijn eigen cao (de ABU- of de NBBU-cao, met elk een eigen fasensysteem). In welke fase je zit en hoeveel weken je hebt opgebouwd, hoor je van je uitzendbureau.",
         ],
       },
     ],
@@ -174,7 +174,7 @@ export const GUIDES: Article[] = [
       {
         heading: "Werkvorm en KVK",
         paragraphs: [
-          "Bij aanmelden kies je je werkvorm: zzp'er (met KVK en btw), flexwerker (btw optioneel, eventueel kleineondernemersregeling) of uitzendkracht (verloning via payroll, met BSN).",
+          "Bij aanmelden kies je je werkvorm: zzp'er (met KVK en btw), flexwerker (btw optioneel, eventueel kleineondernemersregeling) of uitzendkracht (zonder KVK, via een aangesloten uitzendbureau dat je werkgever is en je verloont).",
           "Voor zzp en flex koppelen we je KVK-inschrijving en controleren we die bij het Handelsregister.",
         ],
       },
@@ -305,9 +305,9 @@ export const FULL_FAQ: { category: string; items: { q: string; a: string }[] }[]
   {
     category: "Aan de slag",
     items: [
-      { q: "Hoe meld ik me aan?", a: "Via 'Start vandaag'. Je kiest je werkvorm (zzp, flexwerker of uitzendkracht), koppelt je KVK of loongegevens en doorloopt een korte identiteitscontrole. Bedrijven registreren hun organisatie en kunnen daarna direct diensten uitzetten." },
+      { q: "Hoe meld ik me aan?", a: "Via 'Start vandaag'. Je kiest je werkvorm (zzp, flexwerker of uitzendkracht), koppelt als zzp'er je KVK en doorloopt een korte identiteitscontrole. Bedrijven registreren hun organisatie en kunnen daarna direct diensten uitzetten." },
       { q: "Wat kost het?", a: "Meedoen als freelancer is gratis. Bedrijven betalen € 3,50 platformkosten per gewerkt uur, en alleen wanneer er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten." },
-      { q: "Heb ik een KVK nodig?", a: "Als zzp'er wel. Als flexwerker is btw optioneel. Werk je als uitzendkracht, dan is ZekerFlex je werkgever en heb je geen eigen onderneming nodig." },
+      { q: "Heb ik een KVK nodig?", a: "Als zzp'er wel. Als flexwerker is btw optioneel. Werk je als uitzendkracht via een aangesloten uitzendbureau, dan is dat bureau je werkgever en heb je geen eigen onderneming nodig." },
     ],
   },
   {

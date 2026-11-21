@@ -136,19 +136,20 @@ export const AANBOD: AanbodItem[] = [
     slug: "uitzendkrachten",
     pijler: "personeel",
     naam: "Uitzendkrachten",
-    kort: "ZekerFlex is de werkgever: loon, cao en pensioen zijn geregeld.",
+    // 21 nov 2026: ZekerFlex is zelf geen uitzender meer; uitzendkrachten lopen via een aangesloten uitzendbureau
+    kort: "Via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt loon, cao en pensioen.",
     tekst:
-      "Liever geen werkgeversrisico? Dan huur je uitzendkrachten in via ZekerFlex. Loondoorbetaling, verzuim, cao en pensioen lopen via ons.",
+      "Liever geen werkgeversrisico? Dan krijg je uitzendkrachten via een aangesloten uitzendbureau. Het bureau is de werkgever: contract, loon, verzuim, cao en pensioen lopen via het bureau. ZekerFlex brengt je met het bureau in contact.",
     punten: [
       "Geen werkgeversrisico voor jou",
-      "ABU-cao en pensioen via StiPP geregeld",
-      "Eén factuur per kostenplaats",
-      "Logboek van elke handeling",
+      "Contract, loon en pensioen via het uitzendbureau, volgens zijn cao",
+      "Inchecken en uren in de ZekerFlex-app",
+      "Aanvragen met één formulier",
     ],
     voorWie: "Bedrijven die mensen langer of vaker willen inzetten",
     status: "beschikbaar",
     pagina: "/uitzendbureau",
-    start: DEMO,
+    start: { label: "Vraag uitzendkrachten aan", href: "/uitzendbureau#werkgevers" },
   },
   {
     slug: "inchecken-op-locatie",
@@ -720,7 +721,7 @@ export const AANBOD: AanbodItem[] = [
 export const WERK_ZOEKEN: { naam: string; kort: string; href: string }[] = [
   { naam: "Open klussen", kort: "Diensten bij jou in de buurt, op vak en reistijd.", href: "/klussen" },
   { naam: "Starten als freelancer", kort: "Van aanmelding tot je eerste dienst.", href: "/voor-freelancers" },
-  { naam: "Werken als uitzendkracht", kort: "Loonstrook, vakantiegeld en pensioen.", href: "/uitzendbureau" },
+  { naam: "Werken als uitzendkracht", kort: "Zonder KVK, via een aangesloten uitzendbureau.", href: "/uitzendbureau" },
   { naam: "Download de app", kort: "Diensten, uren en uitbetaling op je telefoon.", href: "/app" },
 ];
 

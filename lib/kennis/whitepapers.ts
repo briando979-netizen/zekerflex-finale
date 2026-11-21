@@ -644,7 +644,7 @@ export const WHITEPAPERS: Whitepaper[] = [
         blocks: [
           {
             t: "p",
-            text: "Werk je als uitzendkracht via ZekerFlex, dan ben je in dienst van ZekerFlex. Wat er voor jou geregeld is, staat in je uitzendovereenkomst en de ABU-cao.",
+            text: "Werk je als uitzendkracht via ZekerFlex, dan ben je in dienst van het aangesloten uitzendbureau van de klus. Wat er voor jou geregeld is, staat in je uitzendovereenkomst met dat bureau en in zijn cao.",
           },
         ],
       },

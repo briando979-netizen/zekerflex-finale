@@ -41,7 +41,7 @@ const FAQ = [
   },
   {
     q: "Kan ik via ZekerFlex ook uitzendkrachten inhuren?",
-    a: "Ja. Het ZekerFlex-uitzendbureau regelt de loonadministratie, het StiPP-pensioen en de ABU-cao. Je vraagt daar een tarief op maat aan.",
+    a: "Ja, via een aangesloten uitzendbureau. Dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao. Je vraagt uitzendkrachten aan op de pagina over het uitzendbureau; het tarief krijg je vooraf van het bureau.",
   },
 ];
 
@@ -115,9 +115,9 @@ export default function KostenUitzendkrachtPage() {
                 Wet DBA
               </Link>
               . Heb je mensen nodig die onder jouw leiding werken, dan is een uitzendkracht de juiste keuze. Dat kan ook
-              via het{" "}
+              via ZekerFlex, met een{" "}
               <Link href="/uitzendbureau" className="text-brand-600 underline">
-                ZekerFlex-uitzendbureau
+                aangesloten uitzendbureau
               </Link>
               .
             </p>

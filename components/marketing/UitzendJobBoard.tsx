@@ -1,9 +1,13 @@
 import Link from "next/link";
 
 // ---------------------------------------------------------------------------
-// YoungCapital-achtige "vacaturebank"-landing voor het uitzendbureau, in
+// YoungCapital-achtige "vacaturebank"-landing voor uitzendwerk, in
 // ZekerFlex-stijl. Alle browse-links funnelen naar registratie als
 // uitzendkracht (de klussen zelf staan achter login).
+// Sinds 21 nov 2026 is ZekerFlex zelf geen uitzendbureau: de uitzendklussen
+// komen van aangesloten uitzendbureaus en dat bureau is de werkgever. Het
+// aantal open klussen telt alle klussen, dus de kop noemt het geen
+// "uitzendklussen" en zonder klussen staat er geen getal.
 // ---------------------------------------------------------------------------
 
 const REG = "/register?type=uitzendkracht";
@@ -79,23 +83,26 @@ function Pill({ label }: { label: string }) {
 }
 
 export function UitzendJobBoard({ openCount }: { openCount: number }) {
-  const count = openCount > 0 ? openCount.toLocaleString("nl-NL") : "Honderden";
-
   return (
     <>
       {/* Hero + zoekbalk */}
       <div className="hero-ink text-white">
         <div className="shell pt-16 md:pt-20">
-          <p className="eyebrow text-brand-mint">Via ons uitzendbureau</p>
+          <p className="eyebrow text-brand-mint">Via aangesloten uitzendbureaus</p>
           <h1 className="mt-2 max-w-3xl font-display text-3xl font-bold uppercase leading-[1.05] md:text-5xl">
-            <span className="text-[#ff7a1a]">{count}</span> uitzendklussen
+            <span className="text-[#ff7a1a]">Uitzendwerk</span> zonder KVK
             <br />
-            werk met zekerheid
+            met de zekerheid van een contract
           </h1>
           <p className="mt-4 max-w-xl text-white/70">
-            Geen KVK, geen facturen. ZekerFlex is je werkgever en verloont je elke week met
-            een echte loonstrook — inclusief vakantiegeld en pensioen.
+            Geen KVK, geen facturen. Je werkt via een aangesloten uitzendbureau: dat bureau is je
+            werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.
           </p>
+          {openCount > 0 ? (
+            <p className="mt-2 text-sm text-white/60">
+              Nu {openCount.toLocaleString("nl-NL")} open klussen in de app.
+            </p>
+          ) : null}
         </div>
 
         <div className="shell pb-14 pt-8">

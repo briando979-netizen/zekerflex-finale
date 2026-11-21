@@ -5,6 +5,11 @@ import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
 import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
 import { proefklusRuimte } from "@/lib/fiscal/proefklussen";
 import { AppError } from "@/lib/errors";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
+
+/** De reden voor een uitzendkracht op een klus die niet van een aangesloten uitzendbureau is (lib/uitzend/model.ts). */
+export const UITZEND_ALLEEN_VIA_BUREAU =
+  "Als uitzendkracht reageer je op uitzendklussen van aangesloten uitzendbureaus. Voor andere klussen heb je een KVK-nummer nodig: kies dan zzp'er of flexwerker bij Werkvorm.";
 
 // ---------------------------------------------------------------------------
 // Can this worker actually be paid for a klus? The rule differs by werkvorm:
@@ -85,6 +90,12 @@ async function payrollEligibility(
   profielIban: string | null,
 ): Promise<PayoutEligibility> {
   const track = "payroll" as const;
+  // ZekerFlex is sinds 21 nov zelf geen uitzender meer (lib/uitzend/model.ts): een uitzendkracht werkt alleen via een
+  // aangesloten uitzendbureau. Op die klussen slaan de callers deze controle over (lib/uitzend/partners.ts); op alle
+  // andere klussen kan ZekerFlex hem niet in dienst nemen, dus nee, met een eerlijke uitleg.
+  if (!ZEKERFLEX_UITZENDER) {
+    return { ok: false, track, reason: UITZEND_ALLEEN_VIA_BUREAU, sleutel: "elig.uitzendPartner" };
+  }
   const hasBasics = Boolean(fiscal.bsnHash) && Boolean(fiscal.iban || profielIban);
   if (!hasBasics) {
     return {

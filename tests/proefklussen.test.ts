@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
 import { MAX_PROEFKLUSSEN, magProefklus, proefklussenOver } from "@/lib/fiscal/proefklussen-kern";
 import { nogVoorEersteKlus, type KlusFeiten } from "@/lib/onboarding/klaar-voor-klus";
 import { klusStappen, poortSamenvatting } from "@/lib/admin/werker-poort-weergave";

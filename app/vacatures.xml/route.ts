@@ -25,8 +25,8 @@ function description(s: PublicShift): string {
     s.description ? `<p>${esc(s.description)}</p>` : "",
     `<p><strong>Wanneer:</strong> ${day}, ${from}–${to}<br><strong>Waar:</strong> ${esc(s.city)} (${esc(s.postalCode)})<br><strong>Tarief:</strong> € ${eur(s.hourlyRateCents)} per uur${s.positions > 1 ? `<br><strong>Plekken:</strong> ${s.positions}` : ""}</p>`,
     s.viaUitzendbureau
-      ? "<p>Je werkt via het ZekerFlex-uitzendbureau: geen KVK nodig, wekelijks loon met vakantiegeld en pensioen (StiPP).</p>"
-      : "<p>Voor zzp'ers en flexwerkers (KVK of EU-btw-nummer), of zonder KVK via het ZekerFlex-uitzendbureau. Je stuurt geen facturen en kiest zelf hoe snel je wordt uitbetaald.</p>",
+      ? "<p>Je werkt via een aangesloten uitzendbureau: geen KVK nodig. Het uitzendbureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.</p>"
+      : "<p>Voor zzp'ers en flexwerkers (KVK of EU-btw-nummer). Je stuurt geen facturen en kiest zelf hoe snel je wordt uitbetaald.</p>",
     `<p>Reageren gaat via ZekerFlex: gratis account, binnen een paar minuten geverifieerd.</p>`,
   ].join("");
 }

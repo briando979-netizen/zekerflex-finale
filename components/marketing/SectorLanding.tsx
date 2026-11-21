@@ -40,7 +40,7 @@ function cityFaq(s: Sector, c: City) {
     },
     {
       q: "Zzp'er of uitzendkracht?",
-      a: "Jij kiest per klus: zelfstandige krachten via het platform, of uitzendkrachten via het ZekerFlex-uitzendbureau (zonder KVK, met loonadministratie, StiPP en ABU-cao geregeld). Uren, facturen en betalingen lopen automatisch.",
+      a: "Zelfstandige krachten huur je via het platform; uren, facturen en betalingen lopen dan automatisch. Wil je liever uitzendkrachten, dan krijg je die via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao.",
     },
   ];
 }
@@ -213,7 +213,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
           {[
             ["Snel bij uitval", `Je klus gaat eerst naar krachten die snel in ${c.name} kunnen zijn — minder no-shows, minder gedoe op de drukte.`],
             ["Jij houdt de regie", "Kies zelf wie je inroostert op basis van reviews en ervaring, blokkeer wie niet bevalt, en bouw je vaste ploeg met favorieten."],
-            ["Alles geregeld", "Urenregistratie met check-in, automatische facturen en een modelovereenkomst — zzp of uitzend, jij kiest."],
+            ["Alles geregeld", "Urenregistratie met check-in, automatische facturen en een modelovereenkomst. Uitzendkrachten krijg je via een aangesloten uitzendbureau."],
           ].map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
               <p className="font-display font-bold text-ink">{t}</p>
@@ -257,7 +257,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
 const workerFaq = (s: Sector) => [
   {
     q: "Heb ik een KVK nodig?",
-    a: `Nee — je werkt als zelfstandige (met KVK) óf als uitzendkracht via het ZekerFlex-uitzendbureau; dan regelen wij loonadministratie, StiPP en de ABU-cao voor je.`,
+    a: `Nee — je werkt als zelfstandige (met KVK) óf zonder KVK als uitzendkracht via een aangesloten uitzendbureau; dat bureau is dan je werkgever en regelt je contract, loon en pensioen volgens zijn cao.`,
   },
   {
     q: "Wanneer word ik betaald?",
@@ -273,7 +273,7 @@ function workerBenefits(s: Sector, where: string): [string, string][] {
   return [
     ["Kies je eigen diensten", `Je ziet open ${low(s)}-diensten in de buurt${where} en pakt alleen wat jou uitkomt.`],
     ["Snel uitbetaald", "Na goedgekeurde uren volgt je geld snel — vaak direct of binnen enkele dagen. Alles live in de app."],
-    ["Met of zonder KVK", "Werk als zzp'er, of als uitzendkracht via het ZekerFlex-uitzendbureau — loon, StiPP en cao geregeld."],
+    ["Met of zonder KVK", "Werk als zzp'er, of als uitzendkracht via een aangesloten uitzendbureau — dat bureau regelt je loon, pensioen en cao."],
   ];
 }
 

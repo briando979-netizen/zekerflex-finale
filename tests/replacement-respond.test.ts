@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
+
 // Een werker biedt aan een klus over te nemen (POST /api/me/replacement/respond).
 // Dat volgt dezelfde regel als de matching (lib/matching/geschikt.ts): een klus via
 // het uitzendbureau alleen voor een uitzendkracht, een gewone klus voor een zzp'er

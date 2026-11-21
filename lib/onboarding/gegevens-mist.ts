@@ -10,6 +10,8 @@
 // uitzendkrachten bleven op het BSN hangen); die staan in voorEersteKlus, met het veld en de overeenkomst onder "Later".
 // ---------------------------------------------------------------------------
 
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
+
 export type GegevensStuk = "bsn" | "contract" | "btw" | "postcode";
 
 export interface GegevensStand {
@@ -39,6 +41,8 @@ export function gegevensMist(s: GegevensStand): GegevensStuk[] {
 export function voorEersteKlus(s: GegevensStand): GegevensStuk[] {
   if (s.soort === "zzp" || s.soort === "flexwerker") return s.fiscaalIngevuld && s.bedrijfOk ? [] : ["btw"];
   if (s.soort !== "uitzendkracht") return [];
+  // ZekerFlex is sinds 21 nov zelf geen uitzender (lib/uitzend/model.ts): BSN en contract vraagt het uitzendbureau
+  if (!ZEKERFLEX_UITZENDER) return [];
   const later: GegevensStuk[] = [];
   if (!s.fiscaalIngevuld) later.push("bsn");
   if (!s.contractGetekend) later.push("contract");

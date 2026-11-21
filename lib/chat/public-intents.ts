@@ -101,7 +101,8 @@ const TOPICS: { re: RegExp; answer: IntentReply }[] = [
   },
   {
     re: /uitzend|zonder kvk|geen kvk|loonstrook|payroll/i,
-    answer: { reply: "Geen KVK? Dan werk je via ZekerFlex als uitzendkracht: wij regelen loonheffing, vakantiegeld en pensioen. Je loon komt op je wekelijkse loonstrook; biedt je opdrachtgever het aan, dan krijg je na goedkeuring van je uren al een voorschot.", suggestions: ["Hoe meld ik me aan?", "Hoe snel word ik uitbetaald?"] },
+    // 21 nov 2026: ZekerFlex is zelf geen uitzendbureau meer; het aangesloten uitzendbureau is de werkgever en verloont
+    answer: { reply: "Geen KVK? Dan werk je als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is je werkgever: het regelt je contract, loonheffing, vakantiegeld en pensioen volgens zijn cao, en je loonstrook krijg je van het bureau. Bij een uitzendklus vraag je in de app met één knop een uitzendcontract aan.", suggestions: ["Hoe meld ik me aan?", "Hoe snel word ik uitbetaald?"] },
   },
   {
     re: /belasting|btw|inkomstenbelasting|aangifte|kvk|kleineondernemers|\bkor\b/i,

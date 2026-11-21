@@ -75,11 +75,10 @@ export const SITE = {
     "modelovereenkomst zzp",
     "schijnzelfstandigheid voorkomen",
     "handhaving Wet DBA 2026",
-    // verloning
+    // uitbetaling en uitzendwerk (sinds 21 nov 2026 via aangesloten uitzendbureaus; ZekerFlex verloont zelf niet)
     "sneller uitbetaald zzp",
-    "wekelijkse verloning",
-    "StiPP pensioen uitzendkracht",
-    "ABU fasensysteem",
+    "uitzendwerk zonder KVK",
+    "werken via een uitzendbureau",
   ],
   twitter: "@zekerflex",
   email: "info@zekerflex.com",
@@ -202,7 +201,7 @@ export function serviceJsonLd(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "Service",
-    name: "ZekerFlex — matching, verloning en uitbetaling voor flexwerk",
+    name: "ZekerFlex — matching, uren en uitbetaling voor flexwerk",
     serviceType: "Arbeidsbemiddeling en flexpool-software",
     provider: { "@id": ORG_ID },
     areaServed: { "@type": "Country", name: "Netherlands" },
@@ -389,7 +388,7 @@ export function faqJsonLd(): Record<string, unknown> {
     ],
     [
       "Kan ik werken zonder KVK?",
-      "Ja. Via het ZekerFlex-uitzendbureau werk je als uitzendkracht: ZekerFlex is je werkgever en verloont je wekelijks met loonstrook, vakantiegeld, pensioen (StiPP) en het ABU-fasensysteem. Alles is terug te lezen in je dashboard.",
+      "Ja. Dan werk je als uitzendkracht via een aangesloten uitzendbureau. Het uitzendbureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao. In de ZekerFlex-app vraag je met één knop een uitzendcontract aan bij het bureau van de klus.",
     ],
   ];
   return {

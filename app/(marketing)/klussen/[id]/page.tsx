@@ -84,7 +84,7 @@ export default async function KlusPublicPage({ params }: { params: Promise<{ id:
         {s.description && <p className="mt-8 max-w-3xl whitespace-pre-line text-neutralx-700">{s.description}</p>}
         <p className="mt-6 max-w-3xl text-sm text-neutralx-600">
           {s.viaUitzendbureau
-            ? "Deze klus loopt via het ZekerFlex-uitzendbureau: je hebt geen KVK nodig en krijgt loon met vakantiegeld, pensioen (StiPP) en reiskosten."
+            ? "Deze uitzendklus loopt via een aangesloten uitzendbureau: je hebt geen KVK nodig. Het uitzendbureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao."
             : "Voor zzp'ers en flexwerkers. Je stuurt geen facturen: ZekerFlex regelt de factuur, en je kiest zelf of de betaalopdracht direct wordt ingediend, binnen 3 werkdagen wordt ingediend of je gratis wacht tot de opdrachtgever betaalt (binnen 30 dagen)."}
           {s.positions > 1 ? ` Er zijn ${s.positions} plekken.` : ""}
         </p>

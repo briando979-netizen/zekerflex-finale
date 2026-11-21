@@ -42,8 +42,8 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
       a: "Je betaalt het uurtarief van de flexkracht plus € 3,50 per gewerkt uur aan ZekerFlex. Geen abonnement, geen inschrijfkosten en geen uitzendmarge van 30–50%.",
     },
     {
-      q: "Is het verschil met een uitzendbureau?",
-      a: "Je kiest zelf: zzp'ers en flexwerkers via het platform, of uitzendkrachten via het ZekerFlex-uitzendbureau (zonder KVK, met loonadministratie, StiPP en ABU-cao geregeld). Alles in één omgeving, met uren, facturen en betalingen automatisch.",
+      q: "Wat is het verschil met een uitzendbureau?",
+      a: "Je kiest zelf: zzp'ers en flexwerkers huur je via het platform, met uren, facturen en betalingen automatisch. Wil je liever uitzendkrachten, dan krijg je die via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao.",
     },
     {
       q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?",
@@ -101,7 +101,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
           {[
             ["Gematcht op reistijd", `Je klus gaat eerst naar mensen die snel in ${c.name} kunnen zijn — minder no-shows, minder reiskosten.`],
             ["Alles geregeld", "Urenregistratie met GPS-check-in, automatische facturen en een modelovereenkomst."],
-            ["Zzp of uitzend", "Kies per klus voor zzp'ers/flexwerkers of uitzendkrachten via het ZekerFlex-uitzendbureau."],
+            ["Zzp of uitzend", "Huur zzp'ers en flexwerkers met een klus, of krijg uitzendkrachten via een aangesloten uitzendbureau."],
           ].map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
               <p className="font-display font-bold text-ink">{t}</p>

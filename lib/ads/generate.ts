@@ -21,7 +21,7 @@ export const FACTS = `
 - Freelancers kiezen zelf hoe snel de betaalopdracht wordt ingediend: direct na goedkeuring (4% van de factuur), binnen 3 werkdagen (2%), of gratis wachten tot de opdrachtgever betaalt. Externe bankverwerking kan langer duren.
 - Werkgevers betalen € 3,50 platformkosten per gewerkt uur. Alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten.
 - ZekerFlex legt afspraken per relatie vast en biedt Wet DBA-risicosignalering; de feitelijke werkwijze blijft bepalend voor de arbeidsrelatie.
-- Werken zonder KVK is mogelijk als uitzendkracht via het ZekerFlex-uitzendbureau (wekelijkse verloning, StiPP-pensioen, ABU-fasensysteem).
+- Werken zonder KVK is mogelijk als uitzendkracht via een aangesloten uitzendbureau. Het uitzendbureau is de werkgever en regelt contract, loon, vakantiegeld en pensioen volgens zijn cao. ZekerFlex is zelf geen uitzendbureau en verloont niet: beloof geen wekelijkse verloning, StiPP of ABU-fasen van ZekerFlex en noem geen aantal bureaus.
 - Werkgevers krijgen staffelkorting bij veel uren: van € 3,50 tot € 2,50 per uur.
 - Werkgevers die snelle uitbetaling aanbieden (na kredietcheck) krijgen sneller reacties op hun klussen.
 - ZekerFlex Bank is gestopt: beloof geen eigen rekening, betaalpas, potjes, sparen, voorschot voor zzp'ers of bonus voor doorverwijzen. Verdiensten gaan naar de eigen bankrekening.
@@ -51,7 +51,7 @@ const adCopySchema = z.object({
 const TEMPLATES: Record<AdAudience, AdCopy[]> = {
   freelancer: [
     { headline: "Werk dat past bij jou", subheadline: "Kies zelf je klussen, dichtbij huis en op jouw tijden.", body: "Meedoen is gratis. Je kiest zelf hoe snel je betaald wordt — zelfs direct na goedkeuring van je uren. Afspraken worden per opdrachtgever vastgelegd.", cta: "Meld je gratis aan" },
-    { headline: "Geen KVK? Toch flexibel werken", subheadline: "Werk als uitzendkracht via het ZekerFlex-uitzendbureau.", body: "Zonder KVK werk je als uitzendkracht: wekelijkse verloning, StiPP-pensioen en het ABU-fasensysteem geregeld.", cta: "Bekijk klussen" },
+    { headline: "Geen KVK? Toch flexibel werken", subheadline: "Werk als uitzendkracht via een aangesloten uitzendbureau.", body: "Zonder KVK werk je als uitzendkracht. Het uitzendbureau is je werkgever en regelt je contract, loon, vakantiegeld en pensioen volgens zijn cao.", cta: "Bekijk klussen" },
   ],
   werkgever: [
     { headline: "Personeel nodig? Binnen minuten geregeld", subheadline: "Plaats een dienst, betrouwbare krachten reageren direct.", body: "Je betaalt € 3,50 per gewerkt uur, alleen als er echt iemand werkt. Geen abonnement, geen opstartkosten.", cta: "Plaats je eerste dienst" },

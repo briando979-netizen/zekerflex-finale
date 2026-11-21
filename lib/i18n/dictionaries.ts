@@ -1833,6 +1833,9 @@ export const nl = {
     kledingKeuzes: "Stevige schoenen|Veiligheidsschoenen S3|Zwarte broek|Effen trui of t-shirt|Werkkleding op locatie|Veiligheidshesje op locatie|Geen sieraden|Lange haren vast|Nette kleding|Bedrijfskleding wordt verstrekt",
     uitzendbureau: "Via het ZekerFlex-uitzendbureau",
     uitzendbureauUitleg: "Alleen uitzendkrachten (loon via ZekerFlex) kunnen hierop reageren — zzp'ers en flexwerkers zien de klus wel staan, maar kunnen er niet op reageren.",
+    // sinds 21 nov 2026 (lib/uitzend/model.ts): ZekerFlex is zelf geen uitzender, uitzendkrachten via een aangesloten bureau
+    uitzendViaBureau: "Uitzendkrachten nodig? Die huur je in via een aangesloten uitzendbureau; dat bureau is hun werkgever. Wij koppelen je.",
+    uitzendViaBureauLink: "Vraag uitzendkrachten aan",
     start: "Start",
     einde: "Einde",
     pauze: "Pauze (minuten)",

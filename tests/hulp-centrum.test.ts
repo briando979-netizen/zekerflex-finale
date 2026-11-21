@@ -81,7 +81,8 @@ describe("teksten van het hulpcentrum", () => {
         [tekstVan(t, "mijn-klussen"), d.nav.myJobs],
         [tekstVan(t, "uren"), d.nav.hours],
         [tekstVan(t, "betaling"), d.acct.invoices],
-        [tekstVan(t, "betaling"), d.acct.payroll],
+        // d.acct.payroll ("Verloning & loonstroken") staat niet meer in het menu sinds ZEKERFLEX_UITZENDER = false (21 nov 2026):
+        // het uitzendbureau verloont, dus het hulpcentrum noemt dat menu niet meer
         [tekstVan(t, "meldingen"), d.nav.account],
         [tekstVan(t, "gegevens-wijzigen"), d.acct.personal],
         [tekstVan(t, "gegevens-downloaden"), d.acct.download],

@@ -7,8 +7,9 @@ Al je facturen staan onder **Facturen**. Bovenaan zie je **Openstaand**, **Betaa
 - **Platformfee**: wat ZekerFlex per gewerkt uur rekent.
 - **Dienst (zzp)**: de factuur van een zzp'er, die ZekerFlex namens hem maakt.
 - **Annuleringsvergoeding**.
-- **Uitzendkracht (loon + opslag)**.
 - **Domeinnaam**.
+
+Uitzendkrachten krijg je via een aangesloten uitzendbureau; dat bureau stuurt je zelf de factuur voor het loon.
 
 Staat er "verlegd" achter, dan is de btw verlegd.
 

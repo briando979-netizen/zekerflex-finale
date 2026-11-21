@@ -54,9 +54,9 @@ const TAKEN: { taak: string; zekerflex: string; href: string; label: string }[] 
   },
   {
     taak: "Loon en facturen regelen",
-    zekerflex: "Bij een uitzendkracht is ZekerFlex de werkgever: loon, cao en pensioen zijn geregeld. De factuur komt vanzelf uit de goedgekeurde uren.",
-    href: "/uitzendbureau",
-    label: "Werken via het uitzendbureau",
+    zekerflex: "Bij een uitzendkracht blijft het uitzendbureau de werkgever en regelt het loon, cao en pensioen zelf, met de goedgekeurde uren uit de app. Bij een zelfstandige komt de factuur vanzelf uit de goedgekeurde uren.",
+    href: "/uitzendpartner",
+    label: "Uitzendklussen op ZekerFlex",
   },
 ];
 

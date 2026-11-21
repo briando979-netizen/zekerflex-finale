@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
 import type { KlusFeiten } from "@/lib/onboarding/klaar-voor-klus";
 
 // De herinnering na de aanmelding (eigenaar 16 nov): zijn de 5 stappen af maar mist er nog iets wat reageren tegenhoudt,

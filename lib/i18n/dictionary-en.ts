@@ -1810,6 +1810,8 @@ export const en: Dict = {
     kledingKeuzes: "Sturdy shoes|Safety shoes S3|Black trousers|Plain jumper or t-shirt|Work clothing on site|Safety vest on site|No jewellery|Long hair tied back|Smart clothing|Company clothing is provided",
     uitzendbureau: "Via the ZekerFlex temp agency",
     uitzendbureauUitleg: "Only temp workers (paid via ZekerFlex) can respond to this — freelancers and flex workers can see the job, but cannot respond to it.",
+    uitzendViaBureau: "Need temp workers? You hire them through a connected staffing agency; that agency is their employer. We connect you.",
+    uitzendViaBureauLink: "Request temp workers",
     start: "Start",
     einde: "End",
     pauze: "Break (minutes)",

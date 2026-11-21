@@ -37,7 +37,9 @@ Met **Meerdere dagen (zelfde tijd)** zet je dezelfde klus tot 30 extra dagen uit
 
 ## Zzp of uitzend?
 
-Standaard is de klus voor zzp'ers en flexwerkers. Zet je **Via het ZekerFlex-uitzendbureau** aan, dan kunnen alleen uitzendkrachten reageren. Zzp'ers zien de klus wel, maar kunnen niet reageren. Een uitzenddienst telt hooguit 12 werkuren (zonder pauze), conform de Arbeidstijdenwet.
+Een klus is voor zzp'ers en flexwerkers. Wil je liever uitzendkrachten, dan loopt dat via een aangesloten uitzendbureau: dat bureau is dan de werkgever en regelt contract, loon en pensioen. Vraag uitzendkrachten aan met het formulier op zekerflex.com/uitzendbureau; wij brengen je in contact met een bureau.
+
+Ben je zelf een uitzendbureau en aangesloten als uitzendpartner? Dan zijn je klussen uitzendklussen, onder de naam van je bureau. Werkers vragen met één knop een uitzendcontract bij je aan; jij regelt het contract en het loon. Een uitzenddienst telt hooguit 12 werkuren (zonder pauze), conform de Arbeidstijdenwet.
 
 ## Beeld bij je klus
 

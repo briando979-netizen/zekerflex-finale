@@ -86,8 +86,8 @@ export const TARIEVEN_TEKST = {
   zelfstandige:
     "Huur je een zelfstandige in, dan betaal je het uurtarief van de klus plus de platformkosten per gewerkt uur. Er is geen abonnement en er zijn geen opstart- of plaatsingskosten.",
   uitzend:
-    "Wil je liever geen werkgeversrisico, dan kun je iemand inhuren als uitzendkracht via het ZekerFlex uitzendbureau. ZekerFlex is dan de werkgever en regelt loon, cao en pensioen. Daarvoor geldt een uitzendtarief per uur. Dat hangt af van de functie en de inzet, en je krijgt het vooraf in een offerte.",
-  uitzendVraag: "Vraag een offerte aan via de contactpagina van ZekerFlex, of lees eerst meer op de pagina over het uitzendbureau.",
+    "Wil je liever geen werkgeversrisico, dan kun je een uitzendkracht krijgen via een aangesloten uitzendbureau. Het uitzendbureau is dan de werkgever en regelt contract, loon, cao en pensioen. Het bureau rekent daarvoor zijn eigen uitzendtarief per uur. Dat hangt af van de functie en de inzet, en je krijgt het vooraf in een offerte van het bureau.",
+  uitzendVraag: "Vul het aanvraagformulier in op de pagina over het uitzendbureau, of neem contact op met ZekerFlex. Wij brengen je in contact met een aangesloten uitzendbureau.",
 } as const;
 
 export const TARIEF_TIPS: { titel: string; tekst: string }[] = [

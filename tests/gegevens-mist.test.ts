@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// het eigen uitzendspoor van ZekerFlex (sinds 21 nov uit, lib/uitzend/model.ts): deze test bewaakt het voor als het terugkomt
+vi.mock("@/lib/uitzend/model", () => ({ ZEKERFLEX_UITZENDER: true }));
+
 // "Gegevens" is de stap waar nieuwe werkers vastliepen (12 nov 2026: 19 van de 20 nieuwe aanmeldingen; van de 16 uitzendkrachten
 // die daar stilstonden ontbrak bij allen het BSN, en dat veld stond niet op de pagina waar de stap naartoe wijst). Nu laat de
 // verificatiepagina per onderdeel zien wat er mist, en het BSN kan daar meteen.

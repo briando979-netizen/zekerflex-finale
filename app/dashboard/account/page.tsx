@@ -11,6 +11,7 @@ import { PushToggle } from "@/components/app/PushToggle";
 import { SpoedKanaalToggle } from "@/components/app/SpoedKanaalToggle";
 import { ZiekMelden } from "@/components/app/ZiekMelden";
 import { getTheme } from "@/lib/theme/server";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import { AccountLanguageRow } from "@/components/app/AccountLanguageRow";
 import { inAndroidApp } from "@/lib/app-mode-server";
@@ -121,8 +122,14 @@ export default async function AccountPage() {
       ...(isUitzend
         ? [
             { label: t.kindBsn, href: "/dashboard/fiscaal" },
-            { label: t.uitzendContract, href: "/dashboard/verificatie" },
-            { label: t.payroll, href: "/dashboard/verloning" },
+            // de uitzendovereenkomst en loonstroken van ZekerFlex alleen als ZekerFlex zelf uitzender is (lib/uitzend/model.ts);
+            // anders regelt het uitzendbureau dat
+            ...(ZEKERFLEX_UITZENDER
+              ? [
+                  { label: t.uitzendContract, href: "/dashboard/verificatie" },
+                  { label: t.payroll, href: "/dashboard/verloning" },
+                ]
+              : []),
           ]
         : [
             { label: t.business, href: "/dashboard/fiscaal" },
@@ -212,7 +219,8 @@ export default async function AccountPage() {
       {/* ziek melden blijft alleen weg bij wie nog nooit een klus aannam: "gepland" telt alleen klussen die nog moeten
           beginnen, dus wie tijdens een lopende klus ziek wordt, vindt de kaart via de aangenomen klussen van het laatste
           halfjaar (beide getallen zijn hierboven al opgehaald, geen extra vraag aan de database) */}
-      {isUitzend && (heeftGeplandeKlus || matched > 0) && (
+      {/* ziek melden bij ZekerFlex als werkgever; bij een uitzendbureau meld je je ziek bij het bureau (lib/uitzend/model.ts) */}
+      {isUitzend && ZEKERFLEX_UITZENDER && (heeftGeplandeKlus || matched > 0) && (
         <div className="mt-4">
           <ZiekMelden texts={ft.accountDelen.ziek} />
         </div>

@@ -88,7 +88,7 @@ export function ruleShiftText(input: ShiftTextInput): Omit<ShiftText, "mode"> {
   if (from && to) lines.push("", `Werktijd: ${from}–${to}${input.breakMinutes ? `, inclusief ${input.breakMinutes} minuten pauze` : ""}.`);
   if (p.bring) lines.push(`Neem mee: ${p.bring}.`);
   lines.push("Meld je bij aankomst bij de leidinggevende en check in via de ZekerFlex-app.");
-  if (input.viaUitzendbureau) lines.push("Je werkt via het ZekerFlex-uitzendbureau en krijgt een loonstrook.");
+  if (input.viaUitzendbureau) lines.push("Dit is een uitzendklus: het uitzendbureau is je werkgever en je krijgt een loonstrook.");
   return {
     description: lines.join("\n").slice(0, 1000),
     dresscode: (input.dresscode?.trim() || p.dresscode).slice(0, 500),

@@ -82,8 +82,8 @@ const VIDEOS = {
     },
   ],
   "uitzenden-of-freelance": [
-    { url: "/uitzendbureau", tekst: "Bij ZekerFlex kies je per klus: een zelfstandige, of een uitzendkracht via het ZekerFlex uitzendbureau.", actie: scroll(500) },
-    { url: "/uitzendbureau", tekst: "Bij een uitzendkracht is ZekerFlex de werkgever. Loon, cao en pensioen zijn dan geregeld.", actie: async (p, s) => { await wacht(400); await glij(p, 1100, (s - 1) * 900); } },
+    { url: "/uitzendbureau", tekst: "Bij ZekerFlex werk je als zelfstandige, of als uitzendkracht via een aangesloten uitzendbureau.", actie: scroll(500) },
+    { url: "/uitzendbureau", tekst: "Bij een uitzendkracht is het uitzendbureau de werkgever. Het regelt contract, loon en pensioen volgens zijn cao.", actie: async (p, s) => { await wacht(400); await glij(p, 1100, (s - 1) * 900); } },
     { url: "/voor-bedrijven", tekst: "Een zelfstandige werkt met een eigen factuur. Jij betaalt het uurtarief van de kracht en de platformkosten per gewerkt uur.", actie: scroll(800) },
     { url: "/personeel-inhuren", tekst: "Jij kiest per klus wat het beste past, en je plaatst hem in een paar minuten.", actie: scroll(500) },
   ],
@@ -91,7 +91,7 @@ const VIDEOS = {
     { url: "/aanbod/automatisch-inchecken", tekst: "Je kracht checkt in op de werkplek: automatisch via de geofence van je vestiging, met een QR-code of met een Bluetooth-baken.", actie: scroll(600) },
     { url: TERMINAL, tekst: "Bij de ingang staat een tablet met een QR-code die elke minuut wisselt. De kracht scant hem met de telefoon.", actie: async (p, s) => { await schoon(p); await wacht((s - 0.5) * 1000); } },
     { url: "/werkgever/inchecken", sessie: true, tekst: "In je beheer maak je per vestiging een terminal en print je een sticker.", actie: async (p, s) => { await schoon(p); await scroll(500)(p, s); } },
-    { url: "/werkgever/uren", sessie: true, tekst: "De uren staan daarna klaar om goed te keuren, met het bewijs erbij. Met één tik keur je ze goed, en daarna loopt de facturatie of de verloning automatisch.", actie: async (p, s) => { await schoon(p); await scroll(300)(p, s); } },
+    { url: "/werkgever/uren", sessie: true, tekst: "De uren staan daarna klaar om goed te keuren, met het bewijs erbij. Met één tik keur je ze goed, en daarna loopt de facturatie automatisch.", actie: async (p, s) => { await schoon(p); await scroll(300)(p, s); } },
   ],
   "kosten-en-facturen": [
     { url: "/prijzen", tekst: "Je betaalt het uurtarief van de kracht plus drie euro vijftig platformkosten per gewerkt uur. Zonder abonnement of opstartkosten.", actie: scroll(700) },
@@ -114,7 +114,7 @@ const VIDEOS = {
       },
     },
     { url: "/aanbod/facturen-en-betalen", tekst: "Facturen komen vanzelf uit goedgekeurde uren, en betaalverzoeken gaan met een QR-code. Alles in dezelfde omgeving.", actie: scroll(500) },
-    { url: "/uitzendbureau", tekst: "Bij uitzenden zit de cao beloning en de loonadministratie erbij.", actie: scroll(700) },
+    { url: "/uitzendbureau", tekst: "Bij uitzenden regelt het aangesloten uitzendbureau de cao beloning en de loonadministratie.", actie: scroll(700) },
   ],
 };
 

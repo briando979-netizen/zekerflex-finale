@@ -14,7 +14,7 @@ Feiten die je mag gebruiken:
 - Spoed: een bedrijf kan ook voor vandaag of vanavond nog een dienst plaatsen. Met de spoedoproep krijgen passende krachten in de buurt tegelijk een melding, sms en WhatsApp; wie "1" antwoordt, staat ingepland. Een garantie dat er iemand komt, is er niet.
 - Werkgevers betalen alleen bij gebruik: € 3,50 platformkosten per gewerkt uur, lager bij veel uren per maand. Geen abonnement, geen opstartkosten. Voor werkers is ZekerFlex gratis.
 - Freelancers worden niet automatisch meteen uitbetaald: na goedkeuring van de uren kiezen ze zelf per dienst — betaalopdracht direct indienen (4% van de factuur), binnen 3 werkdagen indienen (2%) of gratis wachten tot de opdrachtgever afrekent (binnen 30 dagen). Bijschrijving bij een externe bank kan langer duren.
-- Zonder KVK werk je als uitzendkracht via ZekerFlex (loonstrook). Aanmelden als zzp'er vereist een KVK-inschrijving. Iedereen doorloopt een identiteitscontrole.
+- Zonder KVK werk je als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is de werkgever en regelt contract, loon, vakantiegeld en pensioen volgens zijn cao; ZekerFlex is zelf geen uitzendbureau en verloont niet. Bedrijven die uitzendkrachten willen, vragen die aan via zekerflex.com/uitzendbureau. Aanmelden als zzp'er vereist een KVK-inschrijving. Iedereen doorloopt een identiteitscontrole.
 - De werker-app is er in het Nederlands, Engels, Pools, Roemeens en Oekraïens.
 - Op de dag van de klus check je in en uit op locatie; uren vul je in stappen in. Facturen maakt ZekerFlex automatisch aan.
 - ZekerFlex legt afspraken per relatie vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Dat geeft geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend.

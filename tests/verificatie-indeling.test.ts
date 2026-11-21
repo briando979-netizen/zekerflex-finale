@@ -27,7 +27,8 @@ describe("de verificatiepagina: elk ding op zijn plek", () => {
     const later = pagina.indexOf('aria-labelledby="later-kop"');
     expect(later).toBeGreaterThan(formulier);
     expect(pagina).not.toContain('mist.includes("contract")');
-    expect(pagina.indexOf("{isUitzend && (", later)).toBeGreaterThan(later);
+    // de ZekerFlex-overeenkomst alleen als ZekerFlex zelf uitzender is (lib/uitzend/model.ts, sinds 21 nov uit)
+    expect(pagina.indexOf("{isUitzend && ZEKERFLEX_UITZENDER && (", later)).toBeGreaterThan(later);
     expect(pagina.indexOf('<GegevensMist mist={voorKlus} later kopId="gegevens-later-kop"', later)).toBeGreaterThan(later);
     // ook op het eindscherm, met het voorstel uit de ID-scan, hetzelfde anker en (15 nov) het btw-veld voor een zzp'er/flexwerker
     expect(pagina).toContain('<GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={soort ?? (uitzend ? "uitzendkracht" : null)} bsnVoorstel={bsnVoorstel} btw={btw} />');

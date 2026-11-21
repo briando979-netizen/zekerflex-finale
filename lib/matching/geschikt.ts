@@ -1,5 +1,6 @@
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { zzpGeschikt } from "@/lib/matching/onderneming";
+import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
 // ---------------------------------------------------------------------------
 // Mag deze werker deze klus doen? Eén regel voor de matching (lib/matching/
@@ -32,6 +33,8 @@ export async function isMatchEligibleWorker(
   if (uitzendPartner) return true;
   const zzpEligible = zzpGeschikt(profile);
   if (zzpEligible && !viaUitzendbureau) return true;
+  // ZekerFlex is zelf geen uitzender meer (lib/uitzend/model.ts): een uitzendkracht alleen bij een uitzendpartner (hierboven)
+  if (!ZEKERFLEX_UITZENDER) return false;
   const fiscal = await getFiscal(profile.userId);
   return invoiceModeFor(fiscal) === "payroll";
 }
