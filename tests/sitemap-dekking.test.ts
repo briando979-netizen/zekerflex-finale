@@ -13,8 +13,10 @@ const lees = (f: string) => readFileSync(path.join(ROOT, f), "utf8").split("\r\n
 const NOINDEX = /index:\s*false|noindex/;
 
 const disallow = [...(lees("app/robots.ts").match(/const PRIVATE = \[([\s\S]*?)\];/)?.[1] ?? "").matchAll(/"(\/[^"]*)"/g)].map((m) => m[1]!);
-const onder = (pad: string, lijst: string[]) =>
-  lijst.some((p) => pad === p.replace(/\/$/, "") || pad.startsWith(p.endsWith("/") ? p : `${p}/`));
+// Zoals Google een Disallow leest: een voorvoegsel, geen map ("/start" sluit ook /starten-als-uitzendkracht uit); een "$" aan
+// het eind betekent precies dat adres. Deze bewaker las het eerst als map en zag zo niet dat /starten-als-uitzendkracht,
+// /starters en /sales-partner geblokkeerd waren (22 nov 2026, Search Console: 58 × "geblokkeerd door robots.txt").
+const onder = (pad: string, lijst: string[]) => lijst.some((p) => (p.endsWith("$") ? pad === p.slice(0, -1) : pad.startsWith(p)));
 const inSitemap = new Set([...lees("app/sitemap.ts").matchAll(/entry\(\s*"(\/[^"]*)"/g)].map((m) => m[1]!));
 
 /** Elke vaste pagina (geen [dynamisch] deel): route → bron van page.tsx. */
@@ -57,6 +59,15 @@ describe("sitemap.xml dekt de openbare pagina's", () => {
       .map(([route]) => route)
       .filter((route) => !inSitemap.has(route));
     expect(ontbreekt, "zet ze in app/sitemap.ts (entry(pad, prioriteit, frequentie))").toEqual([]);
+  });
+
+  it("robots.txt sluit de privépaden uit, maar geen openbare pagina die met hetzelfde begint", () => {
+    for (const p of ["/start", "/start/x", "/sales", "/sales/leads", "/dashboard", "/werkgever/klussen", "/api/x", "/r/abc"]) expect(onder(p, disallow), p).toBe(true);
+    for (const p of ["/starten-als-uitzendkracht", "/starters", "/sales-partner", "/voorbeeldsites", "/voor-freelancers", "/horeca-vacatures"]) expect(onder(p, disallow), p).toBe(false);
+    // en geen enkele vaste openbare pagina (app/(marketing)) valt eronder
+    const marketing = [...paginas("app/(marketing)").keys()];
+    expect(marketing.length).toBeGreaterThan(50);
+    expect(marketing.filter((p) => onder(p, disallow))).toEqual([]);
   });
 
   it("geen vast pad in de sitemap dat noindex is, achter de disallow staat of niet bestaat", () => {

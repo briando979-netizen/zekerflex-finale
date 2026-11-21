@@ -4,16 +4,22 @@ import { SITE } from "@/lib/seo";
 // Search engines AND AI assistants (ChatGPT, Claude, Perplexity, Gemini,
 // Copilot, Apple) may read every public page — being quoted by them is how
 // people who ask an AI "where do I find freelance work" end up here.
+//
+// Let op: een Disallow is een voorvoegsel, geen map. "/start" sloot ook /starten-als-uitzendkracht en /starters uit, en
+// "/sales" ook /sales-partner (22 nov 2026: Search Console meldde 58 adressen "geblokkeerd door robots.txt"). Botst een
+// privépad met een openbare pagina, schrijf het dan als "/pad$" (precies dat adres) plus "/pad/" (alles eronder).
 const PRIVATE = [
   "/admin",
   "/dashboard",
   "/werkgever",
-  "/sales",
+  "/sales$",
+  "/sales/",
   "/berichten",
   "/api",
   "/kyc",
   "/verifieer-email",
-  "/start",
+  "/start$",
+  "/start/",
   "/welkom",
   "/voorbeeld/", // alleen een voorbeeldpad, niet /voorbeeldsites
   // personal links: referral codes and payment links
