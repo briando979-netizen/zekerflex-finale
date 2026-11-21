@@ -252,31 +252,37 @@ export function ShiftActions({
 
       {!started && (
         <div className="space-y-3">
-          {/* Annuleringstermijn */}
-          <div
-            className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
-              stillFree ? "border-hair bg-paper-soft text-neutralx-600" : "border-warn/30 bg-warn/5 text-neutralx-700"
-            }`}
-          >
-            {stillFree ? (
-              <Rich text={t.freeUntil(deadlineLabel)} />
-            ) : (
-              <>
-                <span className="font-semibold text-warn">{t.lateTitle}</span> <Rich text={t.lateBody} />
-              </>
-            )}
-          </div>
+          {/* Op de kluspagina (variant "detail") zegt de pagina zelf al tot wanneer je kunt afzeggen en dat je ID mee
+              moet (D.yourJobBody, D.bringId), zoals bij YoungOnes; alleen de kaart herhaalt het hier. */}
+          {variant !== "detail" && (
+            <>
+              {/* Annuleringstermijn */}
+              <div
+                className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
+                  stillFree ? "border-hair bg-paper-soft text-neutralx-600" : "border-warn/30 bg-warn/5 text-neutralx-700"
+                }`}
+              >
+                {stillFree ? (
+                  <Rich text={t.freeUntil(deadlineLabel)} />
+                ) : (
+                  <>
+                    <span className="font-semibold text-warn">{t.lateTitle}</span> <Rich text={t.lateBody} />
+                  </>
+                )}
+              </div>
 
-          {/* Extra info voor jou */}
-          <div className="rounded-lg border border-hairstrong bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-            <p className="mb-1.5 text-sm font-semibold text-ink">{t.extraTitle}</p>
-            <p>
-              <Rich text={t.idCard} />
-            </p>
-            <p className="mt-1.5">
-              <Rich text={t.endTime} />
-            </p>
-          </div>
+              {/* Extra info voor jou */}
+              <div className="rounded-lg border border-hairstrong bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
+                <p className="mb-1.5 text-sm font-semibold text-ink">{t.extraTitle}</p>
+                <p>
+                  <Rich text={t.idCard} />
+                </p>
+                <p className="mt-1.5">
+                  <Rich text={t.endTime} />
+                </p>
+              </div>
+            </>
+          )}
 
           {/* Acties — volle-breedte rijen */}
           <div className="divide-y divide-hair border-y border-hair">

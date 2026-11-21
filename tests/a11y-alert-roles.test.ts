@@ -21,7 +21,6 @@ const NOT_A_MESSAGE = new Set([
   "components/bank/BankInsurance.tsx|p.arrears",
   "components/bank/BankView.tsx|account.frozen",
   "components/marketing/ShopChrome.tsx|promo",
-  "app/dashboard/klussen/[shiftId]/page.tsx|g.required",
   "app/(marketing)/developers/api/page.tsx|r.verplicht",
 ]);
 
