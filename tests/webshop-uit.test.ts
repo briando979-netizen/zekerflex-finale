@@ -33,7 +33,7 @@ describe("de webshop staat uit", () => {
 
   it("de webshoptaken van de eigenaar vallen weg", () => {
     const todos = lees("lib/admin/owner-todos.ts");
-    expect(todos).toContain("return WEBSHOP_AAN ? lijst : lijst.filter((t) => !WEBSHOP_TAKEN.has(t.id));");
+    expect(todos).toContain("(WEBSHOP_AAN || !WEBSHOP_TAKEN.has(t.id))");
     for (const id of ["webshop-leverancier", "product-photos", "3d-models", "stripe-agentische-handel"]) expect(todos).toContain(`id: "${id}"`);
   });
 });

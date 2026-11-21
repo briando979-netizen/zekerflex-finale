@@ -64,3 +64,28 @@ export async function lijstPartnerdeal(): Promise<PartnerdealVrij[]> {
   const rijen = await kvListValues<PartnerdealVrij>(PARTNERDEAL_PREFIX, 500).catch(() => []);
   return rijen.filter((r) => r && typeof r.tenantId === "string" && typeof r.gratisTot === "string").sort((a, b) => b.at.localeCompare(a.at));
 }
+
+/** De vlag (lib/flags) voor de automatische eerste maand gratis; standaard aan, uit = alleen nog met de hand via de Partnerdeal. */
+export const EERSTE_MAAND_GRATIS_VLAG = "eerste-maand-gratis";
+
+/**
+ * Eerste maand gratis voor elk bedrijf (21 nov 2026, eigenaar: "zet op auto"): bij het goedkeuren van de eerste dienst van
+ * een bedrijf dat nog geen gratis maand heeft, begint die vanzelf, vanaf de dag van die dienst (Amsterdam), 30 dagen. Dezelfde
+ * opslag als de Partnerdeal, dus één keer per bedrijf (kvSetIfAbsent) en een al gegeven Partnerdeal blijft staan. Een storing
+ * hier laat de goedkeuring nooit hangen: dan gelden de gewone platformkosten.
+ */
+export async function startEersteMaandGratis(input: { tenantId: string; bedrijf: string; eersteDienst: Date; nu?: Date }): Promise<boolean> {
+  try {
+    const deal: PartnerdealVrij = {
+      ...vrijePeriode(input.eersteDienst, PARTNERDEAL_DAGEN),
+      tenantId: input.tenantId,
+      bedrijf: input.bedrijf.slice(0, 160),
+      at: (input.nu ?? new Date()).toISOString(),
+      door: "automatisch (eerste dienst)",
+    };
+    return await kvSetIfAbsent(sleutel(input.tenantId), deal);
+  } catch (err) {
+    logger.warn("eerste maand gratis: niet gestart, gewone platformkosten", { tenantId: input.tenantId, error: (err as Error).message });
+    return false;
+  }
+}

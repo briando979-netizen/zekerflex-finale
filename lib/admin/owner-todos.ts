@@ -57,6 +57,7 @@ import { functiesWachtenTodo } from "@/lib/admin/todo-besluiten";
 import { KV_VERLOPEN_METING, VERLOPEN_VLAG, type VerlopenMeting } from "@/lib/shifts/verlopen";
 import { BOUNCE_VLAG, KV_BOUNCE_METING, type BounceMeting } from "@/lib/mail/bounce-ronde";
 import { WEBSHOP_AAN } from "@/lib/shop/aan";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -1594,9 +1595,23 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(bankToestemming && bankToestemming.length > 0 ? { doneNote: bankToestemming.join("; ") } : {}),
     },
   ];
-  // de webshop staat uit (lib/shop/aan.ts): zijn taken niet meer tonen
-  return WEBSHOP_AAN ? lijst : lijst.filter((t) => !WEBSHOP_TAKEN.has(t.id));
+  // de webshop staat uit (lib/shop/aan.ts): zijn taken niet meer tonen; met de vlag alleen-flexwerk ook niet de taken van
+  // onderdelen die uit of verborgen zijn (21 nov 2026, eigenaar: "ruim op wat niet relevant is")
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
+  return lijst.filter((t) => (WEBSHOP_AAN || !WEBSHOP_TAKEN.has(t.id)) && (!alleenFlexwerk || !NIET_FLEXWERK_TAKEN.has(t.id)));
 }
+
+/**
+ * Taken van onderdelen die uit staan of verborgen zijn (bank, betaalpassen, telefonie, wifi/VPN, kastjes op locatie,
+ * rijschool-apps, websites voor klanten, loonstroken, AI-video): weg uit Te doen zolang publiek alleen flexwerk is.
+ */
+export const NIET_FLEXWERK_TAKEN: ReadonlySet<string> = new Set([
+  "issuing-active", "insurer", "bank-name", "map-3d", "play-rijschool-apps",
+  "locatie-prijzen", "locatie-toegang-kastje", "locatie-printer", "locatie-portofoon-proef",
+  "zakelijke-mail-kosten", "telefonie-prijzen", "telefonie-saldo", "twilio-085", "telefonie-acm", "telefonie-partner",
+  "netwerk-vpn-dns", "netwerk-radius", "websitevoorstellen-versturen", "stripe-btw", "loonheffingennummer",
+  "image", "gratis-ai-bronnen", "cloudflare-ai", "hf-token",
+]);
 
 /** De taken die alleen over de webshop gaan (weg zolang WEBSHOP_AAN uit staat). */
 export const WEBSHOP_TAKEN: ReadonlySet<string> = new Set(["webshop-leverancier", "product-photos", "3d-models", "stripe-agentische-handel"]);

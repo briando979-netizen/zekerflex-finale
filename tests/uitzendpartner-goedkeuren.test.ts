@@ -73,7 +73,8 @@ vi.mock("@/lib/pricing/volume", () => ({ feePerHourFor: () => 350, monthHoursFor
 vi.mock("@/lib/billing/comp", () => ({ isCompTenant: async () => false }));
 vi.mock("@/lib/introducties/vrijstelling", () => ({ introductieZonderFee: async () => false }));
 vi.mock("@/lib/introducties/periode", () => ({ INTRODUCTIE_FEE_REDEN: "introductie" }));
-vi.mock("@/lib/billing/partnerdeal-vrij", () => ({ PARTNERDEAL_FEE_REDEN: "partnerdeal", partnerdealZonderFee: async () => false }));
+// de automatische eerste maand gratis (21 nov 2026) doet hier niets: deze test gaat over de platformkosten zelf
+vi.mock("@/lib/billing/partnerdeal-vrij", () => ({ PARTNERDEAL_FEE_REDEN: "partnerdeal", partnerdealZonderFee: async () => false, EERSTE_MAAND_GRATIS_VLAG: "eerste-maand-gratis", startEersteMaandGratis: async () => false }));
 vi.mock("@/lib/uitzendbureau/insights", () => ({ markupFor: async () => 0.3 }));
 vi.mock("@/lib/fraud/timesheet", () => ({ evaluateTimesheetFraud: () => [] }));
 vi.mock("@/lib/webhooks/dispatcher", () => ({ dispatchWebhook: async () => undefined }));

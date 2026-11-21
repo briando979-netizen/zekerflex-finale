@@ -35,7 +35,8 @@ import { feePerHourFor, monthHoursFor, tierFor } from "@/lib/pricing/volume";
 import { isCompTenant } from "@/lib/billing/comp";
 import { introductieZonderFee } from "@/lib/introducties/vrijstelling";
 import { INTRODUCTIE_FEE_REDEN } from "@/lib/introducties/periode";
-import { PARTNERDEAL_FEE_REDEN, partnerdealZonderFee } from "@/lib/billing/partnerdeal-vrij";
+import { EERSTE_MAAND_GRATIS_VLAG, PARTNERDEAL_FEE_REDEN, partnerdealZonderFee, startEersteMaandGratis } from "@/lib/billing/partnerdeal-vrij";
+import { featureEnabled } from "@/lib/flags";
 import { markupFor } from "@/lib/uitzendbureau/insights";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
@@ -330,6 +331,8 @@ async function approveTimesheetInner(
     // "Introduceer een bedrijf" (lib/introducties): de eerste twee weken na het koppelen geen platformkosten, naar de dag
     // van de dienst in Amsterdam. Dezelfde € 0-factuur als hierboven, met de reden op de regel; elk ander bedrijf: niets anders.
     const introductieVrij = !freeFee && (await introductieZonderFee(ts.branch.tenantId, ts.scheduledStart));
+    // Eerste maand gratis (21 nov 2026): bij de eerste dienst van een bedrijf zonder gratis maand begint die vanzelf
+    if (!freeFee && !introductieVrij) await eersteMaandGratisAlsAan(ts.branch.tenantId, ts.branch.tenant.name, ts.scheduledStart);
     // De gratis maand van de Partnerdeal (lib/billing/partnerdeal-vrij.ts): 30 dagen vanaf de dag dat de eigenaar hem gaf.
     const partnerdealVrij = !freeFee && !introductieVrij && (await partnerdealZonderFee(ts.branch.tenantId, ts.scheduledStart));
 
@@ -579,6 +582,7 @@ async function approveViaPartner(args: {
   const monthHours = await monthHoursFor(ts.branch.tenantId);
   const freeFee = await isCompTenant(ts.branch.tenantId);
   const introductieVrij = !freeFee && (await introductieZonderFee(ts.branch.tenantId, ts.scheduledStart));
+  if (!freeFee && !introductieVrij) await eersteMaandGratisAlsAan(ts.branch.tenantId, ts.branch.tenant.name, ts.scheduledStart);
   const partnerdealVrij = !freeFee && !introductieVrij && (await partnerdealZonderFee(ts.branch.tenantId, ts.scheduledStart));
 
   const { feeInvoice, computed } = await prisma.$transaction(async (tx) => {
@@ -954,4 +958,10 @@ async function persistInvoice(
       },
     },
   });
+}
+
+/** De eerste maand gratis starten als de vlag aan staat (lib/billing/partnerdeal-vrij.ts); nooit een fout naar boven. */
+async function eersteMaandGratisAlsAan(tenantId: string, bedrijf: string, dienst: Date): Promise<void> {
+  if (!(await featureEnabled(EERSTE_MAAND_GRATIS_VLAG).catch(() => false))) return;
+  await startEersteMaandGratis({ tenantId, bedrijf, eersteDienst: dienst });
 }
