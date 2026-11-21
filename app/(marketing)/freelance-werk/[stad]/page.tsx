@@ -8,6 +8,7 @@ import { sectorFoto } from "@/lib/marketing/fotos";
 import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES, RADIUS_KM, cityBySlug } from "@/lib/seo-cities";
+import { SECTORS, werkKop } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
@@ -21,7 +22,8 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ stad: string }> }): Promise<Metadata> {
   const c = cityBySlug((await params).stad);
   if (!c) return {};
-  const title = `Freelance werk in ${c.name} — klussen, flexwerk & uitzendwerk`;
+  // 22 nov 2026: ook "flexwerk" in de titel (Search Console: "flexwerken breda", "flexwerken arnhem", "freelance eindhoven")
+  const title = `Freelance werk en flexwerk in ${c.name} — klussen, bijbanen & uitzendwerk`;
   const description = `Open klussen in ${c.name} en omgeving: ${c.sectors.join(", ")}. Reageer direct via ZekerFlex, werk wanneer jij wilt en kies zelf hoe snel je wordt uitbetaald — ook zonder KVK via een aangesloten uitzendbureau.`;
   return {
     title: { absolute: seoTitel(title) },
@@ -52,6 +54,10 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
       q: `Welk werk is er veel in ${c.name}?`,
       a: `In ${c.name} is er vooral vraag in ${c.sectors.join(", ")}. ${c.local}`,
     },
+    {
+      q: "Is ZekerFlex een uitzendbureau?",
+      a: "Nee. ZekerFlex is zelf geen uitzendbureau, maar een app met freelance klussen en uitzendklussen. Als zzp'er neem je een klus aan bij de opdrachtgever en maakt ZekerFlex de factuur voor je. Bij een uitzendklus teken je je contract bij het uitzendbureau van die dienst: dat bureau is je werkgever.",
+    },
   ];
 
   return (
@@ -61,7 +67,8 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
           __html: ldJson([
-            breadcrumbJsonLd([["Home", "/"], ["Klussen", "/klussen"], [`Freelance werk ${c.name}`, `/freelance-werk/${c.slug}`]]),
+            // het overzicht /freelance-werk, niet /klussen: die lijst staat met de vlag publiek-alleen-flexwerk op noindex
+            breadcrumbJsonLd([["Home", "/"], ["Freelance werk", "/freelance-werk"], [`Freelance werk ${c.name}`, `/freelance-werk/${c.slug}`]]),
             {
               "@context": "https://schema.org",
               "@type": "FAQPage",
@@ -75,7 +82,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
         <SectionHead
           kop="h1"
           eyebrow={`${c.name} · ${c.province}`}
-          title={`Freelance werk in ${c.name}`}
+          title={`Freelance werk en flexwerk in ${c.name}`}
           intro={`${c.local} Op ZekerFlex vind je klussen in ${c.sectors.join(", ")} — reageer direct en kies zelf hoe snel je wordt uitbetaald.`}
         />
         </HeroMetFoto>
@@ -100,6 +107,19 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
           </Link>
           .
         </p>
+        <h2 className="mt-14 font-display text-xl font-bold text-ink">Werk per branche in {c.name}</h2>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {SECTORS.map((s) => (
+            <li key={s.workerSlug}>
+              <Link href={`/${s.workerSlug}/${c.slug}`} className="block rounded-xl border border-hair bg-white px-4 py-3 text-sm hover:border-brand-500">
+                <span className="font-semibold text-ink">
+                  {werkKop(s)} in {c.name}
+                </span>
+                <span className="block text-xs text-neutralx-500">{s.rolesShort}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </Section>
       <Section tone="soft">
         <SectionHead eyebrow="Veelgestelde vragen" title={`Werken in ${c.name} via ZekerFlex`} />
@@ -119,7 +139,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
       </Section>
       <CtaBand
         title={`Begin vandaag met werken in ${c.name}`}
-        body="Gratis account, binnen een paar minuten geverifieerd. Reageer op klussen die bij je passen."
+        body="Maak gratis een account en reageer op klussen die bij je passen."
         primaryHref="/register?type=freelancer"
         primaryLabel="Gratis account maken"
         secondaryHref="/klussen"

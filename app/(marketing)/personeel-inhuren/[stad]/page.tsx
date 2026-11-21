@@ -6,6 +6,7 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { sectorFoto } from "@/lib/marketing/fotos";
 import { CITIES, cityBySlug } from "@/lib/seo-cities";
+import { SECTORS, inhurenKop } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
@@ -106,6 +107,20 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
               <p className="font-display font-bold text-ink">{t}</p>
               <p className="mt-2 text-sm text-neutralx-600">{b}</p>
+            </li>
+          ))}
+        </ul>
+        {/* 22 nov 2026: naar de branchepagina's van deze stad (die kregen alleen links van elkaar en van het overzicht) */}
+        <h2 className="mt-14 font-display text-xl font-bold text-ink">Personeel per branche in {c.name}</h2>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {SECTORS.map((s) => (
+            <li key={s.slug}>
+              <Link href={`/${s.slug}/${c.slug}`} className="block rounded-xl border border-hair bg-white px-4 py-3 text-sm hover:border-brand-500">
+                <span className="font-semibold text-ink">
+                  {inhurenKop(s)} in {c.name}
+                </span>
+                <span className="block text-xs text-neutralx-500">{s.rolesShort}</span>
+              </Link>
             </li>
           ))}
         </ul>

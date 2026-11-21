@@ -7,13 +7,14 @@ import { sectorFoto } from "@/lib/marketing/fotos";
 import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES } from "@/lib/seo-cities";
-import { SECTORS } from "@/lib/seo-sectors";
+import { SECTORS, werkHubKop } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const revalidate = 600;
 
-const TITLE = "Freelance werk in Nederland — klussen voor zzp'ers, flexwerkers en uitzendkrachten";
+// 22 nov 2026: "klussen" in de titel (Search Console: "freelance klussen", "freelance klus")
+const TITLE = "Freelance werk en klussen in heel Nederland — voor zzp'ers, flexwerkers en uitzendkrachten";
 const DESCRIPTION =
   "Freelance werk vinden in heel Nederland: open klussen in horeca, logistiek, retail, evenementen en zorg. Met KVK of btw-nummer als zzp'er, of zonder KVK als uitzendkracht via een aangesloten uitzendbureau. Gratis aanmelden, zelf je uitbetaling kiezen.";
 
@@ -36,6 +37,11 @@ const FAQ = [
   {
     q: "Wat kost het voor freelancers?",
     a: "Niets. Aanmelden en reageren is gratis. Alleen als je kiest voor snellere uitbetaling betaal je een kleine fee per klus; wachten tot de opdrachtgever betaalt is gratis.",
+  },
+  {
+    // wie zoekt op "freelance uitzendbureau" krijgt het eerlijke antwoord (ZEKERFLEX_UITZENDER = false)
+    q: "Is ZekerFlex een uitzendbureau voor freelancers?",
+    a: "Nee. ZekerFlex is zelf geen uitzendbureau. Als zzp'er neem je een klus aan bij de opdrachtgever, zonder bureau ertussen, en maakt ZekerFlex de factuur voor je. Zonder KVK werk je als uitzendkracht via een aangesloten uitzendbureau: dat bureau is dan je werkgever.",
   },
 ];
 
@@ -62,7 +68,7 @@ export default async function FreelanceWerkPage() {
         <SectionHead
           kop="h1"
           eyebrow="Freelance werk"
-          title="Freelance werk in heel Nederland"
+          title="Freelance werk en klussen in heel Nederland"
           intro="ZekerFlex verbindt freelancers, flexwerkers en uitzendkrachten met bedrijven door het hele land. Slim gematcht op reistijd en vak, en jij kiest per klus hoe snel je wordt uitbetaald."
         />
         </HeroMetFoto>
@@ -91,7 +97,7 @@ export default async function FreelanceWerkPage() {
           {SECTORS.map((s) => (
             <li key={s.workerSlug}>
               <Link href={`/${s.workerSlug}`} className="block rounded-xl border border-hair bg-white px-4 py-3 text-sm hover:border-brand-500">
-                <span className="font-semibold text-ink">Werken in de {s.label.toLowerCase()}</span>
+                <span className="font-semibold text-ink">{werkHubKop(s)}</span>
                 <span className="block text-xs text-neutralx-500">{s.rolesShort}</span>
               </Link>
             </li>
