@@ -160,6 +160,8 @@ const PAGINA_FOTOS: Record<string, string> = {
   intercedenten: "campagne-eigenaar",
   // /uitzendpartner (21 nov 2026): voor uitzendbureaus die hun klussen op ZekerFlex zetten
   uitzendpartner: "campagne-rooster",
+  // /starten-als-uitzendkracht (21 nov 2026): werken via een uitzendbureau, uitzendklussen in de app
+  "starten-als-uitzendkracht": "campagne-steekkar",
   verkopen: "campagne-inpakken",
   rekentools: "campagne-vouwen",
   "review-check": "campagne-bediening",

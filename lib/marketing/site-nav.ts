@@ -115,6 +115,8 @@ export const NAV: NavEntry[] = [
         items: [
           { title: "Vind werk", desc: "Diensten die matchen op je vak, je reistijd en je beschikbaarheid.", href: "/voor-freelancers#matching" },
           { title: "Starten als freelancer", desc: "Van aanmelding tot je eerste dienst — alles geregeld behalve het werk zelf.", href: "/voor-freelancers" },
+          // 21 nov (eigenaar: "YoungOnes heeft dat bij workers onder Hoe het werkt, zet die ook bij ZekerFlex neer")
+          { title: "Starten als uitzendkracht", desc: "Werken zonder KVK, op contract bij een uitzendbureau.", href: "/starten-als-uitzendkracht" },
           { title: "Verzekeren", desc: "Welke verzekering je als zzp'er of flexwerker zelf regelt.", href: "/voor-freelancers#verzekering" },
         ],
       },

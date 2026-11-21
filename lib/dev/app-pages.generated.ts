@@ -397,6 +397,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/schoonmaak-personeel-inhuren/[stad]","file":"app/(marketing)/schoonmaak-personeel-inhuren/[stad]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/schoonmaak-vacatures","file":"app/(marketing)/schoonmaak-vacatures/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/schoonmaak-vacatures/[stad]","file":"app/(marketing)/schoonmaak-vacatures/[stad]/page.tsx","area":"Marketing","dynamic":true},
+  {"route":"/starten-als-uitzendkracht","file":"app/(marketing)/starten-als-uitzendkracht/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/starters","file":"app/(marketing)/starters/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/status","file":"app/(marketing)/status/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/tarieven-overzicht","file":"app/(marketing)/tarieven-overzicht/page.tsx","area":"Marketing","dynamic":false},

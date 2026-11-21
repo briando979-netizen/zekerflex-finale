@@ -76,7 +76,7 @@ export const YO_WERK = {
         foto: "/werk/campagne-uitzend.jpg",
         alt: "Een medewerker duwt een steekkar met dozen",
         knop: { label: "Start als uitzendkracht", href: "/register?type=freelancer" },
-        knop2: { label: "Veelgestelde vragen", href: "#vragen" },
+        knop2: { label: "Zo werkt het", href: "/starten-als-uitzendkracht" },
       },
     ] satisfies YoTab[],
     vragen: {

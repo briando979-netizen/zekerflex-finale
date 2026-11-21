@@ -73,9 +73,9 @@ const nextConfig = {
       { source: "/studio/reserveringen", destination: "/studio/website/reserveringen", permanent: false },
       // 16 nov: het eigen 5G-netwerk staat niet meer in het aanbod (vergunning en apparatuur per terrein, owner-todo)
       { source: "/aanbod/eigen-5g-netwerk", destination: "/aanbod", permanent: true },
-      // 21 nov: geen aparte pagina meer voor uitzendwerk (eigenaar: "haal dit per direct weg, ga gewoon in de app"); uitzendklussen
-      // van aangesloten bureaus vind je in de app. Tijdelijk (307), zodat het terug kan.
-      { source: "/uitzendbureau", destination: "/app", permanent: false },
+      // 21 nov: de oude pagina over ZekerFlex als uitzender is weg (eigenaar: "haal dit per direct weg"); oude links gaan naar
+      // de nieuwe uitleg /starten-als-uitzendkracht (werken via een uitzendbureau, in de app). Tijdelijk (307).
+      { source: "/uitzendbureau", destination: "/starten-als-uitzendkracht", permanent: false },
       // Browsers, pdf-viewers en de linkvoorvertoning van Apple vragen deze vaste adressen in de root, ook al staat het
       // pictogram in de pagina-kop (13 nov: 17× /favicon.ico en 7× een apple-touch-icon als 404 in 2 dagen)
       { source: "/favicon.ico", destination: "/icons/icon-192.png", permanent: true },
