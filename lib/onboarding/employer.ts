@@ -14,31 +14,48 @@ import { setBuitenlandBewijs, getBuitenlandBewijs, type BuitenlandBewijs } from 
 import { checkVies } from "@/lib/integrations/vies";
 import { landNaam, landSoort, normaliseerLand, controleerBuitenlandInvoer, viesLandCode } from "@/lib/onboarding/buitenland";
 
+const bedrijfVelden = {
+  /** Standaard Nederland: dan telt alleen het KVK-nummer, zoals altijd. */
+  land: z.string().trim().max(2).default("NL"),
+  kvkNumber: z.string().trim().max(20).default(""),
+  btwNummer: z.string().trim().max(24).default(""),
+  registratieNummer: z.string().trim().max(40).default(""),
+};
+
+function controleerBedrijf(v: { land: string; kvkNumber: string; btwNummer: string; registratieNummer: string }, ctx: z.RefinementCtx): void {
+  const soort = landSoort(v.land);
+  if (soort === null) {
+    ctx.addIssue({ code: "custom", path: ["land"], message: "Kies een land uit de lijst." });
+  } else if (soort === "NL") {
+    if (v.kvkNumber.replace(/[^\d]/g, "").length < 6) ctx.addIssue({ code: "custom", path: ["kvkNumber"], message: "Vul het KVK-nummer van je organisatie in (8 cijfers)." });
+  } else {
+    const c = controleerBuitenlandInvoer({ land: v.land, btwNummer: v.btwNummer, registratieNummer: v.registratieNummer });
+    if (!c.ok) ctx.addIssue({ code: "custom", path: [soort === "EU" ? "btwNummer" : "registratieNummer"], message: c.fout });
+  }
+}
+
 // De vestiging is de werklocatie in Nederland (postcode en geofence), ook voor een buitenlands bedrijf.
 export const employerOnboardingSchema = z
   .object({
-    /** Standaard Nederland: dan telt alleen het KVK-nummer, zoals altijd. */
-    land: z.string().trim().max(2).default("NL"),
-    kvkNumber: z.string().trim().max(20).default(""),
-    btwNummer: z.string().trim().max(24).default(""),
-    registratieNummer: z.string().trim().max(40).default(""),
+    ...bedrijfVelden,
     branchName: z.string().trim().min(2).max(120),
     addressLine: z.string().trim().min(3).max(160),
     postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode"),
     houseNumber: z.string().trim().min(1).max(12),
   })
-  .superRefine((v, ctx) => {
-    const soort = landSoort(v.land);
-    if (soort === null) {
-      ctx.addIssue({ code: "custom", path: ["land"], message: "Kies een land uit de lijst." });
-    } else if (soort === "NL") {
-      if (v.kvkNumber.replace(/[^\d]/g, "").length < 6) ctx.addIssue({ code: "custom", path: ["kvkNumber"], message: "Vul het KVK-nummer van je organisatie in (8 cijfers)." });
-    } else {
-      const c = controleerBuitenlandInvoer({ land: v.land, btwNummer: v.btwNummer, registratieNummer: v.registratieNummer });
-      if (!c.ok) ctx.addIssue({ code: "custom", path: [soort === "EU" ? "btwNummer" : "registratieNummer"], message: c.fout });
-    }
-  });
+  .superRefine(controleerBedrijf);
 export type EmployerOnboardingInput = z.infer<typeof employerOnboardingSchema>;
+
+/**
+ * Alleen het bedrijf (KVK, btw- of registratienummer): de vestiging staat er al, toegevoegd op Locaties of op Klus
+ * uitzetten. 22 nov 2026 (gebruikersonderzoek B27): het startscherm vroeg naam, adres en postcode van de "eerste
+ * vestiging" opnieuw. De verificatie zelf verandert niet.
+ */
+export const employerKvkSchema = z.object(bedrijfVelden).superRefine(controleerBedrijf);
+export type EmployerKvkInput = z.infer<typeof employerKvkSchema>;
+
+const heeftVestigingVelden = (input: EmployerOnboardingInput | EmployerKvkInput): input is EmployerOnboardingInput =>
+  "branchName" in input && typeof input.branchName === "string";
 
 const DEFAULT_MATCHING_CONFIG = {
   minScore: 0.55,
@@ -74,7 +91,7 @@ export interface EmployerOnboardingResult {
  */
 async function meldBuitenlandsBedrijf(
   tenantId: string,
-  input: EmployerOnboardingInput,
+  input: EmployerKvkInput,
 ): Promise<{ valid: boolean; companyName: string | null; reasons: string[]; detail: string }> {
   const land = normaliseerLand(input.land);
   const invoer = controleerBuitenlandInvoer({ land, btwNummer: input.btwNummer, registratieNummer: input.registratieNummer });
@@ -124,7 +141,7 @@ async function meldBuitenlandsBedrijf(
 export async function submitEmployerOnboarding(
   userId: string,
   tenantId: string,
-  input: EmployerOnboardingInput,
+  input: EmployerOnboardingInput | EmployerKvkInput,
 ): Promise<EmployerOnboardingResult> {
   const membership = await prisma.membership.findFirst({
     where: { userId, tenantId, role: { in: ["HQ_ADMIN", "PLATFORM_ADMIN"] } },
@@ -132,8 +149,15 @@ export async function submitEmployerOnboarding(
   });
   if (!membership) throw AppError.forbidden("Je beheert deze organisatie niet.");
 
+  // Alleen het bedrijf (employerKvkSchema): dan moet er al een vaste werklocatie zijn; die blijft zoals hij is.
+  const vestiging = heeftVestigingVelden(input) ? input : null;
+  const bestaand = vestiging
+    ? null
+    : await prisma.branch.findFirst({ where: { tenantId, kind: "PERMANENT" }, select: { id: true } });
+  if (!vestiging && !bestaand) throw AppError.validation("Vul eerst het adres van je werklocatie in.");
+
   const cleanKvk = input.kvkNumber.replace(/[^\d]/g, "");
-  const geo = await geocodePostcode(input.postalCode, input.houseNumber);
+  const geo = vestiging ? await geocodePostcode(vestiging.postalCode, vestiging.houseNumber) : null;
   const reasons: string[] = [];
 
   let kvkValid = false;
@@ -185,39 +209,32 @@ export async function submitEmployerOnboarding(
     );
   }
 
-  // First branch for the organization.
-  const existing = await prisma.branch.findFirst({
-    where: { tenantId },
-    select: { id: true },
-  });
-
-  const branch = existing
-    ? await prisma.branch.update({
-        where: { id: existing.id },
-        data: {
-          name: input.branchName,
-          addressLine: input.addressLine,
-          postalCode: geo.postalCode,
-          city: geo.city ?? "Onbekend",
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-        },
-        select: { id: true },
-      })
-    : await prisma.branch.create({
-        data: {
-          tenantId,
-          name: input.branchName,
-          addressLine: input.addressLine,
-          postalCode: geo.postalCode,
-          city: geo.city ?? "Onbekend",
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-          geofenceRadiusMeters: 150,
-          matchingConfig: DEFAULT_MATCHING_CONFIG,
-        },
-        select: { id: true },
-      });
+  // First branch for the organization, only when the form asked for it; otherwise the existing one stays as it is.
+  let branch: { id: string };
+  if (bestaand) {
+    branch = bestaand;
+  } else if (vestiging && geo) {
+    const existing = await prisma.branch.findFirst({
+      where: { tenantId },
+      select: { id: true },
+    });
+    const adres = {
+      name: vestiging.branchName,
+      addressLine: vestiging.addressLine,
+      postalCode: geo.postalCode,
+      city: geo.city ?? "Onbekend",
+      latitude: geo.latitude,
+      longitude: geo.longitude,
+    };
+    branch = existing
+      ? await prisma.branch.update({ where: { id: existing.id }, data: adres, select: { id: true } })
+      : await prisma.branch.create({
+          data: { tenantId, ...adres, geofenceRadiusMeters: 150, matchingConfig: DEFAULT_MATCHING_CONFIG },
+          select: { id: true },
+        });
+  } else {
+    throw AppError.validation("Vul eerst het adres van je werklocatie in.");
+  }
 
   // De naam uit het Handelsregister (KVK) komt op de organisatie; een naam uit VIES blijft ernaast staan.
   if (companyName && !buitenlands) {

@@ -20,6 +20,17 @@ export interface AdresVelden {
   plaats: string;
 }
 
+/**
+ * Eén regel voor een opgeslagen vestiging: "Grote Markt 1, 9712HN Groningen". Oudere vestigingen hebben de hele PDOK-naam
+ * als adresregel; dan staan postcode en plaats er al in en komen ze er niet nog eens achter.
+ */
+export function vestigingRegel(v: { addressLine: string; postalCode: string; city: string }): string {
+  const regel = v.addressLine.trim();
+  const rest = `${v.postalCode} ${v.city}`.trim();
+  if (!rest || (v.postalCode.trim() && regel.replace(/\s/g, "").includes(v.postalCode.replace(/\s/g, "")))) return regel;
+  return regel ? `${regel}, ${rest}` : rest;
+}
+
 export function adresUitKeuze(k: AdresKeuze): AdresVelden {
   const label = k.label.trim();
   const postcode = (k.postcode ?? "").trim();

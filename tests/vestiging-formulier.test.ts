@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { adresUitKeuze } from "@/lib/geo/adres-keuze";
+import { adresUitKeuze, vestigingRegel } from "@/lib/geo/adres-keuze";
 import { nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
 
@@ -23,6 +23,15 @@ describe("een gekozen adres → de velden van de vestiging", () => {
   it("zonder postcode (een straat of plaats) blijft de hele naam staan en blijven postcode en plaats leeg of zoals PDOK ze gaf", () => {
     expect(adresUitKeuze({ label: "Grote Markt, Groningen", plaats: "Groningen" })).toEqual({ straat: "Grote Markt, Groningen", postcode: "", plaats: "Groningen" });
     expect(adresUitKeuze({ label: "  Damrak 1  ", postcode: null, plaats: null })).toEqual({ straat: "Damrak 1", postcode: "", plaats: "" });
+  });
+});
+
+describe("een opgeslagen vestiging op één regel (de KVK-stap op het startscherm)", () => {
+  it("zet postcode en plaats achter de straat, maar niet dubbel bij een oude adresregel", () => {
+    expect(vestigingRegel({ addressLine: "Grote Markt 1", postalCode: "9712HN", city: "Groningen" })).toBe("Grote Markt 1, 9712HN Groningen");
+    expect(vestigingRegel({ addressLine: "Grote Markt 1, 9712HN Groningen", postalCode: "9712HN", city: "Groningen" })).toBe("Grote Markt 1, 9712HN Groningen");
+    expect(vestigingRegel({ addressLine: "Grote Markt 1, 9712 HN Groningen", postalCode: "9712HN", city: "Groningen" })).toBe("Grote Markt 1, 9712 HN Groningen");
+    expect(vestigingRegel({ addressLine: "", postalCode: "9712HN", city: "Groningen" })).toBe("9712HN Groningen");
   });
 });
 

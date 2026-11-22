@@ -190,6 +190,12 @@ export const nl = {
     kvkSaved: "{name} — opgeslagen, KVK nog te bevestigen",
     kvkInControle: "{name} staat in het Handelsregister. We controleren nog of je bij dit bedrijf hoort: meestal binnen een werkdag, je krijgt bericht. Je kunt alvast één testklus plaatsen.",
     country: "Waar is je bedrijf gevestigd?",
+    // al gevraagd bij het aanmelden: in de KVK-stap alleen tonen, met een knop om het te wijzigen (22 nov 2026)
+    countryKnown: "Gevestigd in {land}.",
+    countryChange: "Wijzig",
+    // de werklocatie is er al (Locaties of Klus uitzetten): de KVK-stap vraagt hem niet opnieuw
+    vestigingBekend: "Werklocatie:",
+    vestigingWijzig: "Andere werklocatie? Pas hem aan bij Locaties.",
     countryEu: "Europese Unie",
     countryOther: "Buiten de EU",
     vatNumber: "Btw-nummer",

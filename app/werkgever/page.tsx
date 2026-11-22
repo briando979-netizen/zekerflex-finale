@@ -36,6 +36,7 @@ import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { kl, startMarges } from "@/lib/werkgever/start-marges";
+import { vestigingRegel } from "@/lib/geo/adres-keuze";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,13 @@ export default async function WerkgeverStartPage() {
   const wizardComplete = kvkDone && Boolean(ob.profileStepDone) && emailVerified && orgAnswered;
   const canOnboard = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   const showWizard = canOnboard && !wizardComplete;
+  // de vaste werklocatie die er al is (Locaties of Klus uitzetten): dan vraagt de KVK-stap hem niet opnieuw (22 nov 2026)
+  const bestaandeVestiging =
+    showWizard && !kvkDone && tenantId
+      ? await prisma.branch
+          .findFirst({ where: { tenantId, kind: "PERMANENT" }, orderBy: { createdAt: "asc" }, select: { name: true, addressLine: true, postalCode: true, city: true } })
+          .catch(() => null)
+      : null;
   // Startmodus: nog bezig met de stappen en nog niets te laten zien (geen klussen, uren of facturen).
   // Dan staan de stappen bovenaan en vallen de lege cijfers, grafiek en panelen weg (4 nov 2026:
   // een nieuw bedrijf zag eerst een scherm vol nullen en vond de KVK-stap pas ver naar beneden).
@@ -367,6 +375,7 @@ export default async function WerkgeverStartPage() {
                 inControle,
                 buitenlands: Boolean(verificatie.buitenlands),
                 companyName: o.orgName,
+                vestiging: bestaandeVestiging ? { naam: bestaandeVestiging.name, adres: vestigingRegel(bestaandeVestiging) } : null,
               }}
             />
           </div>
