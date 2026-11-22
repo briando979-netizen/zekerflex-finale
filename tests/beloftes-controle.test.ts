@@ -6,6 +6,7 @@ import { ALL_PRODUCTS, DEPLOYMENT_LABEL } from "@/lib/products";
 import { JOB_SKILLS } from "@/lib/jobs/skills";
 import { RETENTION_RULES } from "@/lib/privacy/retention";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
+import { COPY as BEZOEKERSTIP, copyKeyVoor } from "@/lib/marketing/bezoekerstip";
 
 // Bewaker (16 nov 2026, schermcontrole van de live site): beloftes die niet klopten en tekst die niet voor klanten bedoeld
 // was. Geen bank, geen 5G, geen Peppol-verzending, geen interne verkoopnotities en geen Engelse vaktaal op openbare
@@ -64,6 +65,25 @@ describe("geen beloftes die niet kloppen", () => {
     const register = lees("lib/content/store.ts");
     expect(register).not.toMatch(/De beste match wordt direct toegewezen\./);
     expect(register).toContain('(key === "how.s2.body" && /direct toegewezen|beste match/i.test(value))');
+  });
+
+  // 22 nov 2026 (gebruikersonderzoek punt 2): de tip "Er wachten klussen op je … reageer direct" stond er terwijl alle open
+  // klussen testklussen waren. Nu alleen een belofte van klussen als er een echte open staat; anders eerlijk. Nooit "direct".
+  it("de bezoekerstip belooft alleen klussen als er een echte openstaat, en nergens 'reageer direct'", () => {
+    expect(copyKeyVoor("werk", false)).toBe("werkStart");
+    expect(copyKeyVoor("exit", false)).toBe("exitStart");
+    expect(copyKeyVoor("werk", true)).toBe("werk");
+    expect(copyKeyVoor("bedrijf", false)).toBe("bedrijf");
+    expect(BEZOEKERSTIP.nl!.werkStart.title).toBe("We starten nu in jouw regio");
+    expect(BEZOEKERSTIP.nl!.werkStart.body).toBe("Meld je aan en hoor als eerste van nieuwe klussen.");
+    const alles = [lees("lib/marketing/bezoekerstip.ts"), lees("components/marketing/VisitorNudge.tsx")].join("\n");
+    expect(alles).not.toMatch(/Er wachten klussen op je|reageer direct|reageren direct|react right away|od razu się zgłoś|aplică imediat|одразу відгук/i);
+    for (const [taal, teksten] of Object.entries(BEZOEKERSTIP)) {
+      for (const k of ["werkStart", "exitStart"] as const) expect(teksten[k].href, `${taal} ${k}`).not.toBe("/klussen");
+    }
+    // de server telt de echte klussen (zonder testklussen) en geeft dat door aan de tip
+    expect(lees("app/(marketing)/layout.tsx")).toContain("<VisitorNudge echteKlussen={echteKlussen} />");
+    expect(lees("lib/marketing/echte-klussen.ts")).toContain("publicOpenShifts({ take: 1 })");
   });
 
   it("/nieuwsbrief/afmelden zegt alleen 'Je bent afgemeld' met een geldige code", () => {

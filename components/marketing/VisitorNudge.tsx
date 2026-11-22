@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { pingNudge } from "@/components/analytics/AnalyticsBeacon";
+import { COPY, copyKeyVoor, type Kind } from "@/lib/marketing/bezoekerstip";
 
 // ---------------------------------------------------------------------------
 // Gentle prompts for visitors without an account — at the moment they're
@@ -16,7 +17,6 @@ import { pingNudge } from "@/components/analytics/AnalyticsBeacon";
 // anonymously (Admin → Verkeer & analytics).
 // ---------------------------------------------------------------------------
 
-type Kind = "bedrijf" | "werk" | "exit";
 const DONE_KEY = "zf_nudge_done";
 
 const COMPANY = /^\/(voor-bedrijven|prijzen|personeel-inhuren|demo)(\/|$)/;
@@ -26,41 +26,12 @@ const WORK = /^\/($|klussen|freelance-werk|voor-freelancers|uitzendbureau)/;
 const WORK_EXPLICIT = /^\/(klussen|freelance-werk|voor-freelancers|uitzendbureau)/;
 const AUDIENCE_KEY = "zf-audience"; // gedeeld met de koptekst-schakelaar (SiteHeader)
 
-type Copy = { title: string; body: string; cta: string; href: string };
-const COPY: Record<string, Record<Kind, Copy>> = {
-  nl: {
-    bedrijf: { title: "Zet je eerste klussen uit", body: "Vul de gaten in je werkrooster: plaats een dienst en geverifieerde flexkrachten in de buurt reageren direct. Je betaalt alleen € 3,50 per gewerkt uur.", cta: "Gratis klus plaatsen", href: "/register?type=bedrijf" },
-    werk: { title: "Er wachten klussen op je", body: "Maak in 2 minuten een gratis account en reageer direct. Je kiest zelf hoe snel je wordt uitbetaald.", cta: "Gratis account maken", href: "/register?type=freelancer" },
-    exit: { title: "Nog even, voor je gaat…", body: "Werken via ZekerFlex is gratis — ook zonder KVK, als uitzendkracht via een aangesloten uitzendbureau.", cta: "Bekijk open klussen", href: "/klussen" },
-  },
-  en: {
-    bedrijf: { title: "Post your first shifts", body: "Fill the gaps in your schedule: post a shift and verified flex workers nearby react right away. You only pay € 3.50 per hour worked.", cta: "Post a job for free", href: "/register?type=bedrijf" },
-    werk: { title: "Jobs are waiting for you", body: "Create a free account in 2 minutes and react right away. You choose how fast you get paid.", cta: "Create free account", href: "/register?type=freelancer" },
-    exit: { title: "One moment before you go…", body: "Working through ZekerFlex is free — even without a KVK, as a temp worker via an affiliated staffing agency.", cta: "See open jobs", href: "/klussen" },
-  },
-  pl: {
-    bedrijf: { title: "Dodaj pierwsze zlecenia", body: "Wypełnij luki w grafiku: dodaj zmianę, a zweryfikowani pracownicy w okolicy zgłoszą się od razu. Płacisz tylko € 3,50 za przepracowaną godzinę.", cta: "Dodaj zlecenie", href: "/register?type=bedrijf" },
-    werk: { title: "Czekają na ciebie zlecenia", body: "Załóż darmowe konto w 2 minuty i od razu się zgłoś. Sam wybierasz, jak szybko dostajesz wypłatę.", cta: "Załóż darmowe konto", href: "/register?type=freelancer" },
-    exit: { title: "Chwilka, zanim wyjdziesz…", body: "Praca przez ZekerFlex jest darmowa — także bez KVK, jako pracownik tymczasowy przez współpracującą agencję pracy.", cta: "Zobacz zlecenia", href: "/klussen" },
-  },
-  ro: {
-    bedrijf: { title: "Publică primele ture", body: "Acoperă golurile din program: publică o tură și lucrătorii verificați din zonă aplică imediat. Plătești doar € 3,50 pe oră lucrată.", cta: "Publică un job", href: "/register?type=bedrijf" },
-    werk: { title: "Te așteaptă joburi", body: "Creează un cont gratuit în 2 minute și aplică imediat. Tu alegi cât de repede ești plătit.", cta: "Creează cont gratuit", href: "/register?type=freelancer" },
-    exit: { title: "O clipă, înainte să pleci…", body: "Munca prin ZekerFlex este gratuită — și fără KVK, ca lucrător temporar printr-o agenție de muncă parteneră.", cta: "Vezi joburile", href: "/klussen" },
-  },
-  uk: {
-    bedrijf: { title: "Розмісти перші зміни", body: "Заповни прогалини у графіку: розмісти зміну, і перевірені працівники поруч відгукнуться одразу. Платиш лише € 3,50 за відпрацьовану годину.", cta: "Розмістити роботу", href: "/register?type=bedrijf" },
-    werk: { title: "На тебе чекає робота", body: "Створи безкоштовний акаунт за 2 хвилини й одразу відгукуйся. Ти сам обираєш, як швидко отримати виплату.", cta: "Створити акаунт", href: "/register?type=freelancer" },
-    exit: { title: "Хвилинку, перш ніж піти…", body: "Робота через ZekerFlex безкоштовна — навіть без KVK, як тимчасовий працівник через агенцію-партнера.", cta: "Переглянути роботи", href: "/klussen" },
-  },
-};
-
 function locale(): string {
   const v = document.cookie.split("; ").find((c) => c.startsWith("zf_locale="))?.split("=")[1];
   return v && COPY[v] ? v : "nl";
 }
 
-export function VisitorNudge() {
+export function VisitorNudge({ echteKlussen = false }: { echteKlussen?: boolean }) {
   const pathname = usePathname();
   const [kind, setKind] = useState<Kind | null>(null);
   const [lang, setLang] = useState("nl");
@@ -137,7 +108,7 @@ export function VisitorNudge() {
   }, [pathname]);
 
   if (!kind) return null;
-  const c = COPY[lang]![kind];
+  const c = COPY[lang]![copyKeyVoor(kind, echteKlussen)];
   return (
     <div className="fixed bottom-5 left-4 z-[70] w-[min(22rem,calc(100vw-2rem))] animate-slide-up-fade sm:left-6" role="dialog" aria-label={c.title}>
       <div className="relative overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-lift ring-1 ring-white/10">
