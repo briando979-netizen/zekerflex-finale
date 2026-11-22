@@ -128,11 +128,12 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
       }}
     >
       <div className="shell-4k flex h-16 items-center gap-4 lg:h-[68px]">
-        <Link href="/" className="flex flex-shrink-0 items-center gap-2.5" aria-label="ZekerFlex home">
+        <Link href="/" className="relative flex flex-shrink-0 items-center gap-2.5" aria-label="ZekerFlex home">
           <span className="transition-transform hover:rotate-6">
             <LogoGlyph size={30} tone="light" />
           </span>
-          <span className="font-display text-lg font-bold tracking-tight">ZekerFlex</span>
+          {/* onder 380px past de naam niet naast de schakelaar Werkers | Bedrijven: dan alleen het beeldmerk */}
+          <span className="font-display text-lg font-bold tracking-tight max-[379px]:sr-only">ZekerFlex</span>
         </Link>
 
         {/* With every label on one line the full bar needs ~1.500px. Below
@@ -247,12 +248,37 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           </Link>
         </div>
 
-        {/* telefoon/tablet: de belangrijkste knop altijd binnen handbereik, naast de menuknop */}
-        <div className="ml-auto flex items-center gap-2 lg:hidden">
+        {/* telefoon/tablet: de schakelaar Werkers | Bedrijven naast de menuknop (22 nov 2026, eigenaar: "niet meer te zien op
+            de telefoon, alleen in het hamburgermenu"); de belangrijkste knop past daar pas vanaf 640px naast */}
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:hidden">
+          {!open && (
+            <div role="group" aria-label="Werkers of bedrijven" className="flex items-center rounded-full border border-white/15 bg-white/[0.06] p-0.5">
+              <Link
+                href="/"
+                onClick={() => pick("werknemers")}
+                aria-current={audience === "werknemers" ? "page" : undefined}
+                className={`rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
+                }`}
+              >
+                Werkers
+              </Link>
+              <Link
+                href="/bedrijven"
+                onClick={() => pick("bedrijven")}
+                aria-current={audience === "bedrijven" ? "page" : undefined}
+                className={`rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  audience === "bedrijven" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
+                }`}
+              >
+                Bedrijven
+              </Link>
+            </div>
+          )}
           {!open && (
             <Link
               href={knoppen.mobiel.href}
-              className="whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-sm font-bold text-ink transition hover:bg-white/90 max-[359px]:hidden"
+              className="hidden whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-sm font-bold text-ink transition hover:bg-white/90 sm:inline-block"
             >
               {knoppen.mobiel.label}
             </Link>
