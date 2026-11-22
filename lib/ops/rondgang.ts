@@ -54,8 +54,12 @@ const OVERSLAAN = new Set(["/account-verwijderen/voltooid", "/kyc/callback", "/w
 // elke regiostad binnen 5 nachten en elke stad binnen ±4 weken langskomt. Plus vaste adressen met een querystring.
 /** Regiosteden rond de eigen vestiging (Zuidbroek); de lijst zelf staat in lib/seo-cities.ts. */
 export { REGIO_STEDEN };
-/** Adressen die geen eigen pagina zijn maar wel een eigen weergave hebben. */
-export const EXTRA_ADRESSEN = ["/register?type=bedrijf"] as const;
+/**
+ * Adressen die geen eigen pagina zijn maar wel een eigen weergave hebben. Het welkomstonderwerp van de community (22 nov 2026,
+ * lib/community) staat er altijd: zo komt ook de pagina van één onderwerp (/community/[id]) elke nacht langs; /community en
+ * /community/regels zelf zijn vaste pagina's en staan al in de lijst.
+ */
+export const EXTRA_ADRESSEN = ["/register?type=bedrijf", "/community/welkom-stel-je-voor"] as const;
 
 /** De soorten stadspagina: /personeel-inhuren/<stad>, /freelance-werk/<stad>, /bijbaan/<stad> (22 nov 2026) en per sector de werkgevers- en de werkerkant. */
 export function stadSoorten(): string[] {

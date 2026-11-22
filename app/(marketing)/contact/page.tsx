@@ -66,9 +66,9 @@ export default async function ContactPage() {
           <a href={`mailto:${CONTACTS.klachten}`} className="btn-ghost">
             Klacht indienen ({CONTACTS.klachten})
           </a>
-          <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+          <Link href={COMMUNITY_URL} className="btn-ghost">
             Praat mee in de ZekerFlex community
-          </a>
+          </Link>
         </div>
       </Section>
     ),

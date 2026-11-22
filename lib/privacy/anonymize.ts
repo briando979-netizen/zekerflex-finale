@@ -150,6 +150,16 @@ export async function anonymizeUser(
     })
     .catch((err) => logger.warn("erasure: zekerflex-mail wissen mislukt", { soort: err instanceof Error ? err.name : "onbekend" }));
 
+  // De community (lib/community/avg.ts): eigen berichten weg of anoniem ("Verwijderd account"), de foto's van schijf, de naam
+  // uit "Handig" en uit meldingen. Vóór de transactie: die wist community-gebruiker:<id>, met de nog losse foto's. Een storing
+  // hier houdt het wissen van het account niet tegen; de schrijver heet dan toch al "Verwijderd account" (lib/community/weergave.ts).
+  await import("@/lib/community/avg")
+    .then((m) => m.wisCommunityVan(userId))
+    .then((n) => {
+      if (n > 0) cleared.community = n;
+    })
+    .catch((err) => logger.warn("erasure: community wissen mislukt", { soort: err instanceof Error ? err.name : "onbekend" }));
+
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: userId },

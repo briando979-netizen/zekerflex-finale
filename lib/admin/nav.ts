@@ -99,6 +99,8 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/mijn-mail", label: "Mijn mailbox" },
       { href: "/admin/zekerflex-mail", label: "ZekerFlex Mail" },
       { href: "/admin/whatsapp", label: "WhatsApp" },
+      // het openbare forum op /community (22 nov 2026): meldingen nakijken, verbergen, uitsluiten
+      { href: "/admin/community", label: "Community" },
     ],
   },
   {

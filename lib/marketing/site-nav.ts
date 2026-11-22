@@ -102,6 +102,8 @@ const OVER_ITEMS: MenuItem[] = [
   { title: "Ons verhaal", desc: "Waarom ZekerFlex bestaat en wat we anders doen.", href: "/over-ons#verhaal" },
   // 21 nov 2026 (eigenaar): "Drie uitgangspunten" uit het menu
   { title: "Werken bij ons", desc: "Stuur een open sollicitatie — goede mensen zijn altijd welkom.", href: "/over-ons#werken-bij" },
+  // 22 nov 2026: de community op de site zelf (lib/community); hier en niet onder Kennis, want Kennis bij werkers blijft kort (21 nov)
+  { title: "Community", desc: "Praat mee met werkers en bedrijven: vragen, ervaringen en tips.", href: "/community" },
   { title: "Contact", desc: "Vragen of samenwerken? Mail info@zekerflex.com.", href: "mailto:info@zekerflex.com" },
 ];
 // 21 nov 2026 (eigenaar): Kennis bij werknemers alleen Informatie, Kennisbank, Blogs en FAQ (zoals YoungOnes)

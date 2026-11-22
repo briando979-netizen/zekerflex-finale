@@ -283,6 +283,8 @@ export async function exportUserData(userId: string): Promise<DataExport> {
   sections.voorraadmeldingen = await safe("voorraadmeldingen", () => voorraadmeldingenVan(user.email));
   // wat je aan de assistenten (Jarvis, Brain) hebt gevraagd en wat ze antwoordden; alleen je eigen regels, hooguit 90 dagen terug
   sections.assistentChat = await safe("assistentChat", () => exportChatlogVan(userId));
+  // je onderwerpen en reacties in de community (lib/community/avg.ts), ook verborgen of verwijderde; dynamisch geladen
+  sections.community = await safe("community", () => import("@/lib/community/avg").then((m) => m.exportCommunityVan(userId)));
 
   sections.auditTrail = await safe("auditTrail", () =>
     prisma.auditLog.findMany({
