@@ -58,7 +58,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
     },
     {
       q: "Moet mijn bedrijf geverifieerd zijn?",
-      a: "Ja — voor de veiligheid van flexkrachten controleren we je KVK-inschrijving. Tot die tijd kun je al één testklus plaatsen en reacties ontvangen.",
+      a: "Ja — voor de veiligheid van flexkrachten controleren we je KVK-inschrijving. Je kunt al een klus plaatsen en reacties ontvangen; inplannen kan na de controle van je bedrijf.",
     },
   ];
 
