@@ -81,7 +81,7 @@ export const PIJLERS: Pijler[] = [
     naam: "Personeel",
     kort: "Flexwerkers, uitzendkrachten en zzp'ers, van dienst tot factuur.",
     intro:
-      "Plaats een dienst en ZekerFlex stelt direct passende mensen voor. Inchecken, uren goedkeuren en factureren gaan in dezelfde omgeving.",
+      "Plaats een dienst: hij komt bij geverifieerde werkers in de buurt en jij kiest wie je inroostert. Inchecken, uren goedkeuren en factureren gaan in dezelfde omgeving.",
   },
   {
     sleutel: "online",
@@ -117,7 +117,7 @@ export const AANBOD: AanbodItem[] = [
     slug: "flexwerkers-inhuren",
     pijler: "personeel",
     naam: "Flexwerkers inhuren",
-    kort: "Plaats een dienst en krijg direct passende flexwerkers voorgesteld.",
+    kort: "Plaats een dienst bij geverifieerde flexwerkers in de buurt en kies zelf wie je inroostert.",
     tekst:
       "Je zet een dienst uit en ZekerFlex matcht op vak, reistijd en betrouwbaarheid. Flexwerkers checken in op locatie, jij keurt de uren goed en de factuur volgt vanzelf.",
     punten: [

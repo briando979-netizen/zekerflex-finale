@@ -30,8 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
 const BLOCKS = [
   {
     id: "matching",
-    title: "Automatische matching per vestiging",
-    body: "Stel per locatie in wie automatisch mag worden toegewezen en vanaf welke matchscore. Nieuwe diensten worden direct bij de beste kandidaten uitgezet, in golven, tot de dienst vol is.",
+    // 22 nov 2026: eerlijk en in gewone taal, zonder vaktermen en zonder belofte over snelheid (tests/beloftes-controle.test.ts)
+    title: "Je klus bij werkers in de buurt",
+    body: "Je klus komt bij geverifieerde werkers in de buurt. Wie reageert, zie je op volgorde van reistijd, betrouwbaarheid en ervaring, en jij kiest wie je inroostert. Werk je vaak met dezelfde mensen? Dan laat je je favorieten bij een klus vanzelf inplannen als ze reageren.",
   },
   {
     id: "checkin",
@@ -65,7 +66,7 @@ const TOOLS = [
 
 const FAQ = [
   { q: "Wat kost het?", a: "€ 3,50 platformkosten per gewerkt uur. Je betaalt alleen wanneer er daadwerkelijk iemand werkt. Geen abonnement, geen opstart- of plaatsingskosten." },
-  { q: "Hoe snel kan ik iemand hebben?", a: "Bij bekende functies met automatische toewijzing gaat het aanbod in golven naar passende krachten. Je ziet reacties live binnenkomen; de invulling hangt af van wie beschikbaar is." },
+  { q: "Hoe snel kan ik iemand hebben?", a: "Zodra je klus online staat, zien geverifieerde werkers in de buurt hem en kunnen ze reageren. Je ziet de reacties binnenkomen; hoe snel je iemand hebt, hangt af van wie er beschikbaar is." },
   { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast, signaleert onder meer urenconcentratie en kan matching bij verhoogde risico's beperken. Dit geeft geen garantie over de arbeidsrelatie: de beoordeling hangt ook af van hoe er in de praktijk wordt gewerkt." },
   { q: "Kan ik meerdere vestigingen beheren?", a: "Ja. Je richt een organisatie in met vestigingen, wijst lokale managers toe met of zonder locatiebeperking, en houdt op hoofdkantoorniveau overzicht over alles." },
 ];

@@ -110,7 +110,7 @@ export const nl = {
     kpiActiveHint: "deze maand ingezet",
     upcomingTitle: "Aankomende klussen",
     upcomingEmptyTitle: "Geen open klussen",
-    upcomingEmptyBody: "Zet een klus uit en ZekerFlex matcht direct de beste kandidaten.",
+    upcomingEmptyBody: "Zet een klus uit. Geverifieerde werkers in de buurt zien hem en kunnen reageren; jij kiest wie je inroostert.",
     approvalsTitle: "Uren te keuren",
     approvalsEmptyTitle: "Niets te doen",
     approvalsEmptyBody: "Alle ingediende uren zijn afgehandeld.",
@@ -210,7 +210,7 @@ export const nl = {
     emailVerified: "Je e-mailadres is bevestigd.",
     emailBody: "We hebben je een bevestigingsmail gestuurd. Klik op de link daarin om je account te activeren.",
     resend: "Bevestigingsmail opnieuw sturen",
-    klaarBody: "Je organisatie staat klaar. Zet je eerste klus uit — ZekerFlex matcht direct de beste krachten.",
+    klaarBody: "Je organisatie staat klaar. Zet je eerste klus uit: hij komt bij geverifieerde werkers in de buurt en jij kiest wie je inroostert.",
     placeFirst: "Zet je eerste klus uit",
   },
   calendar: {
@@ -389,7 +389,7 @@ export const nl = {
     placeShift: "Klus uitzetten",
     emptyTitle: "Nog geen klussen",
     emptyBody:
-      "Zet je eerste klus uit. ZekerFlex rangschikt direct de beste kandidaten op reistijd en betrouwbaarheid.",
+      "Zet je eerste klus uit. Geverifieerde werkers in de buurt zien hem en kunnen reageren; jij kiest wie je inroostert.",
     groupRecruiting: "Werven",
     groupRecruitingNote: "Deze klussen zijn nog niet vol.",
     groupPlanned: "Gepland & bezet",
@@ -509,7 +509,7 @@ export const nl = {
   newShift: {
     title: "Klus uitzetten",
     eyebrow: "Nieuw",
-    subtitle: "Kies een sjabloon of vul het zelf in. Zet 'm op meerdere dagen en ZekerFlex matcht direct de beste kandidaten.",
+    subtitle: "Kies een sjabloon of vul het zelf in. Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert.",
     back: "Terug",
     // een bedrijf zonder vestiging: gewone taal en rechtstreeks naar de plek waar het adres erbij komt (20 nov 2026)
     noBranches: "We hebben eerst het adres van je bedrijf nodig. Daarmee vinden we werkers bij jou in de buurt.",
@@ -596,7 +596,7 @@ export const nl = {
     message: "Bericht",
     assignedTitle: "Aangenomen ({n}/{total})",
     assignedEmptyTitle: "Nog niemand aangenomen",
-    assignedEmptyBody: "ZekerFlex nodigt automatisch de beste kandidaten uit.",
+    assignedEmptyBody: "Werkers in de buurt kunnen op je klus reageren; jij kiest wie je aanneemt.",
     reliability: "Betrouwbaarheid {n}",
     acceptedOn: "aangenomen {date}",
     replacementPill: "Vervanging",
