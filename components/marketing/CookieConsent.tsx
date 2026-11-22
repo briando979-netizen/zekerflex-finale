@@ -110,9 +110,7 @@ export function CookieConsent() {
         13: de kaart bedekte een derde van het eerste scherm). Vanaf 640 px, en zodra iemand de instellingen opent, precies
         de kaart van daarvoor. */}
     <div ref={laag} data-cookie-laag className={`pointer-events-none fixed inset-x-0 bottom-0 z-[90] ${showDetails ? "px-4 pb-4" : "px-0 pb-0 sm:pb-4"} sm:px-6`}>
-      <div
-        role="region"
-        aria-label={c.label}
+      <div role="region" aria-label={c.label}
         className={`pointer-events-auto mx-auto max-w-2xl bg-white shadow-lift ${
           showDetails ? "rounded-2xl border border-hair p-5" : "border-t border-hair px-4 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 sm:rounded-2xl sm:border sm:p-5"
         }`}

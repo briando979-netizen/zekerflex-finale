@@ -49,7 +49,7 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = f
             <span className="font-display text-lg font-bold">ZekerFlex</span>
           </div>
           {voettekst.slogan ? <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">{voettekst.slogan}</p> : null}
-          {/* geen losse "Bekijk de systeemstatus" meer: /status staat één keer, in de kolom Platform (22 nov 2026) */}
+          {/* geen losse link naar de systeemstatus meer: /status staat één keer, in de kolom Platform (22 nov 2026) */}
           <SocialLinks className="mt-6" />
         </div>
 
