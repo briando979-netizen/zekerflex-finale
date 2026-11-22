@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { submitEmployerOnboarding, employerOnboardingSchema } from "@/lib/onboarding/employer";
+import { submitEmployerOnboarding, employerKvkSchema, employerOnboardingSchema } from "@/lib/onboarding/employer";
 import { getOrgProfileExtra, saveOrgProfileExtra } from "@/lib/profile/store";
 import { AppError } from "@/lib/errors";
-import { controleerVestiging, type VestigingFouten } from "@/lib/onboarding/vestiging";
+import { controleerVestiging, controleerVestigingVeld, type VestigingFouten } from "@/lib/onboarding/vestiging";
+import { landSoort } from "@/lib/onboarding/buitenland";
 import { maakBrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 const profileSchema = z.object({
@@ -93,16 +94,26 @@ export async function employerOnboardingAction(
     postalCode: String(formData.get("postalCode") ?? "").slice(0, 12),
     houseNumber: String(formData.get("houseNumber") ?? "").slice(0, 12),
   };
-  const fieldErrors = controleerVestiging(values);
-  const eerste = Object.values(fieldErrors)[0];
-  if (eerste) return { error: eerste, done: false, values, fieldErrors };
-  const parsed = employerOnboardingSchema.safeParse({
-    ...values,
-    branchName: formData.get("branchName"),
-    addressLine: formData.get("addressLine"),
-    postalCode: formData.get("postalCode"),
-    houseNumber: formData.get("houseNumber"),
-  });
+  // De werklocatie staat er al (Locaties of Klus uitzetten): dan alleen het bedrijf, de vestiging blijft zoals hij is
+  // (22 nov 2026). submitEmployerOnboarding controleert zelf of er echt een vaste werklocatie is.
+  const vestigingBekend = formData.get("vestigingBekend") === "1";
+  if (vestigingBekend) {
+    const kvkFout = landSoort(values.land) === "NL" ? controleerVestigingVeld("kvkNumber", values.kvkNumber) : null;
+    if (kvkFout) return { error: kvkFout, done: false, values, fieldErrors: { kvkNumber: kvkFout } };
+  } else {
+    const fieldErrors = controleerVestiging(values);
+    const eerste = Object.values(fieldErrors)[0];
+    if (eerste) return { error: eerste, done: false, values, fieldErrors };
+  }
+  const parsed = vestigingBekend
+    ? employerKvkSchema.safeParse(values)
+    : employerOnboardingSchema.safeParse({
+        ...values,
+        branchName: formData.get("branchName"),
+        addressLine: formData.get("addressLine"),
+        postalCode: formData.get("postalCode"),
+        houseNumber: formData.get("houseNumber"),
+      });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Controleer de gegevens.", done: false, values };
   }

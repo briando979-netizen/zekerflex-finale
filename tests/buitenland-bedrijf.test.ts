@@ -33,7 +33,7 @@ vi.mock("@/lib/company/eigendom", () => ({ eigendomVanEmail: () => ({ ok: false,
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: m.alert }));
 vi.mock("@/lib/audit", () => ({ recordAudit: m.audit }));
 
-const { employerOnboardingSchema, submitEmployerOnboarding, isEmployerOnboarded } = await import("@/lib/onboarding/employer");
+const { employerKvkSchema, employerOnboardingSchema, submitEmployerOnboarding, isEmployerOnboarded } = await import("@/lib/onboarding/employer");
 
 const vestiging = { branchName: "Magazijn", addressLine: "Damrak 1", postalCode: "1012 AB", houseNumber: "1" };
 
@@ -160,6 +160,35 @@ describe("aanmelden buiten Nederland", () => {
     expect(m.registerTenantCompany).toHaveBeenCalledWith({ tenantId: "t1", kvkNumber: "12345678", allowInactive: true });
     expect(m.checkVies).not.toHaveBeenCalled();
     expect(r).toMatchObject({ kvkValid: true, inControle: true, buitenlands: false, companyName: "Bakker BV" });
+  });
+});
+
+// 22 nov 2026 (gebruikersonderzoek B27): wie de werklocatie al toevoegde (Locaties of Klus uitzetten), krijgt in de
+// KVK-stap alleen nog de vraag naar het bedrijf. De verificatie zelf blijft precies zoals hij was.
+describe("de werklocatie staat er al", () => {
+  it("het schema vraagt geen vestigingsvelden, maar wel het KVK-nummer of het buitenlandse nummer", () => {
+    expect(employerKvkSchema.safeParse({ kvkNumber: "12345678" }).success).toBe(true);
+    expect(employerKvkSchema.safeParse({}).error?.issues[0]?.message).toMatch(/KVK/);
+    expect(employerKvkSchema.safeParse({ land: "DE" }).success).toBe(false);
+    expect(employerKvkSchema.safeParse({ land: "DE", btwNummer: "DE123456789" }).success).toBe(true);
+  });
+
+  it("controleert het bedrijf en laat de bestaande vestiging zoals hij is", async () => {
+    m.branchFindFirst.mockResolvedValue({ id: "b9" });
+    m.registerTenantCompany.mockResolvedValue({ kvkValid: true, profile: { legalName: "Bakker BV", tradeName: null, kvkNumber: "12345678" }, validation: { reasons: [] } });
+    m.userFindUnique.mockResolvedValue({ email: "jan@gmail.com" });
+    const r = await submitEmployerOnboarding("u1", "t1", employerKvkSchema.parse({ kvkNumber: "12345678" }));
+    expect(m.branchFindFirst).toHaveBeenCalledWith({ where: { tenantId: "t1", kind: "PERMANENT" }, select: { id: true } });
+    expect(m.registerTenantCompany).toHaveBeenCalledWith({ tenantId: "t1", kvkNumber: "12345678", allowInactive: true });
+    expect(m.branchCreate).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ kvkValid: true, branchId: "b9" });
+  });
+
+  it("zonder vaste werklocatie: een nette melding, en er wordt niets gecontroleerd of opgeslagen", async () => {
+    m.branchFindFirst.mockResolvedValue(null);
+    await expect(submitEmployerOnboarding("u1", "t1", employerKvkSchema.parse({ kvkNumber: "12345678" }))).rejects.toMatchObject({ status: 422 });
+    expect(m.registerTenantCompany).not.toHaveBeenCalled();
+    expect(m.branchCreate).not.toHaveBeenCalled();
   });
 });
 

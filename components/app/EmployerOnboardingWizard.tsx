@@ -12,7 +12,7 @@ import {
 import { KvkZoeker } from "@/components/kvk/KvkZoeker";
 import { useT } from "@/components/i18n/I18nProvider";
 import { nl, fmt } from "@/lib/i18n/dictionaries";
-import { BUITEN_LANDEN, EU_LANDEN, landSoort } from "@/lib/onboarding/buitenland";
+import { BUITEN_LANDEN, EU_LANDEN, landNaam, landSoort } from "@/lib/onboarding/buitenland";
 import { BRANCHE_OPTIES, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 import { controleerVestigingVeld, type VestigingVeld } from "@/lib/onboarding/vestiging";
 
@@ -90,6 +90,8 @@ export function EmployerOnboardingWizard({
     /** het bedrijf zit buiten Nederland: geen KVK, een beheerder keurt het goed */
     buitenlands?: boolean | undefined;
     companyName?: string | undefined;
+    /** de vaste werklocatie die er al is (Locaties of Klus uitzetten): dan vraagt de KVK-stap hem niet opnieuw */
+    vestiging?: { naam: string; adres: string } | null | undefined;
   };
 }) {
   const o = useT().onboarding;
@@ -100,9 +102,12 @@ export function EmployerOnboardingWizard({
     done: initial.kvkDone,
     ...(initial.kvkDone ? { kvkValid: Boolean(initial.verified || initial.inControle), inControle: Boolean(initial.inControle), buitenlands: Boolean(initial.buitenlands), companyName: initial.companyName ?? null } : {}),
   });
-  // het land dat bij het aanmelden werd gekozen
-  const [land, setLand] = useState(initial.landPrefill && landSoort(initial.landPrefill) ? initial.landPrefill : "NL");
+  // het land dat bij het aanmelden werd gekozen: dan niet opnieuw vragen, alleen tonen met "Wijzig" (22 nov 2026)
+  const landBekend = Boolean(initial.landPrefill && landSoort(initial.landPrefill));
+  const [land, setLand] = useState(landBekend && initial.landPrefill ? initial.landPrefill : "NL");
+  const [landKiezen, setLandKiezen] = useState(!landBekend);
   const soort = landSoort(land) ?? "NL";
+  const vestiging = initial.vestiging ?? null;
 
   const [orgSaved, setOrgSaved] = useState(Boolean(initial.answers.role || initial.answers.sector));
   // branches waarvoor het bedrijf mensen zoekt: één of meer, of alle
@@ -269,18 +274,29 @@ export function EmployerOnboardingWizard({
               vulFormulier={{ kvk: "kvkNumber", address: "addressLine", houseNumber: "houseNumber", postalCode: "postalCode", name: "branchName" }}
               alleenAlsLeeg={["name"]}
             />
-            <label className="block">
-              <span className="field-label">{o.country}</span>
-              <select name="land" value={land} onChange={(e) => setLand(e.target.value)} className="field-input">
-                <option value="NL">Nederland</option>
-                <optgroup label={o.countryEu}>
-                  {EU_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
-                </optgroup>
-                <optgroup label={o.countryOther}>
-                  {BUITEN_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
-                </optgroup>
-              </select>
-            </label>
+            {landKiezen ? (
+              <label className="block">
+                <span className="field-label">{o.country}</span>
+                <select name="land" value={land} onChange={(e) => setLand(e.target.value)} className="field-input">
+                  <option value="NL">Nederland</option>
+                  <optgroup label={o.countryEu}>
+                    {EU_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
+                  </optgroup>
+                  <optgroup label={o.countryOther}>
+                    {BUITEN_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
+                  </optgroup>
+                </select>
+              </label>
+            ) : (
+              // al gevraagd bij het aanmelden: alleen tonen
+              <p className="text-sm text-neutralx-700">
+                <input type="hidden" name="land" value={land} />
+                {fmt(o.countryKnown, { land: landNaam(land) })}{" "}
+                <button type="button" onClick={() => setLandKiezen(true)} className="font-semibold text-brand-600 underline underline-offset-2">
+                  {o.countryChange}
+                </button>
+              </p>
+            )}
             {soort === "NL" && (
               <label className="block">
                 <span className="field-label">{o.kvkNumber}</span>
@@ -302,29 +318,45 @@ export function EmployerOnboardingWizard({
                 <span className="mt-1 block text-xs text-neutralx-400">{o.regHint}</span>
               </label>
             )}
-            {soort !== "NL" && <p className="text-xs text-neutralx-600">{o.foreignWorkplace}</p>}
-            <label className="block">
-              <span className="field-label">{o.branchName}</span>
-              <input name="branchName" required aria-required="true" autoComplete="organization" placeholder={o.branchNamePh} defaultValue={kvkState.values?.branchName ?? ""} onBlur={vestBlur("branchName")} {...vestAttrs("branchName")} className="field-input" />
-              <VeldMelding veld="branchName" tekst={vestMelding("branchName")} />
-            </label>
-            <label className="block">
-              <span className="field-label">{o.address}</span>
-              <input name="addressLine" required aria-required="true" autoComplete="street-address" placeholder={o.addressPh} defaultValue={kvkState.values?.addressLine ?? ""} onBlur={vestBlur("addressLine")} {...vestAttrs("addressLine")} className="field-input" />
-              <VeldMelding veld="addressLine" tekst={vestMelding("addressLine")} />
-            </label>
-            <div className="grid grid-cols-[1fr_110px] gap-3">
-              <label className="block">
-                <span className="field-label">{o.postal}</span>
-                <input name="postalCode" required aria-required="true" autoComplete="postal-code" placeholder="1012 AB" defaultValue={kvkState.values?.postalCode ?? ""} onBlur={vestBlur("postalCode")} {...vestAttrs("postalCode")} className="field-input" />
-                <VeldMelding veld="postalCode" tekst={vestMelding("postalCode")} />
-              </label>
-              <label className="block">
-                <span className="field-label">{o.houseNr}</span>
-                <input name="houseNumber" required aria-required="true" autoComplete="off" placeholder="10" defaultValue={kvkState.values?.houseNumber ?? ""} onBlur={vestBlur("houseNumber")} {...vestAttrs("houseNumber")} className="field-input" />
-                <VeldMelding veld="houseNumber" tekst={vestMelding("houseNumber")} />
-              </label>
-            </div>
+            {vestiging ? (
+              // de werklocatie is er al: niet opnieuw vragen (22 nov 2026, gebruikersonderzoek B27); aanpassen kan op Locaties
+              <div className="rounded-lg bg-paper-soft px-3 py-2.5 text-sm">
+                <input type="hidden" name="vestigingBekend" value="1" />
+                <p className="text-ink">
+                  <span className="font-semibold">{o.vestigingBekend}</span> {vestiging.naam}
+                  {vestiging.adres ? `, ${vestiging.adres}` : ""}
+                </p>
+                <Link href="/werkgever/locaties" className="mt-1 inline-block text-xs font-semibold text-brand-600 underline underline-offset-2">
+                  {o.vestigingWijzig}
+                </Link>
+              </div>
+            ) : (
+              <>
+                {soort !== "NL" && <p className="text-xs text-neutralx-600">{o.foreignWorkplace}</p>}
+                <label className="block">
+                  <span className="field-label">{o.branchName}</span>
+                  <input name="branchName" required aria-required="true" autoComplete="organization" placeholder={o.branchNamePh} defaultValue={kvkState.values?.branchName ?? ""} onBlur={vestBlur("branchName")} {...vestAttrs("branchName")} className="field-input" />
+                  <VeldMelding veld="branchName" tekst={vestMelding("branchName")} />
+                </label>
+                <label className="block">
+                  <span className="field-label">{o.address}</span>
+                  <input name="addressLine" required aria-required="true" autoComplete="street-address" placeholder={o.addressPh} defaultValue={kvkState.values?.addressLine ?? ""} onBlur={vestBlur("addressLine")} {...vestAttrs("addressLine")} className="field-input" />
+                  <VeldMelding veld="addressLine" tekst={vestMelding("addressLine")} />
+                </label>
+                <div className="grid grid-cols-[1fr_110px] gap-3">
+                  <label className="block">
+                    <span className="field-label">{o.postal}</span>
+                    <input name="postalCode" required aria-required="true" autoComplete="postal-code" placeholder="1012 AB" defaultValue={kvkState.values?.postalCode ?? ""} onBlur={vestBlur("postalCode")} {...vestAttrs("postalCode")} className="field-input" />
+                    <VeldMelding veld="postalCode" tekst={vestMelding("postalCode")} />
+                  </label>
+                  <label className="block">
+                    <span className="field-label">{o.houseNr}</span>
+                    <input name="houseNumber" required aria-required="true" autoComplete="off" placeholder="10" defaultValue={kvkState.values?.houseNumber ?? ""} onBlur={vestBlur("houseNumber")} {...vestAttrs("houseNumber")} className="field-input" />
+                    <VeldMelding veld="houseNumber" tekst={vestMelding("houseNumber")} />
+                  </label>
+                </div>
+              </>
+            )}
             <div className="flex justify-end pt-1">
               <NextButton label={o.verifyNext} busy={o.busy} />
             </div>
@@ -381,7 +413,7 @@ export function EmployerOnboardingWizard({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [kvkState, pending, orgSaved, initial, o, vestFout, werkBranches],
+    [kvkState, pending, orgSaved, initial, o, vestFout, werkBranches, land, landKiezen],
   );
 
   return (
