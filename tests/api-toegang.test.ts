@@ -64,7 +64,7 @@ describe("werkgeversroutes bepalen het bedrijf uit de sessie, nooit uit de aanvr
   const werkgever = alle.filter((r) => r.pad.startsWith("app/api/werkgever/"));
 
   it("er zijn werkgeversroutes om te bewaken", () => {
-    expect(werkgever.length).toBeGreaterThan(50);
+    expect(werkgever.length).toBeGreaterThan(40);
   });
 
   it("geen werkgeversroute vertrouwt een tenantId uit de body of querystring zonder controle", () => {

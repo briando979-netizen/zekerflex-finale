@@ -9,13 +9,12 @@ import { describe, expect, it } from "vitest";
 const lees = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
 describe("een account zonder rol wordt op /start uitgelogd", () => {
-  it("/start stuurt een account zonder rol naar /uitloggen, ná de horeca-medewerker en vóór /dashboard", () => {
+  // de horeca-medewerker (/personeel) is op 22 nov 2026 weggehaald
+  it("/start stuurt een account zonder rol naar /uitloggen, vóór /dashboard", () => {
     const s = lees("app/start/page.tsx");
-    const medewerker = s.indexOf('if (principal.grants.length === 0 && (await isMedewerker(principal.userId))) redirect("/personeel");');
     const geenRol = s.indexOf('if (principal.grants.length === 0) redirect("/uitloggen?reden=GeenRol");');
     const dashboard = s.lastIndexOf('redirect("/dashboard");');
-    expect(medewerker).toBeGreaterThan(0);
-    expect(geenRol).toBeGreaterThan(medewerker);
+    expect(geenRol).toBeGreaterThan(0);
     expect(dashboard).toBeGreaterThan(geenRol);
   });
 

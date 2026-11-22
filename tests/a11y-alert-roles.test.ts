@@ -13,6 +13,7 @@ const ERROR_LOOK = /(text-crit|text-red-\d{3}|text-rose-\d{3}|var\(--a-crit\)|te
 
 /** Geen melding maar een badge/label/kop in foutkleur — of al binnen een aria-live-blok. */
 const NOT_A_MESSAGE = new Set([
+  "components/admin/sales/PipelineBoard.tsx|l.websiteCheck",
   "components/admin/ClawbacksPanel.tsx|c.workerPaid",
   "components/app/EmployerDashboardHero.tsx|sub",
   "components/app/ShiftCard.tsx|special",

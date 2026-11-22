@@ -180,7 +180,7 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                       )}
                       {l.websiteCheck && (
                         <span
-                          title={`Website ${l.websiteCheck.host}: ${l.websiteCheck.score}/100${l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW ? " · kans voor Website-beheer" : ""}`}
+                          title={`Website ${l.websiteCheck.host}: ${l.websiteCheck.score}/100${l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW ? " · zwakke website" : ""}`}
                           className="rounded px-1.5 text-[10px] font-bold"
                           style={{
                             background: l.websiteCheck.score < 50 ? "var(--a-crit-soft)" : l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW ? "var(--a-warn-soft)" : "var(--a-elev)",

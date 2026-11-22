@@ -87,7 +87,7 @@ describe("de opslag", () => {
     expect(await getPaginaIndeling("voor-freelancers")).toBeNull();
     await setPaginaIndeling("voor-freelancers", { volgorde: OUD["voor-freelancers"], verborgen: ["stappen"] });
     expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["voor-bedrijven", "voor-freelancers"]);
-    expect(PAGINAS).toHaveLength(10);
+    expect(PAGINAS).toHaveLength(9);
     expect(await setPaginaIndeling("voor-bedrijven", standaardPaginaIndeling("voor-bedrijven"))).toBeNull();
     expect((await getPaginaIndeling("voor-freelancers"))?.verborgen).toEqual(["stappen"]);
     await resetPaginaIndeling("voor-freelancers");

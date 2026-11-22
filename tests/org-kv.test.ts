@@ -19,9 +19,9 @@ import { ORG_KV_REGISTER, orgSleutel } from "@/lib/privacy/org-kv";
 import { exporteerOrganisatieGegevens, wisOrganisatieGegevens } from "@/lib/privacy/org-wissen";
 
 /** modules met code in lib/ */
-const MET_CODE = ["ritten", "afspraken", "inkaart", "horeca-personeel", "telefoon-berichten"];
+const MET_CODE = ["ritten", "afspraken", "inkaart", "telefoon-berichten"];
 /** op 22 nov 2026 uit de code gehaald; hun gegevens kunnen nog in de opslag staan en gaan bij het wissen en exporteren mee */
-const OPGEHEVEN = ["werkbonnen", "offertes", "checklists", "voorraad", "kamers", "lidmaatschappen"];
+const OPGEHEVEN = ["werkbonnen", "offertes", "checklists", "voorraad", "kamers", "lidmaatschappen", "horeca-personeel"];
 const MODULES = [...MET_CODE, ...OPGEHEVEN];
 const LIB = join(process.cwd(), "lib");
 
@@ -36,7 +36,7 @@ describe("register van organisatie-gegevens", () => {
         for (const hit of tekst.matchAll(/`([a-z-]+:[a-z-]+:)\$\{/g)) gebruikt.add(hit[1]!);
       }
     }
-    expect(gebruikt.size).toBeGreaterThan(15); // de scan vindt echt iets
+    expect(gebruikt.size).toBeGreaterThan(10); // de scan vindt echt iets
     expect([...gebruikt].filter((p) => !bekend.has(p))).toEqual([]);
   });
 

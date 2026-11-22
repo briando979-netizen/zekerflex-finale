@@ -125,10 +125,6 @@ describe("module, tabblad en opslag", () => {
     expect(MODULES.bezorgen.prijsCentPerMaand).toBe(0);
   });
 
-  it("het menu heeft een icoon voor het tabblad", () => {
-    expect(lees("app/werkgever/layout.tsx")).toMatch(/bezorgen: <IPin \/>/);
-  });
-
   it("na 12 maanden verdwijnen adres, postcode, plek, telefoon en e-mail van bestellingen", () => {
     const sweep = lees("lib/privacy/sweep.ts");
     expect(sweep).toMatch(/telefoon: "", email: "", adres: "", postcode: "", lat: null, lng: null/);

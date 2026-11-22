@@ -52,15 +52,16 @@ describe("middleware — app mode", () => {
   });
 
   it("sends the homepage and marketing pages to /start inside the app", async () => {
-    for (const p of ["/", "/voor-bedrijven", "/prijzen", "/klussen"]) {
+    // de webshop is op 22 nov 2026 weggehaald: /shop hoort niet meer bij de app
+    for (const p of ["/", "/voor-bedrijven", "/prijzen", "/klussen", "/shop"]) {
       const res = await middleware(req(p, true));
       expect(res.status).toBe(307);
       expect(new URL(res.headers.get("location")!).pathname).toBe("/start");
     }
   });
 
-  it("keeps login, legal pages and the shop reachable inside the app", async () => {
-    for (const p of ["/login", "/privacy", "/account-verwijderen", "/gegevens-verwijderen", "/shop/item"]) {
+  it("keeps login and legal pages reachable inside the app", async () => {
+    for (const p of ["/login", "/privacy", "/account-verwijderen", "/gegevens-verwijderen"]) {
       const res = await middleware(req(p, true));
       expect(res.status).not.toBe(307);
     }
