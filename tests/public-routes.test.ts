@@ -102,8 +102,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/agent/horeca/de-zaak/beschikbaarheid", // free times for a day
     "/api/agent/horeca/de-zaak/reserveringen", // book a table (rate-limited, same capacity check as the own site)
     "/api/agent/horeca/reserveringen/token", // view or cancel with the signed cancel link
-    "/api/voorstel/smileyapp/chat", // websitechat van het SmileyApp-voorstel (IP-begrensd, alleen van de eigen site)
-    "/api/voorstel/smileyapp/chat/abcdefghijklmnop12345678", // de widget haalt de status van het eigen gesprek op
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -164,6 +162,10 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/website-check/lead",
     "/api/starters",
     "/api/website-aanvraag",
+    // de ontwerpvoorstellen (Schwarzwald, SmileyApp) en de websitevoorstellen van sales zijn weg (22 nov 2026, fase C)
+    "/api/voorstel/smileyapp/chat",
+    "/api/voorstel/schwarzwald/account",
+    "/api/websitevoorstel/0123456789abcdef/bekeken",
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

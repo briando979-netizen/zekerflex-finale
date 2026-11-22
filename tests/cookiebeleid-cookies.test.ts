@@ -82,9 +82,6 @@ const VERWACHT: Record<string, Verwacht> = {
   zf_horeca_scherm: { bron: "lib/horeca/apparaten.ts", looptijd: () => constante("lib/horeca/apparaten.ts", "COOKIE_DAGEN") * DAG },
   zf_rijles: { bron: "lib/rijschool/accounts.ts", looptijd: () => constante("lib/rijschool/accounts.ts", "SESSIE_DAGEN") * DAG },
   zf_view_as: { bron: "lib/auth/inspect.ts", looptijd: () => constante("lib/auth/inspect.ts", "INSPECT_SESSION_SECONDS") },
-  schw_sessie: { bron: "lib/voorstel/schwarzwald-accounts.ts", looptijd: () => constante("lib/voorstel/schwarzwald-accounts.ts", "SESSIE_DAGEN") * DAG },
-  schw_google: { bron: "lib/voorstel/google.ts", looptijd: () => uit("app/api/voorstel/schwarzwald/google/route.ts", new RegExp(`maxAge: ${SOM},`)) },
-  smiley_sessie: { bron: "lib/voorstel/smileyapp-accounts.ts", looptijd: () => constante("lib/voorstel/smileyapp-accounts.ts", "SESSIE_DAGEN") * DAG },
   zf_ref: { bron: "lib/rewards/referral.ts", looptijd: () => uit("app/r/[code]/route.ts", new RegExp(`maxAge: ${SOM},`)) },
 };
 
@@ -96,8 +93,6 @@ const ZETTERS: Record<string, number> = {
   "app/api/admin/view-as/route.ts": 1,
   "app/api/analytics/taal-vraag/route.ts": 1,
   "app/api/auth/passkey/route.ts": 1,
-  "app/api/voorstel/schwarzwald/google/route.ts": 1,
-  "app/api/voorstel/schwarzwald/google/terug/route.ts": 2,
   "app/api/werkgever/dashboard/wissel/route.ts": 1,
   "app/api/werkgever/werkruimte/route.ts": 1,
   "app/r/[code]/route.ts": 1,
@@ -111,8 +106,6 @@ const ZETTERS: Record<string, number> = {
   "components/welkom/WelkomCarousel.tsx": 1,
   "lib/horeca/apparaten.ts": 1,
   "lib/rijschool/accounts.ts": 1,
-  "lib/voorstel/schwarzwald-accounts.ts": 1,
-  "lib/voorstel/smileyapp-accounts.ts": 1,
 };
 // req.cookies.set (alleen het verzoek, niet de browser) telt niet mee
 const ZET_PATRONEN = [/\b(?!req\.)\w+\.cookies\.set\(/g, /cookies\(\)\)?\.set\(/g, /document\.cookie\s*=(?!=)/g, /["']set-cookie["']/gi, /cookieStore\.set\(/g, /terugPostCookie\("/g];

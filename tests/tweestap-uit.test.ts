@@ -28,8 +28,8 @@ describe("tweestapsverificatie staat uit", () => {
     expect(await twoFactorStatus("u1")).toEqual({ enabled: false, enabledAt: null, recoveryLeft: 0 });
   });
 
-  it("geen scherm biedt het meer aan: werker, bedrijf, studio, beheer en chat-instellingen", () => {
-    for (const f of ["app/dashboard/account/page.tsx", "app/werkgever/account/page.tsx", "components/studio/account/Schermen.tsx", "app/admin/beveiliging/page.tsx", "components/chat/ChatSettingsPanel.tsx", "components/admin/AdminShell.tsx"]) {
+  it("geen scherm biedt het meer aan: werker, bedrijf, beheer en chat-instellingen", () => {
+    for (const f of ["app/dashboard/account/page.tsx", "app/werkgever/account/page.tsx", "app/admin/beveiliging/page.tsx", "components/chat/ChatSettingsPanel.tsx", "components/admin/AdminShell.tsx"]) {
       const s = bron(f);
       expect(s, f).not.toContain("TwoFactorSettings");
       expect(s, f).not.toContain("tweestapsverificatie}");

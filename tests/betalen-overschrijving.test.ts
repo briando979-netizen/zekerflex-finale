@@ -108,10 +108,7 @@ describe("de facturenschermen volgen de echte stand van betalen", () => {
     expect(factuurBetaalwijze(true, { iban: "NL91ABNA0417164301", naam: "Zekerflex, Inc." })).toBe("dicht");
   });
 
-  it("de studio zegt alleen 'meteen online' als het kan, en het overzicht toont dan pas de knoppen voor iDEAL en kaart", () => {
-    const studio = lees("components/studio/account/Schermen.tsx");
-    expect(studio).toContain("huidigeFactuurBetaalwijze()");
-    expect(studio).not.toMatch(/zoals je domeinnaam\. Betalen kan meteen online\./);
+  it("het overzicht toont pas de knoppen voor iDEAL en kaart als online betalen kan", () => {
     expect(lees("app/werkgever/facturen/page.tsx")).toContain("betaalwijze={betaalwijze}");
     const overzicht = lees("components/app/InvoicesOverview.tsx");
     expect(overzicht).toMatch(/online && !\(i\.digitaal/);

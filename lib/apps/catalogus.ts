@@ -98,7 +98,8 @@ export const ZF_APPS: ZfApp[] = [
     start: `/studio/webshop?${bron("webshop")}`,
     kleur: "#BE185D",
     symbool: "tas",
-    beschikbaar: true,
+    // de webshop en de websitestudio zijn weg (22 nov 2026, fase C); /studio stuurt door naar /werkgever
+    beschikbaar: false,
   },
   {
     id: "website",
@@ -109,7 +110,7 @@ export const ZF_APPS: ZfApp[] = [
     start: `/studio/website?${bron("website")}`,
     kleur: "#0F766E",
     symbool: "venster",
-    beschikbaar: true,
+    beschikbaar: false,
   },
 ];
 

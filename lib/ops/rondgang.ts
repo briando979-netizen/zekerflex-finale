@@ -46,9 +46,9 @@ export const KV_RONDGANG = "rondgang:laatste";
 /** Vaste routes die zonder login bereikbaar horen te zijn. */
 // /personeel (15 nov): de omgeving van horecapersoneel; zonder sessie een doorverwijzing, /personeel/uitnodiging zonder token
 // alleen "niet meer geldig"
-const PRIVE = ["/admin", "/dashboard", "/werkgever", "/studio", "/sales", "/scherm", "/start", "/berichten", "/kyc", "/verifieer-email", "/terminal", "/i/", "/personeel"];
+const PRIVE = ["/admin", "/dashboard", "/werkgever", "/sales", "/scherm", "/start", "/berichten", "/kyc", "/verifieer-email", "/terminal", "/i/", "/personeel"];
 /** Uitgezonderd: pagina's die bewust een lege, kleine of bijzondere staat hebben (ook een inlogpoort met alleen een knop; /welkom is de welkomstcarrousel van de app, ±220 tekens). */
-const OVERSLAAN = new Set(["/account-verwijderen/voltooid", "/kyc/callback", "/wachtwoord-herstellen", "/mail/voorkeuren", "/nieuwsbrief/bevestigen", "/nieuwsbrief/afmelden", "/kaart", "/voorstel/schwarzwald/beheer", "/voorstel/smileyapp/beheer","/id-scan", "/welkom"]);
+const OVERSLAAN = new Set(["/account-verwijderen/voltooid", "/kyc/callback", "/wachtwoord-herstellen", "/mail/voorkeuren", "/nieuwsbrief/bevestigen", "/nieuwsbrief/afmelden", "/kaart", "/id-scan", "/welkom"]);
 
 // Stadspagina's (14 nov): die zijn dynamisch ([stad]) en vielen dus altijd buiten de ronde, ook de regio rond de eigen
 // vestiging. Niet alle ±300: per soort twee per nacht, één uit alle steden en één regiostad, steeds een andere, zodat

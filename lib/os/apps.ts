@@ -89,7 +89,6 @@ const WERKER: OsRol[] = ["werker"];
 const WERKGEVER: OsRol[] = ["werkgever"];
 const VERKOPER: OsRol[] = ["verkoper"];
 const IEDEREEN: OsRol[] = ["werker", "werkgever", "verkoper", "admin"];
-const ZAKELIJK: OsRol[] = ["werkgever", "admin"];
 
 /** De apps van de werker-app (/dashboard). */
 const WERKER_APPS: OsApp[] = [
@@ -142,7 +141,6 @@ const WERKGEVER_APPS: OsApp[] = [
   { id: "b-mail", naam: "Zakelijke e-mail", uitleg: "Je postbus op je eigen domein.", href: "/werkgever/mail", icoon: "mail", categorie: "communicatie", rollen: WERKGEVER },
   { id: "b-whatsapp", naam: "WhatsApp", uitleg: "WhatsApp-gesprekken bij je bedrijf.", href: "/werkgever/whatsapp", icoon: "chat", categorie: "communicatie", rollen: WERKGEVER },
   { id: "b-telefonie", naam: "Telefonie", uitleg: "Zakelijke nummers, bundels en gesprekken.", href: "/werkgever/telefonie", icoon: "telefoon", categorie: "communicatie", rollen: WERKGEVER },
-  { id: "b-website", naam: "Website", uitleg: "Je eigen site bouwen en beheren.", href: "/werkgever/website", icoon: "website", categorie: "online", rollen: WERKGEVER, zoek: ["site", "domein"] },
   { id: "b-reviews", naam: "Google-reviews", uitleg: "Meer echte reviews verzamelen.", href: "/werkgever/google-reviews", icoon: "ster", categorie: "groei", rollen: WERKGEVER, zoek: ["beoordelingen", "google"] },
   { id: "b-horeca", naam: "Horecasoftware", uitleg: "Reserveren, menukaart, kassa en keukenscherm.", href: "/werkgever/horeca", icoon: "doos", categorie: "branche", rollen: WERKGEVER, zoek: ["restaurant", "kassa", "menu"] },
   { id: "b-rijschool", naam: "Rijschoolsoftware", uitleg: "Lessen, leerlingen en instructeurs.", href: "/werkgever/rijschool", icoon: "doos", categorie: "branche", rollen: WERKGEVER, zoek: ["rijles", "leerling"] },
@@ -163,7 +161,6 @@ const WERKGEVER_APPS: OsApp[] = [
 /** De apps van de buitendienst (/sales) — voor wie de rol SALES heeft. */
 const VERKOPER_APPS: OsApp[] = [
   { id: "v-sales", naam: "Buitendienst", uitleg: "Bedrijfsbezoeken vastleggen en leads binnenhalen.", href: "/sales", icoon: "groei", categorie: "groei", rollen: VERKOPER, zoek: ["bezoek", "lead", "acquisitie"] },
-  { id: "v-websitevoorstellen", naam: "Websitevoorstellen", uitleg: "Een voorstel op maat maken en volgen.", href: "/sales/websitevoorstellen", icoon: "website", categorie: "groei", rollen: VERKOPER, zoek: ["offerte", "voorstel"] },
 ];
 
 /** Apps die iedereen heeft: de kaart en de gereedschappen (de winkel is sinds 22 nov 2026 weg: alleen flexwerk). */
@@ -173,7 +170,6 @@ const GEDEELDE_APPS: OsApp[] = [
   { id: "g-rekentools", naam: "Rekentools", uitleg: "Uurtarief, kosten en de Wet DBA-check.", href: "/rekentools", icoon: "rekenen", categorie: "gereedschap", rollen: IEDEREEN, zoek: ["calculator", "tarief"] },
   { id: "g-kennis", naam: "Kennisbank", uitleg: "Uitleg over regels, geld en werken.", href: "/kennis", icoon: "kennis", categorie: "gereedschap", rollen: IEDEREEN, zoek: ["help", "uitleg", "faq"] },
   { id: "g-aanbod", naam: "Het aanbod", uitleg: "Alles wat ZekerFlex voor je kan doen.", href: "/aanbod", icoon: "doos", categorie: "gereedschap", rollen: IEDEREEN },
-  { id: "g-studio", naam: "Websitestudio", uitleg: "Je webwinkel en site beheren.", href: "/studio", icoon: "website", categorie: "online", rollen: ZAKELIJK, groot: true, zoek: ["producten", "bestellingen"] },
   { id: "g-site", naam: "De website", uitleg: "Open zekerflex.com zoals bezoekers hem zien.", href: "/", icoon: "website", categorie: "gereedschap", rollen: IEDEREEN, nieuwTabblad: true, zoek: ["homepage", "openbaar"] },
 ];
 
@@ -270,6 +266,6 @@ export interface OsKaart {
 export const STANDAARD_VASTGEZET: Record<OsRol, string[]> = {
   werker: ["w-klussen", "w-diensten", "w-uren", "w-berichten", "w-uitbetalingen"],
   werkgever: ["b-start", "b-diensten", "b-uren", "b-kalender", "b-berichten", "b-facturen"],
-  verkoper: ["v-sales", "v-websitevoorstellen", "g-kaart", "g-kennis", "g-aanbod"],
+  verkoper: ["v-sales", "g-kaart", "g-kennis", "g-aanbod"],
   admin: ["a-start", "a-te-doen", "a-cockpit", "a-gebruikers", "a-financien", "a-sales"],
 };

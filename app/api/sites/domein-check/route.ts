@@ -1,15 +1,15 @@
-import { mayIssueCertificate } from "@/lib/sites/domain";
 import { rijschoolMagCertificaat } from "@/lib/rijschool/domein";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/sites/domein-check?domain=<host> — Caddy's on-demand TLS "ask"
-// (deploy/caddy/Caddyfile): 200 only for a proven own domain of a published
-// website or driving school (lib/rijschool/domein.ts), so nobody can make our
-// server fetch certificates for other names.
+// (deploy/caddy/Caddyfile): 200 only for a proven own domain of a driving
+// school (lib/rijschool/domein.ts), so nobody can make our server fetch
+// certificates for other names. Klantwebsites zijn weg (22 nov 2026, fase C):
+// hun domeinen krijgen geen nieuw certificaat meer.
 export async function GET(request: Request): Promise<Response> {
   const domain = new URL(request.url).searchParams.get("domain") ?? "";
-  const ok = (await mayIssueCertificate(domain)) || (await rijschoolMagCertificaat(domain));
+  const ok = await rijschoolMagCertificaat(domain);
   return new Response(ok ? "ok" : "onbekend domein", { status: ok ? 200 : 404, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
 }

@@ -43,12 +43,7 @@ describe("geen beloftes die niet kloppen", () => {
     expect(lees("app/api/werkgever/fastpay/route.ts")).toMatch(/directeSepaIngericht\(\) \|\| !\(await stripeBetalenDicht\(\)\)/);
   });
 
-  it("/werkgever/website belooft iDEAL en creditcard alleen als Stripe betaalt", () => {
-    const s = lees("components/app/WebsiteManage.tsx");
-    expect(s).toContain("betalenDicht\n          ?");
-    expect(lees("app/werkgever/website/page.tsx")).toContain("betalenDicht={betalenDicht}");
-  });
-
+  // /werkgever/website (het websitebeheer) is op 22 nov 2026 weggehaald, met de klantsites
   // de productpagina van de shop (ProductDetail, ShopProductCard) is op 22 nov 2026 weggehaald, met de hele webshop
   it("/demo noemt geen aantal krachten", () => {
     expect(lees("app/(marketing)/demo/page.tsx")).not.toMatch(/duizenden|honderden/);

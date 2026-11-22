@@ -56,13 +56,10 @@ const PUBLIC_PREFIXES = [
   "/api/horeca/scherm", // horeca-schermen (keuken, bar, handheld, …): alleen voor een gekoppeld apparaat met eigen ondertekend cookie of de beheerder; koppelen met een code van 15 min, IP-begrensd (lib/horeca/apparaten.ts)
   "/api/rijschool/site", // rijschoolsite: proefles (IP-begrensd), leerling- en instructeur-app met eigen sessie-cookie; elke route controleert zelf (lib/rijschool/accounts.ts). Het beheer (/api/rijschool/beheer) blijft achter de ZekerFlex-login
   "/api/rijschool/domein", // eigen domein van een rijschool: welke rijschool hoort bij een domein (alleen naam, online, hoofdadres; de middleware vraagt dit) en het https-bewijs op dat domein (lib/rijschool/domein.ts)
-  "/api/voorstel/schwarzwald", // Schwarzwald-voorstel: agenda (IP-begrensd), klantaccount met eigen sessie-cookie, beheer (Schwarzwald-beheerder of PLATFORM_ADMIN) — elke route controleert zelf (lib/voorstel/schwarzwald-accounts.ts)
-  "/api/voorstel/smileyapp", // SmileyApp-voorstel: de websitechat (AI-assistent met hun eigen teksten; het gesprek-id uit de browser is de sleutel, lib/sitechat), de demo-aanvraag, inloggen met een eigen sessie-cookie en het beheer (SmileyApp-account of PLATFORM_ADMIN). Elke route controleert zelf: eigen site, limiet per IP, begrensde body, sessie (lib/voorstel/smileyapp-poort.ts en smileyapp-accounts.ts)
   "/api/review", // Google-reviews verzamelen: sterren, privébericht en de doorstuurlink naar Google van één verzoek; het niet te raden token is de sleutel, IP-begrensd (lib/review-requests/store.ts). /api/reviews (interne beoordelingen) valt hier niet onder
   "/api/netwerk/radius", // de RADIUS-server (wifi) vraagt per inlogpoging of iemand mag en welk geheim bij een IP hoort; eigen vaste sleutel NETWERK_RADIUS_TOKEN (lib/netwerk/token.ts). Het beheer (/api/werkgever/netwerk) blijft achter de login
   "/api/toegang", // het kastje bij de slagboom (kentekenherkenning) vraagt per auto of die mag en haalt open-opdrachten op; eigen token per vestiging (lib/locatie/toegang.ts), IP-begrensd. Het beheer (/api/werkgever/locatie) blijft achter de login
   "/api/printen/agent", // de printagent op een computer op locatie haalt de labelwachtrij op en meldt wat geprint is; eigen token per bedrijf (lib/locatie/printen.ts), IP-begrensd
-  "/api/websitevoorstel", // websitevoorstel van sales: "bekeken" en het ja-formulier; het niet te raden id in de link is de sleutel, IP-begrensd (lib/sales/website-proposal.ts). Maken en beheren blijft achter de login (/api/admin/websitevoorstellen)
   "/api/agent/horeca", // AI-assistenten reserveren een tafel: alleen zaken die online staan met reserveren aan, dezelfde controle onder een slot als de eigen site, IP- en per-gast-begrensd; bekijken/annuleren alleen met de ondertekende annuleerlink (lib/horeca/agent-server.ts)
   "/api/id-overdracht", // "verder op je telefoon": de telefoon (niet ingelogd) opent, laat lezen en levert de foto's in met een eenmalige code van 20 min (in de body, IP-begrensd; lib/kyc/overdracht.ts). Starten en de stand bekijken (/api/onboarding/overdracht) blijft achter de login
   "/api/chip", // de Android-app leest de chip van paspoort/ID-kaart: sleutel ophalen en uitslag sturen met een eenmalige code (10 min, in de body, IP-begrensd; lib/kyc/chip/sessie.ts). Starten en de uitslag bekijken (/api/onboarding/chip) blijft achter de login
@@ -76,7 +73,7 @@ const PUBLIC_PREFIXES = [
 
 const PUBLIC_EXACT = new Set<string>([
   "/api/company/search", // public KVK autocomplete — /api/company/lookup and /company/register require a session
-  "/api/sites/domein-check", // Caddy's on-demand TLS "ask": says only whether a proven own domain of a published site exists
+  "/api/sites/domein-check", // Caddy's on-demand TLS "ask": says only whether a proven own domain of a driving school exists
   "/api/indexnow-key", // IndexNow keyLocation: Bing/Yandex fetch it logged-out to verify site ownership; the key is public by design
 ]);
 

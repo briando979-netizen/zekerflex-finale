@@ -48,8 +48,6 @@ export const MODULES: readonly BrancheModule[] = [
   klaar("facturen", "geld", "Facturen", "Facturen en betalingen op één plek.", "/werkgever/facturen"),
   klaar("rapportages", "geld", "Rapportages", "Cijfers over uren, kosten en klussen.", "/werkgever/rapportages"),
   // online
-  klaar("website", "online", "Website", "Je website ontwerpen en online zetten.", "/studio/website"),
-  klaar("webshop", "online", "Webshop", "Producten verkopen, verzenden en betalen.", "/studio/webshop"),
   klaar("kaart", "online", "Op de kaart", "Gratis vermeld op ZekerFlex Kaart, met adres, openingstijden en website.", "/werkgever/kaart"),
   klaar("reviews", "online", "Reviews verzamelen", "Klanten om een Google-review vragen met een eigen link.", "/werkgever/google-reviews"),
   // plek
@@ -61,7 +59,6 @@ export const MODULES: readonly BrancheModule[] = [
   // klaar, voor één soort bedrijf
   klaar("horeca-beheer", "branche", "Horeca-beheer", "Reserveringen, menukaart, bestellen met QR, kassa, keukenscherm en takenlijsten.", "/werkgever/horeca"),
   klaar("rijschool-beheer", "branche", "Rijschool-beheer", "Lesagenda, leerlingen, betalingen, pakketten, instructeurs en je eigen app.", "/werkgever/rijschool"),
-  klaar("kassa-winkel", "branche", "Kassa in de winkel", "Contant of pin afrekenen; een verkoop aan de balie is dezelfde bestelling als online.", "/studio/webshop"),
   // klaar sinds 11 nov: lib/afspraken (boekpagina /boeken/<adres>, agenda, klantenkaart)
   klaar("afspraken", "klanten", "Afspraken boeken", "Klanten boeken online een tijd bij een medewerker; jij ziet de agenda per persoon.", "/werkgever/afspraken"),
   klaar("klantenkaart", "klanten", "Klantenkaart", "Per klant de geschiedenis en je eigen notities, met de mogelijkheid een klant te wissen.", "/werkgever/klanten"),
@@ -100,8 +97,6 @@ export const KOPPELINGEN: readonly Koppeling[] = [
   koppel("certificaten-flexwerk", "certificaten", "flexwerk", "Bij het zoeken van werkers telt mee wie het juiste certificaat heeft.", true),
   koppel("horeca-flexwerk", "horeca-beheer", "flexwerk", "Personeel via ZekerFlex staat als onderdeel in je zaak.", true),
   koppel("horeca-kaart", "horeca-beheer", "kaart", "Een zaak met een openbare site staat als stip op de kaart.", true),
-  koppel("rijschool-website", "rijschool-beheer", "website", "De site van de rijschool wordt in het beheer ingericht.", true),
-  koppel("webshop-kassa", "webshop", "kassa-winkel", "Een verkoop aan de balie is dezelfde bestelling als een online bestelling.", true),
   koppel("afspraken-klantenkaart", "afspraken", "klantenkaart", "Elke afspraak komt op de kaart van de klant.", true),
   // ontwerp: nog niet gebouwd, ook niet waar beide kanten er al zijn
   koppel("afspraken-berichten", "afspraken", "berichten", "Een herinnering of verzetten gaat via de chat.", false),

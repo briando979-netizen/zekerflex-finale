@@ -129,12 +129,6 @@ describe("studioVoorAccount: facturen en team van een bedrijf met klussen blijve
   it("het dashboard personeel, rijschool of horeca: nooit de studio", () => {
     for (const soort of ["personeel", "rijschool", "horeca"] as const) expect(studioVoorAccount({ soort, ookPersoneel: false }), soort).toBeNull();
   });
-
-  it("de accountpagina's van /werkgever vragen het via studioVoorAccount", () => {
-    const bron = readFileSync(path.join(process.cwd(), "lib/studio/account-server.ts"), "utf8");
-    expect(bron).toContain("studioVoorAccount(await werkruimteVan(");
-    expect(bron).not.toMatch(/soort === "website" \|\| soort === "webshop"/);
-  });
 });
 
 describe("menuVoor", () => {

@@ -49,9 +49,6 @@ export const GEPLAATSTE_COOKIES: readonly GeplaatsteCookie[] = [
   { namen: ["zf_horeca_scherm"], doel: "koppelt een tablet of scherm aan een horecazaak, alleen op dat apparaat", looptijd: JAAR },
   { namen: ["zf_rijles"], doel: "houdt een leerling ingelogd in de omgeving van een rijschool", looptijd: 60 * DAG },
   { namen: ["zf_view_as"], doel: "alleen voor beheerders: een scherm alleen-lezend bekijken zoals een gebruiker het ziet", looptijd: 2 * UUR },
-  { namen: ["schw_sessie"], doel: "alleen op een websitevoorstel: houdt je ingelogd op dat voorstel", looptijd: 30 * DAG },
-  { namen: ["schw_google"], doel: "alleen op een websitevoorstel: rondt het koppelen met Google af", looptijd: 10 * MINUUT },
-  { namen: ["smiley_sessie"], doel: "alleen op een websitevoorstel: inloggen in het beheer van het SmileyApp-voorstel", looptijd: 14 * DAG },
   // de doorverwijsbonus werd op ZekerFlex Bank gestort en staat met de bank uit (lib/app-mode.ts): dan zet /r/<code> niets
   { namen: ["zf_ref"], doel: "onthoudt via welke doorverwijslink je binnenkwam, voor de doorverwijsbonus", looptijd: 30 * DAG, aan: BANK_AAN },
 ];

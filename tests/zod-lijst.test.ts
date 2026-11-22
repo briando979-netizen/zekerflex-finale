@@ -50,9 +50,6 @@ describe("bewaker: openbare schrijfroutes gebruiken lijst()", () => {
     "app/api/internal/pricing/route.ts",
     "app/api/internal/ai-node/register/route.ts",
     "app/api/public/v1/webhooks/route.ts",
-    "app/api/voorstel/schwarzwald/beheer/instellingen/route.ts",
-    "app/api/voorstel/schwarzwald/beheer/klanten/route.ts",
-    "app/api/voorstel/schwarzwald/beheer/paginas/route.ts",
     "app/api/chat/settings/route.ts",
   ]);
   const loop = (d: string): string[] =>

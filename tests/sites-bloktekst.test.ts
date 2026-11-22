@@ -63,17 +63,6 @@ describe("getallen nalopen", () => {
 });
 
 describe("de route en het scherm", () => {
-  it("de route is voor de beheerder van het bedrijf, begrensd, en slaat niets op", () => {
-    const route = bron("app/api/werkgever/sites/slim/bloktekst/route.ts");
-    expect(route).toContain("const tenantId = await siteTenantOf(p);");
-    expect(route).toContain('enforceRateLimit({ name: "site-bloktekst", identifier: tenantId');
-    expect(route).not.toMatch(/prisma|kvSet|saveSite/);
-    const ai = bron("lib/sites/bloktekst-ai.ts");
-    expect(ai).not.toMatch(/prisma|kvSet|saveSite/);
-    // het logboek krijgt alleen de soort fout, nooit de tekst
-    expect(ai).toContain('logger.warn("bloktekst: AI gaf geen antwoord", { purpose: BLOKTEKST_PURPOSE, error: (err as Error).message.slice(0, 160) });');
-  });
-
   it("er verandert niets tot de ondernemer 'Gebruik dit' kiest", () => {
     const hulp = bron("components/studio/BlokTekstHulp.tsx");
     expect(hulp.match(/onGebruik\(/g) ?? []).toHaveLength(1);

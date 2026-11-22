@@ -8,7 +8,7 @@ import { BRANCHES, bouwvolgorde, brancheVan, dekkingVan, gemiddeldeDekking, isBr
 // dode link is precies het soort fout dat de motor moet voorkomen.
 
 const ROOT = process.cwd();
-/** /werkgever/planner → app/werkgever/planner/page.tsx, /studio/website → app/studio/website/page.tsx */
+/** /werkgever/planner → app/werkgever/planner/page.tsx */
 const paginaBestaat = (href: string) => existsSync(path.join(ROOT, "app", ...href.split("/").filter(Boolean), "page.tsx"));
 
 describe("modules", () => {
@@ -21,7 +21,7 @@ describe("modules", () => {
   it("een klaar module heeft een echte pagina, een gepland module heeft geen adres", () => {
     for (const m of MODULES) {
       if (m.status === "klaar") {
-        expect(m.href, m.sleutel).toMatch(/^\/(werkgever|studio)\/[a-z0-9-/]+$/);
+        expect(m.href, m.sleutel).toMatch(/^\/werkgever\/[a-z0-9-/]+$/);
         expect(paginaBestaat(m.href!), `${m.sleutel} → ${m.href}`).toBe(true);
       } else {
         expect(m.href, m.sleutel).toBeNull();
@@ -91,16 +91,16 @@ describe("branches", () => {
 
   it("de dekking telt klaar tegen het totaal en rondt af", () => {
     const horeca = brancheVan("horeca")!;
-    expect(dekkingVan(horeca)).toEqual({ klaar: 13, totaal: 13, procent: 100 });
+    expect(dekkingVan(horeca)).toEqual({ klaar: 12, totaal: 12, procent: 100 });
     const kapper = brancheVan("kapper-schoonheid")!;
     const d = dekkingVan(kapper);
-    expect(d.totaal).toBe(9);
-    expect(d.klaar).toBe(9); // afspraken en klantenkaart staan sinds 11 nov; voorraad is op 22 nov weggehaald
+    expect(d.totaal).toBe(8);
+    expect(d.klaar).toBe(8); // afspraken en klantenkaart staan sinds 11 nov; voorraad en de website zijn op 22 nov weggehaald
     expect(d.procent).toBe(100);
     // de bouw, schoonmaak, winkel, transport (ritten), hotel en sport hebben alles van hun lijst
     for (const s of ["bouw-installatie", "schoonmaak", "winkel", "transport-logistiek", "hotel-verblijf", "sport-fitness"]) expect(dekkingVan(brancheVan(s)!).procent, s).toBe(100);
     // wat nog ontbreekt: het dossier (zorg)
-    expect(dekkingVan(brancheVan("zorgpraktijk")!)).toEqual({ klaar: 8, totaal: 9, procent: 89 });
+    expect(dekkingVan(brancheVan("zorgpraktijk")!)).toEqual({ klaar: 7, totaal: 8, procent: 88 });
     // het gemiddelde ligt tussen de laagste en de hoogste
     const alle = BRANCHES.map((b) => dekkingVan(b).procent);
     expect(gemiddeldeDekking()).toBeGreaterThanOrEqual(Math.min(...alle));
@@ -155,7 +155,7 @@ describe("bouwvolgorde", () => {
 
   it("de winst is de dekking die de branches samen erbij krijgen, in procentpunten", () => {
     const dossier = volgorde.find((s) => s.module.sleutel === "dossier")!;
-    // zorgpraktijk heeft 9 modules: één erbij is 11 procentpunten
-    expect(dossier.winst).toBe(11);
+    // zorgpraktijk heeft 8 modules: één erbij is 12,5 procentpunten, afgerond 13
+    expect(dossier.winst).toBe(13);
   });
 });

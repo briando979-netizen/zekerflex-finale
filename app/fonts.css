@@ -44,21 +44,9 @@
 @font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/ibm-plex-mono-500-latin.a76f53ca.woff2) format("woff2"); unicode-range: u+00??, u+0131, u+0152-0153, u+02bb-02bc, u+02c6, u+02da, u+02dc, u+0304, u+0308, u+0329, u+2000-206f, u+20ac, u+2122, u+2191, u+2193, u+2212, u+2215, u+feff, u+fffd; }
 @font-face { font-family: "IBM Plex Mono Fallback"; src: local("Arial"); ascent-override: 76.16%; descent-override: 20.43%; line-gap-override: 0.00%; size-adjust: 134.59%; }
 
-/* Instrument Serif: Koppen van de webshop en de websitevoorstellen (--font-serif); de browser haalt dit alleen op waar het gebruikt wordt */
-@font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; font-display: swap; src: url(/fonts/instrument-serif-italic-latin-ext.a04fc7ed.woff2) format("woff2"); unicode-range: u+0100-02ba, u+02bd-02c5, u+02c7-02cc, u+02ce-02d7, u+02dd-02ff, u+0304, u+0308, u+0329, u+1d00-1dbf, u+1e00-1e9f, u+1ef2-1eff, u+2020, u+20a0-20ab, u+20ad-20c4, u+2113, u+2c60-2c7f, u+a720-a7ff; }
-@font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; font-display: swap; src: url(/fonts/instrument-serif-italic-latin.6ee678c3.woff2) format("woff2"); unicode-range: u+00??, u+0131, u+0152-0153, u+02bb-02bc, u+02c6, u+02da, u+02dc, u+0304, u+0308, u+0329, u+2000-206f, u+20ac, u+2122, u+2191, u+2193, u+2212, u+2215, u+feff, u+fffd; }
-@font-face { font-family: "Instrument Serif"; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/instrument-serif-latin-ext.a8c4bd7c.woff2) format("woff2"); unicode-range: u+0100-02ba, u+02bd-02c5, u+02c7-02cc, u+02ce-02d7, u+02dd-02ff, u+0304, u+0308, u+0329, u+1d00-1dbf, u+1e00-1e9f, u+1ef2-1eff, u+2020, u+20a0-20ab, u+20ad-20c4, u+2113, u+2c60-2c7f, u+a720-a7ff; }
-@font-face { font-family: "Instrument Serif"; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/instrument-serif-latin.60c06664.woff2) format("woff2"); unicode-range: u+00??, u+0131, u+0152-0153, u+02bb-02bc, u+02c6, u+02da, u+02dc, u+0304, u+0308, u+0329, u+2000-206f, u+20ac, u+2122, u+2191, u+2193, u+2212, u+2215, u+feff, u+fffd; }
-@font-face { font-family: "Instrument Serif Fallback"; src: local("Times New Roman"); ascent-override: 117.94%; descent-override: 36.93%; line-gap-override: 0.00%; size-adjust: 83.94%; }
-
 /* De variabelen die tailwind.config.ts en de CSS gebruiken (op <html>, lib/fonts.ts) */
 .zf-fonts {
   --font-display: "Bricolage Grotesque", "Bricolage Grotesque Fallback";
   --font-sans: "Instrument Sans", "Instrument Sans Fallback";
   --font-mono: "IBM Plex Mono", "IBM Plex Mono Fallback";
-}
-
-/* Alleen in app/shop en app/websitevoorstel (lib/fonts-shop.ts) */
-.zf-font-serif {
-  --font-serif: "Instrument Serif", "Instrument Serif Fallback";
 }

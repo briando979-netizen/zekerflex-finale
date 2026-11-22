@@ -21,11 +21,7 @@ export default async function SalesPage() {
           <Link href="/uitleg" target="_blank" className="font-semibold text-brand-600 underline">
             uitlegfilmpjes
           </Link>{" "}
-          zien. Heeft het bedrijf een verouderde website? Maak er een{" "}
-          <Link href="/sales/websitevoorstellen" className="font-semibold text-brand-600 underline">
-            websitevoorstel
-          </Link>{" "}
-          voor.
+          zien.
         </p>
       </div>
       <LeadWorkspace />

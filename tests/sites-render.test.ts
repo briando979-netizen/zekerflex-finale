@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { galleryClass, renderPage, renderRobots, renderSitemap, renderSystemPage, safeHref, siteCss, socialName, textOn, vacancyWhen, waNumber, type RenderOptions } from "@/lib/sites/render";
 import { siteSaveSchema } from "@/lib/sites/schema";
 import { SECTOR_TEMPLATES, newBlock, pagesFromTemplate, slugify, type Company, type SiteDoc } from "@/lib/sites/types";
-import { buildContentSecurityPolicy } from "@/lib/security/csp";
 
 // De websites die ZekerFlex voor klanten maakt: alles wat een klant typt wordt
 // onschadelijk gemaakt, links kunnen nooit javascript: zijn, en dezelfde
@@ -327,16 +326,5 @@ describe("ontwerpvoorstel voor een bedrijf", () => {
     expect(html).toContain('<form class="contact" method="post" action="#">');
     expect(html).toMatch(/<button class="btn" type="submit" disabled>/);
     expect(html).toContain("Dit is een ontwerpvoorstel:");
-  });
-});
-
-describe("afscherming van gehoste websites", () => {
-  it("geeft /site/… een eigen herkomst zonder scripts, met formulieren alleen naar zichzelf", () => {
-    const csp = buildContentSecurityPolicy({ dev: false, nonce: "abc", pathname: "/site/bakkerij/contact" });
-    expect(csp).toMatch(/^sandbox allow-forms allow-popups allow-popups-to-escape-sandbox;/);
-    expect(csp).not.toContain("allow-scripts");
-    expect(csp).not.toContain("allow-same-origin");
-    expect(csp).toContain("default-src 'none'");
-    expect(csp).toMatch(/form-action 'self' https?:\/\/\S+/);
   });
 });

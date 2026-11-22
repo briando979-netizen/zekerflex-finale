@@ -60,17 +60,19 @@ const nextConfig = {
   logging: {
     fetches: { fullUrl: false },
   },
-  // De studio is gesplitst in /studio/website en /studio/webshop; de oude adressen
-  // (bladwijzers, mails) lopen door naar de nieuwe plek. /studio/website zelf is nu
-  // het overzicht van de website; de paginabouwer staat op /studio/website/bouwer.
   async redirects() {
-    const naarWebshop = ["producten", "bestellingen", "klanten", "ontwerp", "instellingen", "verkopen", "verdienen"];
     return [
-      ...naarWebshop.flatMap((d) => [
-        { source: `/studio/${d}`, destination: `/studio/webshop/${d}`, permanent: false },
-        { source: `/studio/${d}/:rest*`, destination: `/studio/webshop/${d}/:rest*`, permanent: false },
-      ]),
-      { source: "/studio/reserveringen", destination: "/studio/website/reserveringen", permanent: false },
+      // 22 nov 2026 (fase C, eigenaar: "ruim op"): de websitestudio, het websitebeheer, de klantsites en de
+      // ontwerpvoorstellen zijn uit de code. Oude links (bladwijzers, mails) naar de studio of het websitebeheer gaan naar
+      // het werkgeversdashboard, een voorstel naar de voorpagina. Tijdelijk (307). /site/<naam> geeft gewoon een 404.
+      ...[
+        ["/studio", "/werkgever"],
+        ["/studio/:rest*", "/werkgever"],
+        ["/werkgever/website", "/werkgever"],
+        ["/werkgever/website/:rest*", "/werkgever"],
+        ["/voorstel/:rest*", "/"],
+        ["/websitevoorstel/:rest*", "/voor-bedrijven"],
+      ].map(([van, naar]) => ({ source: van, destination: naar, permanent: false })),
       // 16 nov: het eigen 5G-netwerk staat niet meer in het aanbod (vergunning en apparatuur per terrein, owner-todo)
       { source: "/aanbod/eigen-5g-netwerk", destination: "/aanbod", permanent: true },
       // 21 nov: de oude pagina over ZekerFlex als uitzender is weg (eigenaar: "haal dit per direct weg"); oude links gaan naar
@@ -82,9 +84,9 @@ const nextConfig = {
       // Tijdelijk (307), zodat het terug kan. Ook de hulpmiddelen website-check, review-check, logo-maker, advertentie op maat,
       // domeinnaam en abonnementen: gemeten op 22 nov had geen enkel echt bedrijf ze ooit gebruikt of ervoor betaald (alleen
       // test- en eigen accounts), dus de eigenaar koos "gooi weg". /aanbod (overzicht met alleen flexwerk) en de
-      // personeel/geld-functiepagina's blijven, net als de klantsites (/site, /site-domein).
+      // personeel/geld-functiepagina's blijven.
       // Later op 22 nov zijn de pagina's zelf uit de code gehaald (de webshop ook); deze omleidingen vangen de oude links op.
-      // De manifesten en iconen onder /apps/<id>/ en de kaartfoto's onder /voorbeeldsites/foto/ blijven bestaan.
+      // De manifesten en iconen onder /apps/<id>/ blijven bestaan.
       // Alleen exacte paden of paginapaden zonder punt: foto's in public/aanbod, public/voorbeeldsites,
       // public/rijschool-software en public/shop blijven gewoon laden, net als de partnerlink /shop/p/<code> (de studio
       // deelt hem; app/shop/p/[code]/route.ts stuurt daarna naar /shop en zo naar de voorpagina).
@@ -174,19 +176,6 @@ const nextConfig = {
         // so they may be cached for good, as next/font's own files were.
         source: "/fonts/:file*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
-      },
-      {
-        // Photos and the hero video of the proposal sites (public/voorstel). Without
-        // this every visit re-downloaded the 6 MB video (max-age=0). The names carry
-        // no hash, so cache a day and revalidate in the background, not immutable.
-        source: "/voorstel/:pad*/:bestand.:ext(webp|png|jpg|jpeg|svg|mp4)",
-        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
-      },
-      {
-        // Het SmileyApp-voorstel hoort niet in zoekmachines, ook niet via zekerflex.com/voorstel/smileyapp
-        // (op smileyapp.zekerflex.com zet de middleware deze kop op elk antwoord, voorstelSite()).
-        source: "/voorstel/smileyapp/:pad*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {
         // Foto's van de eigen site (paginacheck 15 nov): ook die kwamen met max-age=0, dus elk bezoek vroeg ze opnieuw

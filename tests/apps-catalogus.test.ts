@@ -28,8 +28,9 @@ describe("de catalogus", () => {
     for (const a of ZF_APPS) expect(appVan(a.id), a.id).toBe(a.beschikbaar ? a : undefined);
   });
 
-  it("de opdrachtgevers, horeca, horecapersoneel, rijschool, webshop en website zijn er", () => {
-    for (const id of ["zakelijk", "horeca", "personeel", "rijschool", "webshop", "website", "werk"]) expect(appVan(id), id).toBeDefined();
+  it("de opdrachtgevers, horeca, horecapersoneel en rijschool zijn er; de webshop en de website niet meer (22 nov 2026)", () => {
+    for (const id of ["zakelijk", "horeca", "personeel", "rijschool", "werk"]) expect(appVan(id), id).toBeDefined();
+    for (const id of ["webshop", "website"]) expect(appVan(id), id).toBeUndefined();
   });
 
   it("de personeel-app belooft niet meer dan /personeel heeft", () => {

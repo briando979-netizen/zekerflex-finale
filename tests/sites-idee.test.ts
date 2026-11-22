@@ -74,8 +74,8 @@ describe("de naam en de plaats", () => {
 });
 
 describe("het scherm", () => {
-  it("staat boven het startformulier van de webshop en van de website, en overschrijft niets wat al ingevuld is", () => {
-    for (const [f, soort] of [["components/studio/WebshopStart.tsx", "webshop"], ["components/app/SiteBuilder.tsx", "website"]] as const) {
+  it("staat boven het startformulier van de website, en overschrijft niets wat al ingevuld is", () => {
+    for (const [f, soort] of [["components/app/SiteBuilder.tsx", "website"]] as const) {
       const src = bron(f);
       expect(src, f).toContain(`<IdeeKaart soort="${soort}"`);
       expect(src, f).toContain("naam: b.naam.trim() ? b.naam : u.naam, plaats: b.plaats.trim() ? b.plaats : u.plaats");

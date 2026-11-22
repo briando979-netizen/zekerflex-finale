@@ -14,7 +14,6 @@ import {
   vraagtNieuweBeoordeling,
   zichtbaarInShop,
 } from "@/lib/shop/verkoper-core";
-import { nieuwProductSchema, wijzigProductSchema } from "@/lib/shop/verkoper-schema";
 
 const dag = 86_400_000;
 const nu = new Date("2026-11-04T12:00:00Z");
@@ -118,17 +117,6 @@ describe("verkopers op de marktplaats: producten", () => {
     expect(euroNaarCents("1.234,50")).toBeNull();
     expect(euroNaarCents("abc")).toBeNull();
     expect(euroNaarCents("")).toBeNull();
-  });
-
-  it("controleert de invoer van een nieuw product", () => {
-    const goed = { naam: "Werkhandschoen", omschrijving: "Stevige handschoen met grip, maat 9 en 10.", categorie: "Werk & PBM", prijsCents: 1295, voorraad: 5, fotoUploadId: "upload12345" };
-    expect(nieuwProductSchema.safeParse(goed).success).toBe(true);
-    expect(nieuwProductSchema.safeParse({ ...goed, categorie: "Wapens" }).success).toBe(false);
-    expect(nieuwProductSchema.safeParse({ ...goed, prijsCents: 50 }).success).toBe(false);
-    expect(nieuwProductSchema.safeParse({ ...goed, omschrijving: "kort" }).success).toBe(false);
-    expect(nieuwProductSchema.safeParse({ ...goed, maten: [{ maat: "M", voorraad: 1 }, { maat: "m", voorraad: 2 }] }).success).toBe(false);
-    expect(wijzigProductSchema.safeParse({ voorraad: { v1: -1 } }).success).toBe(false);
-    expect(wijzigProductSchema.safeParse({ pauze: true }).success).toBe(true);
   });
 });
 

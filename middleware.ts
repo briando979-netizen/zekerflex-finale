@@ -3,10 +3,8 @@ import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { hasAnyRole, matchRouteRule } from "@/lib/auth/rbac";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
 import { TE_GROOT_ANTWOORD, teGroot } from "@/lib/http/openbare-grens";
-import { buildContentSecurityPolicy, generateNonce, siteHostCsp } from "@/lib/security/csp";
+import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
-import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
-import { voorstelServiceWorker } from "@/lib/voorstel/service-worker";
 import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
@@ -39,11 +37,11 @@ export const config = {
       ],
     },
     // A customer's own domain (Caddy sets the header): every path, photos and
-    // sitemap.xml included, goes to that website — see customerSite() below.
+    // sitemap.xml included, stays away from the app — see customerSite() below.
     // A literal, not SITE_HOST_HEADER: Next reads this config statically.
     { source: "/:path*", has: [{ type: "header", key: "x-zf-site-host" }] },
-    // Een ontwerpvoorstel op een eigen subdomein (Caddy zet de kop): ook hier
-    // elk pad, zodat alleen het voorstel bereikbaar is — zie voorstelSite().
+    // Een oud ontwerpvoorstel op een eigen subdomein (Caddy zet de kop nog): ook
+    // hier elk pad, zodat daar niets van de app te zien is — zie voorstelSite().
     { source: "/:path*", has: [{ type: "header", key: "x-zf-voorstel" }] },
   ],
 };
@@ -151,7 +149,7 @@ const APP_ALLOWED = [
   "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
   // 22 nov 2026 (rondgang): "Join de community" (/nieuwsbrief) en "Status" in de werker-app stuurden terug naar /start
   "/nieuwsbrief", "/status",
-  "/shop", "/kennis", "/offline", "/studio",
+  "/shop", "/kennis", "/offline",
   // de bestanden van de paskamer (public/paskamer: meetmodel, wasm, 3D-paspop). De middleware vangt alles op wat geen afbeelding of lettertype is
   // (.mjs, .wasm, .task, .tflite, .bin, .json), dus zonder dit stuurde de app-modus ze door naar /start: de import van vision_bundle.mjs kreeg
   // HTML terug ("text/html is geen JavaScript") en "Op mijn foto" werkte in de iPhone- en Android-app nooit. Er is geen pagina onder /paskamer.
@@ -178,29 +176,25 @@ function appAllowed(pathname: string): boolean {
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // ---------------------------------------------------------------------------
-// A company's website on its own domain (lib/sites/domain.ts). Caddy's block
-// for customer domains sets x-zf-site-host and the zekerflex.com block strips
-// it, so it can't be forged from outside. Everything on such a domain —
-// /login and /api included — goes to that website and never to the app:
-// bakkerjansen.nl/contact is served by /site-domein/bakkerjansen.nl/contact.
+// Een eigen domein van een bedrijf. Caddy's block for customer domains sets
+// x-zf-site-host and the zekerflex.com block strips it, so it can't be forged
+// from outside. Everything on such a domain — /login and /api included — stays
+// away from the app. Klantwebsites zijn weg (22 nov 2026, fase C: ZekerFlex is
+// alleen flexwerk): een domein zonder rijschool krijgt een nette 404.
 // ---------------------------------------------------------------------------
 async function customerSite(req: NextRequest, raw: string): Promise<NextResponse> {
   const host = siteHostFrom(raw);
   if (!host) return new NextResponse("Onbekend domein", { status: 400 });
   const rijschool = await rijschoolOpHost(host);
   if (rijschool) return rijschoolSite(req, host, rijschool);
-  const url = req.nextUrl.clone();
-  url.pathname = `/site-domein/${host}${req.nextUrl.pathname === "/" ? "" : req.nextUrl.pathname}`;
-  const res = NextResponse.rewrite(url);
-  res.headers.set(CSP_HEADER, siteHostCsp(`https://${host}`));
-  return res;
+  return new NextResponse("Niet gevonden", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex" } });
 }
 
 // ---------------------------------------------------------------------------
 // Een rijschool op haar eigen domein (lib/rijschool/domein.ts). Het domein komt
 // binnen als klantdomein; de middleware kan niet bij de database en vraagt de
 // app zelf welke rijschool erbij hoort (kort onthouden, gedeeld via globalThis).
-// Lukt dat niet, dan gaat alles zoals voorheen naar de klantwebsite.
+// Lukt dat niet, dan een 404 (customerSite).
 // ---------------------------------------------------------------------------
 type RijschoolHost = { slug: string; online: boolean; hoofd: string };
 type RijschoolHostCache = Map<string, { r: RijschoolHost | null; tot: number }>;
@@ -237,7 +231,7 @@ function rijschoolSite(req: NextRequest, host: string, r: RijschoolHost): NextRe
   if (pad === "/robots.txt") {
     return new NextResponse(robotsVoor(r.online, r.hoofd), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
-  // zelfde als bij het voorstel: geen ZekerFlex-statistiek en geen ZekerFlex-service-worker
+  // geen ZekerFlex-statistiek en geen ZekerFlex-service-worker op het domein van de rijschool
   if (pad.startsWith("/api/analytics/")) return new NextResponse(null, { status: 204 });
   if (pad === "/sw.js") {
     return new NextResponse(
@@ -262,53 +256,29 @@ function rijschoolSite(req: NextRequest, host: string, r: RijschoolHost): NextRe
 }
 
 // ---------------------------------------------------------------------------
-// Een ontwerpvoorstel op een eigen subdomein (schwarzwald.zekerflex.com,
-// smileyapp.zekerflex.com). Caddy zet x-zf-voorstel alleen in dat blok en haalt
-// hem elders weg. Kale paden worden het voorstel (/ → /voorstel/<naam>), de rest
-// van ZekerFlex geeft 404 (lib/voorstel/subdomein.ts). Pagina's krijgen dezelfde
-// CSP-nonce als overal; de API van het voorstel controleert toegang zelf. Een
-// voorstel hoort niet in zoekmachines: elk antwoord krijgt X-Robots-Tag noindex.
+// De oude ontwerpvoorstellen op een eigen subdomein (schwarzwald.zekerflex.com,
+// smileyapp.zekerflex.com) zijn weg (22 nov 2026, fase C). Caddy zet
+// x-zf-voorstel daar nog; dan is niets van ZekerFlex te zien: een 404, behalve
+// /sw.js. Wie de SmileyApp-app ooit installeerde, krijgt een lege service-worker
+// die zichzelf uitschakelt; bij een 404 bleef de oude met zijn cache staan.
 // ---------------------------------------------------------------------------
+const VOORSTEL_HEADER = "x-zf-voorstel";
 const VOORSTEL_ROBOTS = "noindex, nofollow";
 
-function voorstelSite(req: NextRequest, naam: string): NextResponse {
-  const pad = req.nextUrl.pathname;
-  if (pad === "/robots.txt") {
-    return new NextResponse("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+function voorstelSite(req: NextRequest): NextResponse {
+  if (req.nextUrl.pathname === "/sw.js") {
+    return new NextResponse(
+      "self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',()=>self.registration.unregister());",
+      { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": VOORSTEL_ROBOTS } },
+    );
   }
-  // De ZekerFlex-bezoekersstatistiek draait in de root-layout mee; bezoekers van
-  // het voorstel horen daar niet in. Stil aannemen in plaats van een 404.
-  if (pad.startsWith("/api/analytics/")) return new NextResponse(null, { status: 204 });
-  // De root-layout registreert ook de ZekerFlex-service-worker. Hier de eigen van
-  // het voorstel: een lege die zichzelf uitschakelt, of die van de SmileyApp-app
-  // (lib/voorstel/service-worker.ts). Geen ZekerFlex-cache op het voorstel, geen 404.
-  if (pad === "/sw.js") {
-    return new NextResponse(voorstelServiceWorker(naam), {
-      headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": VOORSTEL_ROBOTS },
-    });
-  }
-  const doel = voorstelPad(naam, pad);
-  if (doel === null) return new NextResponse("Niet gevonden", { status: 404, headers: { "X-Robots-Tag": VOORSTEL_ROBOTS } });
-  if (doel.startsWith("/_next/")) return NextResponse.next();
-  const nonce = generateNonce();
-  const ctx: RequestContext = { cid: correlationId(req), nonce, csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce, pathname: doel }) };
-  const headers = new Headers(req.headers);
-  headers.set(CORRELATION_HEADER, ctx.cid);
-  headers.set("x-pathname", doel);
-  headers.set(NONCE_HEADER, ctx.nonce);
-  headers.set(CSP_HEADER, ctx.csp);
-  const url = req.nextUrl.clone();
-  url.pathname = doel;
-  const res = decorate(doel === pad ? NextResponse.next({ request: { headers } }) : NextResponse.rewrite(url, { request: { headers } }), ctx);
-  res.headers.set("X-Robots-Tag", VOORSTEL_ROBOTS);
-  return res;
+  return new NextResponse("Niet gevonden", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": VOORSTEL_ROBOTS } });
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const siteHost = req.headers.get(SITE_HOST_HEADER);
   if (siteHost !== null) return await customerSite(req, siteHost);
-  const voorstel = req.headers.get(VOORSTEL_HEADER);
-  if (voorstel !== null) return voorstelSite(req, voorstel);
+  if (req.headers.get(VOORSTEL_HEADER) !== null) return voorstelSite(req);
 
   // Te groot voor een openbare schrijfroute (12 nov, lib/http/openbare-grens.ts): 413 vóór de route de body leest.
   // Ingelogde routes en lezen blijven ongemoeid; 413 en geen 403 (CrowdSec).

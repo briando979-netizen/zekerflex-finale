@@ -20,15 +20,6 @@
 // far weaker vector than script injection, so this is a conscious stop here.
 // ---------------------------------------------------------------------------
 
-/** Our own public origin (from APP_BASE_URL); the middleware runs on the edge, so read it directly. */
-const SITE_ORIGIN = (() => {
-  try {
-    return new URL(process.env.APP_BASE_URL ?? "https://zekerflex.com").origin;
-  } catch {
-    return "https://zekerflex.com";
-  }
-})();
-
 /**
  * De herkomst van het BI-dashboard (METABASE_PUBLIC_URL), of leeg als BI niet
  * is ingericht. Werkgever → Rapportages en Admin → Rapportages tonen dat
@@ -73,22 +64,7 @@ export interface CspOptions {
 }
 
 /**
- * Het voorbeeld van de website-verhuizer (/website-preview/<id>/…) toont de
- * gekopieerde site van een klant, met zijn eigen scripts. `sandbox` zonder
- * allow-same-origin geeft die pagina een eigen, lege herkomst: geen toegang tot
- * cookies of opslag van zekerflex.com, en verzoeken naar onze API gaan als
- * vreemde site zonder sessie. Formulieren versturen kan niet (form-action 'none').
- */
-export const SITE_PREVIEW_CSP = [
-  "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox",
-  "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'",
-  "form-action 'none'",
-  "frame-ancestors 'self'",
-  "object-src 'none'",
-].join("; ");
-
-/**
- * Websites die ZekerFlex voor klanten host (/site/<naam>/…). De pagina's
+ * Websites die ZekerFlex voor klanten hostte (lib/sites/serve.ts). De pagina's
  * bevatten geen scripts (lib/sites/render.ts) en krijgen hier ook geen enkel
  * script: `sandbox` zonder allow-scripts en allow-same-origin geeft ze een eigen
  * lege herkomst, dus geen toegang tot cookies of de API van zekerflex.com.
@@ -118,10 +94,6 @@ export function siteHostCsp(origin: string): string {
 export const CHAT_MEDIA_CSP = ["sandbox", "default-src 'none'", "style-src 'unsafe-inline'", "frame-ancestors 'self'"].join("; ");
 
 export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions): string {
-  if (pathname?.startsWith("/website-preview/")) return SITE_PREVIEW_CSP;
-  if (pathname === "/site" || pathname?.startsWith("/site/")) return siteHostCsp(SITE_ORIGIN);
-  // Own domains get their CSP from the middleware (customerSite); typed by hand on zekerflex.com this path only 404s.
-  if (pathname?.startsWith("/site-domein/")) return siteHostCsp(SITE_ORIGIN);
   if (pathname && /^\/api\/inbox\/[^/]+\/media\/[^/]+$/.test(pathname)) return CHAT_MEDIA_CSP;
   const studio =
     pathname === "/admin/zekerflex-ai" || (pathname?.startsWith("/admin/zekerflex-ai/") ?? false);
@@ -150,11 +122,7 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   // frame-ancestors 'self' below keeps clickjacking protection intact.
   // het ingebedde BI-dashboard (Rapportages) staat op een eigen host
   const bi = BI_ORIGIN ? ` ${BI_ORIGIN}` : "";
-  // Het SmileyApp-voorstel (/voorstel/smileyapp, ook op smileyapp.zekerflex.com) toont hun eigen Vimeo-filmpje
-  // pas na een klik, zonder tracking (components/voorstel/smileyapp/VimeoVideo.tsx). Voor de hele omgeving van
-  // dat voorstel, niet per pagina (de CSP hoort bij het eerste document); overal elders blijft Vimeo dicht.
-  const vimeo = pathname === "/voorstel/smileyapp" || pathname?.startsWith("/voorstel/smileyapp/") ? " https://player.vimeo.com" : "";
-  const frameSrc = studio ? "frame-src 'self' blob: https:" : `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${bi}${vimeo}`;
+  const frameSrc = studio ? "frame-src 'self' blob: https:" : `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${bi}`;
   // The sandbox shows arbitrary author markup; let pasted snippets load images
   // from anywhere. It stays isolated by the iframe `sandbox` attribute.
   const imgSrc = sandboxFrame ? "img-src * data: blob:" : "img-src 'self' data: blob:";

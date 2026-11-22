@@ -63,12 +63,9 @@ const config: Config = {
         money: { DEFAULT: "#B7791F", soft: "#FDF3DC", ink: "#7C4A03", bright: "#F5C451" },
         // De webshop (/shop): warm ivoor, antraciet, dunne lijnen en een vleugje goud.
         lux: { bg: "#FAF8F4", stone: "#F1EDE6", ink: "#151412", mute: "#6E675E", line: "#E6E0D6", gold: "#A8834F" },
-        // Ontwerpvoorstel Het Schwarzwald (/voorstel/schwarzwald): bosnacht, hun oranje en een zonnig accent.
+        // Het palet van het oude ontwerpvoorstel Het Schwarzwald (weg sinds 22 nov 2026); de rijschoolsites gebruiken het nog.
         // rust = hun oranje donker genoeg voor kleine tekst op licht (WCAG AA, ≥ 4,8:1 op crème/zand/wit).
         schw: { night: "#0A120E", forest: "#11221A", moss: "#1C3A2B", orange: "#FF5F1F", rust: "#B83A0A", flame: "#FF8A3D", sun: "#FFD23F", cream: "#FFF6EA", sand: "#F4E9DA", mute: "#5C6B62" },
-        // Ontwerpvoorstel SmileyApp (/voorstel/smileyapp): groen en geel uit hun logo (gemeten), met een donkergroen
-        // voor tekst en vlakken. green is te licht voor tekst op wit: gebruik leaf (≥ 6:1) of ink; op green alleen ink.
-        smiley: { green: "#5ABA8E", leaf: "#1E6B4A", ink: "#0E2A20", deep: "#123A2C", sun: "#FDD11A", cream: "#FFFBEA", mint: "#E7F6EE", coral: "#F0705F", mute: "#4B5E55" },
         risk: {
           low: "#15803D",
           medium: "#B45309",
@@ -80,8 +77,6 @@ const config: Config = {
         display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
-        // Alleen in de webshop en de websitevoorstellen geladen (.zf-font-serif, lib/fonts-shop.ts).
-        serif: ["var(--font-serif)", "Georgia", "Cambria", "serif"],
       },
       borderRadius: {
         xl2: "1.25rem",

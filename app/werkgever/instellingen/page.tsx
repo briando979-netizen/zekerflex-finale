@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { requirePrincipal } from "@/lib/auth";
-import { naarStudioAccount } from "@/lib/studio/account-server";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { getDict } from "@/lib/i18n/server";
@@ -35,8 +34,6 @@ interface Card {
 
 export default async function InstellingenPage() {
   const principal = await requirePrincipal();
-  // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
-  await naarStudioAccount(principal, "account");
   const d = await getDict();
   const s = d.settings;
   const scope = await resolveEmployerScope(principal);

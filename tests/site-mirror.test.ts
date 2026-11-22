@@ -25,7 +25,6 @@ afterAll(async () => {
 
 const mirror = await import("@/lib/website/mirror");
 const verify = await import("@/lib/website/verify");
-const { buildContentSecurityPolicy } = await import("@/lib/security/csp");
 
 describe("paden in de kopie", () => {
   it("zet pagina's en bestanden op een vaste plek", () => {
@@ -147,14 +146,6 @@ describe("voorbeeld tonen", () => {
     expect(await mirror.resolveMirrorFile(id, ["..", "..", "geheim.txt"])).toBeNull();
     expect(await mirror.resolveMirrorFile(id, ["%2e%2e", "geheim.txt"])).toBeNull();
     expect(await mirror.resolveMirrorFile("../etc", ["passwd"])).toBeNull();
-  });
-
-  it("het voorbeeld draait altijd in een sandbox zonder toegang tot zekerflex.com", () => {
-    const csp = buildContentSecurityPolicy({ dev: false, nonce: "n", pathname: "/website-preview/0123456789abcdef/" });
-    expect(csp).toMatch(/^sandbox allow-scripts/);
-    expect(csp).not.toContain("allow-same-origin");
-    expect(csp).toContain("form-action 'none'");
-    expect(buildContentSecurityPolicy({ dev: false, nonce: "n", pathname: "/website-check" })).not.toContain("sandbox");
   });
 });
 

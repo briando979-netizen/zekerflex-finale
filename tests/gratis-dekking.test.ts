@@ -47,10 +47,7 @@ const BASISLIJN: Record<string, string> = {
   ...groep("link of knop naar de webmail of agenda van de gebruiker zelf", [
     "calendar.google.com", "outlook.live.com", "mail.google.com", "mail.proton.me", "mail.yahoo.com", "www.icloud.com",
   ]),
-  ...groep("klik-om-af-te-spelen-video in een frame (CSP); de bezoeker laadt het pas na een klik", ["www.youtube-nocookie.com", "player.vimeo.com"]),
-  ...groep("link in het SmileyApp-voorstel naar hun eigen site, klantlogin, video en klanten (lib/voorstel/smileyapp.ts), geen aanroep", [
-    "smileyapp.nl", "smileyapp.online", "100procentondernemen.nl", "vimeo.com", "www.hanze.nl", "www.basicclean.nl", "www.alfa-college.nl", "www.danw.nl",
-  ]),
+  ...groep("klik-om-af-te-spelen-video in een frame (CSP); de bezoeker laadt het pas na een klik", ["www.youtube-nocookie.com"]),
   ...groep("trackinglink van een vervoerder voor de klant, geen aanroep", [
     "gls-group.com", "jouw.postnl.nl", "tracking.dpd.de", "www.dhl.com", "www.ups.com",
   ]),
