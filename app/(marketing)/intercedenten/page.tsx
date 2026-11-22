@@ -25,7 +25,7 @@ const TAKEN: { taak: string; zekerflex: string; href: string; label: string }[] 
   {
     taak: "Passende kandidaten zoeken",
     zekerflex: "Je plaatst een dienst en ZekerFlex stelt direct passende, geverifieerde flexwerkers voor. Krachten die goed bevallen zet je bij je favorieten of in een vaste pool.",
-    href: "/aanbod/flexwerkers-inhuren",
+    href: "/voor-bedrijven",
     label: "Flexwerkers inhuren",
   },
   {

@@ -118,12 +118,6 @@ export default async function PrijzenPage() {
             Vergelijk de kosten per uur
           </Link>
         </p>
-        <p className="mt-2 text-center text-sm text-neutralx-600">
-          Liever een maandabonnement met extra modules (AI-recruiter, snelle uitbetaling, uitzend)?{" "}
-          <Link href="/abonnementen" className="font-semibold text-brand-600 underline">
-            Bekijk de abonnementen
-          </Link>
-        </p>
       </Section>
     ),
     // 21 nov 2026 (eigenaar: "haal dit weg"): geen blok meer over de API en API-abonnementen; alleen de klusprijs

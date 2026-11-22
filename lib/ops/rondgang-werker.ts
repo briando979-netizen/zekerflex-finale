@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { setFiscal } from "@/lib/fiscal/store";
 import { SESSION_COOKIE } from "@/lib/auth/session";
+import { APP_COOKIE } from "@/lib/app-mode";
 import { beoordeel, type RondgangProbleem } from "@/lib/ops/rondgang-regels";
 
 // ---------------------------------------------------------------------------
@@ -147,7 +148,9 @@ export async function draaiWerkerRondgang(gelijktijdig = 3, intern = `http://loc
   const account = await zorgVoorRondgangWerker(email, wachtwoord).catch(() => null);
   if (!account) return leeg("het rondgang-account kon niet worden klaargezet");
 
-  const jar: Jar = new Map();
+  // de werker-omgeving draait sinds 21 nov alleen in de app (app/dashboard/layout.tsx): de rondgang doet zich voor als de app,
+  // anders ziet hij op elke pagina alleen "Installeer de app" en valt een kapotte pagina 's nachts niet op (rondgang 22 nov)
+  const jar: Jar = new Map([[APP_COOKIE, "1"]]);
   const ingelogd = await meldAan(intern, email, wachtwoord, jar).catch(() => false);
   if (!ingelogd) {
     return { ingelogd: false, paginas: 0, overgeslagen: "inloggen mislukt", problemen: [{ route: "/login", status: null, reden: "de rondgang-werker kon niet inloggen" }] };

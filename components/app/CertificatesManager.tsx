@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useFT } from "@/components/i18n/useFT";
 
 interface Cert {
@@ -107,11 +106,7 @@ export function CertificatesManager() {
           <div className="mt-4 rounded-xl border border-hair bg-paper-soft p-4 text-sm">
             <p className="font-semibold text-ink">{t.noVcaTitle}</p>
             <p className="mt-1 text-xs text-neutralx-600">
-              {t.noVcaBefore}{" "}
-              <Link href="/shop#vca-basis-boek" className="font-semibold text-brand-600 underline">
-                {t.noVcaLink}
-              </Link>{" "}
-              {t.noVcaAfter}
+              {t.noVcaBefore} {t.noVcaAfter}
             </p>
           </div>
         )}

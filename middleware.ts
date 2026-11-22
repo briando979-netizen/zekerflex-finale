@@ -149,6 +149,8 @@ const APP_ALLOWED = [
   "/uitloggen",
   "/dashboard", "/werkgever", "/admin", "/sales", "/berichten", "/betaal", "/betaalverzoek", "/kyc", "/r", "/uitnodiging",
   "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
+  // 22 nov 2026 (rondgang): "Join de community" (/nieuwsbrief) en "Status" in de werker-app stuurden terug naar /start
+  "/nieuwsbrief", "/status",
   "/shop", "/kennis", "/offline", "/studio",
   // de bestanden van de paskamer (public/paskamer: meetmodel, wasm, 3D-paspop). De middleware vangt alles op wat geen afbeelding of lettertype is
   // (.mjs, .wasm, .task, .tflite, .bin, .json), dus zonder dit stuurde de app-modus ze door naar /start: de import van vision_bundle.mjs kreeg
