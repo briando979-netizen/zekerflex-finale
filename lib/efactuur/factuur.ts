@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
-import { amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { vervaldatumVan } from "@/lib/billing/betaaltermijn";
 import { efactuurInstellingen, platformPartij, splitsPeppolId } from "@/lib/efactuur/instellingen";
 import { bouwUbl, btwCategorieVoor, ublBestandsnaam, valideerUbl, type UblFactuur, type UblPartij, type UblRegel } from "@/lib/efactuur/ubl";
 
@@ -16,8 +17,6 @@ import { bouwUbl, btwCategorieVoor, ublBestandsnaam, valideerUbl, type UblFactuu
 // database staat, dus download en verzending geven dezelfde inhoud.
 // ---------------------------------------------------------------------------
 
-const BETAALTERMIJN_DAGEN = 14;
-
 type Registratie = { street: string | null; houseNumber: string | null; postalCode: string | null; city: string | null; country: string } | null;
 
 function adresUit(reg: Registratie, land = "NL") {
@@ -27,12 +26,6 @@ function adresUit(reg: Registratie, land = "NL") {
     ...(reg?.city ? { plaats: reg.city } : {}),
     land: reg?.country || land,
   };
-}
-
-function plusDagen(d: Date, n: number): Date {
-  const p = amsterdamParts(d);
-  const t = new Date(Date.UTC(p.year, p.month - 1, p.day + n));
-  return amsterdamToUtc(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
 }
 
 export interface EfactuurDocument {
@@ -119,7 +112,7 @@ export async function efactuurDocument(invoiceId: string): Promise<EfactuurDocum
     nummer: inv.number,
     soort,
     datum: amsterdamDayKey(uitgifte),
-    ...(inv.totalCents > 0 ? { vervaldatum: amsterdamDayKey(inv.dueAt ?? plusDagen(uitgifte, BETAALTERMIJN_DAGEN)) } : {}),
+    ...(inv.totalCents > 0 ? { vervaldatum: amsterdamDayKey(vervaldatumVan(inv)) } : {}),
     valuta: inv.currency,
     verkoper,
     koper,

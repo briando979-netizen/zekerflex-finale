@@ -66,7 +66,7 @@ export function OverdueInvoices() {
     <Panel
       flush
       title={rows.length === 0 ? "Betaalherinneringen" : `Achterstallig: ${euroExact(total)} bij ${groups.length} ${groups.length === 1 ? "bedrijf" : "bedrijven"}`}
-      subtitle={rows.length === 0 ? "Geen achterstallige facturen." : `Betaaltermijn 14 dagen. ${enabled ? "Automatisch" : "Als je het aanzet"}: herinnering na 3 dagen, tweede na 10, melding bij jou na 17.`}
+      subtitle={rows.length === 0 ? "Geen achterstallige facturen." : `Betaaltermijn: 14 dagen voor de platformkosten, 30 dagen voor de factuur van de werker. ${enabled ? "Automatisch" : "Als je het aanzet"}: herinnering na 3 dagen, tweede na 10, melding bij jou na 17.`}
       actions={toggleRow}
     >
       {note && <p className="px-5 pb-3 text-sm" style={{ color: "var(--a-dim)" }}>{note}</p>}

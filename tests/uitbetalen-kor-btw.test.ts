@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Punt 1 en 5 van de review van de proefklussen (21 nov 2026).
 // 1. Reageren liet een werker toe met KVK óf btw óf de KOR, maar uitbetalen eiste KVK én btw: een werker met de KOR of met
@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // approveTimesheet echt doorlopen op het factuurspoor, met de echte poort (lib/billing/payout-gate.ts) en de echte facturen
 // (lib/billing/self-billing.ts).
 
-type Factuur = { type: string; vatTreatment: string; vatCents: number; subtotalCents: number; totalCents: number; lines: { create: { description: string }[] } };
+type Factuur = { type: string; vatTreatment: string; vatCents: number; subtotalCents: number; totalCents: number; issuedAt: Date; dueAt: Date; lines: { create: { description: string }[] } };
 
 const h = vi.hoisted(() => ({
   fiscal: {} as Record<string, unknown>,
@@ -199,6 +199,29 @@ describe("punt 1: uitbetalen met dezelfde regel als reageren (KVK, btw of KOR)",
     await expect(approveTimesheet({ timesheetId: "ts1", principal })).rejects.toThrow(WERKER_BEDRIJF_MIST);
     expect(h.facturen).toHaveLength(0);
     expect(h.betalingen).toHaveLength(0);
+  });
+});
+
+// 22 nov 2026 (eigenaar): bij een gewerkte klus krijgt het bedrijf twee facturen op dezelfde dag, de werkerfactuur binnen
+// 30 dagen en de platformfactuur binnen 14 (lib/billing/betaaltermijn.ts). persistInvoice zet de dueAt zelf op de factuur.
+describe("betaaltermijnen: de dueAt staat op beide facturen", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-20T10:00:00+02:00")); // 30 dagen verder valt na de klokwissel van 25 okt
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("werkerfactuur 20 okt + 30 dagen = 19 nov 10:00, platformfactuur 20 okt + 14 dagen = 3 nov 10:00 (Amsterdam)", async () => {
+    h.freelancer = werker({ kvkValid: true });
+    h.fiscal = { workerKind: "zzp", vatValid: false, korApplies: false };
+    await approveTimesheet({ timesheetId: "ts1", principal });
+    const platform = h.facturen.find((f) => f.type === "PLATFORM_FEE");
+    expect(werkerFactuur()?.issuedAt.toISOString()).toBe("2026-10-20T08:00:00.000Z");
+    expect(platform?.issuedAt.toISOString()).toBe("2026-10-20T08:00:00.000Z");
+    expect(werkerFactuur()?.dueAt.toISOString()).toBe("2026-11-19T09:00:00.000Z");
+    expect(platform?.dueAt.toISOString()).toBe("2026-11-03T09:00:00.000Z");
   });
 });
 

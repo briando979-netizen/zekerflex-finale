@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { getOrgProfileExtra } from "@/lib/profile/store";
-import { INVOICE_DUE_DAYS } from "@/lib/claims/policy";
+import { vervaldatumVan, type TermijnFactuur } from "@/lib/billing/betaaltermijn";
 import { payUrl } from "@/lib/billing/pay-link";
 import { invoicesOnHold } from "@/lib/billing/clawback";
 
@@ -13,7 +13,8 @@ import { invoicesOnHold } from "@/lib/billing/clawback";
 // Payment reminders for client invoices (hours + platform fee + uitzend):
 // standard-speed freelancers are only paid once the client pays, so a late
 // invoice means someone waits for their wage. Due date = issued + 14 days
-// (general terms, art. 4). Schedule after the due date:
+// (general terms, art. 4) — except the freelancer's invoice (SELF_BILL_FREELANCER): issued + 30 days (see
+// lib/billing/betaaltermijn.ts). Schedule after the due date:
 //   +3 days  friendly reminder with ONE pay link for everything open
 //   +10 days second, firmer reminder ("flexwerkers wachten op hun geld")
 //   +17 days escalate to the owner (push + mail) and list it as overdue
@@ -39,8 +40,8 @@ export const resetInvoiceReminders = (invoiceId: string) => kvDelete(stateKey(in
 const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
 const dateNl = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
-export const dueDateOf = (inv: { dueAt: Date | null; issuedAt: Date | null; createdAt: Date }) =>
-  inv.dueAt ?? new Date((inv.issuedAt ?? inv.createdAt).getTime() + INVOICE_DUE_DAYS * DAY);
+/** Vervaldatum: die op de factuur, anders uitgifte + de termijn van zijn soort (werker 30 dagen, platform 14); geef dus altijd het type mee. */
+export const dueDateOf = (inv: TermijnFactuur) => vervaldatumVan(inv);
 
 /** Highest stage an invoice has reached by `now` (0 = not yet due for a reminder). */
 export function stageFor(due: Date, now: Date): number {
@@ -64,7 +65,7 @@ export interface OverdueInvoice {
 async function openInvoices() {
   const invoices = await prisma.invoice.findMany({
     where: { status: InvoiceStatus.ISSUED, type: { in: COLLECTED_TYPES }, recipientTenantId: { not: null }, totalCents: { gt: 0 } },
-    select: { id: true, number: true, totalCents: true, dueAt: true, issuedAt: true, createdAt: true, recipientTenantId: true, recipientTenant: { select: { name: true } } },
+    select: { id: true, number: true, type: true, totalCents: true, dueAt: true, issuedAt: true, createdAt: true, recipientTenantId: true, recipientTenant: { select: { name: true } } },
     take: 5000,
   });
   const onHold = await invoicesOnHold();

@@ -53,6 +53,7 @@ import { pushHoursApproved } from "@/lib/notifications/approved-push";
 import { runAfter } from "@/lib/run-after";
 import { sendMail, invoiceIssuedEmail } from "@/lib/mail";
 import { recipientsFor } from "@/lib/billing/reminders";
+import { betaaltermijnTekst, vervaldatumVoor, type TermijnFactuur } from "@/lib/billing/betaaltermijn";
 import type { ComputedInvoice } from "@/types/billing";
 
 export interface ApproveTimesheetInput {
@@ -533,6 +534,7 @@ async function approveTimesheetInner(
         invoiceNumber: persisted.platformFeeInvoice.number,
         totalCents: persisted.billing.platformFeeInvoice.totalCents,
         description: `platformkosten, shift @ ${ts.branch.name}`,
+        termijn: persisted.platformFeeInvoice,
         log,
       });
       // e-factuur (UBL/Peppol) als het bedrijf dat aan heeft staan; nooit blokkerend
@@ -690,6 +692,7 @@ async function approveViaPartner(args: {
       invoiceNumber: feeInvoice.number,
       totalCents: computed.totalCents,
       description: `platformkosten, shift @ ${ts.branch.name}`,
+      termijn: feeInvoice,
       log,
     });
     void efactuurNaUitgifte(feeInvoice.id, ts.branch.tenantId);
@@ -891,6 +894,7 @@ async function approveViaPayroll(args: {
     invoiceNumber: uitzendInvoice.number,
     totalCents: uitzendInvoice.totalCents,
     description: `uitzendkracht-uren, week ${weekLabel}`,
+    termijn: uitzendInvoice,
     log,
     from: env.MAIL_UITZEND_FROM,
   });
@@ -931,6 +935,8 @@ async function notifyInvoiceIssued(args: {
   invoiceNumber: string;
   totalCents: number;
   description: string;
+  /** de zojuist bewaarde factuur: de mail noemt zijn betaaltermijn */
+  termijn: TermijnFactuur;
   log: ReturnType<typeof logger.child>;
   from?: string;
 }): Promise<void> {
@@ -945,6 +951,7 @@ async function notifyInvoiceIssued(args: {
       args.invoiceNumber,
       args.totalCents,
       args.description,
+      betaaltermijnTekst(args.termijn),
     );
     for (const addr of to) await sendMail({ ...mail, to: addr, ...(args.from ? { from: args.from } : {}) });
   } catch (err) {
@@ -965,6 +972,8 @@ async function persistInvoice(
       // a € 0 platform fee (free company) has nothing to collect: paid at once
       status: opts.paid ? InvoiceStatus.PAID : InvoiceStatus.ISSUED,
       issuedAt: now,
+      // werkerfactuur binnen 30 dagen, platformfactuur binnen 14 (lib/billing/betaaltermijn.ts)
+      dueAt: vervaldatumVoor(invoice.type, now),
       ...(opts.paid ? { paidAt: now } : {}),
       timesheetId: invoice.timesheetId,
       recipientTenantId: invoice.recipientTenantId,
