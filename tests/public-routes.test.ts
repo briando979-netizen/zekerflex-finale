@@ -56,7 +56,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/installatie/abc123def456.sleutel", // klant en monteur volgen een installatie met de code in het adres
     "/api/installatie/abc123def456.sleutel/positie",
     "/api/boeken/kapper-jan", // boekpagina van een bedrijf: vrije tijden en boeken, IP-begrensd
-    "/api/offerte-link/aB3dE6gH9jK2mN5pQ8sT1vW4yZ7cF0hJ", // een klant bekijkt/beantwoordt een offerte met de geheime link
     "/api/kaart/zoek", // ZekerFlex Kaart: adres zoeken (PDOK), IP-begrensd
     "/api/kaart/route", // ZekerFlex Kaart: route plannen via onze eigen routeplanner, IP-begrensd
     "/api/chip/sleutel", // the Android app opens the ID chip with a one-time code
@@ -106,7 +105,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/agent/horeca/de-zaak/beschikbaarheid", // free times for a day
     "/api/agent/horeca/de-zaak/reserveringen", // book a table (rate-limited, same capacity check as the own site)
     "/api/agent/horeca/reserveringen/token", // view or cancel with the signed cancel link
-    "/api/checklist/abcdefghijklmnopqrstuvwxyz012345", // personeel zonder account vult een checklist in; de sleutel in het adres is het bewijs
     "/api/voorstel/smileyapp/chat", // websitechat van het SmileyApp-voorstel (IP-begrensd, alleen van de eigen site)
     "/api/voorstel/smileyapp/chat/abcdefghijklmnop12345678", // de widget haalt de status van het eigen gesprek op
   ];
@@ -161,14 +159,9 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/werkgever/afspraken/2026-11-12~abcdef12",
     "/api/werkgever/klanten", // de klanten van een bedrijf (persoonsgegevens van derden): alleen met een sessie
     "/api/boekenlijst", // alleen /api/boeken/<adres> is openbaar, geen lookalike
-    "/api/werkgever/offertes", // het offertebeheer van een bedrijf (klantgegevens): alleen met een sessie
-    "/api/werkgever/offertes/o0123456789ab",
-    "/api/offertes", // alleen /api/offerte-link/<token> is openbaar
-    "/api/offerte-linkje", // geen lookalike
-    "/api/werkgever/checklists", // het checklistbeheer van een bedrijf: alleen met een sessie
-    "/api/werkgever/checklists/uitvoeringen", // wie wat deed (namen van personeel): alleen met een sessie
-    "/api/werkgever/checklists/uitvoerders",
-    "/api/checklists", // alleen /api/checklist/<sleutel> is openbaar, geen lookalike
+    // offertes en checklists zijn weg (22 nov 2026): hun oude links staan niet meer open
+    "/api/offerte-link/aB3dE6gH9jK2mN5pQ8sT1vW4yZ7cF0hJ",
+    "/api/checklist/abcdefghijklmnopqrstuvwxyz012345",
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

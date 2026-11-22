@@ -5,6 +5,8 @@
 // Een nieuwe module met KV-gegevens per organisatie meldt zich HIER aan (één regel per voorvoegsel); tests/org-kv.test.ts
 // leest de store-bestanden en laat een vergeten voorvoegsel direct opvallen. Puur bestand: geen prisma of kv.
 // De gebruikersgebonden sleutels staan in lib/privacy/user-kv.ts (ERASABLE_KV_PREFIXES).
+// Werkbonnen, offertes, checklists, voorraad, kamers en lidmaatschappen zijn op 22 nov 2026 uit de code gehaald; hun
+// regels blijven hier staan, zodat oude gegevens bij het wissen en in de export van een organisatie mee blijven gaan.
 // ---------------------------------------------------------------------------
 
 /**

@@ -65,15 +65,9 @@ export const MODULES: readonly BrancheModule[] = [
   // klaar sinds 11 nov: lib/afspraken (boekpagina /boeken/<adres>, agenda, klantenkaart)
   klaar("afspraken", "klanten", "Afspraken boeken", "Klanten boeken online een tijd bij een medewerker; jij ziet de agenda per persoon.", "/werkgever/afspraken"),
   klaar("klantenkaart", "klanten", "Klantenkaart", "Per klant de geschiedenis en je eigen notities, met de mogelijkheid een klant te wissen.", "/werkgever/klanten"),
-  // klaar sinds 11 nov (gebouwd door een vloot agenten, elk met eigen tests en een schone controle): zie lib/voorraad, lib/werkbonnen, lib/offertes, lib/checklists
-  klaar("offertes", "geld", "Offertes", "Een offerte maken, een link delen en de klant laten akkoord gaan of afwijzen; zonder e-mail, je stuurt de link zelf.", "/werkgever/offertes"),
-  klaar("voorraad", "plek", "Voorraad", "Wat er ligt, wat bijna op is, een logboek van elke wijziging en een bestellijst per leverancier.", "/werkgever/voorraad"),
-  klaar("werkbonnen", "branche", "Werkbonnen en opdrachten", "Een opdracht met klant, planning, uren en materialen, met een afdrukbare werkbon.", "/werkgever/werkbonnen"),
-  klaar("checklists", "branche", "Checklists en rondes", "Vaste taken per locatie of ronde, door personeel zonder account in te vullen, met een overzicht van wat gemist is.", "/werkgever/checklists"),
-  // klaar sinds 11 nov: lib/lidmaatschappen, lib/ritten, lib/kamers (elk met eigen tests en een schone controle)
-  klaar("lidmaatschappen", "branche", "Lidmaatschappen", "Leden, abonnementen en strippenkaarten met bezoeken; betalen en incasso gaan nog buiten ZekerFlex.", "/werkgever/lidmaatschappen"),
+  // klaar sinds 11 nov: lib/ritten. Offertes, voorraad, werkbonnen, checklists, lidmaatschappen en kamers zijn op 22 nov
+  // weggehaald (geen enkel bedrijf gebruikte ze; ZekerFlex is alleen flexwerk)
   klaar("ritten", "branche", "Ritten en voertuigen", "Ritten plannen met voertuig en chauffeur, met de uren per rit en een melding als de APK bijna verloopt; zonder GPS.", "/werkgever/ritten"),
-  klaar("kamers", "branche", "Kamers en verblijven", "Kamers, boekingen en bezetting op één kalender, met in- en uitchecken en schoonmaakstatus; gasten boeken niet zelf online.", "/werkgever/kamers"),
   gepland("dossier", "branche", "Dossier", "Een beveiligd dossier per cliënt; zware regels, dus pas na de eerste branches.", "Eerst een jurist: het zijn gezondheidsgegevens (bijzondere persoonsgegevens, AVG artikel 9)."),
 ];
 
@@ -111,11 +105,6 @@ export const KOPPELINGEN: readonly Koppeling[] = [
   koppel("afspraken-klantenkaart", "afspraken", "klantenkaart", "Elke afspraak komt op de kaart van de klant.", true),
   // ontwerp: nog niet gebouwd, ook niet waar beide kanten er al zijn
   koppel("afspraken-berichten", "afspraken", "berichten", "Een herinnering of verzetten gaat via de chat.", false),
-  koppel("offertes-werkbonnen", "offertes", "werkbonnen", "Een geaccepteerde offerte wordt een werkbon.", false),
-  koppel("werkbonnen-uren", "werkbonnen", "uren", "De uren op een werkbon worden uren om goed te keuren.", false),
-  koppel("werkbonnen-facturen", "werkbonnen", "facturen", "Een afgeronde werkbon wordt een factuur.", false),
-  koppel("lidmaatschappen-facturen", "lidmaatschappen", "facturen", "Een abonnement van een klant wordt elke periode een factuur.", false),
-  koppel("voorraad-webshop", "voorraad", "webshop", "Wat uitverkocht is, kan niet meer besteld worden.", false),
   koppel("ritten-uren", "ritten", "uren", "De tijd van een rit wordt het urenstaatje van de chauffeur.", false),
 ];
 

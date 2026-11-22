@@ -18,27 +18,31 @@ vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 import { ORG_KV_REGISTER, orgSleutel } from "@/lib/privacy/org-kv";
 import { exporteerOrganisatieGegevens, wisOrganisatieGegevens } from "@/lib/privacy/org-wissen";
 
-const MODULES = ["werkbonnen", "offertes", "checklists", "voorraad", "kamers", "ritten", "lidmaatschappen", "afspraken", "inkaart", "horeca-personeel", "telefoon-berichten"];
+/** modules met code in lib/ */
+const MET_CODE = ["ritten", "afspraken", "inkaart", "horeca-personeel", "telefoon-berichten"];
+/** op 22 nov 2026 uit de code gehaald; hun gegevens kunnen nog in de opslag staan en gaan bij het wissen en exporteren mee */
+const OPGEHEVEN = ["werkbonnen", "offertes", "checklists", "voorraad", "kamers", "lidmaatschappen"];
+const MODULES = [...MET_CODE, ...OPGEHEVEN];
 const LIB = join(process.cwd(), "lib");
 
 describe("register van organisatie-gegevens", () => {
   it("elk KV-voorvoegsel dat een module gebruikt staat in het register (een vergeten module valt hier op)", () => {
     const bekend = new Set(ORG_KV_REGISTER.map((r) => r.voorvoegsel));
     const gebruikt = new Set<string>();
-    for (const mod of MODULES) {
+    for (const mod of MET_CODE) {
       for (const f of readdirSync(join(LIB, mod)).filter((n) => n.endsWith(".ts"))) {
         const tekst = readFileSync(join(LIB, mod, f), "utf8");
         // "module:soort:${…" in een sjabloontekst: de eerste twee delen van de sleutel
         for (const hit of tekst.matchAll(/`([a-z-]+:[a-z-]+:)\$\{/g)) gebruikt.add(hit[1]!);
       }
     }
-    expect(gebruikt.size).toBeGreaterThan(20); // de scan vindt echt iets
+    expect(gebruikt.size).toBeGreaterThan(15); // de scan vindt echt iets
     expect([...gebruikt].filter((p) => !bekend.has(p))).toEqual([]);
   });
 
-  it("elke regel in het register wordt ook echt door een module gebruikt, en elke module staat erin", () => {
-    const alles = MODULES.flatMap((mod) => readdirSync(join(LIB, mod)).filter((n) => n.endsWith(".ts")).map((f) => readFileSync(join(LIB, mod, f), "utf8"))).join("\n");
-    for (const r of ORG_KV_REGISTER) expect(alles, r.voorvoegsel).toContain(`\`${r.voorvoegsel}\${`);
+  it("elke regel van een module met code wordt ook echt gebruikt, en elke module staat erin", () => {
+    const alles = MET_CODE.flatMap((mod) => readdirSync(join(LIB, mod)).filter((n) => n.endsWith(".ts")).map((f) => readFileSync(join(LIB, mod, f), "utf8"))).join("\n");
+    for (const r of ORG_KV_REGISTER.filter((x) => MET_CODE.includes(x.module))) expect(alles, r.voorvoegsel).toContain(`\`${r.voorvoegsel}\${`);
     expect(new Set(ORG_KV_REGISTER.map((r) => r.module))).toEqual(new Set(MODULES));
     expect(new Set(ORG_KV_REGISTER.map((r) => r.voorvoegsel)).size).toBe(ORG_KV_REGISTER.length);
   });

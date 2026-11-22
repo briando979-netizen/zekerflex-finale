@@ -63,11 +63,11 @@ describe("koppelingen", () => {
     for (const k of KOPPELINGEN.filter((x) => x.gebouwd)) expect(["klaar"], k.id).toContain(moduleVan(k.van)?.status);
   });
 
-  it("werkt pas als beide kanten klaar zijn", () => {
+  it("werkt pas als hij gebouwd is en beide kanten klaar zijn", () => {
     const uren = KOPPELINGEN.find((k) => k.id === "uren-facturen")!;
-    const werkbon = KOPPELINGEN.find((k) => k.id === "werkbonnen-uren")!;
+    const rit = KOPPELINGEN.find((k) => k.id === "ritten-uren")!;
     expect(koppelingWerkt(uren)).toBe(true);
-    expect(koppelingWerkt(werkbon)).toBe(false); // werkbonnen zijn nog gepland
+    expect(koppelingWerkt(rit)).toBe(false); // ritten en uren zijn klaar, de koppeling zelf niet
   });
 });
 
@@ -94,13 +94,11 @@ describe("branches", () => {
     expect(dekkingVan(horeca)).toEqual({ klaar: 13, totaal: 13, procent: 100 });
     const kapper = brancheVan("kapper-schoonheid")!;
     const d = dekkingVan(kapper);
-    expect(d.totaal).toBe(10);
-    expect(d.klaar).toBe(10); // afspraken, klantenkaart en voorraad staan sinds 11 nov
+    expect(d.totaal).toBe(9);
+    expect(d.klaar).toBe(9); // afspraken en klantenkaart staan sinds 11 nov; voorraad is op 22 nov weggehaald
     expect(d.procent).toBe(100);
-    // ook de bouw, schoonmaak en winkel hebben nu alles van hun lijst (werkbonnen, offertes, checklists en voorraad staan)
-    for (const s of ["bouw-installatie", "schoonmaak", "winkel"]) expect(dekkingVan(brancheVan(s)!).procent, s).toBe(100);
-    // ook transport (ritten), hotel (kamers) en sport (lidmaatschappen) hebben nu alles van hun lijst
-    for (const s of ["transport-logistiek", "hotel-verblijf", "sport-fitness"]) expect(dekkingVan(brancheVan(s)!).procent, s).toBe(100);
+    // de bouw, schoonmaak, winkel, transport (ritten), hotel en sport hebben alles van hun lijst
+    for (const s of ["bouw-installatie", "schoonmaak", "winkel", "transport-logistiek", "hotel-verblijf", "sport-fitness"]) expect(dekkingVan(brancheVan(s)!).procent, s).toBe(100);
     // wat nog ontbreekt: het dossier (zorg)
     expect(dekkingVan(brancheVan("zorgpraktijk")!)).toEqual({ klaar: 8, totaal: 9, procent: 89 });
     // het gemiddelde ligt tussen de laagste en de hoogste
@@ -113,15 +111,14 @@ describe("branches", () => {
     const horeca = koppelingenVan(brancheVan("horeca")!);
     const uren = horeca.find((k) => k.koppeling.id === "uren-facturen");
     expect(uren?.werkt).toBe(true);
-    expect(horeca.some((k) => k.koppeling.id === "werkbonnen-uren")).toBe(false);
+    expect(horeca.some((k) => k.koppeling.id === "ritten-uren")).toBe(false);
     // afspraken en de klantenkaart zijn allebei klaar: die koppeling werkt in de kapper-branche
     const kapper = koppelingenVan(brancheVan("kapper-schoonheid")!);
     expect(kapper.find((k) => k.koppeling.id === "afspraken-klantenkaart")?.werkt).toBe(true);
     // beide kanten zijn klaar, maar de koppeling zelf (herinneringen via de chat) is niet gebouwd: dus werkt hij niet
     expect(kapper.find((k) => k.koppeling.id === "afspraken-berichten")?.werkt).toBe(false);
-    const bouw = koppelingenVan(brancheVan("bouw-installatie")!);
-    expect(bouw.find((k) => k.koppeling.id === "werkbonnen-uren")?.werkt).toBe(false);
-    expect(bouw.find((k) => k.koppeling.id === "offertes-werkbonnen")?.werkt).toBe(false);
+    const transport = koppelingenVan(brancheVan("transport-logistiek")!);
+    expect(transport.find((k) => k.koppeling.id === "ritten-uren")?.werkt).toBe(false);
   });
 
   it("isBranche laat alleen eigen sleutels door (ook niet 'constructor' uit een adres)", () => {
@@ -146,7 +143,7 @@ describe("bouwvolgorde", () => {
 
   it("wat gebouwd is, staat er niet meer in; wat overblijft is alleen het dossier", () => {
     const sleutels = volgorde.map((s) => s.module.sleutel);
-    for (const klaar of ["afspraken", "klantenkaart", "voorraad", "werkbonnen", "offertes", "checklists", "ritten", "kamers", "lidmaatschappen"]) expect(sleutels, klaar).not.toContain(klaar);
+    for (const klaar of ["afspraken", "klantenkaart", "ritten"]) expect(sleutels, klaar).not.toContain(klaar);
     expect([...sleutels].sort()).toEqual(["dossier"]);
   });
 

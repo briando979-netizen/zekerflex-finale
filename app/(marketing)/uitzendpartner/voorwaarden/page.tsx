@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
-import { PrintKnop } from "@/components/offertes/PrintKnop";
+import { PrintKnop } from "@/components/ui/PrintKnop";
 import { canonical } from "@/lib/seo";
 import { BASE_FEE_PER_HOUR_CENTS } from "@/lib/pricing/tiers";
 import { PLATFORM_INSCHRIJVING, PLATFORM_NAAM } from "@/lib/platform/bedrijf";
