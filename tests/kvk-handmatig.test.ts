@@ -220,7 +220,7 @@ describe("mag deze beheerder dit? (puur)", () => {
 
   it("het nummer van de beheerder moet het nummer zijn dat de werker of het bedrijf opgaf", () => {
     expect(beslisKeuring({ ...basis, invoerNummer: "87654321" })).toMatchObject({ ok: false, status: 422, code: "NUMMER_KOMT_NIET_OVEREEN", bericht: expect.stringContaining("12345678") });
-    expect(beslisKeuring({ ...basis, soort: "bedrijf", invoerNummer: "87654321" })).toMatchObject({ ok: false, code: "NUMMER_KOMT_NIET_OVEREEN", bericht: expect.stringContaining("Het bedrijf") });
+    expect(beslisKeuring({ ...basis, soort: "bedrijf", invoerNummer: "87654321" })).toMatchObject({ ok: false, code: "NUMMER_KOMT_NIET_OVEREEN", bericht: expect.stringContaining("Dit bedrijf") });
     // een bedrijf zonder bekend nummer (de aanmelding kon niet): de beheerder vult het in
     expect(beslisKeuring({ ...basis, soort: "bedrijf", bekendNummer: null, invoerNummer: "87654321" })).toEqual({ ok: true });
     // een werker zonder nummer van 8 cijfers: eerst laten invullen
