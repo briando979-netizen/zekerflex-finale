@@ -46,14 +46,15 @@ export const FLAG_REGISTRY: FlagDef[] = [
   { key: "google-verificatiemail", label: "Verificatiemail ook bij aanmelden met Google of Apple", description: "Aan = een nieuw account dat via Google of Apple wordt gemaakt krijgt dezelfde bevestigingsmail (link + code) als een gewone aanmelding en moet het adres eerst bevestigen. Uit = zo’n account geldt meteen als bevestigd en krijgt een welkomstmail. Een verborgen adres van Apple (@privaterelay.appleid.com) geldt altijd meteen als bevestigd. Bestaande accounts veranderen niet.", default: true },
 ];
 
-// Publiek = alleen flexwerk (lib/marketing/flexwerk-only.ts): verbergt de niet-flexwerk-onderdelen (webshop, apps & spelletjes,
-// website/webshop maken, logo, advertentie, starters, domein, checks, branche-software, de online-tools en /developers) uit
-// menu, voorpagina, voettekst, sitemap en Google. De pagina's blijven bestaan en zijn via een directe link bereikbaar.
+// Publiek = alleen flexwerk (lib/marketing/flexwerk-only.ts): verbergt de niet-flexwerk-onderdelen (het aanbod van de pijlers
+// online en branche, /aanbod, de klussenkaart, de partnerpagina's en /developers) uit menu, voorpagina, voettekst, sitemap en
+// Google. Die pagina's blijven bestaan en zijn via een directe link bereikbaar. De webshop, de apps-pagina's en de online-tools
+// zijn sinds 22 nov 2026 helemaal uit de code (next.config.mjs stuurt hun oude adressen door).
 FLAG_REGISTRY.push({
   key: "publiek-alleen-flexwerk",
   label: "Publiek: alleen flexwerk tonen",
   description:
-    "Aan = de openbare site toont alleen flexwerk/uitzend/zzp/freelance: de webshop, apps & spelletjes, website- en webshop-maken, logo, advertentie op maat, starters, domeinnamen, de gratis checks, de branche-software (horeca, rijschool), de online-tools (/online) en het ontwikkelaarsportaal (/developers) verdwijnen uit het menu, de voorpagina, de voettekst, de sitemap en Google (noindex). De pagina's blijven bestaan en zijn via een directe link bereikbaar; FlikFlak en Talkaro houden hun eigen adres. Uit (standaard) = alles blijft zichtbaar zoals nu.",
+    "Aan = de openbare site toont alleen flexwerk/uitzend/zzp/freelance: het aanbod voor online en branche-software (horeca, rijschool), het overzicht /aanbod, de klussenkaart, de partnerpagina's en het ontwikkelaarsportaal (/developers) verdwijnen uit het menu, de voorpagina, de voettekst, de sitemap en Google (noindex). Die pagina's blijven bestaan en zijn via een directe link bereikbaar. De webshop, apps & spelletjes, website maken, logo, advertentie op maat, starters, domeinnamen, de gratis checks en /online zijn sinds 22 nov 2026 helemaal weg; hun oude adressen sturen door. Uit (standaard) = de rest blijft zichtbaar zoals nu.",
   default: false,
 });
 

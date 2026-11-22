@@ -3,18 +3,18 @@
 //
 // Eén bron van waarheid voor wat er, als de vlag AAN staat, uit het openbare
 // zicht verdwijnt: niet-flexwerk-pijlers (online tools, branche-software),
-// niet-flexwerk-menu's (shop, apps), de losse product-dashboards (website,
+// niet-flexwerk-menuknoppen (aanbod, prijzen), de losse product-dashboards (website,
 // webshop, horeca, rijschool) en de vaste niet-flexwerk-pagina's.
 //
 // Dit bestand bepaalt waar ze NIET meer naartoe gelinkt worden (menu, voorpagina,
 // voettekst), waar ze uit de sitemap/rondgang vallen en waar ze op noindex komen.
-// Sinds 22 nov 2026 sturen de oude verkooppagina's en hulpmiddelen (apps, websites,
+// Sinds 22 nov 2026 zijn de oude verkooppagina's en hulpmiddelen (apps, websites,
 // logo, advertentie, domein, website- en reviewcheck, rijschool-software,
-// partnerplatform, producten, abonnementen, de aanbodpagina's van online/branche)
-// bovendien door naar /voor-bedrijven of /app (next.config.mjs; eigenaar: "verwijder
-// de shop en apps enzo", en niemand gebruikte ze). /aanbod zelf en de flexwerk-
-// onderdelen in deze lijst (developers, open-diensten, partnerpagina's) blijven via
-// een directe link bereikbaar.
+// partnerplatform, producten, abonnementen) en de webshop helemaal uit de code; hun
+// oude adressen sturen door naar /voor-bedrijven, /app of de voorpagina
+// (next.config.mjs; eigenaar: "verwijder de shop en apps enzo", en niemand gebruikte
+// ze). /aanbod zelf en de flexwerk-onderdelen in deze lijst (developers,
+// open-diensten, partnerpagina's) blijven via een directe link bereikbaar.
 //
 // Puur en browser-veilig (geen prisma/kv): het menu (client) en de server lezen
 // er allebei uit. De vlag zelf lees je met `featureEnabled(FLAG_ALLEEN_FLEXWERK)`
@@ -35,8 +35,9 @@ export function pijlerIsFlexwerk(sleutel: PijlerSleutel): boolean {
 }
 
 /** Hoofdmenu-knoppen (lib/marketing/site-nav.ts) die niet over flexwerk gaan. "aanbod" = de brede Aanbod-uitklap. */
-// 21 nov 2026 (eigenaar: "prijzen ook weg"): de knop Prijzen ook uit het menu; tarievenoverzicht en rekenhulp staan onder Kennis
-export const NIET_FLEXWERK_NAV_KEYS: readonly string[] = ["shop", "apps", "aanbod", "prijzen"];
+// 21 nov 2026 (eigenaar: "prijzen ook weg"): de knop Prijzen ook uit het menu; tarievenoverzicht en rekenhulp staan onder Kennis.
+// 22 nov 2026: de knoppen Shop en Apps & spelletjes bestaan niet meer (een bewaarde eigen menuversie laat ze ook vallen).
+export const NIET_FLEXWERK_NAV_KEYS: readonly string[] = ["aanbod", "prijzen"];
 
 /** Werkruimte-soorten die niet over flexwerk gaan (de losse product-dashboards). "personeel" blijft. */
 export const NIET_FLEXWERK_SOORTEN: readonly string[] = ["website", "webshop", "horeca", "rijschool"];
@@ -47,12 +48,15 @@ export function werkruimteIsFlexwerk(soort: string): boolean {
 }
 
 /**
- * Vaste openbare pagina's die niet over flexwerk gaan. Als de vlag aan is vallen
- * ze uit menu, voorpagina, voettekst, sitemap en de nachtelijke rondgang, en
- * komen ze op noindex. Ze blijven bestaan en bereikbaar via een directe link.
- * Een subpad (bv. /shop/zakelijk, /developers/api) valt vanzelf mee.
+ * Openbare paden die niet over flexwerk gaan. Als de vlag aan is vallen ze uit menu, voorpagina, voettekst, sitemap en
+ * de nachtelijke rondgang, en komen ze op noindex. Een subpad (bv. /developers/api) valt vanzelf mee.
+ * De bovenste groep is op 22 nov 2026 uit de code gehaald (next.config.mjs stuurt de oude adressen door). Die paden
+ * blijven hier: /sitemap-verwijderd.xml (lib/seo/verwijderd.ts) vraagt Google ze opnieuw op te halen, en links ernaar die
+ * nog in het aanbod (de pijlers online en branche) of in een bewaarde eigen voettekst staan, blijven verborgen.
+ * De andere paden bestaan nog en zijn via een directe link bereikbaar.
  */
 export const NIET_FLEXWERK_PADEN: readonly string[] = [
+  // weg sinds 22 nov 2026
   "/shop",
   "/producten",
   "/apps",
@@ -67,6 +71,10 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   "/review-check",
   "/rijschool-software",
   "/verkopen",
+  "/nieuwe-home",
+  "/abonnementen",
+  "/voorbeeldsites",
+  // bestaan nog, verborgen
   "/developers",
   // de klussen-kaart (en de 3D-variant). De bezoeker ziet de kaart pas na het aanmelden.
   "/open-diensten",
@@ -77,13 +85,9 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   // spoedoproep, facturen, …). De eigenaar wil "aanbod verbergen inclusief wat er is" en "de functies weg";
   // de kern-flexwerk-SEO blijft gedekt door /personeel-inhuren, /uitzendbureau en de sector-/stadpagina's.
   "/aanbod",
-  // de proefversies van het voorpagina-herontwerp van 19 nov (teruggedraaid): de brede home en de losse flexwerk-home.
-  // De eigenaar wil ze dicht (20 nov); ze linken alleen naar elkaar.
-  "/nieuwe-home",
+  // de proefversie van het voorpagina-herontwerp van 19 nov (teruggedraaid): de losse flexwerk-home (de brede home,
+  // /nieuwe-home, staat hierboven). De eigenaar wil hem dicht (20 nov).
   "/flexwerk",
-  // 21 nov 2026 (eigenaar: "alleen flexwerk en de regio's in Google"): de maandabonnementen met modules en de voorbeeldwebsites
-  "/abonnementen",
-  "/voorbeeldsites",
 ];
 
 /**

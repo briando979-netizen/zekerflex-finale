@@ -124,7 +124,7 @@ describe("het hoofdmenu met de vlag aan", () => {
     expect(zichtbareNav(NAV, false)).toBe(NAV);
   });
 
-  it("met de vlag aan vallen shop, apps en aanbod uit de bovenbalk", () => {
+  it("met de vlag aan vallen aanbod en prijzen uit de bovenbalk", () => {
     const keys = zichtbareNav(NAV, true).map((n) => n.key);
     for (const weg of NIET_FLEXWERK_NAV_KEYS) expect(keys, weg).not.toContain(weg);
     expect(keys).not.toContain("aanbod");
