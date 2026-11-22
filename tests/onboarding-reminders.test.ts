@@ -149,4 +149,28 @@ describe("onboarding reminders", () => {
     await runOnboardingReminders(NOW);
     expect(m.mail).not.toHaveBeenCalled();
   });
+
+  // 22 nov 2026 (privé-accounts van de eigenaar): een account dat in Beheer als eigen test staat, of lid is van een bedrijf dat
+  // zo staat, krijgt geen herinneringen (lib/admin/eigen-test-regel.ts)
+  it("een eigen-test-account en het lid van een eigen-testbedrijf krijgen geen herinneringen", async () => {
+    const wis = () => {
+      (globalThis as { __zfEigenTest?: unknown }).__zfEigenTest = undefined;
+    };
+    wis();
+    m.kv.set("systeem:eigen-test", { tenants: { t_prive: "2026-10-01T00:00:00.000Z" }, users: { u_werker: "2026-10-01T00:00:00.000Z" } });
+    m.users = [
+      user({ id: "u_werker", createdAt: daysAgo(10) }),
+      user({ id: "u_ik", createdAt: daysAgo(10), memberships: [{ role: "HQ_ADMIN", tenantId: "t_prive" }] }),
+    ];
+    try {
+      for (let i = 0; i < 4; i++) await runOnboardingReminders(NOW);
+      expect(m.mail).not.toHaveBeenCalled();
+      // een gewone gebruiker ernaast krijgt ze wel
+      m.users = [user({ id: "u_echt", createdAt: daysAgo(10) })];
+      await runOnboardingReminders(NOW);
+      expect(m.mail).toHaveBeenCalledTimes(1);
+    } finally {
+      wis();
+    }
+  });
 });
