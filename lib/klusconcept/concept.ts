@@ -53,15 +53,25 @@ export interface ConceptCost {
   totalCents: number;
 }
 
-/** What the klus costs excl. btw: the workers' rate plus the platform fee (staffel over the klus's own hours). */
-export function conceptCost(c: Pick<KlusConcept, "start" | "end" | "breakMinutes" | "positions" | "rateCents">): ConceptCost {
-  const hours = conceptHours(c);
+/**
+ * What a klus costs excl. btw when the worked hours are already known: the workers' rate plus the platform fee
+ * (staffel over all hours of the klus). The full form (NewShiftForm) knows a date and time, not a bare HH:MM, and can
+ * place the same klus on several days (`days`, same times); /klus-plaatsen and "Snel plaatsen" use conceptCost.
+ */
+export function kostenUitUren(c: { hours: number; positions: number; rateCents: number; days?: number }): ConceptCost {
+  const hours = Math.max(0, Math.round(c.hours * 100) / 100);
   const positions = Math.max(1, Math.min(50, Math.round(c.positions) || 1));
-  const totalHours = Math.round(hours * positions * 100) / 100;
+  const days = Math.max(1, Math.min(60, Math.round(c.days ?? 1) || 1));
+  const totalHours = Math.round(hours * positions * days * 100) / 100;
   const grossPerPersonCents = Math.round(hours * c.rateCents);
-  const grossTotalCents = grossPerPersonCents * positions;
+  const grossTotalCents = grossPerPersonCents * positions * days;
   const feeTotalCents = monthlyPlatformFeeCents(totalHours);
   return { hours, totalHours, grossPerPersonCents, grossTotalCents, feeTotalCents, totalCents: grossTotalCents + feeTotalCents };
+}
+
+/** What the klus costs excl. btw: the workers' rate plus the platform fee (staffel over the klus's own hours). */
+export function conceptCost(c: Pick<KlusConcept, "start" | "end" | "breakMinutes" | "positions" | "rateCents">): ConceptCost {
+  return kostenUitUren({ hours: conceptHours(c), positions: c.positions, rateCents: c.rateCents });
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");

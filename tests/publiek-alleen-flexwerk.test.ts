@@ -311,8 +311,10 @@ describe("de bedrijfskant met de vlag aan", () => {
     expect(start).toContain("{!startModus && alleenFlexwerk && teDoenBlok}");
     expect(start).toContain("{!startModus && !alleenFlexwerk && <EmployerDashboardHero />}");
     const nieuw = readFileSync("app/werkgever/diensten/nieuw/page.tsx", "utf8");
+    // 22 nov: het uitgebreide formulier in twee stappen is de standaard; de korte weg (SnelPlaatsen) staat achter een link (?snel=1)
     expect(nieuw).toContain("<SnelPlaatsen");
-    expect(nieuw).toContain("<details");
+    expect(nieuw).toContain("snelModus");
+    expect(nieuw).not.toContain("<details");
     // één woord voor hetzelfde: "klus", niet "dienst", in de teksten van de werkgeversapp
     const nl = readFileSync("lib/i18n/dictionaries.ts", "utf8");
     for (const oud of ['invShift: "Dienst', 'typeShift: "Dienst', 'sourceShift: "Dienst"', 'uitzetten: "Dienst', 'statDiensten: "diensten"']) expect(nl).not.toContain(oud);
