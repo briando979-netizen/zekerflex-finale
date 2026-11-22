@@ -6,6 +6,8 @@ import { createShift } from "@/lib/shifts/create";
 import { annuleerUrenOf } from "@/lib/shifts/annuleertermijn";
 import { klusAutoAccept } from "@/lib/shifts/auto-accept";
 import { addMember, createPool, listPools } from "@/lib/pools/store";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
 
 // ---------------------------------------------------------------------------
 // "Zelfde team volgende week" — one click repeats a klus N weeks later and
@@ -56,6 +58,12 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
     const existing = (await listPools(s.branch.tenantId)).find((p) => p.name === poolName);
     poolId = existing?.id ?? (await createPool(s.branch.tenantId, poolName)).id;
     for (const userId of team) await addMember(s.branch.tenantId, poolId, userId);
+  }
+  // Niemand toegewezen en een eigen-testbedrijf (lib/admin/eigen-test-regel.ts): de herhaalde klus erft de pool van het origineel
+  // en gaat dus niet naar de open markt.
+  if (!poolId && isEigenTestBedrijf(await leesEigenTest(), s.branch.tenantId)) {
+    poolId = (await prisma.shiftPoolInvite.findFirst({ where: { shiftId }, select: { poolId: true } }))?.poolId;
+    if (poolId) poolName = (await listPools(s.branch.tenantId)).find((p) => p.id === poolId)?.name ?? null;
   }
 
   const res = await createShift(principal, {
