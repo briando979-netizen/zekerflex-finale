@@ -1,6 +1,8 @@
 // De teksten van "Snel een klus plaatsen" (components/werkgever/SnelPlaatsen.tsx), Nederlands en Engels zoals de rest van
 // de werkgeversapp. Puur bestand: de pagina (server) geeft ze mee en de tests lezen ze zonder JSX.
 
+import { amsterdamDagLabel } from "@/lib/time/amsterdam";
+
 export interface SnelTeksten {
   kop: string;
   stap1: string;
@@ -26,7 +28,13 @@ export interface SnelTeksten {
   volgende: string;
   plaats: string;
   bezig: string;
+  /** "{titel} op {datum} van {van} tot {tot}{pauze}, {personen}, € {tarief} per uur." (snelSamenvatting) */
   samenvatting: string;
+  persoonEen: string;
+  /** "{n} personen": enkel- en meervoud apart, niet "persoon/personen" */
+  persoonMeer: string;
+  /** achter de eindtijd als er een pauze is; "{m}" = minuten */
+  metPauze: string;
   fout: string;
   /** de kostenregel naast "Plaats de klus", dezelfde som als /klus-plaatsen (lib/klusconcept/concept.ts conceptCost) */
   kostenLoon: string;
@@ -60,7 +68,10 @@ export const SNEL_NL: SnelTeksten = {
   volgende: "Volgende",
   plaats: "Plaats de klus",
   bezig: "Even geduld…",
-  samenvatting: "{titel} op {datum} van {van} tot {tot}, {n} persoon/personen, € {tarief} per uur.",
+  samenvatting: "{titel} op {datum} van {van} tot {tot}{pauze}, {personen}, € {tarief} per uur.",
+  persoonEen: "1 persoon",
+  persoonMeer: "{n} personen",
+  metPauze: " ({m} minuten pauze)",
   fout: "Vul de eindtijd ná de begintijd in.",
   kostenLoon: "Loon kracht",
   kostenLoonMeer: "Loon krachten",
@@ -92,7 +103,10 @@ export const SNEL_EN: SnelTeksten = {
   volgende: "Next",
   plaats: "Place the job",
   bezig: "One moment…",
-  samenvatting: "{titel} on {datum} from {van} until {tot}, {n} person(s), € {tarief} per hour.",
+  samenvatting: "{titel} on {datum} from {van} until {tot}{pauze}, {personen}, € {tarief} per hour.",
+  persoonEen: "1 person",
+  persoonMeer: "{n} people",
+  metPauze: " ({m} minute break)",
   fout: "The end time must be after the start time.",
   kostenLoon: "Worker's pay",
   kostenLoonMeer: "Workers' pay",
@@ -100,6 +114,28 @@ export const SNEL_EN: SnelTeksten = {
   kostenTotaal: "Total excl. VAT",
   kostenUitleg: "You only pay for hours worked; the break does not count.",
 };
+
+const vul = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ""));
+
+/**
+ * De samenvatting vlak boven "Plaats de klus": "Bediening / horeca op dinsdag 24 november van 10:00 tot 16:00, 1 persoon,
+ * € 17 per uur." 22 nov 2026 (gebruikersonderzoek B25): er stond "op 2026-11-24" en "1 persoon/personen".
+ */
+export function snelSamenvatting(
+  t: Pick<SnelTeksten, "samenvatting" | "persoonEen" | "persoonMeer" | "metPauze">,
+  v: { titel: string; datum: string; van: string; tot: string; personen: number; pauze: number; tarief: string },
+  locale: "nl" | "en" = "nl",
+): string {
+  return vul(t.samenvatting, {
+    titel: v.titel,
+    datum: amsterdamDagLabel(v.datum, locale === "en" ? "en-GB" : "nl-NL") || v.datum,
+    van: v.van,
+    tot: v.tot,
+    pauze: v.pauze > 0 ? vul(t.metPauze, { m: v.pauze }) : "",
+    personen: v.personen === 1 ? t.persoonEen : vul(t.persoonMeer, { n: v.personen }),
+    tarief: locale === "en" ? v.tarief : v.tarief.replace(".", ","),
+  });
+}
 
 /** De pauzes om uit te kiezen, zoals op /klus-plaatsen; een afwijkende pauze uit een concept komt erbij. */
 export function pauzeKeuzes(huidig: number): number[] {

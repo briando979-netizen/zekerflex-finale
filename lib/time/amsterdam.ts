@@ -99,6 +99,21 @@ export function amsterdamDayKey(d: Date | string | number): string {
   return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
 }
 
+/**
+ * "dinsdag 24 november" — a calendar day ("2026-11-24", e.g. a date field) written out, the same on server and phone.
+ * Noon UTC is the same calendar day in Amsterdam all year. "" for anything that is not a day.
+ */
+export function amsterdamDagLabel(dayKey: string, locale = "nl-NL"): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+  if (!m) return "";
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12)).toLocaleDateString(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Amsterdam",
+  });
+}
+
 /** "2026-11-05T09:00" — a datetime-local field value in Dutch time; parseAmsterdamLocal reads it back. */
 export function amsterdamLocalInput(d: Date | string | number): string {
   const p = amsterdamParts(new Date(d));

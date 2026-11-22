@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { amsterdamClock, amsterdamDayKey } from "@/lib/time/amsterdam";
+import { amsterdamClock, amsterdamDagLabel, amsterdamDayKey } from "@/lib/time/amsterdam";
 import { monthGrid, type CalShift } from "@/lib/dashboard/employer-calendar";
 
 // De server draait in UTC, telefoons soms in een andere zone. Diensttijden zijn
@@ -64,5 +64,22 @@ describe("werkgeverskalender in Nederlandse dagen", () => {
     const weeks = monthGrid(2026, 1, []); // februari
     expect(weeks).toHaveLength(6);
     expect(weeks.every((w) => w.length === 7)).toBe(true);
+  });
+});
+
+// 22 nov 2026: de samenvatting van "Snel een klus plaatsen" toonde "op 2026-11-24"
+describe("amsterdamDagLabel", () => {
+  it("schrijft een dag uit, in welke zone de server of de telefoon ook staat", () => {
+    for (const tz of ["UTC", "America/Los_Angeles", "Pacific/Auckland", "Europe/Amsterdam"]) {
+      process.env.TZ = tz;
+      expect(amsterdamDagLabel("2026-11-24"), tz).toBe("dinsdag 24 november");
+    }
+    expect(amsterdamDagLabel("2026-11-24", "en-GB")).toBe("Tuesday 24 November");
+    expect(amsterdamDagLabel("2026-03-29")).toBe("zondag 29 maart"); // de dag van de zomertijd
+  });
+
+  it("geeft niets terug voor iets wat geen dag is", () => {
+    expect(amsterdamDagLabel("")).toBe("");
+    expect(amsterdamDagLabel("24-11-2026")).toBe("");
   });
 });

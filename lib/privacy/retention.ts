@@ -39,6 +39,12 @@ export interface RetentionRule {
 
 const YEAR = 365;
 
+/**
+ * Regels van producten die weg zijn (rijschool, horeca, klantsites; 22 nov 2026). De opruiming draait door voor wat er
+ * nog staat, maar de verwijderpagina van een bedrijf noemt ze niet meer (gebruikersonderzoek F05b-02).
+ */
+export const REGELS_OPGEHEVEN_PRODUCTEN: readonly string[] = ["rijschool_lesroutes", "rijschool_berichten", "horeca_gasten"];
+
 export const RETENTION_RULES: readonly RetentionRule[] = [
   {
     key: "account",

@@ -2,6 +2,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { ErasureScopeInfo } from "@/components/privacy/ErasureScopeInfo";
+import { REGELS_OPGEHEVEN_PRODUCTEN } from "@/lib/privacy/retention";
 import { DeleteOwnAccountForm } from "@/components/app/DeleteOwnAccountForm";
 import { DELETE_ACCOUNT_EN, DELETE_ACCOUNT_NL } from "@/components/app/delete-account-texts";
 import { BackLink } from "@/components/app/BackLink";
@@ -38,7 +39,8 @@ export default async function VerwijderBedrijfsAccountPage() {
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold text-ink">{t.jijKop}</p>
-          <ErasureScopeInfo {...(en ? { texts: FREELANCER_DICTS.en.restTaal } : {})} />
+          {/* zonder rijlessen, horecareserveringen en klantsites: die producten zijn weg (22 nov 2026) */}
+          <ErasureScopeInfo verberg={REGELS_OPGEHEVEN_PRODUCTEN} {...(en ? { texts: FREELANCER_DICTS.en.restTaal } : {})} />
         </div>
         <DeleteOwnAccountForm texts={en ? DELETE_ACCOUNT_EN : DELETE_ACCOUNT_NL} />
       </div>
