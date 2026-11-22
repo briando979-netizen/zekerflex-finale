@@ -82,6 +82,15 @@ describe("geen interne notities of Engelse vaktaal voor klanten", () => {
     expect(Object.values(DEPLOYMENT_LABEL).join(" ")).not.toMatch(/SaaS|Self-hosted|as a service/);
   });
 
+  // 22 nov 2026 (gebruikersonderzoek, B02b-03): "gegeofenced", "matchscore", "in golven", "aggregeren" op de bedrijfspagina's
+  it("de bedrijvenpagina en de standaardteksten uit het tekstregister gebruiken geen vaktermen", () => {
+    const VAK = /gegeofenced|geofenc|matchscore|aggreg|in golven|vakmatch|badge-niveau|reverse billing/i;
+    expect(lees("app/(marketing)/bedrijven/page.tsx")).not.toMatch(VAK);
+    const standaard = [...lees("lib/content/store.ts").matchAll(/default: "([^"]*)"/g)].map((m) => m[1]).join("\n");
+    expect(standaard.length).toBeGreaterThan(1000);
+    expect(standaard).not.toMatch(VAK);
+  });
+
   it("/about is geen Engelse kopie meer maar stuurt door naar /over-ons", () => {
     const s = lees("app/(marketing)/about/page.tsx");
     expect(s).toContain('permanentRedirect("/over-ons")');
