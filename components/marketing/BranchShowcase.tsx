@@ -107,7 +107,11 @@ const TEKST = {
 /** Zoveel steden onder de branches: een korte rij, het overzicht heeft ze allemaal. */
 const STEDEN_IN_RIJ = 10;
 
-export function BranchShowcase({ minRateCents, voor = "werkers" }: { minRateCents: number; voor?: Voor }) {
+/**
+ * steden: de rij links per stad onder de branches. Op de voorpagina staat die sinds 22 nov 2026 niet meer (gebruikersonderzoek:
+ * tien knoppen die afleiden); de voettekst heeft de rij "Werk per stad". /bedrijven houdt hem (de standaard).
+ */
+export function BranchShowcase({ minRateCents, voor = "werkers", steden = true }: { minRateCents: number; voor?: Voor; steden?: boolean }) {
   const t = TEKST[voor];
   return (
     <section className="relative bg-paper-soft">
@@ -144,23 +148,25 @@ export function BranchShowcase({ minRateCents, voor = "werkers" }: { minRateCent
             <span className="text-sm text-neutralx-500">{t.noot}</span>
           </div>
         </Reveal>
-        <nav aria-label={t.stedenKop} className="mt-6">
-          <p className="text-sm font-semibold text-ink">{t.stedenKop}</p>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {topSteden(STEDEN_IN_RIJ).map((c) => (
-              <li key={c.slug}>
-                <Link href={t.stadHref(c.slug)} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
-                  {c.name}
+        {steden && (
+          <nav aria-label={t.stedenKop} className="mt-6">
+            <p className="text-sm font-semibold text-ink">{t.stedenKop}</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {topSteden(STEDEN_IN_RIJ).map((c) => (
+                <li key={c.slug}>
+                  <Link href={t.stadHref(c.slug)} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link href={voor === "werkers" ? "/freelance-werk" : "/personeel-inhuren"} className="inline-block px-1 py-1 text-sm font-semibold text-brand-600 hover:underline">
+                  Alle steden →
                 </Link>
               </li>
-            ))}
-            <li>
-              <Link href={voor === "werkers" ? "/freelance-werk" : "/personeel-inhuren"} className="inline-block px-1 py-1 text-sm font-semibold text-brand-600 hover:underline">
-                Alle steden →
-              </Link>
-            </li>
-          </ul>
-        </nav>
+            </ul>
+          </nav>
+        )}
       </div>
     </section>
   );

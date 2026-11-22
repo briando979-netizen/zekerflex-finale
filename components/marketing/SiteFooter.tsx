@@ -3,7 +3,11 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 import { SocialLinks } from "@/components/marketing/SocialLinks";
 import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
-import { STANDAARD_VOETTEKST, type Voettekst } from "@/lib/ontwerp/menu";
+import { STANDAARD_VOETTEKST, voettekstZonderDubbel, type Voettekst } from "@/lib/ontwerp/menu";
+import { topSteden } from "@/lib/seo-cities";
+
+/** Zoveel steden in de rij "Werk per stad" (zoals eerst op de voorpagina); het overzicht heeft ze allemaal. */
+const STEDEN_IN_VOETTEKST = 10;
 import { BEDRIJF } from "@/lib/marketing/bedrijfsgegevens";
 import { SITE } from "@/lib/seo";
 import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
@@ -14,11 +18,13 @@ import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 // website maken, rijschool-/horecasoftware, producten, verkopen, developers, …) vallen uit de voettekst.
 export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = false }: { voettekst?: Voettekst; alleenFlexwerk?: boolean }) {
   const year = new Date().getFullYear();
-  const kolommen = alleenFlexwerk
+  const zichtbaar = alleenFlexwerk
     ? voettekst.kolommen
         .map((col) => ({ ...col, links: col.links.filter((l) => !isNietFlexwerkPad(l.href)) }))
         .filter((col) => col.links.length > 0)
     : voettekst.kolommen;
+  // elke link één keer; de telefoon en het mailadres staan al in de regel met de bedrijfsgegevens (22 nov 2026)
+  const kolommen = voettekstZonderDubbel(zichtbaar, [SITE.phoneHref, `mailto:${SITE.email}`]);
   return (
     <footer className="hero-ink text-white">
       <div className="border-b border-white/10">
@@ -43,11 +49,7 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = f
             <span className="font-display text-lg font-bold">ZekerFlex</span>
           </div>
           {voettekst.slogan ? <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">{voettekst.slogan}</p> : null}
-          <div className="mt-5 flex items-center gap-2 text-xs text-white/50">
-            <Link href="/status" className="underline hover:text-white">
-              Bekijk de systeemstatus
-            </Link>
-          </div>
+          {/* geen losse "Bekijk de systeemstatus" meer: /status staat één keer, in de kolom Platform (22 nov 2026) */}
           <SocialLinks className="mt-6" />
         </div>
 
@@ -74,6 +76,22 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = f
           </div>
         ))}
       </div>
+
+      {/* Werk per stad: stond als tien knoppen op de voorpagina en staat sinds 22 nov 2026 hier (gebruikersonderzoek, KAN WEG);
+          zo houden de stadspagina's hun links (lib/seo-cities.ts) */}
+      <nav aria-label="Werk per stad" className="border-t border-white/10">
+        <div className="shell flex flex-wrap items-baseline gap-x-4 gap-y-2 py-5 text-sm">
+          <span className="font-mono text-xs uppercase tracking-[0.16em] text-white/60">Werk per stad</span>
+          {topSteden(STEDEN_IN_VOETTEKST).map((c) => (
+            <Link key={c.slug} href={`/freelance-werk/${c.slug}`} className="text-white/70 transition-colors hover:text-white">
+              {c.name}
+            </Link>
+          ))}
+          <Link href="/freelance-werk" className="font-semibold text-white/85 transition-colors hover:text-white">
+            Alle steden →
+          </Link>
+        </div>
+      </nav>
 
       {/* officiële bedrijfsgegevens: iedereen kan zelf in het register van Delaware nakijken dat het bedrijf bestaat (lib/marketing/bedrijfsgegevens.ts) */}
       <div className="border-t border-white/10">
