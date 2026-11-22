@@ -25,6 +25,8 @@ import {
   type WerkIcoon,
 } from "@/lib/marketing/werk-home";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { featureEnabled } from "@/lib/flags";
+import { ALLEEN_APP_VLAG } from "@/lib/app-vereist";
 
 // ---------------------------------------------------------------------------
 // De homepagina voor werkzoekenden (11 nov 2026). Wie zekerflex.com opent, ziet
@@ -46,6 +48,8 @@ export default async function WerkHomePage() {
   // vlag `publiek-alleen-flexwerk`: de voorpagina blijft, maar de knop "Bekijk klussen" en de "Bezorgen"-chip (→ /klussen,
   // nu verborgen) vallen weg; de bezoeker gaat via "Maak gratis je profiel" naar het aanmelden.
   const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
+  // vlag "werker-omgeving alleen in de app" (standaard uit): bepaalt of het voorbeeldaccount in de browser opent
+  const alleenApp = await featureEnabled(ALLEEN_APP_VLAG).catch(() => false);
   return (
     <>
       <script
@@ -166,18 +170,28 @@ export default async function WerkHomePage() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────── bekijk de app */}
+      {/* ───────────────────────────────────────────────── zo ziet de app eruit */}
+      {/* 22 nov 2026 (gebruikersonderzoek punt 9): het blok beloofde een voorbeeldaccount, maar de knop ging naar de downloadpagina.
+          Nu gaat de knop echt naar het voorbeeldaccount (/voorbeeld/werker: de echte app met verzonnen gegevens, alleen kijken).
+          Staat "alleen in de app" aan (lib/app-vereist.ts), dan opent dat voorbeeld in de browser niet: dan eerlijk naar /app. */}
       <section className="bg-paper-soft">
         <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal className="rounded-3xl border border-hair bg-white p-6 shadow-sm md:p-10">
             <p className="eyebrow">Zie het zelf</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Bekijk de app van binnen</h2>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Zo ziet de app eruit</h2>
             <p className="fluid-lead mt-4 max-w-2xl text-neutralx-600">
-              Kijk mee in een voorbeeldaccount met verzonnen gegevens. Zo zie je hoe je klussen vindt, incheckt met je
-              telefoon en betaald wordt, zonder je aan te melden.
+              {alleenApp
+                ? "Je vindt klussen bij jou in de buurt, checkt in met je telefoon en ziet je uren en uitbetalingen op één plek."
+                : "Kijk mee in een voorbeeldaccount met verzonnen gegevens: zo zie je hoe je klussen vindt, incheckt met je telefoon en je uren en uitbetalingen ziet. Je hoeft je niet aan te melden."}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/app" className="btn-mint text-base">Bekijk de app</Link>
+              {alleenApp ? (
+                <Link href="/app" className="btn-mint text-base">Download de app</Link>
+              ) : (
+                // een gewone link (volledige paginalading): /voorbeeld/werker is een route die een alleen-lezen sessie zet en
+                // doorstuurt; geen voorladen, anders maakt elke bezoeker die langs scrolt al een sessie aan
+                <a href="/voorbeeld/werker" className="btn-mint text-base">Bekijk het voorbeeld</a>
+              )}
               <Link href={WERK_AANMELDEN} className="btn-ghost text-base">Of maak gratis je profiel</Link>
             </div>
           </Reveal>
