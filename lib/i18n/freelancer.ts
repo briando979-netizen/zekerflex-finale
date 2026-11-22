@@ -642,8 +642,6 @@ const nl = {
     // de lege lijst op Ontdekken (20 nov): eerlijk dat er nog weinig is, met één actie (meldingen aan); geen aantallen of data
     noJobsBody: "ZekerFlex is nog in opbouw. Er zijn daarom nog weinig klussen. Met meldingen aan kunnen we je een bericht sturen als er een klus bij jou in de buurt is.",
     noJobsPushOn: "Je meldingen staan aan. We sturen je een bericht als er een passende klus is.",
-    alleenTestTitle: "Nog geen echte klussen bij jou in de buurt",
-    alleenTestBody: "ZekerFlex is net begonnen. De klussen hieronder zijn testklussen: daar zit geen werk achter. Maak je profiel af en zet meldingen aan, dan hoor je het als eerste zodra er een echte klus is.",
     // 22 nov 2026 (gebruikersonderzoek punt 12): één zin bovenaan de lijst als er geen echte klus in de buurt is
     geenEchtInBuurt: "Er zijn nog geen klussen bij jou in de buurt. Zet meldingen aan, dan hoor je het als eerste.",
     block: {
@@ -2464,8 +2462,6 @@ const en: FreelancerDict = {
     noJobsAfter: "— you'll get a notification as soon as a matching shift appears.",
     noJobsBody: "ZekerFlex is still getting started, so there are not many jobs yet. With notifications on, we can send you a message when there is a job near you.",
     noJobsPushOn: "Your notifications are on. We'll send you a message when there is a job that fits you.",
-    alleenTestTitle: "No real jobs near you yet",
-    alleenTestBody: "ZekerFlex has just started. The jobs below are test jobs: there is no real work behind them. Finish your profile and turn on notifications, and you'll be the first to hear when a real job comes in.",
     geenEchtInBuurt: "There are no jobs near you yet. Turn on notifications and you'll be the first to hear.",
     block: {
       onboardingFirst: "Finish your sign-up first to apply for jobs. At the top of Discover you can see what is still missing.",
@@ -4324,8 +4320,6 @@ const pl: FreelancerDict = {
     noJobsAfter: "— dostaniesz wiadomość, gdy pojawi się pasująca zmiana.",
     noJobsBody: "ZekerFlex dopiero się rozwija, dlatego zleceń jest jeszcze mało. Gdy masz włączone powiadomienia, możemy wysłać Ci wiadomość, kiedy w Twojej okolicy jest zlecenie.",
     noJobsPushOn: "Powiadomienia są włączone. Wyślemy Ci wiadomość, gdy będzie pasujące zlecenie.",
-    alleenTestTitle: "Na razie brak prawdziwych zleceń w Twojej okolicy",
-    alleenTestBody: "ZekerFlex dopiero startuje. Zlecenia poniżej to zlecenia testowe: nie kryje się za nimi prawdziwa praca. Uzupełnij profil i włącz powiadomienia, a jako pierwszy dowiesz się o prawdziwym zleceniu.",
     geenEchtInBuurt: "W Twojej okolicy nie ma jeszcze zleceń. Włącz powiadomienia, a dowiesz się o nich jako pierwszy.",
     block: {
       onboardingFirst: "Najpierw dokończ rejestrację, aby zgłaszać się do zleceń. Na górze zakładki Odkrywaj zobaczysz, czego jeszcze brakuje.",
@@ -6184,8 +6178,6 @@ const ro: FreelancerDict = {
     noJobsAfter: "— primești o notificare imediat ce apare o tură potrivită.",
     noJobsBody: "ZekerFlex este încă la început, de aceea sunt încă puține joburi. Cu notificările pornite îți putem trimite un mesaj când există un job în zona ta.",
     noJobsPushOn: "Notificările tale sunt pornite. Îți trimitem un mesaj când există un job potrivit.",
-    alleenTestTitle: "Încă nu sunt joburi reale în zona ta",
-    alleenTestBody: "ZekerFlex abia a început. Joburile de mai jos sunt joburi de test: în spatele lor nu există muncă reală. Completează-ți profilul și activează notificările, ca să afli primul când apare un job real.",
     geenEchtInBuurt: "Încă nu sunt joburi în zona ta. Activează notificările și vei afla primul.",
     block: {
       onboardingFirst: "Finalizează mai întâi înscrierea pentru a aplica la lucrări. În partea de sus a paginii Descoperă vezi ce mai lipsește.",
@@ -8044,8 +8036,6 @@ const uk: FreelancerDict = {
     noJobsAfter: "— ви отримаєте повідомлення, щойно з’явиться відповідна зміна.",
     noJobsBody: "ZekerFlex ще розвивається, тому робіт поки мало. З увімкненими сповіщеннями ми можемо надіслати вам повідомлення, коли поруч із вами є робота.",
     noJobsPushOn: "Сповіщення ввімкнено. Ми надішлемо вам повідомлення, коли буде відповідна робота.",
-    alleenTestTitle: "Поки що немає справжніх робіт поруч із вами",
-    alleenTestBody: "ZekerFlex щойно запустився. Роботи нижче — тестові: за ними немає справжньої роботи. Заповніть профіль і ввімкніть сповіщення — і ви першими дізнаєтеся про справжню роботу.",
     geenEchtInBuurt: "Поруч із вами ще немає робіт. Увімкніть сповіщення — і ви дізнаєтеся першими.",
     block: {
       onboardingFirst: "Спершу заверши реєстрацію, щоб відгукуватися на роботи. Угорі сторінки «Огляд» видно, чого ще бракує.",
