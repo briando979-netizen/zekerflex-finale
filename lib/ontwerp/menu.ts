@@ -77,18 +77,38 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
   },
   {
     titel: "Bedrijf",
+    // 22 nov 2026 (gebruikersonderzoek): de telefoon en info@ staan al in de regel met de bedrijfsgegevens onderaan, en
+    // /status stond er drie keer; hier dus alleen nog "Systeemstatus" in Platform
     links: [
       { href: "/over-ons", label: "Over ZekerFlex" },
       { href: "/contact", label: "Contact" },
-      { href: "tel:+3197010251797", label: "📞 +31 970 102 51797" },
       { href: "/demo", label: "Vraag een demo aan" },
       { href: "/over-ons#werken-bij", label: "Werken bij ons" },
-      { href: "/status", label: "Uptime & incidenten" },
-      { href: "mailto:info@zekerflex.com", label: "info@zekerflex.com" },
       { href: "/login", label: "Inloggen" },
     ],
   },
 ];
+
+/**
+ * De kolommen zonder dubbele links (22 nov 2026, gebruikersonderzoek: /status stond er drie keer, de telefoon en info@
+ * twee keer). Een adres dat al elders in de voettekst staat (`alElders`: de telefoon en het mailadres in de regel met de
+ * bedrijfsgegevens) valt weg, en van elk adres blijft alleen de eerste link over. Werkt ook op een eigen versie uit de
+ * Site-ontwerper; een kolom die zo leeg raakt, valt weg.
+ */
+export function voettekstZonderDubbel(kolommen: VoettekstKolom[], alElders: readonly string[] = []): VoettekstKolom[] {
+  const gezien = new Set(alElders.map((h) => h.trim().toLowerCase()));
+  return kolommen
+    .map((k) => ({
+      ...k,
+      links: k.links.filter((l) => {
+        const sleutel = l.href.trim().toLowerCase();
+        if (gezien.has(sleutel)) return false;
+        gezien.add(sleutel);
+        return true;
+      }),
+    }))
+    .filter((k) => k.links.length > 0);
+}
 
 export const STANDAARD_VOETTEKST: Voettekst = { slogan: STANDAARD_SLOGAN, kolommen: STANDAARD_KOLOMMEN };
 export const MAX_KOLOMMEN = 4;

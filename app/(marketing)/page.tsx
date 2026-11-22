@@ -104,6 +104,13 @@ export default async function WerkHomePage() {
                 </li>
               ))}
             </ul>
+            {/* bedrijven vonden in het eerste scherm niets voor hen (gebruikersonderzoek 22 nov 2026, punt 10): één regel */}
+            <p className="mt-5 text-sm text-white/70">
+              Personeel nodig?{" "}
+              <Link href="/klus-plaatsen" className="font-semibold text-brand-mint underline-offset-4 hover:underline">
+                Plaats een klus →
+              </Link>
+            </p>
           </div>
         </div>
       </section>
@@ -111,7 +118,8 @@ export default async function WerkHomePage() {
       {/* de schuivende strook met soorten werk en de uitlegvideo staan hier niet meer (21 nov, eigenaar: "haal dit allemaal weg") */}
 
       {/* ───────────────────────────────────────────────── branches (met het minimumuurloon) */}
-      <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />
+      {/* zonder de tien stadsknoppen: die staan sinds 22 nov 2026 in de voettekst ("Werk per stad") */}
+      <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} steden={false} />
 
       {/* ───────────────────────────────────────────────── zo werkt het */}
       <section id="hoe-het-werkt" className="relative isolate scroll-mt-24 overflow-hidden hero-ink text-white">

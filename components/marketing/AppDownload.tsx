@@ -163,11 +163,16 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
       <div className={`shell ${standalone ? "py-4" : "py-8 md:py-10"}`}>
         <div className="grid items-center gap-10 md:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <p className="eyebrow text-brand-mint">De app</p>
-            <h2 className="mt-2 max-w-md text-balance font-display text-2xl font-bold leading-tight md:text-[1.75rem]">
-              Neem ZekerFlex mee in je zak
-            </h2>
-            <p className="mt-4 max-w-md text-white/70">
+            {/* op /app zelf staat de kop al boven dit blok ("De flexwerk-app …"): daar geen tweede kop (22 nov 2026) */}
+            {!standalone && (
+              <>
+                <p className="eyebrow text-brand-mint">De app</p>
+                <h2 className="mt-2 max-w-md text-balance font-display text-2xl font-bold leading-tight md:text-[1.75rem]">
+                  Neem ZekerFlex mee in je zak
+                </h2>
+              </>
+            )}
+            <p className={`${standalone ? "" : "mt-4 "}max-w-md text-white/70`}>
               Reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen — alles vanaf je
               telefoon, met meldingen die kloppen.
             </p>
