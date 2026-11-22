@@ -92,8 +92,6 @@ services:
       METABASE_HOST: ${METABASE_HOST:-bi.37-97-226-24.sslip.io}
       OUTLINE_HOST: ${OUTLINE_HOST:-kennis.37-97-226-24.sslip.io}
       FORGEJO_HOST: ${FORGEJO_HOST:-git.37-97-226-24.sslip.io}
-      FLIKFLAK_HOST: ${FLIKFLAK_HOST:-flikflak.37-97-226-24.sslip.io}
-      TALKARO_HOST: ${TALKARO_HOST:-talkaro.37-97-226-24.sslip.io}
     ports:
       - "80:80"
       - "443:443"
@@ -108,8 +106,8 @@ services:
       - caddy-logs:/var/log/caddy
     depends_on:
       app: { condition: service_started }
-    # git: de eigen Git-server (Forgejo) zit alleen op dat netwerk; flikflak-net: FlikFlak idem; talkaro-net: Talkaro idem
-    networks: [internal, bouwer-toegang, git, flikflak-net, talkaro-net]
+    # git: de eigen Git-server (Forgejo) zit alleen op dat netwerk
+    networks: [internal, bouwer-toegang, git]
 
   postgres:
     image: postgres:18.6-bookworm
@@ -297,36 +295,6 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
-  # Wifi op de werkvloer (lib/netwerk): FreeRADIUS vraagt per inlogpoging de app of
-  # iemand nu mag (rooster) en kent de wifi-apparatuur van klanten via dynamic
-  # clients. Alleen de eigen sleutel gaat erin. Het certificaat van vps.zekerflex.com
-  # komt van Caddy (alleen lezen). Zonder NETWERK_RADIUS_TOKEN slaapt de dienst.
-  # Config en uitleg: deploy/netwerk/freeradius.
-  freeradius:
-    image: freeradius/freeradius-server:3.2.10-alpine
-    restart: unless-stopped
-    environment:
-      NETWERK_RADIUS_TOKEN: ${NETWERK_RADIUS_TOKEN:-}
-      RADIUS_CERT_HOST: ${NETWERK_RADIUS_HOST:-vps.zekerflex.com}
-    ports:
-      - "1812:1812/udp"
-    volumes:
-      - ./deploy/netwerk/freeradius/clients.conf:/etc/raddb/clients.conf:ro
-      - ./deploy/netwerk/freeradius/zf-rest:/etc/raddb/mods-enabled/zf-rest:ro
-      - ./deploy/netwerk/freeradius/eap:/etc/raddb/mods-available/eap:ro
-      - ./deploy/netwerk/freeradius/default:/etc/raddb/sites-available/default:ro
-      - ./deploy/netwerk/freeradius/inner-tunnel:/etc/raddb/sites-available/inner-tunnel:ro
-      - ./deploy/netwerk/freeradius/zf-clients:/etc/raddb/sites-enabled/zf-clients:ro
-      - ./deploy/netwerk/freeradius/entrypoint.sh:/zf-radius.sh:ro
-      - caddy-data:/caddy-data:ro
-    entrypoint: ["sh", "/zf-radius.sh"]
-    depends_on:
-      app: { condition: service_started }
-    networks: [internal]
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
   # Veilige werkplek (VPN, lib/netwerk/headscale.ts): Headscale met ingebouwde
   # DERP-relay (STUN op 3490/udp; 3478 en 3479 zijn van coturn). Caddy zet vpn.zekerflex.com
   # door naar poort 8080; de app praat intern via http://headscale:8080 met de
@@ -480,34 +448,6 @@ services:
     command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb"]
     mem_limit: 128m
     networks: [bouwer]
-
-  # Android-bouwer: bouwt de Android-app (.aab) van een rijschool (deploy/android-bouwer,
-  # lib/rijschool/app). Geen database en geen geheimen: de uploadsleutel geeft de app
-  # per opdracht mee. Alleen intern bereikbaar, met ANDROID_BOUWER_TOKEN. De code komt
-  # via een map-mount; Gradle en de Android-SDK zitten in de image (opgewarmd).
-  # Aanzetten (eenmalig): sudo bash deploy/android-bouwer/installeer.sh
-  android-bouwer:
-    build:
-      context: deploy/android-bouwer
-    image: zekerflex-android-bouwer:latest
-    restart: unless-stopped
-    environment:
-      ANDROID_BOUWER_TOKEN: ${ANDROID_BOUWER_TOKEN:-}
-    volumes:
-      - ./deploy/android-bouwer:/opt/android-bouwer/code:ro
-      - android-bouwer-werk:/werk
-      # Gradle-cache: de eerste keer gevuld uit de image, daarna blijft hij staan
-      - android-bouwer-gradle:/opt/gradle
-      # de uitrol-vergrendeling: gradle wacht tot een uitrol klaar is
-      - ./.zf-slot:/zf-slot:ro
-    # gradle krijgt -Xmx1536m (gradle.properties van Bubblewrap); één bouw tegelijk
-    mem_limit: 2560m
-    cpus: 2
-    # niet op internal: een bouw met code van derden (gradle) kan zo niet bij de echte database of Redis
-    networks: [bouwer-toegang]
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
 
   # Rapportages (lib/bi): Metabase, open source, op de eigen server. Zijn eigen
   # gegevens staan in de database `metabase` op onze Postgres (de app maakt die aan);
@@ -692,59 +632,6 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
-  # FlikFlak: de korte-video app van de eigenaar (deploy/flikflak), gehost op
-  # flikflak.zekerflex.com. Eigen kleine container met alleen express+multer+ws en
-  # een eigen geïsoleerd netwerk: géén toegang tot de echte database of Redis. Het
-  # heeft zijn eigen opslag op het volume flikflak-data (/data: de video's en db.json,
-  # zodat ze een uitrol overleven). Alleen Caddy praat ermee. De beheerpagina /beheer
-  # is dicht zonder FF_ADMIN_TOKEN (door env-aanvullen.sh aangemaakt). Moderatie en
-  # het bewaren van IP's staan open in de huisregels die iemand bij het aanmelden ziet.
-  flikflak:
-    build:
-      context: deploy/flikflak
-    image: zekerflex-flikflak:latest
-    restart: unless-stopped
-    init: true
-    environment:
-      FF_ADMIN_TOKEN: ${FF_ADMIN_TOKEN:-}
-    volumes:
-      - flikflak-data:/data
-    mem_limit: 384m
-    networks: [flikflak-net]
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
-  # Talkaro: de praat-met-vreemden-app van de eigenaar (deploy/talkaro), gehost op
-  # talkaro.zekerflex.com. Eigen kleine container (alleen "ws", geen framework) op een
-  # eigen geïsoleerd netwerk: géén toegang tot de echte database of Redis. Eigen opslag
-  # op het volume talkaro-data (/data: meldingen en blokkades, zodat ze een uitrol
-  # overleven). Alleen Caddy praat ermee. De beheerpagina /beheer is dicht zonder
-  # BEHEER_TOKEN (TALKARO_ADMIN_TOKEN, door env-aanvullen.sh aangemaakt). TRUST_PROXY=1:
-  # er staat precies één Caddy voor. Video gebruikt de bestaande coturn (TURN_SHARED_SECRET).
-  talkaro:
-    build:
-      context: deploy/talkaro
-    image: zekerflex-talkaro:latest
-    restart: unless-stopped
-    init: true
-    environment:
-      SITE_NAAM: Talkaro
-      SITE_HOST: ${TALKARO_HOST:-}
-      TRUST_PROXY: "1"
-      BEHEER_TOKEN: ${TALKARO_ADMIN_TOKEN:-}
-      IP_ZOUT: ${TALKARO_IP_ZOUT:-}
-      CONTACT_EMAIL: ${TALKARO_CONTACT_EMAIL:-}
-      TURN_HOST: ${TURN_HOST:-}
-      TURN_SECRET: ${TURN_SHARED_SECRET:-}
-    volumes:
-      - talkaro-data:/data
-    mem_limit: 256m
-    networks: [talkaro-net]
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
 networks:
   internal:
     driver: bridge
@@ -764,12 +651,6 @@ networks:
   # kunnen zo niet bij de echte database of Redis (die heeft geen wachtwoord).
   bouwer-toegang:
     driver: bridge
-  # alleen FlikFlak en Caddy: FlikFlak komt zo nooit bij de echte database of Redis
-  flikflak-net:
-    driver: bridge
-  # alleen Talkaro en Caddy: Talkaro komt zo nooit bij de echte database of Redis
-  talkaro-net:
-    driver: bridge
   # Forgejo (eigen Git-server) en Caddy; met internet voor de spiegel, zonder Postgres/Redis
   git:
     driver: bridge
@@ -777,6 +658,14 @@ networks:
   vpn-uitgang:
     driver: bridge
 
+# Bewust bewaard (22 nov 2026): de diensten android-bouwer, flikflak en talkaro zijn
+# weg, maar hun gegevens blijven op de server staan, want Docker verwijdert een volume
+# nooit vanzelf: android-bouwer-werk, android-bouwer-gradle, flikflak-data en
+# talkaro-data (op de server als zekerflex_<naam>). Hier staan ze niet meer. Terug
+# kunnen ze zo: de dienst uit git halen (commit vóór "diensten-weg-22nov"), de
+# declaratie hieronder weer onder volumes: zetten en `up -d <dienst>`; compose pakt
+# dan het bestaande volume weer op. Echt weg: `docker volume rm zekerflex_<naam>`
+# (alleen na een back-up en met toestemming van de eigenaar).
 volumes:
   forgejo-data:
   outline-data:
@@ -794,9 +683,5 @@ volumes:
   whisper-models:
   bouwer-werk:
   bouwer-db:
-  android-bouwer-werk:
   headscale-data:
   vpn-uitgang:
-  android-bouwer-gradle:
-  flikflak-data:
-  talkaro-data:

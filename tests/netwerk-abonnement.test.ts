@@ -4,7 +4,9 @@ import type Stripe from "stripe";
 // Een pakket aanzetten, betalen en opzeggen (lib/netwerk/abonnement.ts):
 // 5G is altijd een aanvraag met een lead; wifi en VPN gaan op de lijst zolang
 // de server erachter niet draait, zijn gratis voor een kosteloos account en
-// lopen anders via een Stripe-abonnement dat de webhook activeert.
+// lopen anders via een Stripe-abonnement dat de webhook activeert. De wifi-server
+// is op 22 nov 2026 weggehaald: wifi blijft dus altijd op de lijst, en de betaalde
+// paden worden met de VPN getoetst (zelfde code).
 
 process.env.AUTH_SECRET ??= "test-geheim-voor-de-wifi-wachtwoorden-0123456789";
 
@@ -33,9 +35,7 @@ vi.mock("@/lib/billing/stripe", () => ({
 const lead = vi.fn(async (_input: unknown) => ({ id: "lead1" }));
 vi.mock("@/lib/sales/leads", () => ({ createLead: (input: unknown) => lead(input) }));
 vi.mock("@/lib/audit", () => ({ recordAudit: async () => undefined }));
-let wifiKlaar = false;
 let vpnKlaar = false;
-vi.mock("@/lib/netwerk/token", () => ({ wifiServerKlaar: () => wifiKlaar, checkNetwerkToken: () => ({ ok: true }) }));
 vi.mock("@/lib/netwerk/headscale", () => ({ vpnGekoppeld: () => vpnKlaar, vpnAdres: () => null }));
 
 import type { Principal } from "@/lib/auth";
@@ -47,7 +47,6 @@ const baas: Principal = { userId: "u1", email: "baas@bedrijf.test", fullName: "B
 beforeEach(() => {
   store.clear();
   kosteloos = false;
-  wifiKlaar = false;
   vpnKlaar = false;
   checkout.mockClear();
   opzeggen.mockClear();
@@ -64,42 +63,54 @@ describe("aanzetten", () => {
     expect(checkout).not.toHaveBeenCalled();
   });
 
-  it("wifi zonder draaiende server: op de lijst, niets betalen", async () => {
+  it("wifi: de wifi-server is weg, dus alleen op de lijst en niets betalen, ook voor een kosteloos account", async () => {
     expect(moduleLeverbaar("wifi")).toBe(false);
     const r = await startModule("t1", { sleutel: "wifi", aantal: 2 }, baas);
     expect(r.stand.modules.wifi).toMatchObject({ status: "aangevraagd", aantal: 2 });
     expect(r.melding).toMatch(/op de lijst/);
     expect(checkout).not.toHaveBeenCalled();
+    store.clear();
+    kosteloos = true;
+    const gratis = await startModule("t1", { sleutel: "wifi", aantal: 1 }, baas);
+    expect(gratis.stand.modules.wifi).toMatchObject({ status: "aangevraagd" });
+    expect(checkout).not.toHaveBeenCalled();
   });
 
   it("kosteloos account: meteen actief voor € 0", async () => {
-    wifiKlaar = true;
+    vpnKlaar = true;
     kosteloos = true;
-    const r = await startModule("t1", { sleutel: "wifi", aantal: 2 }, baas);
-    expect(r.stand.modules.wifi).toMatchObject({ status: "actief", gratis: true, aantal: 2 });
+    const r = await startModule("t1", { sleutel: "vpn", aantal: 2, variant: "per-gebruiker" }, baas);
+    expect(r.stand.modules.vpn).toMatchObject({ status: "actief", gratis: true, aantal: 2 });
     expect(r.melding).toMatch(/Gratis/);
     expect(checkout).not.toHaveBeenCalled();
-    await expect(startModule("t1", { sleutel: "wifi", aantal: 2 }, baas)).rejects.toThrow(/staat al aan/);
+    await expect(startModule("t1", { sleutel: "vpn", aantal: 2, variant: "per-gebruiker" }, baas)).rejects.toThrow(/staat al aan/);
   });
 
-  it("betalen via Stripe: € 49 per vestiging, en de webhook zet het op actief (ook bij een dubbele melding)", async () => {
-    wifiKlaar = true;
-    const r = await startModule("t1", { sleutel: "wifi", aantal: 3 }, baas);
+  it("betalen via Stripe: € 4 per gebruiker, en de webhook zet het op actief (ook bij een dubbele melding)", async () => {
+    vpnKlaar = true;
+    const r = await startModule("t1", { sleutel: "vpn", aantal: 3, variant: "per-gebruiker" }, baas);
     expect(r.checkoutUrl).toBe("https://stripe.test/cs_1");
-    expect(r.stand.modules.wifi).toMatchObject({ status: "wacht-op-betaling", stripeSessionId: "cs_1", aantal: 3 });
-    expect(checkout).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", module: "wifi", aantal: 3, unitAmountCents: 4900, stripeCustomerId: "cus_1" }));
-    expect((checkout.mock.calls[0]?.[0] as { successUrl: string }).successUrl).toContain("/werkgever?pakket=wifi&betaald=1");
-    expect((checkout.mock.calls[0]?.[0] as { cancelUrl: string }).cancelUrl).toContain("/werkgever?pakket=wifi&geannuleerd=1");
+    expect(r.stand.modules.vpn).toMatchObject({ status: "wacht-op-betaling", stripeSessionId: "cs_1", aantal: 3 });
+    expect(checkout).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", module: "vpn", aantal: 3, unitAmountCents: 400, variant: "per-gebruiker", stripeCustomerId: "cus_1" }));
+    expect((checkout.mock.calls[0]?.[0] as { successUrl: string }).successUrl).toContain("/werkgever?pakket=vpn&betaald=1");
+    expect((checkout.mock.calls[0]?.[0] as { cancelUrl: string }).cancelUrl).toContain("/werkgever?pakket=vpn&geannuleerd=1");
 
-    const sessie = { metadata: { netwerkTenantId: "t1", netwerkModule: "wifi", netwerkAantal: "3" }, subscription: "sub_1" } as unknown as Stripe.Checkout.Session;
+    const sessie = { metadata: { netwerkTenantId: "t1", netwerkModule: "vpn", netwerkAantal: "3", netwerkVariant: "per-gebruiker" }, subscription: "sub_1" } as unknown as Stripe.Checkout.Session;
     await activeerNetwerkModule(sessie);
-    const na = (await netwerkStand("t1")).modules.wifi;
-    expect(na).toMatchObject({ status: "actief", aantal: 3, stripeSubId: "sub_1" });
+    const na = (await netwerkStand("t1")).modules.vpn;
+    expect(na).toMatchObject({ status: "actief", aantal: 3, variant: "per-gebruiker", stripeSubId: "sub_1" });
     const sinds = na?.sinds;
     await activeerNetwerkModule(sessie);
-    expect((await netwerkStand("t1")).modules.wifi?.sinds).toBe(sinds);
-    expect(await standMetAbonnement("sub_1")).toMatchObject({ tenantId: "t1", sleutel: "wifi" });
+    expect((await netwerkStand("t1")).modules.vpn?.sinds).toBe(sinds);
+    expect(await standMetAbonnement("sub_1")).toMatchObject({ tenantId: "t1", sleutel: "vpn" });
     expect(await standMetAbonnement("sub_x")).toBeNull();
+  });
+
+  it("de webhook werkt ook voor een bestaand wifi-abonnement, al is de wifi-server weg", async () => {
+    await activeerNetwerkModule({ metadata: { netwerkTenantId: "t1", netwerkModule: "wifi", netwerkAantal: "2" }, subscription: "sub_w" } as unknown as Stripe.Checkout.Session);
+    expect((await netwerkStand("t1")).modules.wifi).toMatchObject({ status: "actief", aantal: 2, stripeSubId: "sub_w" });
+    await netwerkAbonnementBeeindigd("sub_w");
+    expect((await netwerkStand("t1")).modules.wifi?.status).toBe("opgezegd");
   });
 
   it("VPN: per gebruiker of onbeperkt (dan één regel van € 149); zonder keuze een nette fout", async () => {
@@ -115,15 +126,15 @@ describe("aanzetten", () => {
 
 describe("opzeggen", () => {
   it("met een Stripe-abonnement loopt het door tot het einde van de periode; Stripe meldt daarna het einde", async () => {
-    wifiKlaar = true;
-    await startModule("t1", { sleutel: "wifi", aantal: 1 }, baas);
-    await activeerNetwerkModule({ metadata: { netwerkTenantId: "t1", netwerkModule: "wifi", netwerkAantal: "1" }, subscription: "sub_1" } as unknown as Stripe.Checkout.Session);
-    const r = await zegModuleOp("t1", "wifi", baas);
+    vpnKlaar = true;
+    await startModule("t1", { sleutel: "vpn", aantal: 1, variant: "per-gebruiker" }, baas);
+    await activeerNetwerkModule({ metadata: { netwerkTenantId: "t1", netwerkModule: "vpn", netwerkAantal: "1", netwerkVariant: "per-gebruiker" }, subscription: "sub_1" } as unknown as Stripe.Checkout.Session);
+    const r = await zegModuleOp("t1", "vpn", baas);
     expect(opzeggen).toHaveBeenCalledWith("sub_1", { cancel_at_period_end: true });
-    expect(r.stand.modules.wifi).toMatchObject({ status: "actief", eindigtOp: new Date(1_800_000_000 * 1000).toISOString() });
+    expect(r.stand.modules.vpn).toMatchObject({ status: "actief", eindigtOp: new Date(1_800_000_000 * 1000).toISOString() });
     expect(r.melding).toMatch(/einde van de betaalde periode/);
     await netwerkAbonnementBeeindigd("sub_1");
-    expect((await netwerkStand("t1")).modules.wifi?.status).toBe("opgezegd");
+    expect((await netwerkStand("t1")).modules.vpn?.status).toBe("opgezegd");
     await netwerkAbonnementBeeindigd("sub_1"); // nog een keer: geen fout
   });
 

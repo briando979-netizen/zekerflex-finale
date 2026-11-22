@@ -1063,18 +1063,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: Boolean(env.HEADSCALE_URL && env.HEADSCALE_API_KEY),
     },
     {
-      id: "netwerk-radius",
-      group: "Bellen & koppelingen",
-      title: "Wifi-server (RADIUS) aanzetten voor 'Wifi op de werkvloer'",
-      why: "Klanten die het wifi-pakket willen, zetten zich nu op de lijst. De wifi-server (FreeRADIUS) op de eigen server beslist per inlogpoging via het rooster of iemand mag; zonder die server kan niemand betalen of aansluiten.",
-      how: [
-        "Vraag Claude de freeradius-dienst aan te zetten (deploy/netwerk) en de poort 1812/udp open te zetten op de server (de VPN-relay gebruikt 3490/udp).",
-        "De sleutel NETWERK_RADIUS_TOKEN komt dan in .env.production; deze taak vinkt zichzelf af.",
-      ],
-      auto: true,
-      done: Boolean(env.NETWERK_RADIUS_TOKEN),
-    },
-    {
       id: "webshop-leverancier",
       group: "Bellen & koppelingen",
       title: "Een gratis CJ Dropshipping-account maken en de sleutel in Beheer plakken (echte producten in de webshop)",
@@ -1590,7 +1578,7 @@ export const NIET_FLEXWERK_TAKEN: ReadonlySet<string> = new Set([
   "issuing-active", "insurer", "bank-name", "map-3d", "play-rijschool-apps",
   "locatie-prijzen", "locatie-toegang-kastje", "locatie-printer", "locatie-portofoon-proef",
   "zakelijke-mail-kosten", "telefonie-prijzen", "telefonie-saldo", "twilio-085", "telefonie-acm", "telefonie-partner",
-  "netwerk-vpn-dns", "netwerk-radius", "stripe-btw", "loonheffingennummer",
+  "netwerk-vpn-dns", "stripe-btw", "loonheffingennummer",
   "image", "gratis-ai-bronnen", "cloudflare-ai", "hf-token",
 ]);
 

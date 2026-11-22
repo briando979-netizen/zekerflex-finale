@@ -15,7 +15,7 @@ import type { WifiPlek } from "@/lib/netwerk/wifi-plekken";
 // Alles in de KV (geen migratie):
 //   netwerk:<tenantId>          de stand per pakket (lib/netwerk/modules.ts)
 //   netwerk-wifi:<tenantId>     per vestiging: IP, netwerknaam en het RADIUS-geheim
-//   netwerk-wifi-ip:<ip>        welk bedrijf/vestiging bij een IP hoort (voor de RADIUS-server)
+//   netwerk-wifi-ip:<ip>        welk bedrijf/vestiging bij een IP hoort (de RADIUS-server is weg, 22 nov 2026)
 //   netwerk-wifi-ww:<userId>    het eigen wifi-wachtwoord van een gebruiker (versleuteld;
 //                               staat in ERASABLE_KV_PREFIXES, lib/privacy/user-kv.ts)
 //   netwerk-vpn:<tenantId>      wie wanneer een VPN-toegangscode kreeg (nooit de code zelf)
@@ -156,17 +156,6 @@ export async function verwijderWifiVestiging(tenantId: string, branchId: string)
   delete rest[branchId];
   await kvDelete(WIFI_IP(oud.ip));
   await kvSet(WIFI(tenantId), { vestigingen: rest } satisfies WifiInstellingen);
-}
-
-/** Voor de RADIUS-server: welke vestiging (en welk geheim) hoort bij het IP waarvandaan een verzoek komt. */
-export async function radiusClientVoorIp(raw: string): Promise<{ tenantId: string; branchId: string; secret: string; aan: boolean } | null> {
-  const ip = raw.trim();
-  if (!isIP(ip)) return null;
-  const k = await kvGet<{ tenantId: string; branchId: string }>(WIFI_IP(ip));
-  if (!k) return null;
-  const v = (await wifiInstellingen(k.tenantId)).vestigingen[k.branchId];
-  if (!v || v.ip !== ip) return null;
-  return { tenantId: k.tenantId, branchId: k.branchId, secret: wifiSecret(v), aan: v.aan };
 }
 
 // --- het eigen wifi-wachtwoord van een gebruiker ------------------------------------

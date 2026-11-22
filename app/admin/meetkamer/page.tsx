@@ -142,7 +142,7 @@ export default async function MeetkamerPage(props: { searchParams: Promise<{ per
           })}
         </ul>
         <p className="px-4 py-3 text-xs sm:px-5" style={{ color: "var(--a-mute)", borderTop: "1px solid var(--a-border)" }}>
-          Niet in deze meting: FlikFlak en Talkaro (eigen apps op hun eigen adres, met een eigen beheer) en de websites van klanten (eigen bezoekerscijfers in <Link href="/admin/analytics" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Verkeer</Link>). Het algemene verkeer van bezoekers zonder account staat ook in Verkeer.
+          Niet in deze meting: de websites van klanten (eigen bezoekerscijfers in <Link href="/admin/analytics" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Verkeer</Link>). Het algemene verkeer van bezoekers zonder account staat ook in Verkeer.
         </p>
       </Panel>
     </div>

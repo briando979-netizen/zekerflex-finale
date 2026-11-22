@@ -41,8 +41,8 @@ twee waarheden over "wat draait er" opleveren. Daarom bewust niet geïnstalleerd
 ## 3. Code en controles: de Bouwer controleert, geen Forgejo
 
 Forgejo/Gitea met een CI-runner vraagt een derde kopie van de codebase plus een runner
-die `npm ci`, tsc (≥ 2 GB) en tests draait. Dat past niet naast app, Bouwer en
-Android-bouwer in 8 GB, en het zou een tweede git-waarheid naast GitHub worden. De
+die `npm ci`, tsc (≥ 2 GB) en tests draait. Dat paste niet naast app, Bouwer en
+Android-bouwer (22 nov 2026 weggehaald) in 8 GB, en het zou een tweede git-waarheid naast GitHub worden. De
 Bouwer-container heeft al een werkkopie met node_modules en draait al tsc/eslint/tests
 voor zijn eigen opdrachten. Daar is de controle vóór het live zetten bij gekomen:
 
@@ -70,7 +70,7 @@ Netbird vraagt een eigen identiteitsserver (Zitadel/Keycloak) naast management, 
 relay en dashboard. Headscale doet hetzelfde (WireGuard-mesh, Tailscale-clients op elke
 telefoon en laptop) met één container en een ingebouwde DERP-relay (STUN 3490/udp; 3478
 is van coturn). Hij is gebouwd als onderdeel van het klantproduct ZekerFlex Verbinding
-(wifi via RADIUS, VPN, 5G op aanvraag) en dient ook de eigen servers. Zie
+(wifi via RADIUS, sinds 22 nov 2026 weggehaald; VPN; 5G op aanvraag) en dient ook de eigen servers. Zie
 `deploy/netwerk/README.md` en `lib/netwerk`.
 
 ## Waar je het ziet

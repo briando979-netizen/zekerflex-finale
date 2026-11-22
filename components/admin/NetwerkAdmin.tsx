@@ -6,12 +6,12 @@ import { MODULES, MODULE_DEFS, STATUS_LABEL, euro, type ModuleStatus } from "@/l
 import { alleStanden } from "@/lib/netwerk/store";
 import { bedragVan, moduleLeverbaar } from "@/lib/netwerk/abonnement";
 import { vpnAdres } from "@/lib/netwerk/headscale";
-import { env } from "@/lib/env";
 
 // ---------------------------------------------------------------------------
 // Admin → Verbinding: alle bedrijven met een netwerkpakket (lib/netwerk),
 // de maandomzet, de aanvragen die een mens moet oppakken (5G, wachtlijst) en
-// of de servers erachter (RADIUS voor wifi, Headscale voor de VPN) draaien.
+// of de server erachter (Headscale voor de VPN) draait. De wifi-server (RADIUS)
+// is op 22 nov 2026 weggehaald: wifi kan alleen nog op de lijst.
 // ---------------------------------------------------------------------------
 
 const TONE: Record<ModuleStatus, Tone> = { aangevraagd: "warn", "wacht-op-betaling": "warn", actief: "ok", opgezegd: "neutral" };
@@ -73,7 +73,6 @@ export async function NetwerkAdmin() {
     rows.push({ id: tenantId, cells, sort: { bedrijf: naam, bedrag, laatst }, search: naam, filters, csv: { bedrijf: naam, bedrag: bedrag / 100, laatst } });
   }
 
-  const wifiKlaar = moduleLeverbaar("wifi");
   const vpnKlaar = moduleLeverbaar("vpn");
   const statusOpties = (Object.keys(STATUS_LABEL) as ModuleStatus[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }));
 
@@ -89,11 +88,8 @@ export async function NetwerkAdmin() {
         ]}
       />
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <Notice tone={wifiKlaar ? "ok" : "warn"}>
-          <strong>Wifi (RADIUS):</strong>{" "}
-          {wifiKlaar
-            ? `gekoppeld; klanten zetten ${env.NETWERK_RADIUS_HOST} (UDP 1812) in hun wifi-apparatuur.`
-            : "nog niet ingericht (NETWERK_RADIUS_TOKEN ontbreekt). Klanten kunnen zich alvast op de lijst zetten; betalen kan pas als de server draait."}
+        <Notice tone="warn">
+          <strong>Wifi (RADIUS):</strong> de wifi-server is weggehaald (22 november 2026). Klanten kunnen zich alleen nog op de lijst zetten; betalen kan niet.
         </Notice>
         <Notice tone={vpnKlaar ? "ok" : "warn"}>
           <strong>VPN (Headscale):</strong> {vpnKlaar ? `gekoppeld op ${vpnAdres()}.` : "nog niet gekoppeld (HEADSCALE_URL en HEADSCALE_API_KEY ontbreken). Zie Admin → Te doen."}
