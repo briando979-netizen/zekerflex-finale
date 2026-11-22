@@ -8,6 +8,7 @@ import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { FUNCTIES, functiePad } from "@/lib/seo-functies";
+import { BEDRIJFS_VRAGEN, vraagPad } from "@/lib/seo-vragen";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { eigenPaginas } from "@/lib/marketing/aanbod";
 import { aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
@@ -81,6 +82,9 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     // werken als …: het overzicht en per functie (lib/seo-functies.ts), 22 nov 2026
     entry("/werken-als", 0.8, "weekly"),
     ...FUNCTIES.map((f) => entry(functiePad(f), 0.7, "monthly")),
+    // vragen van bedrijven: het overzicht en per vraag (lib/seo-vragen.ts), 22 nov 2026
+    entry("/vragen", 0.7, "monthly"),
+    ...BEDRIJFS_VRAGEN.map((v) => entry(vraagPad(v), 0.7, "monthly", v.bijgewerkt)),
     // Sector-landingspagina's (horeca, logistiek, schoonmaak, evenementen, retail) × steden
     ...SECTORS.flatMap((s) => [
       entry(`/${s.slug}`, 0.8, "weekly"),

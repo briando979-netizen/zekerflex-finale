@@ -290,6 +290,8 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/voor-freelancers","file":"app/(marketing)/voor-freelancers/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/voorwaarden","file":"app/(marketing)/voorwaarden/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/voorwaarden/snelle-uitbetaling","file":"app/(marketing)/voorwaarden/snelle-uitbetaling/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/vragen","file":"app/(marketing)/vragen/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/vragen/[vraag]","file":"app/(marketing)/vragen/[vraag]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/werken-als","file":"app/(marketing)/werken-als/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/werken-als/[functie]","file":"app/(marketing)/werken-als/[functie]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/werkgever","file":"app/werkgever/page.tsx","area":"Werkgever","dynamic":false},

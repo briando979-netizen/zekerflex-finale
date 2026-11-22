@@ -162,7 +162,16 @@ export function organizationJsonLd(): Record<string, unknown> {
     areaServed: { "@type": "Country", name: "Netherlands" },
     knowsLanguage: "nl-NL",
     address: { "@type": "PostalAddress", addressCountry: "NL" },
+    // 22 nov 2026: ook het algemene adres (info@), zoals in de voettekst en op de contactpagina. Geen adres: we verzinnen er geen.
     contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer service",
+        email: CONTACTS.general,
+        telephone: tel,
+        areaServed: "NL",
+        availableLanguage: ["nl"],
+      },
       {
         "@type": "ContactPoint",
         contactType: "customer support",

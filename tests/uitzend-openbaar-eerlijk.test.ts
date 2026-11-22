@@ -35,6 +35,8 @@ const OPENBAAR = [
   "lib/seo-stad-pagina.ts",
   "lib/seo-bijbaan.ts",
   "lib/seo-functies.ts",
+  "lib/seo-vragen.ts",
+  "components/marketing/VraagLanding.tsx",
   "components/marketing/VisitorNudge.tsx",
   "lib/public-shifts.ts",
   "lib/seo.ts",

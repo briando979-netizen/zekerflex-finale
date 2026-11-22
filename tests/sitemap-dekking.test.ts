@@ -63,6 +63,9 @@ describe("sitemap.xml dekt de openbare pagina's", () => {
 
   it("robots.txt sluit de privépaden uit, maar geen openbare pagina die met hetzelfde begint", () => {
     for (const p of ["/start", "/start/x", "/sales", "/sales/leads", "/dashboard", "/werkgever/klussen", "/api/x", "/r/abc"]) expect(onder(p, disallow), p).toBe(true);
+    // 22 nov 2026: de inloglink /start?voor=werker (op ±515 pagina's, stuurt door naar het geblokkeerde /welkom) ook
+    expect(disallow).toContain("/start?");
+    expect(onder("/start?voor=werker", disallow)).toBe(true);
     for (const p of ["/starten-als-uitzendkracht", "/starters", "/sales-partner", "/voorbeeldsites", "/voor-freelancers", "/horeca-vacatures"]) expect(onder(p, disallow), p).toBe(false);
     // en geen enkele vaste openbare pagina (app/(marketing)) valt eronder
     const marketing = [...paginas("app/(marketing)").keys()];

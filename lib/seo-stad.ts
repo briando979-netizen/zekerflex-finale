@@ -386,6 +386,45 @@ export function studentenVraag(c: City): Vraag | null {
   };
 }
 
+/**
+ * Hoe een bedrijf aan personeel komt, zonder te beloven hoe snel (22 nov 2026, Search Console: "ik moet snel personeel
+ * aannemen in 's-hertogenbosch, wat is de snelste optie?" op plek 2,6). Ook het antwoord op het overzicht van een branche.
+ */
+export const SNEL_STAPPEN =
+  "Zo gaat het: je plaatst een klus met de datum, de tijden, het adres en het uurtarief. Flexwerkers binnen reisafstand van je locatie zien hem en reageren, en jij kiest wie je inroostert. Je betaalt het uurtarief plus € 3,50 per gewerkt uur, zonder abonnement; wil je liever uitzendkrachten, dan krijg je die via een aangesloten uitzendbureau. Hoe snel er iemand reageert, hangt af van wie er op dat moment beschikbaar is, dus plaats je klus zo vroeg als je kunt.";
+
+/** Wat de cijfers van de stad betekenen voor wie snel mensen zoekt: per stad andere getallen, buren en woorden. */
+function snelStadZin(c: City, branche: string): string {
+  const k = stadCijfers(c.slug);
+  if (!k) return "";
+  const nl = NEDERLAND_CIJFERS;
+  const naam = gemeenteNaam(c, k);
+  const jong = komma((k.jongeren.n / k.inwoners.n) * 100);
+  const nlJong = komma((nl.jongeren.n / nl.inwoners.n) * 100);
+  const jongZin = `Van de inwoners van ${naam} is ${jong} procent 18 tot en met 24 jaar, tegen ${nlJong} procent landelijk (CBS, 1 januari ${k.jongeren.jaar}).`;
+  const g = eersteGemeenteMaat(matenVoor(branche));
+  if (!g) return jongZin;
+  const p = per1000(g, k);
+  const pnl = per1000(g, nl);
+  const cijfer = `${komma(p)} per 1.000 inwoners, landelijk ${komma(pnl)}`;
+  const buren = dichtbij(c, 2).map(buurLabel);
+  const omgeving = buren.length ? ` Ook flexwerkers uit ${buren.join(" of ")} zien je klus als je locatie voor hen binnen reisafstand ligt.` : "";
+  const stand = standVan(p / pnl);
+  const markt =
+    stand === "hoog"
+      ? `${naam} telt naar verhouding veel ${g.kort} (${cijfer}). Die zoeken op drukke momenten vaak tegelijk extra mensen: een klus die een paar dagen vooruit staat, zien meer flexwerkers op tijd.`
+      : stand === "gemiddeld"
+        ? `Het aantal ${g.kort} in ${naam} ligt rond het landelijk gemiddelde (${cijfer}).${omgeving}`
+        : `${naam} telt minder ${g.kort} dan gemiddeld (${cijfer}), dus minder bedrijven die op hetzelfde moment dezelfde mensen zoeken.${omgeving}`;
+  return `${markt} ${jongZin}`;
+}
+
+/** "Hoe kom ik snel aan schoonmaakpersoneel in Rotterdam?": de stappen, en daarna wat de cijfers van die stad zeggen. */
+export function snelVraag(c: City, branche: string, wat = "personeel"): Vraag {
+  const stad = snelStadZin(c, branche);
+  return { q: `Hoe kom ik snel aan ${wat} in ${c.name}?`, a: stad ? `${SNEL_STAPPEN} ${stad}` : SNEL_STAPPEN };
+}
+
 /** "Hoeveel jongeren wonen er in Groningen?" voor de bijbaanpagina's. */
 export function jongerenVraag(c: City): Vraag | null {
   const k = stadCijfers(c.slug);

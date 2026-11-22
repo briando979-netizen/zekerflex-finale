@@ -59,6 +59,10 @@ describe("de pagina's", () => {
     expect(titelVan(sectorHubMetadata(sector("schoonmaak")))).toBe("Schoonmakers en schoonmaakpersoneel inhuren | ZekerFlex");
     expect(titelVan(sectorCityMetadata(sector("horeca"), stad("groningen")))).toBe("Horeca personeel inhuren in Groningen | ZekerFlex");
     expect(titelVan(sectorCityMetadata(sector("schoonmaak"), stad("enschede")))).toBe("Schoonmaakpersoneel inhuren in Enschede | ZekerFlex");
+    expect(titelVan(sectorCityMetadata(sector("schoonmaak"), stad("rotterdam")))).toBe("Schoonmaakpersoneel inhuren in Rotterdam | ZekerFlex");
+    // 22 nov 2026 (later): "evenementen personeel inhuren" (plek 15,5) als één woord, zoals de schoonmaak
+    expect(titelVan(sectorCityMetadata(sector("evenementen"), stad("utrecht")))).toBe("Evenementenpersoneel inhuren in Utrecht | ZekerFlex");
+    expect(titelVan(sectorHubMetadata(sector("evenementen")))).toBe("Evenementenpersoneel inhuren | ZekerFlex");
     expect(rollenKort(sector("horeca"))).toBe("bediening, keuken, bar en afwas");
     // geen "vaak nog dezelfde dag gevuld" of "binnen uren": dat kunnen we niet waarmaken zolang het aanbod klein is
     const bronnen = [
@@ -71,6 +75,9 @@ describe("de pagina's", () => {
       "components/marketing/StadCijfers.tsx",
       "lib/seo-functies.ts",
       "components/marketing/FunctieLanding.tsx",
+      "lib/seo-vragen.ts",
+      "components/marketing/VraagLanding.tsx",
+      "app/(marketing)/personeel-inhuren/[stad]/page.tsx",
     ].map((f) => readFileSync(path.join(process.cwd(), f), "utf8"));
     for (const b of bronnen) expect(b).not.toMatch(/dezelfde dag|binnen uren|snel uitbetaald|word snel/i);
     for (const s of SECTORS) expect(s.werkUitleg.length, s.key).toBeGreaterThan(80);

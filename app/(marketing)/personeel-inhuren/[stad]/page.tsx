@@ -11,7 +11,7 @@ import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 import { StadCijfers } from "@/components/marketing/StadCijfers";
-import { aantalVraag, buurLabel, cijferBlok, dichtbij, studentenVraag } from "@/lib/seo-stad";
+import { aantalVraag, buurLabel, cijferBlok, dichtbij, opsomming, snelVraag, studentenVraag } from "@/lib/seo-stad";
 
 export const dynamicParams = false;
 
@@ -23,7 +23,8 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
   const c = cityBySlug((await params).stad);
   if (!c) return {};
   const title = `Personeel inhuren in ${c.name} — klus plaatsen, flexkrachten & uitzendkrachten`;
-  const description = `Flexpersoneel in ${c.name} voor ${c.sectors.join(", ")}. Plaats een klus en match op reistijd en vakmanschap. € 3,50 per gewerkt uur, zonder abonnement, met Wet DBA-risicosignalering.`;
+  // 22 nov 2026: de prijs vooraan; achteraan viel hij weg als Google (seoBeschrijving) de zin inkortte
+  const description = `Personeel inhuren in ${c.name}: het uurtarief plus € 3,50 per gewerkt uur, zonder abonnement. Flexkrachten en zzp'ers voor ${opsomming(c.sectors.slice(0, 3))}.`;
   return {
     title: { absolute: seoTitel(title) },
     description: seoBeschrijving(description),
@@ -41,10 +42,8 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
   const eigen = [aantalVraag(c, "algemeen"), studentenVraag(c)].flatMap((v) => (v ? [v] : []));
   const faq = [
     ...eigen,
-    {
-      q: `Hoe snel heb ik personeel in ${c.name}?`,
-      a: `Je plaatst een klus in een paar minuten. ZekerFlex deelt hem met passende, geverifieerde flexkrachten binnen reisafstand in ${c.name}. Hoe snel je reacties krijgt, hangt af van wie beschikbaar is.`,
-    },
+    // 22 nov 2026: zoals bedrijven het vragen ("ik moet snel personeel aannemen in 's-hertogenbosch"), zonder belofte over snelheid
+    snelVraag(c, "algemeen"),
     {
       q: "Wat kost het?",
       a: "Je betaalt het uurtarief van de flexkracht plus € 3,50 per gewerkt uur aan ZekerFlex. Geen abonnement, geen inschrijfkosten en geen uitzendmarge van 30–50%.",

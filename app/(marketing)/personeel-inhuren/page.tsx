@@ -3,6 +3,7 @@ import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { BedrijfsVragen } from "@/components/marketing/VraagLanding";
 import { sectorFoto } from "@/lib/marketing/fotos";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS, inhurenHubKop } from "@/lib/seo-sectors";
@@ -12,9 +13,10 @@ import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 // 22 nov 2026: "personeel inhuren" is het zoekwoord met de meeste vertoningen (Search Console, plek 31), en
 // "flexibel personeel inhuren" en "personeel inhuren zakelijk" komen erbij. Plus vragen met FAQPage voor Google.
-const TITLE = "Flexibel personeel inhuren in heel Nederland — klus plaatsen voor flex- en uitzendkrachten";
+// 22 nov 2026 (later): het exacte zoekwoord vooraan in de titel en de h1 ("personeel inhuren", 413 vertoningen, plek 34).
+const TITLE = "Personeel inhuren in heel Nederland — flexibel, per klus, voor flex- en uitzendkrachten";
 const DESCRIPTION =
-  "Plaats een klus en huur flexkrachten en zzp'ers in heel Nederland in, of krijg uitzendkrachten via een aangesloten uitzendbureau. Matching op reistijd en vak, € 3,50 per gewerkt uur, geen abonnement.";
+  "Personeel inhuren in heel Nederland: plaats een klus voor flexkrachten en zzp'ers, voor het uurtarief plus € 3,50 per gewerkt uur, zonder abonnement. Uitzendkrachten via een aangesloten uitzendbureau.";
 
 export const metadata: Metadata = {
   title: { absolute: seoTitel(TITLE) },
@@ -68,7 +70,7 @@ export default function PersoneelInhurenPage() {
         <SectionHead
           kop="h1"
           eyebrow="Voor bedrijven"
-          title="Flexibel personeel inhuren, door heel Nederland"
+          title="Personeel inhuren, flexibel en door heel Nederland"
           intro="Plaats een klus en ZekerFlex vindt geverifieerde zzp'ers en flexwerkers in de buurt van je locatie. Je betaalt € 3,50 per gewerkt uur, zonder abonnement. Liever uitzendkrachten? Die krijg je via een aangesloten uitzendbureau; dat bureau is dan de werkgever."
         />
         <div className="mt-10 flex flex-wrap gap-3">
@@ -107,6 +109,7 @@ export default function PersoneelInhurenPage() {
         <SectionHead eyebrow="Veelgestelde vragen" title="Personeel inhuren via ZekerFlex" />
         <div className="mt-8 max-w-3xl">
           <FaqList items={FAQ} />
+          <BedrijfsVragen />
         </div>
       </Section>
       <CtaBand

@@ -55,6 +55,8 @@ const BEDRIJVEN_PADEN = [
   "/prijzen",
   "/kennis/werkgevers",
   "/leren/personeel-krijgen",
+  // vragen van bedrijven (22 nov 2026, lib/seo-vragen.ts)
+  "/vragen",
 ] as const;
 const WERKNEMERS_PADEN = ["/voor-freelancers", "/starten-als-uitzendkracht", "/freelance-werk", "/klussen", "/open-diensten", "/app", "/leren/klussen-krijgen", "/bijbaan", "/werken-als"] as const;
 
@@ -121,6 +123,8 @@ const KENNIS_ITEMS: MenuItem[] = [
   // 21 nov 2026 (eigenaar: "Prijzen weg, tarievenoverzicht bij de vragen, de rekenhulp een plekje geven")
   { title: "Tarievenoverzicht", desc: "Richttarief per functie en branche, ook als pdf.", href: "/tarieven-overzicht" },
   { title: "Platformkosten berekenen", desc: "Wat je per maand betaalt bij jouw aantal uren.", href: "/rekentools/platformkosten-berekenen" },
+  // 22 nov 2026: korte antwoorden voor bedrijven (lib/seo-vragen.ts)
+  { title: "Vragen van bedrijven", desc: "Wat kost een flexwerker, platform of uitzendbureau, en de Wet DBA.", href: "/vragen" },
 ];
 
 // Branches (21 nov 2026, eigenaar: "bij werknemers een menu Branches, zoals YoungOnes"): de branchepagina's uit lib/seo-sectors.ts.

@@ -5,6 +5,7 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { HeroChecks } from "@/components/marketing/HeroChecks";
 import { Photo } from "@/components/marketing/Photo";
 import { PerBrancheEnStad } from "@/components/marketing/PerBrancheEnStad";
+import { BedrijfsVragen } from "@/components/marketing/VraagLanding";
 import { SceneApprove } from "@/components/marketing/Scene";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { contentKeys, getContentMap } from "@/lib/content/store";
@@ -137,6 +138,8 @@ export default async function VoorBedrijvenPage() {
         <div className="mt-10">
           <FaqList items={FAQ} />
         </div>
+        {/* 22 nov 2026: de antwoordpagina's voor bedrijven (lib/seo-vragen.ts) */}
+        <BedrijfsVragen />
       </Section>
     ),
     slot: (

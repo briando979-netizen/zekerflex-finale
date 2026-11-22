@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ldJson } from "@/lib/seo/json-ld";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { CITIES, type City } from "@/lib/seo-cities";
-import { SECTORS, inhurenHubKop, inhurenKop, werkHubKop, werkKop, type Sector } from "@/lib/seo-sectors";
+import { SECTORS, inhurenHubKop, inhurenKop, personeelNaam, werkHubKop, werkKop, type Sector } from "@/lib/seo-sectors";
+import { SNEL_STAPPEN } from "@/lib/seo-stad";
+import { BedrijfsVragen } from "@/components/marketing/VraagLanding";
 import { sectorFoto } from "@/lib/marketing/fotos";
 import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { LinkRij, StadBlok, StadCijfers, Voordelen } from "@/components/marketing/StadCijfers";
@@ -34,10 +36,8 @@ const faqJsonLd = (faq: Vraag[]) => ({
 // ---- shared faq -----------------------------------------------------------
 function hubFaq(s: Sector): Vraag[] {
   return [
-    {
-      q: `Hoe snel heb ik ${low(s)}personeel?`,
-      a: `Je plaatst je klus in een paar minuten. ZekerFlex deelt hem met passende, geverifieerde krachten binnen reisafstand van je locatie. Hoe snel je reacties krijgt, hangt af van wie beschikbaar is.`,
-    },
+    // 22 nov 2026: de vraag zoals bedrijven hem stellen; de stappen zonder belofte over snelheid (lib/seo-stad.ts)
+    { q: `Hoe kom ik snel aan ${personeelNaam(s)}?`, a: SNEL_STAPPEN },
     {
       q: "Wat kost het?",
       a: "Je betaalt het uurtarief van de kracht plus € 3,50 per gewerkt uur aan ZekerFlex. Geen abonnement, geen inschrijfkosten en geen uitzendmarge van 30–50%.",
@@ -174,6 +174,8 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
         <SectionHead eyebrow="Veelgestelde vragen" title={`Vragen over ${inhurenHubKop(s).toLowerCase()}`} />
         <div className="mt-8 max-w-3xl">
           <FaqList items={faq} />
+          {/* 22 nov 2026: de antwoordpagina's voor bedrijven (lib/seo-vragen.ts), die van deze branche eerst */}
+          <BedrijfsVragen branche={s.key} />
         </div>
       </Section>
       <CtaBand

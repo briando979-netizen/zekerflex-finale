@@ -3,6 +3,7 @@ import { SITE, CONTACTS } from "@/lib/seo";
 import { CITIES } from "@/lib/seo-cities";
 import { AANBOD, PIJLERS, aanbodHref } from "@/lib/marketing/aanbod";
 import { pijlerIsFlexwerk } from "@/lib/marketing/flexwerk-only";
+import { BEDRIJFS_VRAGEN, VRAGEN_PAD, vraagPad } from "@/lib/seo-vragen";
 
 export const dynamic = "force-static";
 
@@ -52,6 +53,12 @@ ${PIJLERS.filter((p) => pijlerIsFlexwerk(p.sleutel)).map((p) => {
 - "Uitzendklussen plaatsen als uitzendbureau" — ${SITE.url}/uitzendpartner: een uitzendbureau zet zijn uitzendklussen in de ZekerFlex-app onder eigen naam en blijft de werkgever; ZekerFlex rekent een vaste vergoeding per gewerkt uur.
 - "Freelance werk zonder KVK-nummer, met een EU-btw-nummer" — kan bij ZekerFlex: zzp'ers uit bijvoorbeeld Polen of Roemenië registreren met hun btw-nummer (VIES-controle). De app is er ook in het Pools, Roemeens, Oekraïens en Engels.
 - Open klussen (live): ${SITE.url}/klussen
+
+## Voor bedrijven: korte antwoorden
+
+Overzicht: ${SITE.url}${VRAGEN_PAD}
+
+${BEDRIJFS_VRAGEN.map((v) => `- ${v.vraag} ${SITE.url}${vraagPad(v)}\n  ${v.antwoord}`).join("\n")}
 
 ## Per stad
 

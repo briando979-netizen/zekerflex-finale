@@ -7,9 +7,9 @@
 // ---------------------------------------------------------------------------
 
 import { CITIES, type City } from "@/lib/seo-cities";
-import { SECTORS, inhurenHubKop, inhurenKop, rollenKort, werkHubKop, werkKop, type Sector } from "@/lib/seo-sectors";
+import { SECTORS, inhurenHubKop, inhurenKop, personeelNaam, rollenKort, werkHubKop, werkKop, type Sector } from "@/lib/seo-sectors";
 import { klusUrl } from "@/lib/klusconcept/concept";
-import { aantalVraag, burenVraag, buurLabel, cijferBlok, dichtbij, studentenVraag, type CijferBlok, type Link, type Vraag } from "@/lib/seo-stad";
+import { aantalVraag, burenVraag, buurLabel, cijferBlok, dichtbij, snelVraag, studentenVraag, type CijferBlok, type Link, type Vraag } from "@/lib/seo-stad";
 
 export type { Link, Vraag } from "@/lib/seo-stad";
 
@@ -77,10 +77,8 @@ export function sectorStadPagina(s: Sector, c: City): StadPagina {
     aantalVraag(c, s.key),
     burenVraag(c, "bedrijf"),
     studentenVraag(c),
-    {
-      q: `Hoe snel heb ik een ${s.worker} in ${c.name}?`,
-      a: `Je plaatst je klus in een paar minuten en ZekerFlex deelt hem met passende, geverifieerde krachten binnen reisafstand van je locatie. Hoe snel je reacties krijgt, hangt af van wie op dat moment beschikbaar is.`,
-    },
+    // 22 nov 2026: de vraag zoals bedrijven hem stellen, met de stappen en de cijfers van deze stad (geen belofte over snelheid)
+    snelVraag(c, s.key, personeelNaam(s)),
     {
       q: `Wat kost een flexkracht in de ${low(s)}?`,
       a: "Je betaalt het uurtarief van de kracht plus € 3,50 per gewerkt uur aan ZekerFlex. Geen abonnement, geen inschrijfkosten en geen uitzendmarge van 30–50%.",

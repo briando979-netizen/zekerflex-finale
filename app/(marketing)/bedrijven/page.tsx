@@ -18,6 +18,7 @@ import { Marquee } from "@/components/marketing/Marquee";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
 import { BedrijvenVoordeur } from "@/components/marketing/BedrijvenVoordeur";
+import { BedrijfsVragen } from "@/components/marketing/VraagLanding";
 import { env } from "@/lib/env";
 import { serviceJsonLd, SITE } from "@/lib/seo";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
@@ -295,6 +296,8 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
           </Reveal>
           <Reveal delay={120}>
             <FaqList items={FAQ} />
+            {/* 22 nov 2026: de antwoordpagina's voor bedrijven (lib/seo-vragen.ts) */}
+            <BedrijfsVragen />
           </Reveal>
         </div>
       </section>

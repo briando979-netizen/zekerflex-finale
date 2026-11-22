@@ -32,7 +32,7 @@ describe("knoppen in de kopbalk per kant", () => {
   });
 
   it("elke bedrijvenpagina telt als bedrijven (Inloggen via het web), werkerspagina's als werkers", () => {
-    for (const pad of ["/bedrijven", "/voor-bedrijven", "/partners/uitzend", "/uitzendpartner/voorwaarden", "/prijzen", "/personeel-inhuren/groningen", "/klus-plaatsen"]) {
+    for (const pad of ["/bedrijven", "/voor-bedrijven", "/partners/uitzend", "/uitzendpartner/voorwaarden", "/prijzen", "/personeel-inhuren/groningen", "/klus-plaatsen", "/vragen", "/vragen/wat-kost-een-flexwerker-per-uur"]) {
       expect(kantVanPad(pad), pad).toBe("bedrijven");
     }
     for (const pad of ["/", "/voor-freelancers", "/starten-als-uitzendkracht", "/klussen", "/app", "/bijbaan", "/bijbaan/groningen", "/werken-als", "/werken-als/orderpicker"]) expect(kantVanPad(pad), pad).toBe("werknemers");

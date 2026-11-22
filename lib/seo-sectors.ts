@@ -97,6 +97,8 @@ export const SECTORS: Sector[] = [
     peak: "een evenement of festival",
     serviceType: "Evenementen flexwerk- en uitzendplatform",
     werkHub: "Werken op evenementen: vacatures en bijbanen",
+    // Search Console 22 nov 2026: "evenementen personeel inhuren" (plek 15,5); de kop als één woord, zoals de schoonmaak
+    inhurenKop: "Evenementenpersoneel inhuren",
     werkUitleg:
       "Je helpt bij festivals, beurzen, concerten en bedrijfsfeesten: bij de op- en afbouw, achter de bar, bij de ingang of als host. Het werk zit vaak in het weekend en 's avonds, soms in een paar lange dagen achter elkaar.",
   },
@@ -161,6 +163,11 @@ export const werkHubKop = (s: Sector): string => s.werkHub ?? `Werken in de ${s.
 export const inhurenKop = (s: Sector): string => s.inhurenKop ?? `${s.label} personeel inhuren`;
 /** Werkgeverskant, het overzicht. */
 export const inhurenHubKop = (s: Sector): string => s.inhurenHub ?? inhurenKop(s);
+/** Wat een bedrijf zoekt, midden in een zin: "schoonmaakpersoneel", "horeca personeel", "bezorgers en koeriers". */
+export function personeelNaam(s: Sector): string {
+  const k = inhurenKop(s).replace(/ inhuren$/, "");
+  return k.charAt(0).toLowerCase() + k.slice(1);
+}
 /** De korte rollen als gewone opsomming: "bediening · keuken · bar · afwas" → "bediening, keuken, bar en afwas". */
 export function rollenKort(s: Sector): string {
   const delen = s.rolesShort.split(" · ").map((d) => d.trim()).filter(Boolean);

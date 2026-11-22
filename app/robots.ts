@@ -20,6 +20,9 @@ const PRIVATE = [
   "/verifieer-email",
   "/start$",
   "/start/",
+  // 22 nov 2026: de inloglink /start?voor=werker staat op ±515 pagina's en stuurt door naar het al geblokkeerde /welkom:
+  // kruipverspilling. Een "?" is voor Google een gewoon teken; /starten-als-uitzendkracht valt er dus niet onder.
+  "/start?",
   "/welkom",
   "/voorbeeld/", // alleen een voorbeeldpad, niet /voorbeeldsites
   // personal links: referral codes and payment links
