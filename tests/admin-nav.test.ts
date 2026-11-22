@@ -70,7 +70,7 @@ describe("indeling van de beheeromgeving", () => {
       expect(overal.has(href), href).toBe(false);
     }
     // wat wél bij flexwerk hoort, staat zichtbaar: ook de Site-ontwerper en de huisstijl van de eigen site
-    for (const href of ["/admin/gebruikers", "/admin/bedrijven", "/admin/onboarding", "/admin/vooruitblik", "/admin/disputes", "/admin/facturen", "/admin/berichten", "/admin/zekerflex-ai", "/admin/gratis", "/admin/systeem", "/admin/te-doen", "/admin/ontwerper", "/admin/huisstijl"]) {
+    for (const href of ["/admin/gebruikers", "/admin/bedrijven", "/admin/kvk-controle", "/admin/onboarding", "/admin/vooruitblik", "/admin/disputes", "/admin/facturen", "/admin/berichten", "/admin/zekerflex-ai", "/admin/gratis", "/admin/systeem", "/admin/te-doen", "/admin/ontwerper", "/admin/huisstijl"]) {
       expect(zichtbaar.has(href), href).toBe(true);
     }
   });

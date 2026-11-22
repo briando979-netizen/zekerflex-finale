@@ -91,6 +91,11 @@ export async function wisKvkOpgegeven(soort: "werker" | "bedrijf", id: string): 
   await kvDelete(opgegevenSleutel(soort, id)).catch(() => undefined);
 }
 
+/** Het nummer waar de herkansing op opgaf voor één werker of bedrijf, of null (ook bij een storing). */
+export async function kvkOpgegevenVan(soort: "werker" | "bedrijf", id: string): Promise<KvkOpgegeven | null> {
+  return kvGet<KvkOpgegeven>(opgegevenSleutel(soort, id)).catch(() => null);
+}
+
 /** Alle opgegeven nummers: soort, id en het merk. */
 export async function opgegevenKvkControles(limiet = 500): Promise<{ soort: "werker" | "bedrijf"; id: string; opgegeven: KvkOpgegeven }[]> {
   const rijen = await kvListEntries<KvkOpgegeven>(KVK_OPGEGEVEN_PREFIX, limiet).catch(() => []);

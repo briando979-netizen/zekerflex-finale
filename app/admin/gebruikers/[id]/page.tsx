@@ -15,6 +15,9 @@ import { StripeKopieKnop } from "@/components/admin/StripeKopieKnop";
 import { KOPIE_FOTOS, kopieRegel, kopieStand } from "@/lib/kyc/stripe-kopie-vorm";
 import { stripeFotoSleutelInfo } from "@/lib/kyc/stripe-fotos";
 import { KycOverride } from "@/components/admin/KycOverride";
+import { KvkControlePaneel } from "@/components/admin/KvkControlePaneel";
+import { isActief } from "@/lib/kvk/handmatig";
+import { leesKvkHandmatig } from "@/lib/kvk/handmatig-server";
 import { InspectLinkPanel } from "@/components/admin/InspectLinkPanel";
 import { ChooseViewAsAccount } from "@/components/admin/ViewAsControls";
 import { ComplianceDocActions } from "@/components/admin/ComplianceDocActions";
@@ -154,6 +157,8 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const isDeleted = user.email.endsWith("@verwijderd.zekerflex.invalid");
   const kyc = KYC[user.kycStatus] ?? { label: `Identiteit: ${user.kycStatus}`, tone: "neutral" as const };
   const profile = user.freelancerProfile;
+  // een KVK-controle die de beheerder met de hand deed (lib/kvk/handmatig.ts): alleen intern zichtbaar
+  const kvkHandmatig = profile && !isDeleted ? await leesKvkHandmatig("werker", user.id) : null;
   // de poort van de werker-app (lib/onboarding/werker-poort.ts): zolang die dicht is, ziet de werker alleen de onboarding.
   // Een goedgekeurde ID is maar één van de stappen; het blok "Onboarding" hieronder is de trechter, niet de poort.
   // Daarna "Vóór de eerste klus" (BSN, overeenkomst, KVK/btw, IBAN, ID goedgekeurd): dezelfde lijst als de werker ziet, zodat
@@ -377,7 +382,12 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                 { label: "Disputen ingediend", value: count(disputesRaised) },
                 ...(profile
                   ? [
-                      { label: "KVK", value: profile.kvkNumber ? `${profile.kvkNumber}${profile.kvkValid ? ", gecontroleerd" : ", niet gecontroleerd"}` : "—" },
+                      {
+                        label: "KVK",
+                        value: profile.kvkNumber
+                          ? `${profile.kvkNumber}${profile.kvkValid ? (isActief(kvkHandmatig) && kvkHandmatig.kvkNumber === profile.kvkNumber ? ", met de hand gecontroleerd" : ", gecontroleerd") : ", niet gecontroleerd"}`
+                          : "—",
+                      },
                       { label: "IBAN", value: profile.payoutIban ?? "—" },
                       {
                         label: "Thuisbasis",
@@ -410,6 +420,17 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
               />
               <InspectLinkPanel userId={user.id} />
             </Panel>
+          )}
+
+          {profile && !isDeleted && (
+            <KvkControlePaneel
+              soort="werker"
+              id={user.id}
+              geldig={profile.kvkValid}
+              kvkNumber={/^\d{8}$/.test(profile.kvkNumber) ? profile.kvkNumber : null}
+              naam={user.fullName}
+              handmatig={kvkHandmatig}
+            />
           )}
 
           <Panel flush title="Identiteitscontroles">

@@ -10,6 +10,10 @@ import { count, dateNl, dateTimeNl, euro, euroExact, percentOf } from "@/lib/adm
 import { Avatar, Empty, Feed, KpiStrip, Meter, NameCell, PageHead, Panel, Pill, type Tone } from "@/components/admin/kit";
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 import { CompanyActions } from "@/components/admin/CompanyActions";
+import { KvkControlePaneel } from "@/components/admin/KvkControlePaneel";
+import { isActief } from "@/lib/kvk/handmatig";
+import { leesKvkHandmatig } from "@/lib/kvk/handmatig-server";
+import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
 import { tenantVerification } from "@/lib/company/verified";
 import { getBuitenlandBewijs } from "@/lib/company/buitenland";
 import { landNaam } from "@/lib/onboarding/buitenland";
@@ -63,7 +67,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     );
   }
 
-  const [activity, auditEntries, verification, buitenland] = await Promise.all([
+  const [activity, auditEntries, verification, buitenland, kvkHandmatig, kvkWacht] = await Promise.all([
     companyActivity(tenant.id),
     prisma.auditLog.findMany({
       where: { OR: [{ targetType: "tenant", targetId: tenant.id }, { targetType: "user", targetId: { in: tenant.memberships.map((m) => m.userId) } }] },
@@ -73,7 +77,11 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     }),
     tenantVerification(tenant.id),
     tenant.country !== "NL" ? getBuitenlandBewijs(tenant.id) : Promise.resolve(null),
+    leesKvkHandmatig("bedrijf", tenant.id),
+    kvkWachtVan("bedrijf", tenant.id),
   ]);
+  // het nummer dat het bedrijf opgaf: op de organisatie, of in de wacht als de controle niet kon (tegoed op)
+  const opgegevenKvk = [tenant.kvkNumber, kvkWacht?.kvkNumber].find((n): n is string => /^\d{8}$/.test(n ?? "")) ?? null;
 
   const hqAdmin = tenant.memberships.find((m) => m.role === "HQ_ADMIN")?.user;
   const blocked = tenant.memberships.length > 0 && tenant.memberships.every((m) => m.user.disabledAt);
@@ -133,7 +141,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
               <Pill tone={blocked ? "crit" : "ok"}>{blocked ? "Geblokkeerd" : "Actief"}</Pill>
               <Pill tone={verification.verified ? "trust" : "warn"}>
                 {verification.verified
-                  ? `Geverifieerd: ${VERIFIED_VIA[verification.via!] ?? verification.via}`
+                  ? `Geverifieerd: ${verification.via === "admin" && isActief(kvkHandmatig) ? "KVK met de hand gecontroleerd" : (VERIFIED_VIA[verification.via!] ?? verification.via)}`
                   : verification.buitenlands
                     ? "Buitenlands bedrijf: zoek het zelf op en keur het zo nodig goed"
                     : verification.inControle
@@ -156,6 +164,10 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
           { label: "Gewerkte uren", value: count(Math.round(activity.hours)), hint: "goedgekeurd" },
         ]}
       />
+
+      {tenant.country === "NL" && (
+        <KvkControlePaneel soort="bedrijf" id={tenant.id} geldig={Boolean(tenant.companyRegistrationId)} kvkNumber={opgegevenKvk} naam={tenant.name} handmatig={kvkHandmatig} />
+      )}
 
       <div className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Panel title="Gefactureerd per maand" subtitle="De laatste 12 maanden">
