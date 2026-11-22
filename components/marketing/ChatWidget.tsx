@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { DEMO_TIME_SLOTS, formatDemoDate, isSelectableDemoDate } from "@/lib/demo/slots";
+import { CHATKNOP_VRIJ, raaktChatknop } from "@/lib/marketing/chatknop-vrij";
 
 interface Msg {
   role: "user" | "assistant" | "agent";
@@ -83,6 +84,29 @@ export function ChatWidget() {
   const [booking, setBooking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // de knop wijkt zolang een blok met data-chatknop-vrij (zoals een totaalbedrag) eronder doorschuift (lib/marketing/chatknop-vrij.ts)
+  const [wijk, setWijk] = useState(false);
+
+  useEffect(() => {
+    let frame = 0;
+    const kijk = () => {
+      frame = 0;
+      const venster = { breedte: window.innerWidth, hoogte: window.innerHeight };
+      const blokken = document.querySelectorAll(`[${CHATKNOP_VRIJ}]`);
+      setWijk(Array.from(blokken).some((b) => raaktChatknop(b.getBoundingClientRect(), venster)));
+    };
+    const plan = () => {
+      if (!frame) frame = requestAnimationFrame(kijk);
+    };
+    kijk();
+    window.addEventListener("scroll", plan, { passive: true });
+    window.addEventListener("resize", plan);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", plan);
+      window.removeEventListener("resize", plan);
+    };
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -223,7 +247,7 @@ export function ChatWidget() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lift transition-transform hover:scale-105"
+        className={`fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lift transition-transform hover:scale-105${wijk && !open ? " invisible" : ""}`}
         aria-label={open ? "Chat sluiten" : "Chat openen"}
         aria-expanded={open}
       >
