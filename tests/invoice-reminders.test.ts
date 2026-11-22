@@ -27,10 +27,13 @@ vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import { overdueInvoices, runInvoiceReminders, stageFor } from "@/lib/billing/reminders";
+import { vervaldatumVoor } from "@/lib/billing/betaaltermijn";
 
 const DAY = 86_400_000;
-const issued = new Date("2026-10-01T09:00:00Z"); // due 15 Oct (14 days)
-const inv = (id: string, totalCents = 10_000, tenant = "t1") => ({ id, number: `F-${id}`, totalCents, dueAt: null, issuedAt: issued, createdAt: issued, recipientTenantId: tenant, recipientTenant: { name: tenant === "t1" ? "Super BV" : "Bakker BV" } });
+const issued = new Date("2026-10-01T09:00:00Z"); // platformfactuur: due 15 Oct (14 days)
+const inv = (id: string, totalCents = 10_000, tenant = "t1") => ({ id, number: `F-${id}`, type: "PLATFORM_FEE", totalCents, dueAt: null, issuedAt: issued, createdAt: issued, recipientTenantId: tenant, recipientTenant: { name: tenant === "t1" ? "Super BV" : "Bakker BV" } });
+// de factuur van de werker, dezelfde dag uitgegeven: due 31 Oct (30 days)
+const werkerInv = (id: string) => ({ ...inv(id), type: "SELF_BILL_FREELANCER" });
 const at = (daysAfterDue: number) => new Date(issued.getTime() + (14 + daysAfterDue) * DAY);
 
 beforeEach(() => {
@@ -125,6 +128,31 @@ describe("reminder schedule", () => {
     m.billingEmail = undefined;
     await runInvoiceReminders(at(3));
     expect(m.mail).toHaveBeenCalledWith(expect.objectContaining({ to: "hq@super.nl" }));
+  });
+
+  it("vraagt het soort van elke factuur op: de termijn hangt eraan (werker 30 dagen, platform 14)", async () => {
+    await runInvoiceReminders(at(1));
+    const select = (m.findMany.mock.calls[0]![0] as { select: Record<string, unknown> }).select;
+    expect(select.type).toBe(true);
+  });
+
+  it("twee facturen van dezelfde dag: 17 dagen later herinnert alleen de platformfactuur, de werkerfactuur loopt nog", async () => {
+    m.invoices = [inv("p"), werkerInv("w")];
+    await runInvoiceReminders(at(3)); // 17 dagen na uitgifte
+    expect(m.mail).toHaveBeenCalledOnce();
+    const text = (m.mail.mock.calls[0]![0] as { text: string }).text;
+    expect(text).toContain("F-p");
+    expect(text).not.toContain("F-w");
+    expect((await overdueInvoices(at(3))).map((i) => i.id)).toEqual(["p"]);
+  });
+
+  it("de factuur van de werker krijgt zijn eerste herinnering 3 dagen na dag 30, de lijst telt daar ook vanaf", async () => {
+    m.invoices = [werkerInv("w")];
+    const due = vervaldatumVoor("SELF_BILL_FREELANCER", issued);
+    expect(await runInvoiceReminders(new Date(due.getTime() + 2 * DAY))).toMatchObject({ mailed: 0 });
+    expect(await overdueInvoices(new Date(due.getTime() - DAY))).toEqual([]);
+    expect(await runInvoiceReminders(new Date(due.getTime() + 3 * DAY))).toMatchObject({ mailed: 1 });
+    expect(await overdueInvoices(new Date(due.getTime() + 5 * DAY))).toMatchObject([{ id: "w", daysLate: 5, stage: 1 }]);
   });
 
   it("overdue list reports days late and reminder progress", async () => {

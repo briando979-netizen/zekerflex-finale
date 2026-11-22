@@ -10,6 +10,7 @@ import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 import { overschrijvingRegels, overschrijvingVoor } from "@/lib/billing/overschrijving";
 import { platformBankgegevens, stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
 import { KOR_VERMELDING } from "@/lib/billing/self-billing";
+import { betaaltermijnTekst } from "@/lib/billing/betaaltermijn";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
 // Every date and time in these documents is Dutch time (the server runs in UTC).
@@ -65,6 +66,8 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
 
   pdf.row("Factuurnummer", inv.number, { bold: true });
   pdf.row("Datum", nlDate(inv.issuedAt ?? inv.createdAt));
+  // werkerfactuur binnen 30 dagen, platformfactuur binnen 14 (lib/billing/betaaltermijn.ts)
+  if (inv.totalCents > 0 && (inv.status === "ISSUED" || inv.status === "PAID")) pdf.row("Betaaltermijn", betaaltermijnTekst(inv));
   pdf.row("Van", issuerName);
   pdf.row("Aan", recipientName);
   if (inv.timesheet) {
