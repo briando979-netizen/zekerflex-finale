@@ -53,6 +53,8 @@ describe("menuVoor", () => {
       { sleutel: "compliance", sectie: "beheer" },
       { sleutel: "overeenkomsten", sectie: "beheer" },
       { sleutel: "bedrijf", sectie: "beheer" },
+      // Telefonie (de AI-beller) blijft (eigenaar, 22 nov 2026); met de vlag aan staat hij niet in het menu
+      { sleutel: "telefonie", sectie: "beheer" },
       { sleutel: "kennisbank", sectie: "beheer" },
       { sleutel: "hulp", sectie: "beheer" },
     ]);
@@ -62,11 +64,12 @@ describe("menuVoor", () => {
   it("de onderdelen buiten flexwerk staan er niet meer in, ook niet zonder de vlag", () => {
     for (const vlag of [false, true]) {
       const menu: string[] = sleutels({ alleenFlexwerk: vlag });
-      for (const weg of ["rijschool", "horeca", "studio", "winkel", "website", "telefonie", "reviews", "netwerk", "locatie", "branche", "afspraken", "klanten", "mail", "whatsapp"]) {
+      for (const weg of ["rijschool", "horeca", "studio", "winkel", "website", "reviews", "netwerk", "locatie", "branche", "afspraken", "klanten", "mail", "whatsapp"]) {
         expect(menu, `${weg} (vlag ${vlag})`).not.toContain(weg);
       }
       expect(menu).toContain("klussen");
       expect(menu).toContain("facturen");
+      expect(menu.includes("telefonie"), `telefonie (vlag ${vlag})`).toBe(!vlag);
     }
   });
 

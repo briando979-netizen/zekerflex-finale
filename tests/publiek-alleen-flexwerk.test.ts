@@ -261,15 +261,17 @@ describe("de bedrijfskant met de vlag aan", () => {
     const opties: MenuOpties = { inApp: false };
     // zonder vlag staan de ingangen los, met de handleidingen
     const uit: string[] = menuVoor(opties).map((p) => p.sleutel);
-    for (const er of ["kalender", "planner", "agenda", "kennisbank"]) expect(uit, er).toContain(er);
+    for (const er of ["kalender", "planner", "agenda", "kennisbank", "telefonie"]) expect(uit, er).toContain(er);
     expect(uit).not.toContain("planning");
     // met de vlag aan: zonder de losse handleidingen, en de flexwerk-functies samengevoegd (zie de volgende test)
     const aan: string[] = menuVoor({ ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
     for (const blijft of ["klussen", "planning", "uren", "facturen", "regels", "bedrijf", "cijfers", "berichten", "werkers"]) {
       expect(aan, blijft).toContain(blijft);
     }
+    // telefonie (de AI-beller) blijft bestaan, maar valt met de vlag aan uit het menu
+    expect(aan).not.toContain("telefonie");
     for (const menu of [uit, aan]) {
-      for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"]) expect(menu, weg).not.toContain(weg);
+      for (const weg of ["reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"]) expect(menu, weg).not.toContain(weg);
     }
   });
 
@@ -336,6 +338,7 @@ describe("de bedrijfskant met de vlag aan", () => {
     const zonderVlag = menuVoor({ ...opties, alleenFlexwerk: false, nogGeenKlussen: true }).map((p) => p.sleutel);
     expect(zonderVlag).toContain("planner");
     expect(zonderVlag).toContain("kennisbank");
+    expect(zonderVlag).toContain("telefonie");
   });
 });
 

@@ -71,7 +71,7 @@ describe("€ 0 in de praktijk", () => {
   });
 
   it("de telefoniepagina's tonen dezelfde prijzen als de aanvrager betaalt", () => {
-    for (const page of ["app/dashboard/telefonie/page.tsx"]) {
+    for (const page of ["app/werkgever/telefonie/page.tsx", "app/dashboard/telefonie/page.tsx"]) {
       const src = readFileSync(page, "utf8");
       expect(src, page).toContain("pricingFor(free)");
       expect(src, page).toContain("freeAccess(principal)");

@@ -330,6 +330,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/werkgever/ritten","file":"app/werkgever/ritten/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/ritten/[id]/print","file":"app/werkgever/ritten/[id]/print/page.tsx","area":"Werkgever","dynamic":true},
   {"route":"/werkgever/team","file":"app/werkgever/team/page.tsx","area":"Werkgever","dynamic":false},
+  {"route":"/werkgever/telefonie","file":"app/werkgever/telefonie/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/templates","file":"app/werkgever/templates/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/uitzend","file":"app/werkgever/uitzend/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/uitzend/bureau","file":"app/werkgever/uitzend/bureau/page.tsx","area":"Werkgever","dynamic":false},

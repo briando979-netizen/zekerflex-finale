@@ -73,6 +73,8 @@ export type MenuSleutel =
   | "compliance"
   | "overeenkomsten"
   | "bedrijf"
+  /** de zakelijke nummers en de AI-beller (lib/telephony); blijft, ook al is het geen flexwerk (eigenaar, 22 nov 2026) */
+  | "telefonie"
   | "rapportages"
   | "inkaart"
   | "kennisbank"
@@ -105,7 +107,7 @@ export interface MenuPlek {
 export interface MenuOpties {
   /** Android-app: geen ZekerFlex Bank (lib/app-mode.ts) */
   inApp: boolean;
-  /** vlag `publiek-alleen-flexwerk`: dan vallen de losse handleidingen weg en worden ingangen samengevoegd (zie onder) */
+  /** vlag `publiek-alleen-flexwerk`: dan vallen telefonie en de losse handleidingen weg en worden ingangen samengevoegd (zie onder) */
   alleenFlexwerk?: boolean;
   /** het bedrijf plaatste nog nooit een klus: met de vlag aan dan een kort startmenu (zie NA_EERSTE_KLUS) */
   nogGeenKlussen?: boolean;
@@ -118,9 +120,9 @@ export const PERSONEEL_SLEUTELS: readonly MenuSleutel[] = ["klussen", "kalender"
 
 const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (sectie ? { sleutel, sectie } : { sleutel });
 
-// Met de vlag `publiek-alleen-flexwerk` aan valt de losse ingang "Handleidingen" (Outline) weg: het hulpcentrum (vraagteken,
-// menu-item Hulp) linkt er al naartoe.
-const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["kennisbank"];
+// Met de vlag `publiek-alleen-flexwerk` aan vallen Telefonie (geen flexwerk) en de losse ingang "Handleidingen" (Outline) weg:
+// het hulpcentrum (vraagteken, menu-item Hulp) linkt naar de handleidingen. De pagina's blijven bereikbaar via een directe link.
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "kennisbank"];
 
 // Samenvoegen (20 nov, eigenaar: "voeg samen"): met de vlag aan worden kalender+roosterplanner+agenda één "Planning",
 // uren+inchecken één "Uren", favorieten+geblokkeerd "Mijn werkers", compliance+overeenkomsten "Regels en overeenkomsten",
@@ -143,7 +145,7 @@ export const PLANNING_SAMEN: readonly MenuSleutel[] = SAMENVOEGINGEN[0]!.leden;
 // directe link.
 export const NA_EERSTE_KLUS: readonly MenuSleutel[] = ["favorieten", "geblokkeerd", "inchecken", "rapportages", "inkaart", "compliance", "overeenkomsten"];
 
-/** Het menu van de werkgevers-app; met de vlag aan vallen de handleidingen weg en worden ingangen samengevoegd. */
+/** Het menu van de werkgevers-app; met de vlag aan vallen telefonie en de handleidingen weg en worden ingangen samengevoegd. */
 export function menuVoor(o: MenuOpties): MenuPlek[] {
   const menu = menuVoorBasis(o);
   if (!o.alleenFlexwerk) return menu;
@@ -168,6 +170,6 @@ function menuVoorBasis(o: MenuOpties): MenuPlek[] {
     { sleutel: "start" },
     ...(["klussen", "kalender", "planner", "agenda", ...bank, "favorieten", "berichten", "assistent", "geblokkeerd"] as MenuSleutel[]).map(plek()),
     ...(o.uitzendPartner ? UITZEND_SLEUTELS.map(plek("uitzend")) : []),
-    ...(["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
+    ...(["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "telefonie", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
   ];
 }

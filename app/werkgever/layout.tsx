@@ -20,7 +20,7 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IPin, IUsers, IActivity, IHelp } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IPhone, IPin, IUsers, IActivity, IHelp } from "@/components/app/icons";
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
@@ -97,6 +97,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     compliance: { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield /> },
     overeenkomsten: { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc /> },
     bedrijf: { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid /> },
+    telefonie: { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone /> },
     rapportages: { href: "/werkgever/rapportages", label: "Rapportages", icon: <IGrid /> },
     // personeel, kosten, ruimtes en bezetting in kaart brengen (lib/inkaart)
     inkaart: { href: "/werkgever/in-kaart", label: t.nav.inkaart, icon: <IActivity /> },
@@ -119,7 +120,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   const nav: NavItem[] = pasMenuVolgordeToe(
     menuVoor({
       inApp,
-      // vlag `publiek-alleen-flexwerk`: samengevoegde ingangen, zonder de losse handleidingen
+      // vlag `publiek-alleen-flexwerk`: samengevoegde ingangen, zonder telefonie en de losse handleidingen
       alleenFlexwerk,
       // nog geen klus geplaatst: een kort startmenu, de rest komt erbij na de eerste klus
       nogGeenKlussen: !werkruimte.heeftKlussen,
