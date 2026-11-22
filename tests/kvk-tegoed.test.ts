@@ -285,9 +285,13 @@ describe("bewakers", () => {
     expect(ERASABLE_KV_PREFIXES).toContain("kvk-wacht:werker:");
   });
 
-  it("werker en werkgever krijgen dezelfde eerlijke tekst", () => {
-    const tekst = "We controleren je KVK-nummer later; je kunt verder met je aanmelding.";
-    expect(readFileSync("lib/onboarding/verify.ts", "utf8")).toContain(tekst);
-    expect(readFileSync("lib/onboarding/employer.ts", "utf8")).toContain(tekst);
+  it("werker en werkgever krijgen een eerlijke tekst als de KVK-dienst niet kan antwoorden", () => {
+    // werker: de herkansing komt later (cron); werkgever (22 nov 2026): wij controleren het zelf en laten het binnen 1 werkdag weten
+    expect(readFileSync("lib/onboarding/verify.ts", "utf8")).toContain("We controleren je KVK-nummer later; je kunt verder met je aanmelding.");
+    const werkgever = readFileSync("lib/onboarding/employer.ts", "utf8");
+    expect(werkgever).toContain("We controleren je KVK-nummer zelf; je hoort binnen 1 werkdag van ons. Je kunt gewoon verder met je aanmelding.");
+    // een mislukte controle zegt niet meer kaal dat het niet lukte; een storing (5xx) houdt zijn eigen tekst
+    expect(werkgever).not.toContain("kon niet worden gecontroleerd");
+    expect(werkgever).toContain("Het Handelsregister is nu niet bereikbaar. Probeer het over een paar minuten opnieuw.");
   });
 });
