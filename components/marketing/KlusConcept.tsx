@@ -302,6 +302,7 @@ export function KlusConcept({
                 gekozen={tpl === ANDERS ? "" : tpl}
                 onKies={(key) => pickTemplate(key)}
                 kop="Kies een functie"
+                onEigen={() => setTpl(ANDERS)}
               />
             </div>
             <label className="block sm:col-span-2">
