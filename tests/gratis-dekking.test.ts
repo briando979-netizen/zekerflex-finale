@@ -42,7 +42,7 @@ const BASISLIJN: Record<string, string> = {
   ...groep("link naar een sociaal netwerk of een Google-pagina voor de gebruiker (geen koppeling; plaatsen gaat met de hand)", [
     "instagram.com", "www.instagram.com", "www.facebook.com", "nl-nl.facebook.com", "twitter.com", "x.com", "www.linkedin.com",
     "www.tiktok.com", "www.youtube.com", "studio.youtube.com", "business.google.com", "search.google.com", "www.google.com",
-    "groups.google.com", "base.google.com", "wa.me",
+    "groups.google.com", "base.google.com", "wa.me", "www.threads.com",
   ]),
   ...groep("link of knop naar de webmail of agenda van de gebruiker zelf", [
     "calendar.google.com", "outlook.live.com", "mail.google.com", "mail.proton.me", "mail.yahoo.com", "www.icloud.com",
