@@ -316,6 +316,8 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/bezorging-personeel-inhuren/[stad]","file":"app/(marketing)/bezorging-personeel-inhuren/[stad]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/bezorging-vacatures","file":"app/(marketing)/bezorging-vacatures/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/bezorging-vacatures/[stad]","file":"app/(marketing)/bezorging-vacatures/[stad]/page.tsx","area":"Marketing","dynamic":true},
+  {"route":"/bijbaan","file":"app/(marketing)/bijbaan/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/bijbaan/[stad]","file":"app/(marketing)/bijbaan/[stad]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/c/[slug]","file":"app/(marketing)/c/[slug]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/contact","file":"app/(marketing)/contact/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/cookiebeleid","file":"app/(marketing)/cookiebeleid/page.tsx","area":"Marketing","dynamic":false},

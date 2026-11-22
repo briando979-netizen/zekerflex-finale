@@ -57,9 +57,9 @@ export { REGIO_STEDEN };
 /** Adressen die geen eigen pagina zijn maar wel een eigen weergave hebben. */
 export const EXTRA_ADRESSEN = ["/register?type=bedrijf"] as const;
 
-/** De soorten stadspagina: /personeel-inhuren/<stad>, /freelance-werk/<stad> en per sector de werkgevers- en de werkerkant. */
+/** De soorten stadspagina: /personeel-inhuren/<stad>, /freelance-werk/<stad>, /bijbaan/<stad> (22 nov 2026) en per sector de werkgevers- en de werkerkant. */
 export function stadSoorten(): string[] {
-  return ["personeel-inhuren", "freelance-werk", ...SECTORS.flatMap((s) => [s.slug, s.workerSlug])];
+  return ["personeel-inhuren", "freelance-werk", "bijbaan", ...SECTORS.flatMap((s) => [s.slug, s.workerSlug])];
 }
 
 /** Het dagnummer van een Amsterdamse dag (een stad per nacht verder). */

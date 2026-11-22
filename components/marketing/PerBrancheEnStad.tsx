@@ -42,7 +42,11 @@ export function PerBrancheEnStad({ voor, branches = true }: { voor: Voor; branch
           links={SECTORS.map((s) => (voor === "werkers" ? { href: `/${s.workerSlug}`, label: werkKop(s) } : { href: `/${s.slug}`, label: inhurenKop(s) }))}
         />
       )}
-      <Rij kop={t.steden} links={[...steden, { href: t.alle, label: "Alle steden" }]} />
+      <Rij
+        kop={t.steden}
+        // 22 nov 2026: werkers ook naar de bijbaanpagina's (lib/seo-bijbaan.ts)
+        links={[...steden, { href: t.alle, label: "Alle steden" }, ...(voor === "werkers" ? [{ href: "/bijbaan", label: "Bijbaan per stad" }] : [])]}
+      />
     </div>
   );
 }

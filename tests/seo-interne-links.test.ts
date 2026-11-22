@@ -31,10 +31,20 @@ describe("interne links naar de branche- en stadspagina's", () => {
   it("de stadspagina's linken naar de branches in dezelfde stad, en de branchepagina's naar elkaar", () => {
     expect(lees("app/(marketing)/freelance-werk/[stad]/page.tsx")).toContain("href={`/${s.workerSlug}/${c.slug}`}");
     expect(lees("app/(marketing)/personeel-inhuren/[stad]/page.tsx")).toContain("href={`/${s.slug}/${c.slug}`}");
-    const sector = lees("components/marketing/SectorLanding.tsx");
+    // de stadspagina's per branche komen sinds 22 nov uit lib/seo-stad-pagina.ts (SectorLanding.tsx tekent ze)
+    const sector = lees("lib/seo-stad-pagina.ts");
     expect(sector).toContain("href: `/${x.workerSlug}/${c.slug}`");
     expect(sector).toContain("href: `/${x.slug}/${c.slug}`");
+    expect(lees("components/marketing/SectorLanding.tsx")).toMatch(/sectorStadPagina\(s, c\)[\s\S]*sectorWerkStadPagina\(s, c\)/);
     // het kruimelpad van /freelance-werk/<stad> gaat naar het overzicht, niet naar het verborgen /klussen
     expect(lees("app/(marketing)/freelance-werk/[stad]/page.tsx")).not.toContain('["Klussen", "/klussen"]');
+  });
+
+  it("de bijbaanpagina's krijgen links: voettekst, /voor-freelancers, de werkerkant per branche en per stad", () => {
+    expect(lees("lib/ontwerp/menu.ts")).toContain('{ href: "/bijbaan", label: "Bijbaan per stad" }');
+    expect(lees("components/marketing/PerBrancheEnStad.tsx")).toContain('{ href: "/bijbaan", label: "Bijbaan per stad" }');
+    expect(lees("components/marketing/SectorLanding.tsx")).toContain('{ href: "/bijbaan", label: "Bijbaan" }');
+    expect(lees("lib/seo-stad-pagina.ts")).toContain("{ href: `/bijbaan/${c.slug}`, label: `Bijbaan in ${c.name}` }");
+    expect(lees("app/(marketing)/freelance-werk/[stad]/page.tsx")).toContain("href={`/bijbaan/${c.slug}`}");
   });
 });

@@ -61,7 +61,15 @@ describe("de pagina's", () => {
     expect(titelVan(sectorCityMetadata(sector("schoonmaak"), stad("enschede")))).toBe("Schoonmaakpersoneel inhuren in Enschede | ZekerFlex");
     expect(rollenKort(sector("horeca"))).toBe("bediening, keuken, bar en afwas");
     // geen "vaak nog dezelfde dag gevuld" of "binnen uren": dat kunnen we niet waarmaken zolang het aanbod klein is
-    const bronnen = ["lib/seo-sector-meta.ts", "components/marketing/SectorLanding.tsx"].map((f) => readFileSync(path.join(process.cwd(), f), "utf8"));
+    const bronnen = [
+      "lib/seo-sector-meta.ts",
+      "components/marketing/SectorLanding.tsx",
+      "lib/seo-stad.ts",
+      "lib/seo-stad-pagina.ts",
+      "lib/seo-bijbaan.ts",
+      "components/marketing/BijbaanLanding.tsx",
+      "components/marketing/StadCijfers.tsx",
+    ].map((f) => readFileSync(path.join(process.cwd(), f), "utf8"));
     for (const b of bronnen) expect(b).not.toMatch(/dezelfde dag|binnen uren|snel uitbetaald|word snel/i);
     for (const s of SECTORS) expect(s.werkUitleg.length, s.key).toBeGreaterThan(80);
   });

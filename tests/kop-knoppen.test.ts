@@ -35,7 +35,7 @@ describe("knoppen in de kopbalk per kant", () => {
     for (const pad of ["/bedrijven", "/voor-bedrijven", "/partners/uitzend", "/uitzendpartner/voorwaarden", "/prijzen", "/personeel-inhuren/groningen", "/klus-plaatsen"]) {
       expect(kantVanPad(pad), pad).toBe("bedrijven");
     }
-    for (const pad of ["/", "/voor-freelancers", "/starten-als-uitzendkracht", "/klussen", "/app"]) expect(kantVanPad(pad), pad).toBe("werknemers");
+    for (const pad of ["/", "/voor-freelancers", "/starten-als-uitzendkracht", "/klussen", "/app", "/bijbaan", "/bijbaan/groningen"]) expect(kantVanPad(pad), pad).toBe("werknemers");
     for (const pad of ["/over-ons", "/kennis", "/contact"]) expect(kantVanPad(pad), pad).toBeNull();
     expect(lees("components/marketing/SiteHeader.tsx")).toContain('kantVanPad(pathname) ?? stored ?? "werknemers"');
   });

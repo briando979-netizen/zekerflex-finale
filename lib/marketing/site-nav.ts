@@ -57,7 +57,7 @@ const BEDRIJVEN_PADEN = [
   "/kennis/werkgevers",
   "/leren/personeel-krijgen",
 ] as const;
-const WERKNEMERS_PADEN = ["/voor-freelancers", "/starten-als-uitzendkracht", "/freelance-werk", "/klussen", "/open-diensten", "/app", "/leren/klussen-krijgen"] as const;
+const WERKNEMERS_PADEN = ["/voor-freelancers", "/starten-als-uitzendkracht", "/freelance-werk", "/klussen", "/open-diensten", "/app", "/leren/klussen-krijgen", "/bijbaan"] as const;
 
 export function kantVanPad(pad: string): Audience | null {
   const onder = (basis: string) => pad === basis || pad.startsWith(`${basis}/`);

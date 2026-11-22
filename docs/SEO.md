@@ -62,6 +62,13 @@ The runtime still reads `APP_BASE_URL` first — the box/cluster must set it.
 | `/uitzendbureau` | uitzendwerk zonder KVK, uitzendkracht worden, uitzendbureau alternatief |
 | `/prijzen` | zekerflex kosten, zzp platform kosten, uitzendbureau tarief |
 | `/kennis/wet-dba`, `/kennis/*` | Wet DBA uitgelegd, schijnzelfstandigheid, handhaving 2026, StiPP, ABU-fasen |
+| `/bijbaan`, `/bijbaan/<stad>` | bijbaan, bijbaan <stad>, student bijbaan, weekendwerk (`lib/seo-bijbaan.ts`) |
+
+**Stadspagina's (22 nov 2026):** elke stadspagina (branche × stad, `/freelance-werk/<stad>`, `/personeel-inhuren/<stad>`,
+`/bijbaan/<stad>`) heeft echte CBS-cijfers van die gemeente (`lib/seo-stad.ts`), de dichtstbijzijnde steden en eigen
+vragen. De cijfers staan gecommit in `lib/seo-stad-cijfers.generated.ts`; vernieuwen met `node scripts/stad-cijfers.mjs`
+als het CBS nieuwe cijfers heeft (vestigingen ±mei, bevolking ±juli). `tests/seo-stad-gelijkenis.test.ts` houdt twee
+stadspagina's van dezelfde soort onder 40% gelijk (5-woordstukjes, eerste 400 woorden).
 
 ## Ongoing
 

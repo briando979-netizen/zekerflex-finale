@@ -82,6 +82,9 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/personeel-inhuren", 0.8, "weekly"),
     ...CITIES.map((c) => entry(`/freelance-werk/${c.slug}`, 0.8, "daily")),
     ...CITIES.map((c) => entry(`/personeel-inhuren/${c.slug}`, 0.7, "weekly")),
+    // bijbaan: het overzicht en per stad (lib/seo-bijbaan.ts), 22 nov 2026
+    entry("/bijbaan", 0.8, "weekly"),
+    ...CITIES.map((c) => entry(`/bijbaan/${c.slug}`, 0.7, "weekly")),
     // Sector-landingspagina's (horeca, logistiek, schoonmaak, evenementen, retail) × steden
     ...SECTORS.flatMap((s) => [
       entry(`/${s.slug}`, 0.8, "weekly"),

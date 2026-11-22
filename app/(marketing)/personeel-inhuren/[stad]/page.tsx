@@ -10,6 +10,8 @@ import { SECTORS, inhurenKop } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { StadCijfers } from "@/components/marketing/StadCijfers";
+import { aantalVraag, buurLabel, cijferBlok, dichtbij, studentenVraag } from "@/lib/seo-stad";
 
 export const dynamicParams = false;
 
@@ -33,7 +35,12 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
 export default async function PersoneelInhurenStadPage({ params }: { params: Promise<{ stad: string }> }) {
   const c = cityBySlug((await params).stad);
   if (!c) notFound();
+  // 22 nov 2026: de cijfers van het CBS voor deze stad (lib/seo-stad.ts) en de andere steden op afstand, zodat de
+  // stadspagina's niet meer op elkaar lijken
+  const cijfers = cijferBlok(c, "algemeen", "bedrijf", `Bedrijven in ${c.name} in cijfers`);
+  const eigen = [aantalVraag(c, "algemeen"), studentenVraag(c)].flatMap((v) => (v ? [v] : []));
   const faq = [
+    ...eigen,
     {
       q: `Hoe snel heb ik personeel in ${c.name}?`,
       a: `Je plaatst een klus in een paar minuten. ZekerFlex deelt hem met passende, geverifieerde flexkrachten binnen reisafstand in ${c.name}. Hoe snel je reacties krijgt, hangt af van wie beschikbaar is.`,
@@ -110,6 +117,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
             </li>
           ))}
         </ul>
+        {cijfers ? <StadCijfers blok={cijfers} /> : null}
         {/* 22 nov 2026: naar de branchepagina's van deze stad (die kregen alleen links van elkaar en van het overzicht) */}
         <h2 className="mt-14 font-display text-xl font-bold text-ink">Personeel per branche in {c.name}</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -132,10 +140,11 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
         </div>
         <h2 className="mt-14 font-display text-lg font-bold text-ink">Personeel inhuren in andere steden</h2>
         <ul className="mt-3 flex flex-wrap gap-2">
-          {CITIES.filter((x) => x.slug !== c.slug).map((x) => (
-            <li key={x.slug}>
-              <Link href={`/personeel-inhuren/${x.slug}`} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
-                {x.name}
+          {/* op afstand, dichtstbij eerst (hemelsbreed) */}
+          {dichtbij(c, CITIES.length).map((b) => (
+            <li key={b.city.slug}>
+              <Link href={`/personeel-inhuren/${b.city.slug}`} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
+                {buurLabel(b)}
               </Link>
             </li>
           ))}

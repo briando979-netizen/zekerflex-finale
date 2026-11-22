@@ -11,6 +11,8 @@ import { CITIES, RADIUS_KM, cityBySlug } from "@/lib/seo-cities";
 import { SECTORS, werkKop } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { StadCijfers } from "@/components/marketing/StadCijfers";
+import { aantalVraag, buurLabel, cijferBlok, dichtbij } from "@/lib/seo-stad";
 
 export const revalidate = 900;
 export const dynamicParams = false;
@@ -37,6 +39,10 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
   const c = cityBySlug((await params).stad);
   if (!c) notFound();
   const shifts = await publicOpenShifts({ near: { lat: c.lat, lng: c.lng, km: RADIUS_KM }, take: 30 }).catch(() => []);
+  // 22 nov 2026: de cijfers van het CBS voor deze stad (lib/seo-stad.ts) en de andere steden op afstand, zodat de
+  // stadspagina's niet meer op elkaar lijken
+  const cijfers = cijferBlok(c, "algemeen", "werker", `Werken in ${c.name} in cijfers`);
+  const aantal = aantalVraag(c, "algemeen");
   const faq = [
     {
       q: `Hoe vind ik freelance werk in ${c.name}?`,
@@ -54,6 +60,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
       q: `Welk werk is er veel in ${c.name}?`,
       a: `In ${c.name} is er vooral vraag in ${c.sectors.join(", ")}. ${c.local}`,
     },
+    ...(aantal ? [aantal] : []),
     {
       q: "Is ZekerFlex een uitzendbureau?",
       a: "Nee. ZekerFlex is zelf geen uitzendbureau, maar een app met freelance klussen en uitzendklussen. Als zzp'er neem je een klus aan bij de opdrachtgever en maakt ZekerFlex de factuur voor je. Bij een uitzendklus teken je je contract bij het uitzendbureau van die dienst: dat bureau is je werkgever.",
@@ -107,6 +114,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
           </Link>
           .
         </p>
+        {cijfers ? <StadCijfers blok={cijfers} /> : null}
         <h2 className="mt-14 font-display text-xl font-bold text-ink">Werk per branche in {c.name}</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {SECTORS.map((s) => (
@@ -119,6 +127,12 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
               </Link>
             </li>
           ))}
+          <li>
+            <Link href={`/bijbaan/${c.slug}`} className="block rounded-xl border border-hair bg-white px-4 py-3 text-sm hover:border-brand-500">
+              <span className="font-semibold text-ink">Bijbaan in {c.name}</span>
+              <span className="block text-xs text-neutralx-500">vanaf 18 jaar, naast studie of school</span>
+            </Link>
+          </li>
         </ul>
       </Section>
       <Section tone="soft">
@@ -128,10 +142,11 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
         </div>
         <h2 className="mt-14 font-display text-lg font-bold text-ink">Ook in andere steden</h2>
         <ul className="mt-3 flex flex-wrap gap-2">
-          {CITIES.filter((x) => x.slug !== c.slug).map((x) => (
-            <li key={x.slug}>
-              <Link href={`/freelance-werk/${x.slug}`} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
-                {x.name}
+          {/* op afstand, dichtstbij eerst (hemelsbreed) */}
+          {dichtbij(c, CITIES.length).map((b) => (
+            <li key={b.city.slug}>
+              <Link href={`/freelance-werk/${b.city.slug}`} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
+                {buurLabel(b)}
               </Link>
             </li>
           ))}

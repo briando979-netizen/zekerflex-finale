@@ -137,6 +137,8 @@ const SECTOR_FOTOS: Record<string, readonly string[]> = {
   // de overzichtspagina's: bedrijven die personeel zoeken, en werkers die klussen zoeken
   algemeen: ["campagne-ondernemer", "campagne-rooster", "campagne-eigenaar", "campagne-bouw", "campagne-klembord", "campagne-monteur"],
   freelance: ["campagne-deuropening", "campagne-bezorger", "campagne-aanbellen", "campagne-autowassen", "campagne-wasstraat", "campagne-barista", "campagne-scanner"],
+  // /bijbaan en /bijbaan/<stad> (lib/seo-bijbaan.ts): de branches waar een bijbaan in kan zitten
+  bijbaan: ["campagne-deuropening", "campagne-barista", "campagne-kledingrek", "campagne-festival-crew", "campagne-promotie", "campagne-bezorger", "campagne-scanner"],
 };
 
 /** Een foto voor een sectorpagina; de seed (bijv. de stad) kiest er één uit, zodat stadspagina's niet allemaal dezelfde tonen. */

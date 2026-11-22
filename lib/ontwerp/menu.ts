@@ -37,6 +37,7 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
       { href: "/klussen", label: "Open klussen" },
       { href: "/open-diensten", label: "Open diensten op de kaart" },
       { href: "/freelance-werk", label: "Freelance werk per stad" },
+      { href: "/bijbaan", label: "Bijbaan per stad" },
       { href: "/personeel-inhuren", label: "Personeel inhuren" },
       { href: "/voor-freelancers", label: "Voor freelancers" },
       { href: "/leren/klussen-krijgen", label: "Leren: zo krijg je klussen" },
