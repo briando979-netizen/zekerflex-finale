@@ -20,6 +20,7 @@ export const en: Dict = {
     titel: "Check in with a QR code",
     uitleg: "Your workers check in by scanning the location's QR code with their phone when they arrive. Turn on the QR code per location, print the poster and put it up at the entrance. Every check-in goes straight into the timesheet.",
     knop: "Go to your locations and the QR poster",
+    staatUit: "Check-in is turned off for your company. Your workers do not have to check in and you do not have to put up a QR poster. They submit their hours when the job is over and you approve those yourself.",
   },
   nav: {
     start: "Your start",
@@ -692,6 +693,8 @@ export const en: Dict = {
     signalBody:
       "(location at check-in, impossible times, break or duplicate hours). Check before you approve — with a ⛔ ZekerFlex blocks the approval and the platform reviews it by hand.",
     extraCosts: "Extra costs:",
+    zonderInchecken: "Submitted without check-in: your approval is the proof of these hours.",
+    geenAutoGoedkeuren: "Check-in is turned off for your company. You therefore approve every timesheet yourself: hours are never approved automatically.",
   },
   company: {
     title: "Company profile",
@@ -713,6 +716,16 @@ export const en: Dict = {
     maxUrenOpgeslagen: "Saved: at most {n} hours per worker per 12 months.",
     maxUrenGeenOpgeslagen: "Saved: no limit.",
     maxUrenMislukt: "Saving failed. Please try again.",
+    incheckTitel: "Check-in on site",
+    incheckUitleg: "Choose whether your workers have to check in when they work for you. This applies to all your jobs and you can change it at any time.",
+    incheckJa: "Yes, my workers check in on site",
+    incheckJaUitleg: "With GPS or the location's QR code. This backs up the hours with proof of attendance.",
+    incheckNee: "No, check-in is not needed",
+    incheckNeeUitleg: "Your workers submit their hours when the job is over. Your approval is then the proof: you approve every timesheet yourself, and hours are never approved automatically.",
+    incheckBevestigUit: "Turn check-in off? Your workers will no longer have to check in. You will then approve every timesheet yourself and automatic approval no longer works for your company.",
+    incheckOpgeslagenAan: "Saved: your workers check in on site.",
+    incheckOpgeslagenUit: "Saved: your workers do not have to check in.",
+    incheckMislukt: "Saving failed. Please try again.",
     mailIntro:
       "Choose which optional email you receive. Important email (invoices, compliance, legal notices) always reaches you.",
     noOrgTitle: "No organisation",

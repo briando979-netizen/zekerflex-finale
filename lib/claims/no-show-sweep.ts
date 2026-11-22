@@ -9,6 +9,7 @@ import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { offerEmployerClaim } from "@/lib/claims/store";
 import { NO_SHOW_GRACE_MINUTES, NO_SHOW_RELIABILITY_PENALTY } from "@/lib/claims/policy";
 import { plekVoorWerker } from "@/lib/shifts/place-label";
+import { tenantsZonderInchecken } from "@/lib/checkin/vereist";
 
 // ---------------------------------------------------------------------------
 // Finds shift assignments whose shift started more than NO_SHOW_GRACE_MINUTES
@@ -38,13 +39,19 @@ export interface NoShowSweepResult {
 /** Oudere diensten laat de sweep altijd met rust. */
 export const NO_SHOW_MAX_DAGEN = 7;
 
-/** Welke toewijzingen als no-show gelden (puur, voor de sweep en de test). */
-export function noShowKandidaatWaar(now: Date): Prisma.ShiftAssignmentWhereInput {
+/**
+ * Welke toewijzingen als no-show gelden (puur, voor de sweep en de test). `zonderInchecken`: bedrijven die inchecken uit hebben
+ * (lib/checkin/vereist.ts) tellen nooit mee: bij hen checkt niemand in, dus een ontbrekende check-in zegt niets over opkomst.
+ */
+export function noShowKandidaatWaar(now: Date, zonderInchecken: readonly string[] = []): Prisma.ShiftAssignmentWhereInput {
   const cutoff = new Date(now.getTime() - NO_SHOW_GRACE_MINUTES * 60_000);
   const ondergrens = new Date(now.getTime() - NO_SHOW_MAX_DAGEN * 86_400_000);
   return {
     cancelledAt: null,
-    shift: { startsAt: { lt: cutoff, gte: ondergrens } },
+    shift: {
+      startsAt: { lt: cutoff, gte: ondergrens },
+      ...(zonderInchecken.length > 0 ? { branch: { tenantId: { notIn: [...zonderInchecken] } } } : {}),
+    },
     OR: [{ timesheet: null }, { timesheet: { actualStart: null, status: "DRAFT" } }],
   };
 }
@@ -53,7 +60,7 @@ export async function sweepNoShows(opts: { droog?: boolean; now?: Date } = {}): 
   const now = opts.now ?? new Date();
 
   const candidates = await prisma.shiftAssignment.findMany({
-    where: noShowKandidaatWaar(now),
+    where: noShowKandidaatWaar(now, await tenantsZonderInchecken()),
     select: {
       id: true,
       freelancerId: true,

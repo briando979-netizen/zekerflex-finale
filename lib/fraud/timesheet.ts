@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { incheckenVereist, incheckenVereistVoor } from "@/lib/checkin/vereist";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,11 @@ export interface FraudInput {
   }[];
   /** aantal andere niet-afgewezen urenbriefjes van dezelfde kracht dat overlapt */
   overlappingCount: number;
+  /**
+   * false = dit bedrijf vraagt geen inchecken (lib/checkin/vereist.ts): een ontbrekende check-in is dan geen signaal, want de
+   * goedkeuring van het bedrijf is het bewijs. Een check-in die er wel is, wordt gewoon gecontroleerd. Standaard true.
+   */
+  incheckenVereist?: boolean;
 }
 
 const MIN = 60_000;
@@ -65,7 +71,7 @@ export function evaluateTimesheetFraud(i: FraudInput): FraudFlag[] {
     flags.push({ code: "MOCK_GPS", severity: "critical", message: "GPS kwam van een nep-locatie-app (mock provider)." });
   }
   if (!checkIn) {
-    flags.push({ code: "NO_CHECKIN", severity: "warning", message: "Geen GPS-check-in op locatie geregistreerd." });
+    if (i.incheckenVereist !== false) flags.push({ code: "NO_CHECKIN", severity: "warning", message: "Geen GPS-check-in op locatie geregistreerd." });
   } else if (!checkIn.withinGeofence) {
     const m = Math.round(checkIn.distanceToBranchMeters);
     flags.push({
@@ -144,6 +150,8 @@ export interface TimesheetFraudRow {
   billableMinutes: number;
   freelancerId: string;
   gpsEvents: FraudInput["gpsEvents"];
+  /** het bedrijf van het urenbriefje: voor de keuze "inchecken is optioneel" (lib/checkin/vereist.ts); zonder is inchecken nodig */
+  branch?: { tenantId: string };
 }
 
 /** Haal de context op en evalueer één urenbriefje. */
@@ -159,14 +167,17 @@ export async function fraudForTimesheet(timesheetId: string): Promise<FraudFlag[
       breakMinutes: true,
       billableMinutes: true,
       freelancerId: true,
+      branch: { select: { tenantId: true } },
       gpsEvents: {
         select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true, bron: true, ontvangenOp: true },
       },
     },
   });
   if (!ts) return [];
+  const vereist = await incheckenVereist(ts.branch.tenantId);
   return evaluateTimesheetFraud({
     ...ts,
+    ...(vereist ? {} : { incheckenVereist: false }),
     overlappingCount: await countOverlaps(ts),
   });
 }
@@ -191,10 +202,13 @@ async function countOverlaps(ts: {
 /** Batch: flags per timesheet-id voor een lijst-weergave. */
 export async function fraudForTimesheets(rows: TimesheetFraudRow[]): Promise<Map<string, FraudFlag[]>> {
   const out = new Map<string, FraudFlag[]>();
+  // per bedrijf: vraagt het geen inchecken, dan is een ontbrekende check-in geen signaal (lib/checkin/vereist.ts)
+  const vereist = await incheckenVereistVoor(rows.flatMap((r) => (r.branch ? [r.branch.tenantId] : [])));
   await Promise.all(
     rows.map(async (r) => {
       const overlappingCount = await countOverlaps(r);
-      out.set(r.id, evaluateTimesheetFraud({ ...r, overlappingCount }));
+      const zonderCheck = r.branch ? vereist.get(r.branch.tenantId) === false : false;
+      out.set(r.id, evaluateTimesheetFraud({ ...r, ...(zonderCheck ? { incheckenVereist: false } : {}), overlappingCount }));
     }),
   );
   return out;

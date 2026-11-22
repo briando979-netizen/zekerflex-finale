@@ -5,6 +5,7 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { approveTimesheet } from "@/lib/timesheets/approve";
 import { fraudForTimesheet } from "@/lib/fraud/timesheet";
+import { incheckenVereist } from "@/lib/checkin/vereist";
 import { chat, llmConfigProblem } from "@/lib/ai/client";
 import { knowledgePack } from "@/lib/rag/cag";
 import { alreadyDone, getTenantAutopilot, markDone, optedInTenants } from "@/lib/autopilot/store";
@@ -212,7 +213,7 @@ export const ACTIONS: AutopilotAction[] = [
     key: "uren-auto-goedkeuren",
     label: "Uren automatisch goedkeuren (alleen met toestemming)",
     description:
-      "Alleen bij organisaties die dit zelf aanzetten (Werkgever → Uren). Na 24 uur, als werktijd binnen 15 min van de planning ligt, niet meer uren dan gepland, geen fraudesignalen en geldige GPS-check-in → goedkeuren met de rechten van de beheerder die het aanzette. Al het andere blijft voor een mens.",
+      "Alleen bij organisaties die dit zelf aanzetten (Werkgever → Uren). Na 24 uur, als werktijd binnen 15 min van de planning ligt, niet meer uren dan gepland, geen fraudesignalen en geldige GPS-check-in → goedkeuren met de rechten van de beheerder die het aanzette. Al het andere blijft voor een mens, ook alle uren van een bedrijf dat inchecken uit heeft staan.",
     tier: "consent",
     cap: 100,
     run: async (now) => {
@@ -223,6 +224,12 @@ export const ACTIONS: AutopilotAction[] = [
       for (const tenantId of tenants) {
         const cfg = await getTenantAutopilot(tenantId);
         if (!cfg.autoApproveHours || !cfg.byUserId) continue;
+        // Inchecken uit bij dit bedrijf (lib/checkin/vereist.ts): zonder bewijs van aanwezigheid is de goedkeuring van het bedrijf
+        // zelf het bewijs, dus nooit automatisch. De uren blijven voor het bedrijf, ook als het ooit auto-goedkeuren aanzette.
+        if (!(await incheckenVereist(tenantId))) {
+          details.push(`${tenantId}: inchecken staat uit — uren blijven voor het bedrijf zelf`);
+          continue;
+        }
         const principal = await principalForUser(cfg.byUserId);
         if (!principal || !principal.grants.some((g) => g.organizationId === tenantId && (g.role === "HQ_ADMIN" || g.role === "LOCAL_MANAGER"))) {
           details.push(`${tenantId}: beheerder heeft geen rechten meer — overgeslagen`);

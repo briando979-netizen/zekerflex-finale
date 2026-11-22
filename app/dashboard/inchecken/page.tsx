@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app/ui";
 import { BakenInchecken } from "@/components/app/BakenInchecken";
 import { bakenInstellingen, bakenTokenGeldig } from "@/lib/checkin/baken";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { incheckenVereist } from "@/lib/checkin/vereist";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,10 @@ export default async function IncheckenPage(props: { searchParams: Promise<{ b?:
   const inst = await bakenInstellingen(b);
   const geldig = inst.qr && bakenTokenGeldig(b, inst.qrVersie, t);
   const now = Date.now();
+  // Dit bedrijf vraagt geen inchecken (lib/checkin/vereist.ts): scannen is niet nodig, de werker dient na afloop zijn uren in.
+  // Wie al was ingecheckt (een concept met begintijd) kan hier nog uitchecken, dus alleen zonder check-in hier stoppen.
+  const vestiging = geldig ? await prisma.branch.findUnique({ where: { id: b }, select: { tenantId: true } }) : null;
+  const geenInchecken = vestiging ? !(await incheckenVereist(vestiging.tenantId)) : false;
   // de klus van nu: vanaf een uur voor de start tot zes uur na het einde, net als de knop
   const ts = geldig
     ? await prisma.timesheet.findFirst({
@@ -52,6 +57,8 @@ export default async function IncheckenPage(props: { searchParams: Promise<{ b?:
       <PageHeader title={ft.checkin.title} />
       {!geldig ? (
         <p className="text-sm text-neutralx-600">{ft.checkin.qrWrong}</p>
+      ) : geenInchecken && !ts?.actualStart ? (
+        <p role="status" className="text-sm font-semibold text-ink">{ft.checkinPage.geenInchecken}</p>
       ) : !ts ? (
         <p className="text-sm text-neutralx-600">{ft.checkin.noShiftHere}</p>
       ) : ts.actualEnd ? (

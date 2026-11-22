@@ -40,6 +40,8 @@ import { featureEnabled } from "@/lib/flags";
 import { markupFor } from "@/lib/uitzendbureau/insights";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
+import { incheckenVereist } from "@/lib/checkin/vereist";
+import { zonderInchecken } from "@/lib/checkin/vereist-kern";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
@@ -100,6 +102,9 @@ export interface ApproveTimesheetResult {
 }
 
 const MINUTE_MS = 60_000;
+
+/** Achter de samenvatting in het auditspoor als de uren zonder inchecken zijn ingediend (lib/checkin/vereist.ts). */
+const ZONDER_INCHECKEN_AUDIT = " (zonder inchecken ingediend, goedgekeurd door het bedrijf)";
 
 /**
  * Een goedkeuring/uitbetaling kan geblokkeerd worden doordat het profiel van de
@@ -221,7 +226,11 @@ async function approveTimesheetInner(
 
     // --- GPS check-in verification -------------------------------------
     const checkIn = ts.gpsEvents.find((e) => e.type === "CHECK_IN");
-    if (!input.overrideGpsCheck) {
+    // Inchecken uit bij dit bedrijf (lib/checkin/vereist.ts) en ook niet ingecheckt: er is geen bewijs van aanwezigheid om te
+    // controleren, de goedkeuring van het bedrijf zelf is het bewijs. Een check-in die er toch is, wordt gewoon gecontroleerd.
+    const incheckVereist = await incheckenVereist(ts.branch.tenantId);
+    const zonderCheckin = zonderInchecken(incheckVereist, Boolean(checkIn));
+    if (!input.overrideGpsCheck && !zonderCheckin) {
       if (!checkIn) {
         throw AppError.precondition(
           "No GPS check-in recorded; use overrideGpsCheck to approve manually",
@@ -257,6 +266,7 @@ async function approveTimesheetInner(
       breakMinutes: ts.breakMinutes,
       billableMinutes,
       gpsEvents: ts.gpsEvents,
+      incheckenVereist: incheckVereist,
       overlappingCount: await prisma.timesheet.count({
         where: {
           id: { not: ts.id },
@@ -280,13 +290,13 @@ async function approveTimesheetInner(
     // Vóór de keuze op de werker: ook een uitzendkracht of zzp'er die bij een partner werkte, krijgt van ZekerFlex geen
     // uitbetaling, geen factuur op zijn naam en geen loonstrook (lib/payroll/engine.ts slaat deze briefjes ook over).
     if (await isUitzendPartnerTenant(ts.branch.tenantId)) {
-      return approveViaPartner({ ts, principal, billableMinutes, input, log });
+      return approveViaPartner({ ts, principal, billableMinutes, input, log, zonderCheckin });
     }
 
     // --- Fork: uitzendkracht → payroll, everyone else → invoice + payout ---
     const fiscal = await getFiscal(ts.freelancer.userId);
     if (invoiceModeFor(fiscal) === "payroll") {
-      return approveViaPayroll({ ts, principal, billableMinutes, input, log });
+      return approveViaPayroll({ ts, principal, billableMinutes, input, log, zonderCheckin });
     }
 
     // --- Payout destination -------------------------------------------
@@ -481,13 +491,14 @@ async function approveTimesheetInner(
       actorUserId: principal.userId,
       actorLabel: "user",
       severity: input.overrideGpsCheck ? "warning" : "info",
-      summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - ${ts.branch.name}`,
+      summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - ${ts.branch.name}${zonderCheckin ? ZONDER_INCHECKEN_AUDIT : ""}`,
       targetType: "timesheet",
       targetId: ts.id,
       metadata: {
         billableMinutes,
         correctedBillableMinutes: input.correctedBillableMinutes ?? null,
         overrodeGpsCheck: Boolean(input.overrideGpsCheck),
+        zonderInchecken: zonderCheckin,
         fraudFlags: fraudFlags.map((f) => `${f.severity}:${f.code}`),
         freelancerId: ts.freelancerId,
         freelancerInvoice: persisted.freelancerInvoice.number,
@@ -602,8 +613,9 @@ async function approveViaPartner(args: {
   billableMinutes: number;
   input: ApproveTimesheetInput;
   log: ReturnType<typeof logger.child>;
+  zonderCheckin: boolean;
 }): Promise<ApproveTimesheetResult> {
-  const { ts, principal, billableMinutes, input, log } = args;
+  const { ts, principal, billableMinutes, input, log, zonderCheckin } = args;
 
   const platformTenant = await prisma.tenant.findFirst({ where: { type: "PLATFORM" }, select: { id: true } });
   if (!platformTenant) throw AppError.precondition("De platformorganisatie is niet ingesteld.");
@@ -659,7 +671,7 @@ async function approveViaPartner(args: {
     actorUserId: principal.userId,
     actorLabel: "user",
     severity: input.overrideGpsCheck ? "warning" : "info",
-    summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - uitzendpartner ${ts.branch.tenant.name} betaalt het loon`,
+    summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - uitzendpartner ${ts.branch.tenant.name} betaalt het loon${zonderCheckin ? ZONDER_INCHECKEN_AUDIT : ""}`,
     targetType: "timesheet",
     targetId: ts.id,
     metadata: {
@@ -667,6 +679,7 @@ async function approveViaPartner(args: {
       billableMinutes,
       correctedBillableMinutes: input.correctedBillableMinutes ?? null,
       overrodeGpsCheck: Boolean(input.overrideGpsCheck),
+      zonderInchecken: zonderCheckin,
       freelancerId: ts.freelancerId,
       platformFeeInvoice: feeInvoice.number,
       resolvedDisputeId: ts.dispute?.id ?? null,
@@ -751,8 +764,9 @@ async function approveViaPayroll(args: {
   billableMinutes: number;
   input: ApproveTimesheetInput;
   log: ReturnType<typeof logger.child>;
+  zonderCheckin: boolean;
 }): Promise<ApproveTimesheetResult> {
-  const { ts, principal, billableMinutes, input, log } = args;
+  const { ts, principal, billableMinutes, input, log, zonderCheckin } = args;
   const week = isoWeekOf(ts.scheduledStart);
   const weekId = isoWeekId(week);
   const weekLabel = isoWeekLabel(week);
@@ -860,7 +874,7 @@ async function approveViaPayroll(args: {
     actorUserId: principal.userId,
     actorLabel: "user",
     severity: input.overrideGpsCheck ? "warning" : "info",
-    summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - verloning via payroll, week ${weekLabel}`,
+    summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - verloning via payroll, week ${weekLabel}${zonderCheckin ? ZONDER_INCHECKEN_AUDIT : ""}`,
     targetType: "timesheet",
     targetId: ts.id,
     metadata: {
@@ -868,6 +882,7 @@ async function approveViaPayroll(args: {
       billableMinutes,
       correctedBillableMinutes: input.correctedBillableMinutes ?? null,
       overrodeGpsCheck: Boolean(input.overrideGpsCheck),
+      zonderInchecken: zonderCheckin,
       freelancerId: ts.freelancerId,
       isoWeek: weekId,
       resolvedDisputeId: ts.dispute?.id ?? null,

@@ -11,6 +11,8 @@ import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
 import { FastPaySettings } from "@/components/werkgever/FastPaySettings";
 import { VolumeCard } from "@/components/werkgever/VolumeCard";
 import { MaxUrenInstelling } from "@/components/werkgever/MaxUrenInstelling";
+import { IncheckenInstelling } from "@/components/werkgever/IncheckenInstelling";
+import { incheckenVereist } from "@/lib/checkin/vereist";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -47,6 +49,8 @@ export default async function WerkgeverBedrijfPage() {
     reviewSummary("company", tenantId),
     mailPrefsView(principal.email, "bedrijf"),
   ]);
+  // moeten je werkers inchecken? (lib/checkin/vereist.ts; standaard ja)
+  const incheckVereist = await incheckenVereist(tenantId);
 
   return (
     <>
@@ -116,6 +120,10 @@ export default async function WerkgeverBedrijfPage() {
         {/* klus-instellingen (naar YoungOnes): maximum uren per werker per 12 maanden, lib/werkgever/max-uren.ts */}
         <Panel title={c.maxUrenTitel}>
           <MaxUrenInstelling initial={extra.maxUrenPerWerker ?? 0} />
+        </Panel>
+        {/* inchecken door je werkers: ja (standaard) of nee, dan is jouw goedkeuring van de uren het bewijs */}
+        <Panel title={c.incheckTitel}>
+          <IncheckenInstelling initial={incheckVereist} />
         </Panel>
         <VolumeCard />
         <FastPaySettings />

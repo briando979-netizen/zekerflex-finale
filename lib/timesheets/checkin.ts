@@ -5,6 +5,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { recordEngagement } from "@/lib/engagement/events";
 import { evaluateGeofence } from "@/lib/geo/geofencing";
+import { incheckenVereist } from "@/lib/checkin/vereist";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { badgeNaInchecken } from "@/lib/locatie/printen";
 import { OFFLINE_MELDING, beoordeelOffline, liveTijdstip, offlineTijdstip } from "@/lib/timesheets/offline";
@@ -125,6 +126,10 @@ export async function recordGpsEvent(
     throw AppError.validation("Het tijdstip van tikken ontbreekt.");
   }
 
+  // Inchecken is optioneel per bedrijf (lib/checkin/vereist.ts): een nieuwe check-in nemen we dan niet aan. Alleen opgezocht voor
+  // een check-in; uitchecken en hartslag kunnen alleen na een check-in en blijven dus werken voor wie al was ingecheckt.
+  const incheckVereist = input.type === GpsEventType.CHECK_IN ? await incheckenVereist(ts.branch.tenantId) : true;
+
   const mocked = input.mocked ?? false;
   const scheduledMinutes = Math.max(
     0,
@@ -179,6 +184,9 @@ export async function recordGpsEvent(
 
     if (input.type === GpsEventType.CHECK_IN && hasCheckIn) {
       throw AppError.conflict("Je bent al ingecheckt voor deze dienst.").metSleutel("checkin.alIn");
+    }
+    if (input.type === GpsEventType.CHECK_IN && !incheckVereist) {
+      throw AppError.precondition("Dit bedrijf vraagt geen inchecken. Dien na afloop je uren in.").metSleutel("checkin.nietNodig");
     }
     if (input.type !== GpsEventType.CHECK_IN && !hasCheckIn) {
       throw AppError.precondition("Check eerst in voordat je uitcheckt.").metSleutel("checkin.eerstIn");

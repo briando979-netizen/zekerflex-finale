@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePrincipal } from "@/lib/auth";
 import { CheckInPanel } from "@/components/app/CheckInPanel";
@@ -11,6 +11,8 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 import { INCHECK_VOOR_MS } from "@/lib/timesheets/offline";
 import { urenIndienenOpen } from "@/lib/timesheets/indienen";
+import { incheckenVereist } from "@/lib/checkin/vereist";
+import { zonderInchecken } from "@/lib/checkin/vereist-kern";
 import { plekVoorWerker } from "@/lib/shifts/place-label";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +38,7 @@ export default async function IncheckKlusPage(props: { params: Promise<{ timeshe
       scheduledEnd: true,
       actualStart: true,
       actualEnd: true,
-      branch: { select: { name: true, addressLine: true, postalCode: true, city: true, latitude: true, longitude: true, tenant: { select: { name: true } } } },
+      branch: { select: { name: true, addressLine: true, postalCode: true, city: true, latitude: true, longitude: true, tenantId: true, tenant: { select: { name: true } } } },
       assignment: { select: { shiftId: true, shift: { select: { title: true, breakMinutes: true, dresscode: true, requiredSkill: { select: { name: true } } } } } },
     },
   });
@@ -47,6 +49,12 @@ export default async function IncheckKlusPage(props: { params: Promise<{ timeshe
   const concept = ts.status === "DRAFT";
   const voorVenster = nu < start - INCHECK_VOOR_MS;
   const urenOpen = urenIndienenOpen(ts, nu);
+  // Dit bedrijf vraagt geen inchecken (lib/checkin/vereist.ts): geen incheckpagina, geen knop. De werker gaat naar zijn klus (met
+  // "dien na afloop je uren in") of, als de klus voorbij is, naar zijn uren. Wie al was ingecheckt (een concept met begintijd)
+  // blijft hier, om uit te checken.
+  if (zonderInchecken(await incheckenVereist(ts.branch.tenantId), concept && Boolean(ts.actualStart))) {
+    redirect(concept && !urenOpen ? `/dashboard/klussen/${ts.assignment.shiftId}` : `/dashboard/uren/${ts.id}`);
+  }
   // na afloop zonder inchecken heeft de knop geen zin meer; wie nog ingecheckt is, ziet hem wel (uitchecken)
   const toonPaneel = concept && !voorVenster && !(urenOpen && !ts.actualStart);
   const shift = ts.assignment.shift;

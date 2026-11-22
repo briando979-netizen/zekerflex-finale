@@ -97,6 +97,8 @@ export async function approveCleanTimesheetsAction(timesheetIds: string[]): Prom
         breakMinutes: true,
         billableMinutes: true,
         freelancerId: true,
+        // voor "inchecken is optioneel" (lib/checkin/vereist.ts): bij een bedrijf zonder inchecken is een ontbrekende check-in geen signaal
+        branch: { select: { tenantId: true } },
         gpsEvents: { select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true, bron: true, ontvangenOp: true } },
       },
     });

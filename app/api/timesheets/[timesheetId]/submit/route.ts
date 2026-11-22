@@ -9,6 +9,8 @@ import { pushHoursSubmitted } from "@/lib/notifications/employer-push";
 import { runAfter } from "@/lib/run-after";
 import { urenIndienenOpen } from "@/lib/timesheets/indienen";
 import { addReview, hasReviewed } from "@/lib/reviews/store";
+import { incheckenVereist } from "@/lib/checkin/vereist";
+import { zonderInchecken } from "@/lib/checkin/vereist-kern";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,7 +79,10 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
       });
     }
     const updated = await prisma.timesheet.update({ where: { id: timesheet.id }, data: { status: "SUBMITTED", actualStart: start, actualEnd: end, breakMinutes: input.breakMinutes, billableMinutes, submittedAt: new Date(), extraCostsCents: input.extraCostsCents ?? null, extraCostsNote: input.extraCostsCents ? (input.extraCostsNote ?? null) : null }, select: { id: true, status: true, billableMinutes: true } });
-    await recordAudit({ category: "TIMESHEET", action: "timesheet.submitted", actorUserId: principal.userId, actorLabel: "user", summary: `Urenstaat ingediend: ${billableMinutes} minuten`, targetType: "timesheet", targetId: timesheet.id, metadata: { note: input.note ?? null, breakMinutes: input.breakMinutes, extraCostsCents: input.extraCostsCents ?? null } });
+    // Dit bedrijf vraagt geen inchecken (lib/checkin/vereist.ts) en er is ook niet ingecheckt (in een concept komt actualStart alleen
+    // van een check-in, de waarde van hierboven): de uren zijn zonder inchecken ingediend, het bedrijf keurt ze zelf goed.
+    const zonderCheckin = zonderInchecken(await incheckenVereist(tenantId), Boolean(timesheet.actualStart));
+    await recordAudit({ category: "TIMESHEET", action: "timesheet.submitted", actorUserId: principal.userId, actorLabel: "user", summary: `Urenstaat ingediend: ${billableMinutes} minuten${zonderCheckin ? " (zonder inchecken)" : ""}`, targetType: "timesheet", targetId: timesheet.id, metadata: { note: input.note ?? null, breakMinutes: input.breakMinutes, extraCostsCents: input.extraCostsCents ?? null, zonderInchecken: zonderCheckin } });
     // Tell the client now (the autopilot only reminds twice a day): approving sooner pays the worker sooner.
     if (shiftId) runAfter(() => pushHoursSubmitted(shiftId, timesheet.id, principal.fullName, billableMinutes));
     return NextResponse.json({ timesheet: updated });
