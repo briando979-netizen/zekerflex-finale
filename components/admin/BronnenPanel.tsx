@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Empty, KpiStrip, Notice, Panel, Pill } from "@/components/admin/kit";
 import { Chart } from "@/components/admin/kit-client";
 import { dateTimeNl, timeAgoNl } from "@/lib/admin/format";
-import type { Bron, BronId, Meting } from "@/lib/bronnen/catalogus";
+import { isNietIngesteld, isOvergeslagen, type Bron, type BronId, type Meting } from "@/lib/bronnen/catalogus";
 import type { ReeksPunt } from "@/lib/bronnen/store";
 
 // De bronnen: per bron de laatste stand, de regels eronder, "Nu ophalen", de
@@ -57,8 +57,9 @@ export function BronnenPanel() {
 
   if (!data) return fout ? <Notice tone="crit" role="alert">{fout}</Notice> : <p className="text-sm" style={{ color: "var(--a-mute)" }}>Laden…</p>;
 
-  const ok = data.bronnen.filter((b) => b.laatste?.ok).length;
-  const mis = data.bronnen.filter((b) => b.laatste && !b.laatste.ok && !/Nog niet ingesteld/.test(b.laatste.tekst)).length;
+  // een overgeslagen bron (KVK-controle zonder tegoed) telt niet als in orde, maar ook niet als mislukt
+  const ok = data.bronnen.filter((b) => b.laatste?.ok && !isOvergeslagen(b.laatste)).length;
+  const mis = data.bronnen.filter((b) => b.laatste && !b.laatste.ok && !isNietIngesteld(b.laatste)).length;
   const brandstof = data.bronnen.find((b) => b.id === "brandstof")?.laatste;
   const minloon = data.bronnen.find((b) => b.id === "minimumloon")?.laatste;
   const reeks = data.brandstofReeks.filter((p) => typeof p.waarden.benzine === "number");
@@ -81,7 +82,8 @@ export function BronnenPanel() {
       <div className="grid gap-4 lg:grid-cols-2">
         {data.bronnen.map((b) => {
           const m = b.laatste;
-          const uit = m && !m.ok && /Nog niet ingesteld/.test(m.tekst);
+          const uit = m && isNietIngesteld(m);
+          const over = m && isOvergeslagen(m);
           return (
             <Panel
               key={b.id}
@@ -89,7 +91,7 @@ export function BronnenPanel() {
               subtitle={b.kort}
               actions={
                 <span className="flex items-center gap-2">
-                  <Pill tone={!m ? "neutral" : uit ? "neutral" : m.ok ? "ok" : "crit"}>{!m ? "Nog niet opgehaald" : uit ? "Niet ingesteld" : m.ok ? "In orde" : "Mislukt"}</Pill>
+                  <Pill tone={!m ? "neutral" : uit || over ? "neutral" : m.ok ? "ok" : "crit"}>{!m ? "Nog niet opgehaald" : uit ? "Niet ingesteld" : over ? "Overgeslagen" : m.ok ? "In orde" : "Mislukt"}</Pill>
                   <button type="button" className="a-btn a-btn-ghost" disabled={bezig !== null} onClick={() => void haal(b.id)}>
                     {bezig === b.id ? "Ophalen…" : "Nu ophalen"}
                   </button>

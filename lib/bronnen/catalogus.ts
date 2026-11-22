@@ -96,6 +96,17 @@ export interface Meting {
 
 export const lege = (fout: string): Omit<Meting, "op" | "duurMs"> => ({ ok: false, waarden: {}, tekst: "", regels: [], fout });
 
+/**
+ * Een bron die bewust niets deed (de KVK-controle van bedrijven bij een op tegoed, 22 nov 2026): geen mislukking. Als `ok: false`
+ * werd hij elk uur opnieuw geprobeerd en meldde de planner na drie keer "lukt niet meer" aan de eigenaar, terwijl er niets stuk was.
+ */
+export const overgeslagen = (reden: string): Omit<Meting, "op" | "duurMs"> => ({ ok: true, waarden: { overgeslagen: 1 }, tekst: `Overgeslagen: ${reden}`, regels: [], fout: "" });
+
+export const isOvergeslagen = (m: Pick<Meting, "ok" | "waarden">): boolean => m.ok && m.waarden.overgeslagen === 1;
+
+/** Er ontbreekt een sleutel of dienst: een taak voor de eigenaar (Te doen), geen storing en geen alarm. */
+export const isNietIngesteld = (m: Pick<Meting, "ok" | "tekst">): boolean => !m.ok && /Nog niet ingesteld/.test(m.tekst);
+
 const euro = (n: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(n);
 const dagKort = (iso: string) => new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T12:00:00Z`));
 
