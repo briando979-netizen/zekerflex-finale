@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { LOCATIE_TEKSTEN, locatieTeksten, vulAantal, vulIn } from "@/lib/locatie/teksten";
-import { TABS, isTab } from "@/lib/locatie/tabs";
 
 // De pagina's van Op locatie draaien op de server en geven deze teksten door aan
 // een clientcomponent. Zat er een functie in, dan weigert Next dat met
@@ -50,13 +49,5 @@ describe("teksten van Op locatie", () => {
       expect(t.kluis.tot, `taal ${taal}`).toContain("{tijd}");
       expect(Object.keys(t).sort(), `taal ${taal}`).toEqual(Object.keys(nl).sort());
     }
-  });
-});
-
-describe("tabbladen van Op locatie", () => {
-  it("herkent alleen de echte tabbladen", () => {
-    for (const t of TABS) expect(isTab(t.key)).toBe(true);
-    expect(isTab("bestaat-niet")).toBe(false);
-    expect(isTab(undefined)).toBe(false);
   });
 });

@@ -1,23 +1,14 @@
 // ---------------------------------------------------------------------------
-// De dashboards van een bedrijf (10 nov 2026, eigenaar: "een aparte aanmelding en een eigen,
-// volledig ingericht dashboard voor website, webshop, rijschool en restaurant; haal die opties
-// uit de normale werkgever; wie al een account heeft, wisselt van dashboard zonder alles opnieuw
-// in te vullen").
+// Het menu van de werkgevers-app (/werkgever).
 //
-// Vijf dashboards: personeel (het gewone werkgeversdashboard, alleen personeel inhuren), website
-// en webshop (de studio, /studio/<soort>), rijschool (/werkgever/rijschool) en horeca
-// (/werkgever/horeca). Een bedrijf heeft er één of meer:
-//  - de dashboards die het zelf toevoegde (bij het aanmelden of via "Dashboard toevoegen"),
-//    in KV "werkruimte:<tenantId>" (lib/werkgever/werkruimte-server.ts);
-//  - plus wat het al gebruikt: een rijschool, een horecazaak, een website, een webshop, klussen.
-// Welk dashboard je ziet, kies je per browser (cookie, zie werkruimte-server.ts): wisselen verandert
-// niets voor je collega's. De bedrijfsgegevens (naam, KVK, adres) zijn gedeeld; elk dashboard vraagt
-// alleen wat het zelf nodig heeft.
+// Van 10 tot 22 nov 2026 had een bedrijf meerdere dashboards: personeel, website, webshop, rijschool en horeca. Die
+// andere dashboards zijn op 22 nov uit de code gehaald (fase C, eigenaar: "ruim op"; geen enkel echt bedrijf gebruikte
+// ze). Elk bedrijf heeft nu alleen het dashboard personeel: klussen, uren, facturen en wat daarbij hoort.
+// De soorten hieronder blijven alleen bestaan als wat een bedrijf ooit bij het aanmelden koos (KV "werkruimte:<tenantId>",
+// lib/werkgever/werkruimte-server.ts); ze veranderen niets meer aan het menu.
 // Puur (geen prisma of kv): de layout koppelt de sleutels aan adres, label en icoon.
 // ---------------------------------------------------------------------------
 import { BANK_AAN } from "@/lib/app-mode";
-import { RIJSCHOOL_TABS } from "@/lib/rijschool/tabs";
-import { horecaTabs } from "@/lib/horeca/tabs";
 
 export const WERKRUIMTES = ["personeel", "rijschool", "horeca", "website", "webshop"] as const;
 export type Werkruimte = (typeof WERKRUIMTES)[number];
@@ -31,43 +22,11 @@ export const WERKRUIMTE_INFO: Record<Werkruimte, { naam: string; uitleg: string 
   webshop: { naam: "Webshop", uitleg: "Producten verkopen, bestellingen, verzending en betalen." },
 };
 
-/** Waar een dashboard begint. */
-export function thuisVan(soort: Werkruimte): string {
-  switch (soort) {
-    case "rijschool":
-      return "/werkgever/rijschool";
-    case "horeca":
-      return "/werkgever/horeca";
-    case "website":
-      return "/studio/website";
-    case "webshop":
-      return "/studio/webshop";
-    default:
-      return "/werkgever";
-  }
-}
-
-/** Adressen die bij het dashboard personeel horen (klussen, uren, …). */
-const PERSONEEL_PADEN = ["/werkgever/diensten", "/werkgever/kalender", "/werkgever/planner", "/werkgever/favorieten", "/werkgever/geblokkeerd", "/werkgever/uren", "/werkgever/inchecken", "/werkgever/compliance", "/werkgever/overeenkomsten", "/werkgever/uitzend"];
-
-/**
- * Bij welk dashboard een adres hoort, of null als het bij elk dashboard past (mail, facturen, …).
- * Opent iemand zo'n adres vanuit een mail of melding terwijl een ander dashboard open is, dan
- * wisselt de werkgever-app mee (components/app/EmployerShell.tsx).
- */
-export function dashboardVanPad(pad: string): Werkruimte | null {
-  const onder = (basis: string) => pad === basis || pad.startsWith(`${basis}/`);
-  if (onder("/werkgever/rijschool")) return "rijschool";
-  if (onder("/werkgever/horeca")) return "horeca";
-  if (PERSONEEL_PADEN.some(onder)) return "personeel";
-  return null;
-}
-
-/** Wat het bedrijf zelf koos. */
+/** Wat het bedrijf bij het aanmelden koos (alleen nog bewaard, zie boven). */
 export interface WerkruimteKeuze {
-  /** het dashboard waarmee het bedrijf standaard opent */
+  /** het dashboard waarmee het bedrijf wilde openen */
   soort: Werkruimte;
-  /** ook personeel inhuren (oude keuze van vóór 10 nov): telt als het dashboard personeel */
+  /** ook personeel inhuren */
   ookPersoneel: boolean;
   /** de dashboards die het bedrijf zelf toevoegde */
   dashboards: Werkruimte[];
@@ -90,97 +49,10 @@ export function voegToe(keuze: WerkruimteKeuze | null, soort: Werkruimte, at: st
   return { soort, ookPersoneel: lijst.has("personeel"), dashboards: WERKRUIMTES.filter((w) => lijst.has(w)), at };
 }
 
-export interface WerkruimteFeiten {
-  keuze: WerkruimteKeuze | null;
-  heeftRijschool: boolean;
-  heeftHoreca: boolean;
-  /** een website (SiteDoc soort website) */
-  heeftSite: boolean;
-  /** een webshop (SiteDoc soort webshop) */
-  heeftWebshop?: boolean;
-  /** ooit een klus geplaatst */
-  heeftKlussen: boolean;
-  /** de horeca-module "Personeel via ZekerFlex" staat aan (lib/horeca/modules.ts) */
-  personeelModule?: boolean;
-}
-
-export interface WerkruimteStand {
-  /** het dashboard dat nu open is */
-  soort: Werkruimte;
-  /** het bedrijf heeft het dashboard personeel (klussen, of zelf toegevoegd) */
-  ookPersoneel: boolean;
-  /** door het bedrijf gekozen; anders afgeleid */
-  gekozen: boolean;
-  /** alle dashboards van dit bedrijf, in vaste volgorde */
-  dashboards: Werkruimte[];
-}
-
-/** De dashboards die een bedrijf heeft: zelf toegevoegd plus wat het al gebruikt. Nooit leeg. */
-export function dashboardsVan(f: WerkruimteFeiten): Werkruimte[] {
-  const lijst = new Set<Werkruimte>(f.keuze?.dashboards ?? []);
-  if (f.keuze) lijst.add(f.keuze.soort);
-  // niets wat iemand gebruikt, verdwijnt: wie klussen heeft, houdt het personeelsdashboard
-  if (f.keuze?.ookPersoneel || f.heeftKlussen || f.personeelModule) lijst.add("personeel");
-  if (f.heeftRijschool) lijst.add("rijschool");
-  if (f.heeftHoreca) lijst.add("horeca");
-  if (f.heeftSite) lijst.add("website");
-  if (f.heeftWebshop) lijst.add("webshop");
-  if (lijst.size === 0) lijst.add("personeel");
-  return WERKRUIMTES.filter((w) => lijst.has(w));
-}
-
-/**
- * Welk dashboard open is. `gewenst` is wat deze browser het laatst koos (cookie); dat telt alleen
- * als het bedrijf dat dashboard heeft. Anders de keuze van het bedrijf, en zonder keuze wat het
- * al gebruikt (een rijschool, een horecazaak, alleen een webshop of website, anders personeel).
- */
-export function bepaalWerkruimte(f: WerkruimteFeiten, gewenst?: Werkruimte | null): WerkruimteStand {
-  const dashboards = dashboardsVan(f);
-  const ookPersoneel = dashboards.includes("personeel");
-  if (gewenst && dashboards.includes(gewenst)) return { soort: gewenst, ookPersoneel, gekozen: true, dashboards };
-  if (f.keuze) return { soort: f.keuze.soort, ookPersoneel, gekozen: true, dashboards };
-  const soort: Werkruimte = f.heeftRijschool
-    ? "rijschool"
-    : f.heeftHoreca
-      ? "horeca"
-      : f.heeftWebshop && !f.heeftKlussen
-        ? "webshop"
-        : f.heeftSite && !f.heeftKlussen
-          ? "website"
-          : "personeel";
-  return { soort, ookPersoneel, gekozen: false, dashboards };
-}
-
-/**
- * Met de vlag `publiek-alleen-flexwerk` (20 nov, eigenaar: "haal die andere dingen weg als ze er nog staan, zoals webshop
- * beheren, rijschool en alle andere, bij werkgevers") heeft élk bedrijf alleen het dashboard personeel: ook een bedrijf
- * dat eerder webshop, website, rijschool of horeca koos of gebruikt. De pagina's zelf blijven via een directe link
- * bereikbaar en de keuze in de KV blijft staan: vlag uit = alles terug.
- */
-export function alleenPersoneel(stand: WerkruimteStand): WerkruimteStand {
-  return { ...stand, soort: "personeel", ookPersoneel: true, gekozen: true, dashboards: ["personeel"] };
-}
-
-/**
- * Hoort een accountscherm van /werkgever (bedrijf, facturen, team, mail, mijn account) in de studio
- * (lib/studio/account-server.ts)? Alleen als het dashboard website of webshop open is en het bedrijf
- * geen dashboard personeel heeft. Wie klussen heeft, houdt de werkgeverspagina met de facturen van
- * zijn klussen en zijn team (16 nov: een bedrijf met 90 klussen kwam via Facturen op de
- * domeinfacturen van de websitestudio).
- */
-export function studioVoorAccount(stand: Pick<WerkruimteStand, "soort" | "ookPersoneel">): "website" | "webshop" | null {
-  if (stand.ookPersoneel) return null;
-  return stand.soort === "website" || stand.soort === "webshop" ? stand.soort : null;
-}
-
 // --- het menu ------------------------------------------------------------------
 
 export type MenuSleutel =
   | "start"
-  | "rijschool"
-  | "horeca"
-  | "studio"
-  | "winkel"
   | "klussen"
   | "kalender"
   | "planner"
@@ -194,8 +66,6 @@ export type MenuSleutel =
   | "bank"
   | "favorieten"
   | "berichten"
-  | "mail"
-  | "whatsapp"
   | "geblokkeerd"
   | "uren"
   | "inchecken"
@@ -203,19 +73,11 @@ export type MenuSleutel =
   | "compliance"
   | "overeenkomsten"
   | "bedrijf"
-  | "website"
-  | "telefonie"
-  | "reviews"
-  | "netwerk"
   | "rapportages"
   | "inkaart"
   | "kennisbank"
   | "hulp"
   | "assistent"
-  | "locatie"
-  | "branche"
-  | "afspraken"
-  | "klanten"
   /** het dashboard van een uitzendpartner (lib/uitzend/bureau-kern.ts): alleen als het bedrijf uitzendpartner is */
   | "uitzendAanvragen"
   | "uitzendKrachten"
@@ -223,44 +85,27 @@ export type MenuSleutel =
   | "uitzendKlanten"
   | "uitzendBureau";
 
-export type MenuSectie = "beheer" | "klanten" | "administratie" | "rijschool" | "horeca" | "uitzend";
+export type MenuSectie = "beheer" | "uitzend";
 
 export const SECTIE_NAAM: Record<Exclude<MenuSectie, "beheer">, string> = {
-  klanten: "Klanten en contact",
-  administratie: "Administratie",
-  rijschool: "Je rijschool",
-  horeca: "Je zaak",
   uitzend: "Uitzendbureau",
 };
 
 /**
  * Het blok "Uitzendbureau" (21 nov 2026, eigenaar: "een aparte" voor de uitzendpartners): aanvragen, uitzendkrachten, uren
- * voor de verloning, klanten en locaties, bureaugegevens. Alleen in het dashboard personeel van een uitzendpartner, tussen
- * het hoofddeel en Beheer.
+ * voor de verloning, klanten en locaties, bureaugegevens. Alleen bij een uitzendpartner, tussen het hoofddeel en Beheer.
  */
 export const UITZEND_SLEUTELS: readonly MenuSleutel[] = ["uitzendAanvragen", "uitzendKrachten", "uitzendVerloning", "uitzendKlanten", "uitzendBureau"];
 
 export interface MenuPlek {
   sleutel: MenuSleutel;
   sectie?: MenuSectie;
-  /** een tabblad van het rijschool- of horecabeheer: adres <onderdeel>?tab=<id>, met dit label */
-  tab?: { id: string; label: string };
 }
 
 export interface MenuOpties {
-  /** het bedrijf heeft afspraken ingericht (lib/afspraken/in-menu.ts): dan staan Afspraken en Klantenkaart in het menu, anders niet */
-  heeftAfspraken: boolean;
-  /** de rijschool is ingericht (anders alleen de ingang om hem in te richten) */
-  heeftRijschool: boolean;
-  /** de horecazaak is ingericht */
-  heeftHoreca: boolean;
-  /** de modules die de horecazaak aan heeft (lib/horeca/modules.ts): bepalen de tabbladen */
-  horecaModules?: readonly string[];
   /** Android-app: geen ZekerFlex Bank (lib/app-mode.ts) */
   inApp: boolean;
-  /** mag de studio openen (HQ_ADMIN of PLATFORM_ADMIN, zoals app/studio/layout.tsx eist) */
-  studio: boolean;
-  /** vlag `publiek-alleen-flexwerk`: dan vallen de niet-flexwerk-menu-items (online marketing) weg; personeelsfuncties blijven */
+  /** vlag `publiek-alleen-flexwerk`: dan vallen de losse handleidingen weg en worden ingangen samengevoegd (zie onder) */
   alleenFlexwerk?: boolean;
   /** het bedrijf plaatste nog nooit een klus: met de vlag aan dan een kort startmenu (zie NA_EERSTE_KLUS) */
   nogGeenKlussen?: boolean;
@@ -268,26 +113,14 @@ export interface MenuOpties {
   uitzendPartner?: boolean;
 }
 
-/** De personeelsfuncties, in de volgorde van het gewone menu. Alleen in het dashboard personeel. */
+/** De personeelsfuncties, in de volgorde van het menu. */
 export const PERSONEEL_SLEUTELS: readonly MenuSleutel[] = ["klussen", "kalender", "planner", "uren", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten"];
-
-/** Onderdelen die bij één van de andere dashboards horen en dus niet in het dashboard personeel staan. */
-export const PAKKET_SLEUTELS: readonly MenuSleutel[] = ["rijschool", "horeca", "studio", "winkel", "website"];
 
 const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (sectie ? { sleutel, sectie } : { sleutel });
 
-// Menu-items die niet over flexwerk gaan: met de vlag `publiek-alleen-flexwerk` aan vallen ze uit het PERSONEEL-menu (het
-// flexwerk-dashboard). Telefonie en Google-reviews (online-pijler), "Jouw branche" (/werkgever/branche + de branchetegels),
-// en "Website bouwen"/"Webshop"/"Website-beheer" (studio/winkel/website). Personeelsfuncties (klussen, uren, facturen,
-// verloning, team, instellingen, abonnement, …) blijven altijd. De pagina's blijven bereikbaar via een directe link.
-// Alleen het personeel-dashboard wordt gefilterd: een bestaand website-/webshop-/rijschool-/horeca-bedrijf houdt zijn eigen
-// dashboardmenu volledig (breek dat niet; de wisselaar toont dat dashboard alleen als het open is).
-// Sinds 20 nov (eigenaar: "haal weg wat niets met flexwerkers of uren goedkeuren te maken heeft") ook de zakelijke
-// mailbox, de WhatsApp-koppeling en Wifi/VPN (netwerkpakketten): losse diensten, geen flexwerk.
-// En (eigenaar, "haal dat allemaal weg"): Op locatie (portofoon, toegang op kenteken, sleutelkluis, badges) en
-// Afspraken/Klantenkaart (de agenda voor kappers en garages: branche, geen flexwerk).
-// En de losse ingang "Handleidingen" (Outline): het hulpcentrum (vraagteken, menu-item Hulp) linkt er al naartoe.
-const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten", "kennisbank"];
+// Met de vlag `publiek-alleen-flexwerk` aan valt de losse ingang "Handleidingen" (Outline) weg: het hulpcentrum (vraagteken,
+// menu-item Hulp) linkt er al naartoe.
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["kennisbank"];
 
 // Samenvoegen (20 nov, eigenaar: "voeg samen"): met de vlag aan worden kalender+roosterplanner+agenda één "Planning",
 // uren+inchecken één "Uren", favorieten+geblokkeerd "Mijn werkers", compliance+overeenkomsten "Regels en overeenkomsten",
@@ -310,10 +143,10 @@ export const PLANNING_SAMEN: readonly MenuSleutel[] = SAMENVOEGINGEN[0]!.leden;
 // directe link.
 export const NA_EERSTE_KLUS: readonly MenuSleutel[] = ["favorieten", "geblokkeerd", "inchecken", "rapportages", "inkaart", "compliance", "overeenkomsten"];
 
-/** Het menu van het dashboard `soort`; met de vlag aan vallen in het personeel-dashboard de niet-flexwerk-items weg. */
-export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
-  const menu = menuVoorBasis(soort, o);
-  if (!o.alleenFlexwerk || soort !== "personeel") return menu;
+/** Het menu van de werkgevers-app; met de vlag aan vallen de handleidingen weg en worden ingangen samengevoegd. */
+export function menuVoor(o: MenuOpties): MenuPlek[] {
+  const menu = menuVoorBasis(o);
+  if (!o.alleenFlexwerk) return menu;
   const weg: readonly MenuSleutel[] = o.nogGeenKlussen ? [...NIET_FLEXWERK_MENU, ...NA_EERSTE_KLUS] : NIET_FLEXWERK_MENU;
   // samenvoegen: het eerste lid van een groep wordt de samengevoegde ingang, de andere leden vallen weg (tabbladen)
   const gezet = new Set<MenuSleutel>();
@@ -327,45 +160,14 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   });
 }
 
-/** Het menu van het dashboard `soort` (de vaste opbouw, zonder de vlag). */
-function menuVoorBasis(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
+/** De vaste opbouw van het menu, zonder de vlag. */
+function menuVoorBasis(o: MenuOpties): MenuPlek[] {
   // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN)
   const bank: MenuSleutel[] = o.inApp || !BANK_AAN ? [] : ["bank"];
-  // Afspraken en de Klantenkaart staan er alleen als het bedrijf afspraken heeft ingericht (anders is de ingang de tegel in Jouw branche)
-  const afspraken: MenuSleutel[] = o.heeftAfspraken ? ["afspraken", "klanten"] : [];
-  switch (soort) {
-    case "personeel":
-      // het gewone werkgeversmenu, zonder de onderdelen van de andere dashboards
-      return [
-        { sleutel: "start" },
-        ...(["klussen", "kalender", "planner", "agenda", ...afspraken, ...bank, "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
-        ...(o.uitzendPartner ? UITZEND_SLEUTELS.map(plek("uitzend")) : []),
-        ...(["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
-      ];
-    case "rijschool":
-      return [
-        // nog niet ingericht: één ingang, daar staat de start van de rijschool
-        ...(o.heeftRijschool
-          ? RIJSCHOOL_TABS.map((tab): MenuPlek => ({ sleutel: "rijschool", tab }))
-          : [{ sleutel: "rijschool" as const }]),
-        ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
-        ...(["facturen", "rapportages", "inkaart", ...bank, "bedrijf", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("administratie")),
-      ];
-    case "horeca":
-      return [
-        ...(o.heeftHoreca
-          ? horecaTabs(o.horecaModules ?? []).map((tab): MenuPlek => ({ sleutel: "horeca", tab }))
-          : [{ sleutel: "horeca" as const }]),
-        ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews", "netwerk", "locatie"] as MenuSleutel[]).map(plek("klanten")),
-        ...(["facturen", "rapportages", "inkaart", ...bank, "bedrijf", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("administratie")),
-      ];
-    default:
-      // website en webshop: de studio is het dashboard; hier wat erbij hoort buiten de studio
-      return [
-        ...(o.studio ? [{ sleutel: soort === "webshop" ? ("winkel" as const) : ("studio" as const) }] : [{ sleutel: "start" as const }]),
-        { sleutel: "website" },
-        ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
-        ...(["facturen", "rapportages", "inkaart", ...bank, "bedrijf", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("administratie")),
-      ];
-  }
+  return [
+    { sleutel: "start" },
+    ...(["klussen", "kalender", "planner", "agenda", ...bank, "favorieten", "berichten", "assistent", "geblokkeerd"] as MenuSleutel[]).map(plek()),
+    ...(o.uitzendPartner ? UITZEND_SLEUTELS.map(plek("uitzend")) : []),
+    ...(["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
+  ];
 }

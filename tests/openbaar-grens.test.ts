@@ -8,7 +8,6 @@ const h = vi.hoisted(() => ({
   enforceRateLimit: vi.fn(async (..._a: unknown[]) => undefined),
   recordVisitEvent: vi.fn(async () => undefined),
   trackEvents: vi.fn(async () => ({ accepted: 1 })),
-  schermContext: vi.fn(),
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/lib/rate-limit", () => ({ fixedWindow: h.fixedWindow, enforceRateLimit: h.enforceRateLimit }));
@@ -18,14 +17,11 @@ vi.mock("@/lib/auth", () => ({ getPrincipal: async () => null }));
 vi.mock("@/lib/analytics/live", () => ({ recordVisitEvent: h.recordVisitEvent, sourceOf: () => "direct" }));
 vi.mock("@/lib/analytics/track", () => ({ trackEvents: h.trackEvents }));
 vi.mock("@/lib/ops/usage", () => ({ withUsage: (_n: string, f: (r: Request) => Promise<Response>) => f }));
-vi.mock("@/lib/horeca/scherm-server", () => ({ schermContext: h.schermContext, voerUit: vi.fn() }));
-vi.mock("@/lib/horeca/live", () => ({ schermDataVan: vi.fn(async () => ({})) }));
 vi.mock("@/lib/rijschool/herkomst", () => ({ zelfdeHerkomst: () => true }));
 
 import { POST as ping } from "@/app/api/analytics/ping/route";
 import { POST as track } from "@/app/api/analytics/track/route";
 import { POST as clientError } from "@/app/api/client-error/route";
-import { POST as scherm } from "@/app/api/horeca/scherm/route";
 import { ontvangerVoorLog } from "@/lib/mail";
 import { emailHash } from "@/lib/auth/email-hash";
 
@@ -73,15 +69,6 @@ describe("client-error", () => {
     expect(res.status).toBe(200);
     expect(h.log.error).not.toHaveBeenCalled();
     expect(h.log.warn).not.toHaveBeenCalled();
-  });
-});
-
-describe("horeca-scherm", () => {
-  it("limiet per IP vóór het lezen, en een te grote body geeft 422 vóór de zaak wordt opgezocht", async () => {
-    const res = await scherm(post("/api/horeca/scherm", JSON.stringify({ rol: "keuken", x: groot(100_000) })));
-    expect(res.status).toBe(422);
-    expect(h.enforceRateLimit).toHaveBeenCalledWith(expect.objectContaining({ name: "horeca-scherm", identifier: "203.0.113.9" }));
-    expect(h.schermContext).not.toHaveBeenCalled();
   });
 });
 

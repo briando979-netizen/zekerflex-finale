@@ -2,7 +2,7 @@ import type { MenuPlek, MenuSleutel } from "@/lib/werkgever/werkruimte";
 
 // ---------------------------------------------------------------------------
 // De volgorde van het werkgeversmenu (13 nov 2026, eigenaar: "alles moet ik kunnen verslepen"). In de Site-ontwerper
-// (tabblad Menu, "Menu van de werkgevers-app") versleept de beheerder de onderdelen van het dashboard personeel: het
+// (tabblad Menu, "Menu van de werkgevers-app") versleept de beheerder de onderdelen van het menu: het
 // bovenste deel en het deel onder "Beheer". Het geldt voor alle werkgevers.
 // Alleen de volgorde: er verdwijnt niets (wie klussen heeft, houdt alle personeelsfuncties) en niets wisselt van deel.
 // Wélke onderdelen een bedrijf ziet, bepaalt nog steeds menuVoor() in lib/werkgever/werkruimte.ts.
@@ -11,11 +11,11 @@ import type { MenuPlek, MenuSleutel } from "@/lib/werkgever/werkruimte";
 
 export type MenuDeel = "hoofd" | "beheer";
 
-/** Het bovenste deel van het menu van het dashboard personeel, in de oorspronkelijke volgorde ("Jouw start" staat er altijd boven). */
-export const HOOFD_STANDAARD: readonly MenuSleutel[] = ["klussen", "kalender", "planner", "agenda", "afspraken", "klanten", "bank", "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"];
+/** Het bovenste deel van het menu, in de oorspronkelijke volgorde ("Jouw start" staat er altijd boven). */
+export const HOOFD_STANDAARD: readonly MenuSleutel[] = ["klussen", "kalender", "planner", "agenda", "bank", "favorieten", "berichten", "assistent", "geblokkeerd"];
 
 /** Het deel onder "Beheer", in de oorspronkelijke volgorde. */
-export const BEHEER_STANDAARD: readonly MenuSleutel[] = ["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank", "hulp"];
+export const BEHEER_STANDAARD: readonly MenuSleutel[] = ["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "kennisbank", "hulp"];
 
 const STANDAARD: Record<MenuDeel, readonly MenuSleutel[]> = { hoofd: HOOFD_STANDAARD, beheer: BEHEER_STANDAARD };
 
@@ -25,14 +25,10 @@ export const MENU_NAAM: Partial<Record<MenuSleutel, { naam: string; wanneer?: st
   kalender: { naam: "Kalender" },
   planner: { naam: "Roosterplanner" },
   agenda: { naam: "Agenda" },
-  afspraken: { naam: "Afspraken", wanneer: "Alleen bij bedrijven die afspraken hebben ingericht." },
-  klanten: { naam: "Klantenkaart", wanneer: "Alleen bij bedrijven die afspraken hebben ingericht." },
   bank: { naam: "ZekerFlex Bank", wanneer: "Staat nu uit en is dus niet zichtbaar." },
   favorieten: { naam: "Favorieten" },
   berichten: { naam: "Chat" },
   assistent: { naam: "Assistent" },
-  mail: { naam: "Mail" },
-  whatsapp: { naam: "WhatsApp" },
   geblokkeerd: { naam: "Geblokkeerd" },
   uren: { naam: "Uren goedkeuren" },
   inchecken: { naam: "Inchecken met QR-code" },
@@ -42,11 +38,6 @@ export const MENU_NAAM: Partial<Record<MenuSleutel, { naam: string; wanneer?: st
   compliance: { naam: "Compliance" },
   overeenkomsten: { naam: "Modelovereenkomsten" },
   bedrijf: { naam: "Bedrijfsprofiel" },
-  telefonie: { naam: "Telefonie" },
-  reviews: { naam: "Google-reviews" },
-  netwerk: { naam: "Wifi en VPN", wanneer: "Alleen als de netwerkpakketten aan staan." },
-  locatie: { naam: "Op locatie", wanneer: "Alleen als de modules voor op locatie aan staan." },
-  branche: { naam: "Jouw branche" },
   kennisbank: { naam: "Handleidingen", wanneer: "Alleen als de kennisbank is ingesteld." },
   hulp: { naam: "Hulpcentrum" },
 };
@@ -81,7 +72,7 @@ export function isStandaardMenuVolgorde(v: MenuVolgorde): boolean {
 }
 
 /**
- * Zet het menu van het dashboard personeel in de gekozen volgorde. null = het menu ongewijzigd terug (hetzelfde object).
+ * Zet het menu in de gekozen volgorde. null = het menu ongewijzigd terug (hetzelfde object).
  * "Jouw start" blijft bovenaan, daarna het bovenste deel, daarna Beheer; een onderdeel dat de volgorde niet kent, houdt zijn plek achteraan zijn deel.
  */
 export function pasMenuVolgordeToe(menu: MenuPlek[], volgorde: MenuVolgorde | null): MenuPlek[] {
@@ -99,6 +90,5 @@ export function pasMenuVolgordeToe(menu: MenuPlek[], volgorde: MenuVolgorde | nu
   const beheer = menu.filter((p) => p.sectie === "beheer");
   // het blok Uitzendbureau (alleen bij een uitzendpartner) houdt zijn plek tussen het hoofddeel en Beheer
   const uitzend = menu.filter((p) => p.sectie === "uitzend");
-  const rest = menu.filter((p) => p.sectie && p.sectie !== "beheer" && p.sectie !== "uitzend");
-  return [...start, ...gesorteerd(hoofd, n.hoofd), ...uitzend, ...gesorteerd(beheer, n.beheer), ...rest];
+  return [...start, ...gesorteerd(hoofd, n.hoofd), ...uitzend, ...gesorteerd(beheer, n.beheer)];
 }

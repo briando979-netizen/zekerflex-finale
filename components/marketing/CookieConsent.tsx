@@ -58,10 +58,9 @@ export function CookieConsent() {
     // valt niets te kiezen; het cookiebeleid blijft bereikbaar en "instellingen" opent hem nog steeds.
     const inApp = cookieStringIsApp(document.cookie);
     const opWelkom = pad === "/welkom" || (pad ?? "").startsWith("/welkom/");
-    // Ook niet op de vaste schermen: de horecaschermen (/scherm: zelfbestelzuil, kassa, keuken) en de incheckterminal
-    // (/terminal). Die tablets staan de hele dag aan, vaak voor gasten; de melding lag daar over de knoppen (15 nov: over
-    // "Nog iets erbij" op de zuil) en niemand kiest er iets.
-    const opScherm = ["/scherm", "/terminal"].some((p) => pad === p || (pad ?? "").startsWith(`${p}/`));
+    // Ook niet op het vaste scherm: de incheckterminal (/terminal). Die tablet staat de hele dag aan; de melding lag over
+    // de knoppen (15 nov, toen nog op de horecazuil) en niemand kiest er iets.
+    const opScherm = pad === "/terminal" || (pad ?? "").startsWith("/terminal/");
     setVisible(!readConsentCookie() && !inApp && !opWelkom && !opScherm);
   }, [pad]);
 

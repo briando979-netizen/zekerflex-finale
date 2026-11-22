@@ -1,10 +1,6 @@
 import tls from "node:tls";
-import { promises as dns } from "node:dns";
 import { env } from "@/lib/env";
-import { prisma } from "@/lib/prisma";
 import { alertOwner, type OpsAlert } from "@/lib/ops/alert";
-import { mayIssueCertificate } from "@/lib/sites/domain";
-import { rijschoolMagCertificaat } from "@/lib/rijschool/domein";
 
 // ---------------------------------------------------------------------------
 // Certificaten van onze domeinen (13 nov 2026, cert-ronde). Caddy vernieuwt zelf, ±30 dagen vooraf; lukt dat niet (DNS
@@ -12,14 +8,13 @@ import { rijschoolMagCertificaat } from "@/lib/rijschool/domein";
 // het pas als het certificaat al verlopen was (de pagina's halen hem via https). Nu meet de rondgang elke nacht hoe lang
 // elk certificaat nog geldt en waarschuwt de eigenaar 14 dagen vooraf (kritiek onder 7 dagen, of bij een verkeerd of
 // onbetrouwbaar certificaat). We meten bij Caddy zelf (de dienst "caddy" in docker-compose.vps.yml), dus precies het
-// certificaat dat wij uitgeven. Een klantdomein telt alleen als het bij het ask-eindpunt hoort (zelfde poort als voor
-// Caddy) én zijn DNS naar onze server wijst: wijst hij elders heen, dan geven wij er niets uit en is er niets te melden.
+// certificaat dat wij uitgeven. Klantdomeinen (klantsites en rijscholen) zijn er sinds 22 nov 2026 niet meer (fase C):
+// alleen het hoofdadres en www.
 // ---------------------------------------------------------------------------
 
 export const CERT_WAARSCHUW_DAGEN = 14;
 export const CERT_KRITIEK_DAGEN = 7;
 const CADDY = process.env.CADDY_HOST || "caddy";
-const MAX_KLANTDOMEINEN = 200;
 
 export interface CertMeting {
   host: string;
@@ -86,35 +81,17 @@ export function certOordeel(metingen: CertMeting[], now = Date.now()): OpsAlert 
   };
 }
 
-async function ipv4(host: string): Promise<string[]> {
-  return dns.resolve4(host).catch(() => [] as string[]);
-}
-
-/** Onze eigen domeinen (het hoofdadres en www) en de klantdomeinen die bij ons horen én naar ons wijzen. */
-export async function teMetenDomeinen(): Promise<{ eigen: string[]; klanten: string[]; elders: string[] }> {
+/** Onze eigen domeinen: het hoofdadres en www. */
+export function teMetenDomeinen(): string[] {
   const hoofd = new URL(env.APP_BASE_URL).hostname.toLowerCase();
-  const eigen = [...new Set([hoofd, hoofd.startsWith("www.") ? hoofd.slice(4) : `www.${hoofd}`])];
-  const onze = new Set(await ipv4(hoofd));
-  const rijen = await prisma.keyValueStore.findMany({ where: { key: { startsWith: "site-host:" } }, select: { key: true }, take: MAX_KLANTDOMEINEN });
-  const klanten: string[] = [];
-  const elders: string[] = [];
-  for (const r of rijen) {
-    const host = r.key.slice("site-host:".length);
-    if (!host || eigen.includes(host)) continue;
-    const hoortBijOns = (await mayIssueCertificate(host)) || (await rijschoolMagCertificaat(host));
-    if (!hoortBijOns) continue;
-    if ((await ipv4(host)).some((ip) => onze.has(ip))) klanten.push(host);
-    else elders.push(host);
-  }
-  return { eigen, klanten, elders };
+  return [...new Set([hoofd, hoofd.startsWith("www.") ? hoofd.slice(4) : `www.${hoofd}`])];
 }
 
 /** Elke nacht mee met de rondgang: meten, en de eigenaar waarschuwen als een certificaat bijna verloopt of niet klopt. */
-export async function controleerCertificaten(now = Date.now()): Promise<{ metingen: CertMeting[]; elders: string[]; gemeld: boolean }> {
-  const { eigen, klanten, elders } = await teMetenDomeinen();
+export async function controleerCertificaten(now = Date.now()): Promise<{ metingen: CertMeting[]; gemeld: boolean }> {
   const metingen: CertMeting[] = [];
-  for (const host of [...eigen, ...klanten]) metingen.push(await leesCertificaat(host));
+  for (const host of teMetenDomeinen()) metingen.push(await leesCertificaat(host));
   const melding = certOordeel(metingen, now);
   if (melding) await alertOwner(melding);
-  return { metingen, elders, gemeld: Boolean(melding) };
+  return { metingen, gemeld: Boolean(melding) };
 }

@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
 // Aanmelden voor één dashboard (10 nov 2026, eigenaar: "een aparte aanmelding per product").
 // /register?type=bedrijf&dashboard=<soort> toont een eigen kop en kiest dat dashboard al voor;
-// het bedrijf opent na de bevestigingsmail meteen daarin (lib/werkgever/werkruimte.ts thuisVan).
+// sinds 22 nov 2026 (fase C) opent elk bedrijf in het dashboard personeel; de keuze wordt alleen bewaard
+// (lib/werkgever/werkruimte-server.ts).
 // De productpagina's zijn alleen Nederlands, dus deze teksten ook. Puur: de pagina (server) en het
 // formulier (client) lezen allebei uit dit bestand.
 // ---------------------------------------------------------------------------

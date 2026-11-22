@@ -63,7 +63,6 @@ const VERWACHT: Record<string, Verwacht> = {
   zf_cookie_consent: { bron: "components/marketing/CookieConsent.tsx", looptijd: () => constante("components/marketing/CookieConsent.tsx", "oneYear") },
   zf_locale: { bron: "lib/i18n/config.ts", looptijd: () => constante("lib/i18n/config.ts", "LOCALE_MAX_AGE") },
   zf_theme: { bron: "lib/theme/config.ts", looptijd: () => constante("lib/theme/config.ts", "THEME_MAX_AGE") },
-  zf_dashboard: { bron: "lib/werkgever/werkruimte-server.ts", looptijd: () => uit("lib/werkgever/werkruimte-server.ts", new RegExp(`name: DASHBOARD_COOKIE,[^}]*maxAge: ${SOM},`)) },
   zf_shop_modus: { bron: "lib/shop/modus.ts", looptijd: () => constante("lib/shop/modus.ts", "MODUS_MAX_AGE") },
   zf_welkom: { bron: "lib/welkom/slides.ts", looptijd: () => uit("lib/welkom/slides.ts", new RegExp(`WELKOM_COOKIE\\}=1; path=/; max-age=\\$\\{${SOM}\\}`)) },
   zf_balk_dicht: { bron: "lib/ontwerp/balk.ts", looptijd: () => uit("components/marketing/AankondigingsBalk.tsx", new RegExp(`BALK_COOKIE\\}=\\$\\{id\\}; Max-Age=\\$\\{${SOM}\\}`)) },
@@ -79,8 +78,6 @@ const VERWACHT: Record<string, Verwacht> = {
       return zet && !zet.includes("maxAge") && !zet.includes("expires") ? "sessie" : -1;
     },
   },
-  zf_horeca_scherm: { bron: "lib/horeca/apparaten.ts", looptijd: () => constante("lib/horeca/apparaten.ts", "COOKIE_DAGEN") * DAG },
-  zf_rijles: { bron: "lib/rijschool/accounts.ts", looptijd: () => constante("lib/rijschool/accounts.ts", "SESSIE_DAGEN") * DAG },
   zf_view_as: { bron: "lib/auth/inspect.ts", looptijd: () => constante("lib/auth/inspect.ts", "INSPECT_SESSION_SECONDS") },
   zf_ref: { bron: "lib/rewards/referral.ts", looptijd: () => uit("app/r/[code]/route.ts", new RegExp(`maxAge: ${SOM},`)) },
 };
@@ -93,8 +90,6 @@ const ZETTERS: Record<string, number> = {
   "app/api/admin/view-as/route.ts": 1,
   "app/api/analytics/taal-vraag/route.ts": 1,
   "app/api/auth/passkey/route.ts": 1,
-  "app/api/werkgever/dashboard/wissel/route.ts": 1,
-  "app/api/werkgever/werkruimte/route.ts": 1,
   "app/r/[code]/route.ts": 1,
   "app/uitloggen/route.ts": 1,
   "app/voorbeeld/sluiten/route.ts": 1,
@@ -104,8 +99,6 @@ const ZETTERS: Record<string, number> = {
   "components/marketing/CookieConsent.tsx": 1,
   "components/theme/ThemeToggle.tsx": 1,
   "components/welkom/WelkomCarousel.tsx": 1,
-  "lib/horeca/apparaten.ts": 1,
-  "lib/rijschool/accounts.ts": 1,
 };
 // req.cookies.set (alleen het verzoek, niet de browser) telt niet mee
 const ZET_PATRONEN = [/\b(?!req\.)\w+\.cookies\.set\(/g, /cookies\(\)\)?\.set\(/g, /document\.cookie\s*=(?!=)/g, /["']set-cookie["']/gi, /cookieStore\.set\(/g, /terugPostCookie\("/g];

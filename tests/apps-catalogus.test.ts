@@ -28,23 +28,9 @@ describe("de catalogus", () => {
     for (const a of ZF_APPS) expect(appVan(a.id), a.id).toBe(a.beschikbaar ? a : undefined);
   });
 
-  it("de opdrachtgevers, horeca, horecapersoneel en rijschool zijn er; de webshop en de website niet meer (22 nov 2026)", () => {
-    for (const id of ["zakelijk", "horeca", "personeel", "rijschool", "werk"]) expect(appVan(id), id).toBeDefined();
-    for (const id of ["webshop", "website"]) expect(appVan(id), id).toBeUndefined();
-  });
-
-  it("de personeel-app belooft niet meer dan /personeel heeft", () => {
-    const uitleg = appVan("personeel")?.uitleg ?? "";
-    const heeft = (onderdeel: string) => existsSync(path.join(ROOT, "components/personeel", onderdeel));
-    expect(uitleg).toMatch(/taken/);
-    // elke belofte alleen zolang de omgeving van de medewerker dat onderdeel heeft
-    if (/loonstro/i.test(uitleg)) expect(heeft("LoonstrokenBlok.tsx")).toBe(true);
-    if (/chat/i.test(uitleg)) expect(heeft("ChatPaneel.tsx")).toBe(true);
-    if (/rooster|verlof|uren/i.test(uitleg)) expect(heeft("PlanningBlokken.tsx")).toBe(true);
-    if (/documenten/i.test(uitleg)) expect(heeft("DocumentenBlok.tsx")).toBe(true);
-    const pagina = readFileSync(path.join(ROOT, "app/personeel/page.tsx"), "utf8");
-    if (/fooi/i.test(uitleg)) expect(pagina).toMatch(/fooi/);
-    if (/melding/i.test(uitleg)) expect(pagina).toContain("<PushToggle");
+  it("de werker en de opdrachtgevers zijn er; horeca, horecapersoneel, rijschool, webshop en website niet meer (22 nov 2026)", () => {
+    for (const id of ["zakelijk", "werk"]) expect(appVan(id), id).toBeDefined();
+    for (const id of ["horeca", "personeel", "rijschool", "webshop", "website"]) expect(appVan(id), id).toBeUndefined();
   });
 });
 

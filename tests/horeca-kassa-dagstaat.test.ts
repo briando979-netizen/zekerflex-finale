@@ -1,13 +1,10 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { dagstaatCsv, dagstaatRij, ontvangstVan, rondtAf, type BonRegel, type KassaBetaling } from "@/lib/horeca/kassa";
 
 // De dagstaat voor de boekhouder (15 nov 2026): per dag omzet en btw per tarief, fooi, ontvangsten per betaalwijze
-// en het kasverschil, zo dat hij per dag sluit (memoriaalboeking). Plus de rekening in de kassa: korting bij één
-// betaling en de bezorgkosten op het scherm zoals de server ze op de bon zet.
+// en het kasverschil, zo dat hij per dag sluit (memoriaalboeking). Plus de rekening: de bezorgkosten horen op de betaling
+// die de bestelling afrondt. (De kassa en het horecabeheer zelf zijn op 22 nov 2026 weggehaald.)
 
-const lees = (rel: string) => readFileSync(path.join(process.cwd(), rel), "utf8");
 const r = (prijsCent: number, aantal: number, btw: number): BonRegel => ({ naam: "x", prijsCent, aantal, btw });
 const bon = (methode: string, regels: BonRegel[], fooiCent = 0): KassaBetaling => ({ methode, regels, fooiCent, bedragCent: regels.reduce((s, x) => s + x.prijsCent * x.aantal, 0) });
 
@@ -69,27 +66,9 @@ describe("dagstaat", () => {
     expect(totaal?.[kop?.indexOf("Kasverschil") ?? -1]).toBe("0,25");
   });
 
-  it("de beheer-API en het tabblad Kassa bieden hem aan", () => {
-    expect(lees("app/api/horeca/beheer/route.ts")).toContain('q.get("alleen") === "kassa-dagstaat"');
-    expect(lees("components/horeca/beheer/KassaTab.tsx")).toContain("alleen=kassa-dagstaat");
-  });
 });
 
-describe("rekening in de kassa", () => {
-  const kassa = lees("components/horeca/scherm/KassaScherm.tsx");
-
-  it("korting bij één betaling, nooit bij gelijk verdelen", () => {
-    expect(kassa).toContain('const kortingHier = splits === "gelijk" ? 0 : korting;');
-    expect(kassa).toContain("kortingProcent: kortingHier");
-  });
-
-  it("de bezorgkosten staan op het scherm wanneer de server ze op de bon zet", () => {
-    expect(lees("lib/horeca/live.ts")).toContain('bezorgkostenCent: b.soort === "bezorgen" ? b.bezorgkostenCent : 0');
-    expect(kassa).toContain('keuze.soort === "bestelling" && (!selectie || rondtAf(rekening, selectie, keuze.id))');
-    expect(kassa).toContain("verdeelGelijk(totaal + bezorgCent, personen)");
-    expect(lees("lib/horeca/kassa-server.ts")).toContain("a.bestellingId ? !a.selectie || rondtAf(rekening, selectie, a.bestellingId) : false");
-  });
-
+describe("rekening", () => {
   it("per gerecht afrekenen: de bezorgkosten horen op de betaling die de bestelling afrondt", () => {
     const rekening = [
       { bestellingId: "b1", index: 0, nummer: 7, naam: "Pizza", prijsCent: 1200, aantal: 2, btw: 9 as const },

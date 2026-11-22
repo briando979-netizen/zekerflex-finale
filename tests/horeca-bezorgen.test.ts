@@ -19,7 +19,6 @@ import {
   vroegsteOp,
 } from "@/lib/horeca/bezorgen";
 import { MODULES, zetModule } from "@/lib/horeca/modules";
-import { horecaTabs } from "@/lib/horeca/tabs";
 
 // Afhalen en bezorgen in de horeca (15 nov 2026): instellingen, kosten, straal,
 // tijden in Nederlandse tijd en de fasen van een levering. Elke datum met een zone.
@@ -124,8 +123,6 @@ describe("module, tabblad en opslag", () => {
     expect(zetModule([], "bezorgen", true)).toEqual(["bestellen", "bezorgen"]);
     expect(zetModule(["bestellen", "bezorgen"], "bestellen", false)).toEqual([]);
     expect(MODULES.bezorgen.prijsCentPerMaand).toBe(0);
-    expect(horecaTabs(["bestellen", "bezorgen"]).some((t) => t.id === "bezorgen")).toBe(true);
-    expect(horecaTabs(["bestellen"]).some((t) => t.id === "bezorgen")).toBe(false);
   });
 
   it("het menu heeft een icoon voor het tabblad", () => {

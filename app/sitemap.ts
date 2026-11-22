@@ -12,7 +12,6 @@ import { publicOpenShifts } from "@/lib/public-shifts";
 import { eigenPaginas } from "@/lib/marketing/aanbod";
 import { aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
 import { paginaLijst } from "@/lib/ontwerp/paginas-store";
-import { rijschoolPadenVoorSitemap } from "@/lib/rijschool/vindbaar";
 import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
@@ -167,9 +166,6 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/login", 0.3, "yearly"),
     entry("/toegankelijkheid", 0.3, "yearly"),
     entry("/verwerkersovereenkomst", 0.3, "yearly"),
-
-    // Websites van rijscholen op zekerflex.com (met een actief eigen domein: daar een eigen sitemap)
-    ...(await rijschoolPadenVoorSitemap().catch(() => [])).map((p) => entry(p.pad, 0.5, "weekly", p.bijgewerkt)),
   ];
 
   // Vlag `publiek-alleen-flexwerk`: de verborgen pagina's (developers, de klussenkaart, de partnerpagina's, /aanbod, …)

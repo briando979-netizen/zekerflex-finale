@@ -18,11 +18,8 @@ describe("geen beloftes die niet kloppen", () => {
     expect(lees("app/(marketing)/prijzen/page.tsx")).not.toMatch(/uitzend, bank\)/);
   });
 
-  it("/werkgever/netwerk biedt geen eigen 5G meer aan en zegt eerlijk dat de VPN de Tailscale-app gebruikt", () => {
-    const scherm = lees("components/app/netwerk/Verbinding.tsx");
-    expect(scherm).not.toContain("Wifi, VPN en eigen 5G");
-    expect(scherm).not.toContain("zonder diensten van derden");
-    expect(scherm).toContain('def.sleutel !== "5g"');
+  // /werkgever/netwerk (het scherm Verbinding) is op 22 nov 2026 weggehaald; de teksten beloven nog steeds geen eigen 5G
+  it("nergens een eigen 5G, en de VPN gebruikt eerlijk de Tailscale-app", () => {
     expect(lees("lib/netwerk/modules.ts")).not.toMatch(/Geen dure diensten als Tailscale/);
     for (const p of ["lib/branches/modules.ts", "lib/os/apps.ts", "lib/i18n/dictionaries.ts", "lib/i18n/dictionary-en.ts"]) {
       expect(lees(p), p).not.toMatch(/en 5G|eigen 5G-netwerk|your own 5G/);

@@ -257,24 +257,25 @@ describe("de bedrijfskant met de vlag aan", () => {
     expect(flex).toContain("personeel");
   });
 
-  it("het personeel-menu: met de vlag aan vallen telefonie, reviews, 'Jouw branche', mail, WhatsApp en wifi/vpn weg, de personeelsfuncties blijven", () => {
-    const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true };
-    // zonder vlag staan ze er gewoon in
-    const uit = menuVoor("personeel", opties).map((p) => p.sleutel);
-    for (const er of ["telefonie", "reviews", "branche", "mail", "whatsapp", "netwerk", "kalender", "planner", "agenda"]) expect(uit, er).toContain(er);
+  it("het menu: zonder de vlag de losse ingangen, met de vlag samengevoegd; de onderdelen buiten flexwerk zijn er nooit (weg sinds 22 nov 2026)", () => {
+    const opties: MenuOpties = { inApp: false };
+    // zonder vlag staan de ingangen los, met de handleidingen
+    const uit: string[] = menuVoor(opties).map((p) => p.sleutel);
+    for (const er of ["kalender", "planner", "agenda", "kennisbank"]) expect(uit, er).toContain(er);
     expect(uit).not.toContain("planning");
-    // met de vlag aan: de niet-flexwerk-items weg (ook branche, de website/webshop-items, de mailbox, WhatsApp en wifi/vpn)
-    const aan = menuVoor("personeel", { ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
-    for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"]) expect(aan, weg).not.toContain(weg);
-    // de flexwerk-functies blijven, samengevoegd tot tien regels (zie de volgende test)
+    // met de vlag aan: zonder de losse handleidingen, en de flexwerk-functies samengevoegd (zie de volgende test)
+    const aan: string[] = menuVoor({ ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
     for (const blijft of ["klussen", "planning", "uren", "facturen", "regels", "bedrijf", "cijfers", "berichten", "werkers"]) {
       expect(aan, blijft).toContain(blijft);
+    }
+    for (const menu of [uit, aan]) {
+      for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"]) expect(menu, weg).not.toContain(weg);
     }
   });
 
   it("samenvoegen met de vlag aan: Planning, Uren, Mijn werkers, Regels, Cijfers en Chat met tabbladen; tien regels", () => {
-    const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
-    const aan = menuVoor("personeel", opties).map((p) => p.sleutel);
+    const opties: MenuOpties = { inApp: false, alleenFlexwerk: true };
+    const aan = menuVoor(opties).map((p) => p.sleutel);
     // de leden staan niet meer los in het menu
     for (const weg of ["kalender", "planner", "agenda", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten", "rapportages", "inkaart", "assistent"]) expect(aan, weg).not.toContain(weg);
     expect(aan).toEqual(["start", "klussen", "planning", "werkers", "berichten", "uren", "facturen", "cijfers", "regels", "bedrijf", "hulp"]);
@@ -324,25 +325,17 @@ describe("de bedrijfskant met de vlag aan", () => {
   });
 
   it("een nieuw bedrijf zonder klus krijgt met de vlag aan een kort startmenu; na de eerste klus staat alles er weer", () => {
-    const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
-    const kort = menuVoor("personeel", { ...opties, nogGeenKlussen: true }).map((p) => p.sleutel);
+    const opties: MenuOpties = { inApp: false, alleenFlexwerk: true };
+    const kort = menuVoor({ ...opties, nogGeenKlussen: true }).map((p) => p.sleutel);
     expect(kort).toEqual(["start", "klussen", "planning", "berichten", "uren", "facturen", "bedrijf", "hulp"]);
     // wie klussen heeft, houdt alle personeelsfuncties, samengevoegd (mail, whatsapp en wifi/vpn komen niet terug: geen flexwerk)
-    const vol = menuVoor("personeel", { ...opties, nogGeenKlussen: false }).map((p) => p.sleutel);
+    const vol: string[] = menuVoor({ ...opties, nogGeenKlussen: false }).map((p) => p.sleutel);
     for (const terug of ["werkers", "regels", "cijfers"]) expect(vol, terug).toContain(terug);
     for (const nooit of ["mail", "whatsapp", "netwerk", "planner", "agenda", "inchecken", "assistent"]) expect(vol, nooit).not.toContain(nooit);
     // zonder de vlag verandert er niets, ook niet voor een nieuw bedrijf
-    const zonderVlag = menuVoor("personeel", { ...opties, alleenFlexwerk: false, nogGeenKlussen: true }).map((p) => p.sleutel);
+    const zonderVlag = menuVoor({ ...opties, alleenFlexwerk: false, nogGeenKlussen: true }).map((p) => p.sleutel);
     expect(zonderVlag).toContain("planner");
-    expect(zonderVlag).toContain("telefonie");
-    expect(zonderVlag).toContain("mail");
-  });
-
-  it("de andere dashboards worden niet gefilterd: een bestaand website-bedrijf houdt zijn menu (breek niet)", () => {
-    const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
-    const website = menuVoor("website", opties).map((p) => p.sleutel);
-    expect(website).toContain("studio"); // "Website bouwen"
-    expect(website).toContain("website"); // "Website-beheer"
+    expect(zonderVlag).toContain("kennisbank");
   });
 });
 

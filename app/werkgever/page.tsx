@@ -32,13 +32,7 @@ import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { followerCount } from "@/lib/worker/follows";
-import { inAndroidApp } from "@/lib/app-mode-server";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
-import { WerkruimteStart } from "@/components/app/werkruimte/WerkruimteStart";
-import { WerkruimteKiezer } from "@/components/app/werkruimte/WerkruimteKiezer";
-import { VoorbeeldBalk } from "@/components/app/werkruimte/VoorbeeldBalk";
-import { isWerkruimte, thuisVan } from "@/lib/werkgever/werkruimte";
-import { redirect } from "next/navigation";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { kl, startMarges } from "@/lib/werkgever/start-marges";
@@ -46,33 +40,15 @@ import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
 
-export default async function WerkgeverStartPage({ searchParams }: { searchParams: Promise<{ voorbeeld?: string | string[] }> }) {
+export default async function WerkgeverStartPage() {
   const t = await getDict();
   const ws = t.werkgeverStart;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
 
-  // rijschool, horeca of alleen website: een eigen startscherm (components/app/werkruimte)
-  const [echt, inApp, { voorbeeld }, alleenFlexwerk] = await Promise.all([werkruimteVan(tenantId), inAndroidApp(), searchParams, alleenFlexwerkAan().catch(() => false)]);
-  // ?voorbeeld=<soort>: alleen bekijken, niets opslaan
-  const voorbeeldSoort = isWerkruimte(voorbeeld) ? voorbeeld : null;
-  const w = voorbeeldSoort ? { ...echt, soort: voorbeeldSoort } : echt;
-  const kanKiezen = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
-  if (w.soort !== "personeel") {
-    // elk dashboard heeft een eigen omgeving: de studio (website, webshop) of het rijschool- of
-    // horecabeheer, met daar de eigen start. Die zijn voor de beheerder; een collega ziet hier het startscherm.
-    if (!voorbeeldSoort && kanKiezen) redirect(thuisVan(w.soort));
-    return (
-      <>
-        {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
-        <WerkruimteStart w={w} principal={principal} tenantId={tenantId} greet={t.greet} inApp={inApp} studio={kanKiezen} />
-      </>
-    );
-  }
-  // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor. Met de vlag `publiek-alleen-flexwerk` aan is er
-  // nog maar één antwoord (personeel inhuren): dan valt de vraag weg.
-  const nieuwBedrijf = !alleenFlexwerk && !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite && !w.heeftWebshop;
+  // of het bedrijf al een klus plaatste (de stappen) en de vlag `publiek-alleen-flexwerk`
+  const [w, alleenFlexwerk] = await Promise.all([werkruimteVan(tenantId), alleenFlexwerkAan().catch(() => false)]);
 
   const [kvkDone, extra, o, threads, verificatie, pendingReviews, followers, tenantKvk] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
@@ -331,10 +307,8 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
 
   return (
     <>
-      {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       {!startModus && !alleenFlexwerk && <EmployerDashboardHero />}
-      {nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={false} kanKiezen alsVraag alleenFlexwerk={alleenFlexwerk} />}
       {!startModus && <KlusConceptNudge />}
       {!companyVerified && !startModus && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
@@ -355,7 +329,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       )}
       {showWizard && <OnboardingOnderhoudBalk soort="werkgever" />}
       {/* na de wizard: wat er nog open staat (bv. nog geen eerste klus); verdwijnt vanzelf */}
-      {!showWizard && canOnboard && !startModus && !voorbeeldSoort && (
+      {!showWizard && canOnboard && !startModus && (
         <OnboardingProgress
           voortgang={berekenVoortgang(
             werkgeverStappen({ emailBevestigd: emailVerified, bedrijfKlaar: kvkDone, verified: companyVerified, inControle, heeftKlus: w.heeftKlussen }),
@@ -415,7 +389,6 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
         zichtbaarFlex.map((id) => (
           <Fragment key={id}>{onderdelen[id]}</Fragment>
         ))}
-      {/* wisselen of een dashboard toevoegen: de wisselaar bovenaan de zijbalk (components/app/werkruimte/DashboardWisselaar.tsx) */}
     </>
   );
 }

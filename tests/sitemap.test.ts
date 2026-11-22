@@ -14,7 +14,6 @@ vi.mock("@/lib/ontwerp/paginas-store", () => ({
     { slug: "verborgen", live: { noindex: true }, gepubliceerd: "2026-11-05T12:00:00.000Z" },
   ],
 }));
-vi.mock("@/lib/rijschool/vindbaar", () => ({ rijschoolPadenVoorSitemap: async () => [] }));
 
 import sitemap from "@/app/sitemap";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
@@ -17,8 +17,6 @@ import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config"
 import { fmt } from "@/lib/i18n/dictionaries";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
-import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkruimte/DashboardWisselaar";
-import { dashboardVanPad } from "@/lib/werkgever/werkruimte";
 import { naamInitialen } from "@/lib/naam/initialen";
 
 // ---------------------------------------------------------------------------
@@ -52,7 +50,6 @@ export function EmployerShell({
   userMeta,
   avatarUrl,
   canSwitchToFreelancer = false,
-  dashboards,
   helpHref = "/kennis/werkgevers",
   hulp,
   handleidingen = null,
@@ -66,8 +63,6 @@ export function EmployerShell({
   toonOs?: boolean;
   /** de losse regel "Instellingen" onderin; met de vlag aan weg, want Bedrijfsprofiel heeft dan een knop Instellingen (één plek, 20 nov) */
   toonInstellingen?: boolean;
-  /** de dashboards van het bedrijf (lib/werkgever/werkruimte.ts): de wisselaar bovenaan de zijbalk */
-  dashboards?: DashboardStand;
   nav: NavItem[];
   locale: Locale;
   theme: Theme;
@@ -91,8 +86,6 @@ export function EmployerShell({
 }) {
   const t = useT();
   const pathname = usePathname();
-  const zoek = useSearchParams();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
@@ -105,24 +98,6 @@ export function EmployerShell({
       /* ignore */
     }
   }, []);
-
-  // Een adres van een ander dashboard dat het bedrijf heeft (bijv. een link in een mail naar
-  // /werkgever/rijschool terwijl personeel open is): dat dashboard openen, zodat het menu klopt.
-  const actief = dashboards?.actief;
-  const lijst = dashboards?.dashboards.join(",") ?? "";
-  useEffect(() => {
-    const hoort = dashboardVanPad(pathname);
-    if (!actief || !hoort || hoort === actief || !lijst.split(",").includes(hoort)) return;
-    void fetch("/api/werkgever/dashboard/wissel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ soort: hoort }),
-    })
-      .then((r) => {
-        if (r.ok) router.refresh();
-      })
-      .catch(() => undefined);
-  }, [pathname, actief, lijst, router]);
 
   // Touch devices (iPad) have no hover, so onMouseLeave never fires to close
   // the menu — close on any tap/click outside it instead.
@@ -148,12 +123,6 @@ export function EmployerShell({
   }
 
   const isActive = (href: string) => {
-    // een tabblad van het rijschool- of horecabeheer (/werkgever/rijschool?tab=agenda); geen tab = overzicht
-    const [pad, query] = href.split("?");
-    if (query) {
-      const tab = new URLSearchParams(query).get("tab");
-      return pathname === pad && (zoek?.get("tab") ?? "overzicht") === tab;
-    }
     return pathname === href || (href !== "/werkgever" && pathname.startsWith(href + "/")) ||
       (href === "/werkgever" && pathname === "/werkgever");
   };
@@ -189,12 +158,6 @@ export function EmployerShell({
           </span>
           {!collapsed && <p className="font-display text-sm font-bold">ZekerFlex</p>}
         </div>
-
-        {dashboards && (
-          <div className={`border-b border-hair py-2.5 ${collapsed ? "px-2" : "px-3"}`}>
-            <DashboardWisselaar stand={dashboards} ingeklapt={collapsed} />
-          </div>
-        )}
 
         <button
           type="button"

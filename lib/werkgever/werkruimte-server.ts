@@ -1,96 +1,33 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { siteOfTenant } from "@/lib/sites/store";
-import { alleenPersoneel, bepaalWerkruimte, isWerkruimte, leesKeuze, voegToe, WERKRUIMTES, type Werkruimte, type WerkruimteKeuze, type WerkruimteStand } from "@/lib/werkgever/werkruimte";
-import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { leesKeuze, voegToe, WERKRUIMTES, type Werkruimte, type WerkruimteKeuze } from "@/lib/werkgever/werkruimte";
 
 // ---------------------------------------------------------------------------
-// De dashboards van een bedrijf ophalen en bewaren (lib/werkgever/werkruimte.ts).
-//   KV "werkruimte:<tenantId>"  — welke dashboards het bedrijf toevoegde en waarmee het opent
-//                                 (bedrijfsgegevens, geen persoonsgegevens)
-//   cookie "zf_dashboard"       — welk dashboard deze browser het laatst open had; wisselen
-//                                 verandert dus niets voor collega's
-// Elke bron los en foutbestendig: een ontbrekende tabel of een storing mag het menu nooit breken;
-// dan valt het terug op het gewone dashboard.
+// Wat de werkgevers-app per bedrijf moet weten, en de keuze bij het aanmelden bewaren (lib/werkgever/werkruimte.ts).
+//   KV "werkruimte:<tenantId>"  — welke dashboards het bedrijf bij het aanmelden koos (bedrijfsgegevens, geen
+//                                 persoonsgegevens). Sinds 22 nov 2026 (fase C) opent elk bedrijf in het dashboard
+//                                 personeel; de keuze blijft alleen bewaard.
+// Foutbestendig: een ontbrekende tabel of een storing mag het menu nooit breken; dan geldt "nog geen klussen".
 // ---------------------------------------------------------------------------
 
 const sleutel = (tenantId: string) => `werkruimte:${tenantId}`;
 
-/** Het dashboard dat deze browser open heeft (gezet door POST /api/werkgever/dashboard/wissel). */
-export const DASHBOARD_COOKIE = "zf_dashboard";
-
-export interface WerkruimteContext extends WerkruimteStand {
-  heeftRijschool: boolean;
-  heeftHoreca: boolean;
-  heeftSite: boolean;
-  heeftWebshop: boolean;
+export interface WerkruimteContext {
+  /** het bedrijf plaatste ooit een klus (het korte startmenu, lib/werkgever/werkruimte.ts NA_EERSTE_KLUS) */
   heeftKlussen: boolean;
-  /** de modules van de horecazaak (lib/horeca/modules.ts); leeg zonder zaak */
-  horecaModules: string[];
-}
-
-const GEWOON: WerkruimteContext = {
-  soort: "personeel",
-  ookPersoneel: true,
-  gekozen: false,
-  dashboards: ["personeel"],
-  heeftRijschool: false,
-  heeftHoreca: false,
-  heeftSite: false,
-  heeftWebshop: false,
-  heeftKlussen: false,
-  horecaModules: [],
-};
-
-async function gewenstDashboard(): Promise<Werkruimte | null> {
-  try {
-    const waarde = (await cookies()).get(DASHBOARD_COOKIE)?.value;
-    return isWerkruimte(waarde) ? waarde : null;
-  } catch {
-    return null;
-  }
 }
 
 /** Per verzoek één keer: de layout en het startscherm vragen hetzelfde. */
 export const werkruimteVan = cache(async (tenantId: string | undefined): Promise<WerkruimteContext> => {
-  if (!tenantId) return GEWOON;
-  const [keuze, rijschool, horeca, site, webshop, klus, gewenst, alleenFlexwerk] = await Promise.all([
-    kvGet<unknown>(sleutel(tenantId)).then(leesKeuze).catch(() => null),
-    prisma.rijschool.findUnique({ where: { tenantId }, select: { id: true } }).catch(() => null),
-    prisma.horecaZaak.findUnique({ where: { tenantId }, select: { modules: true } }).catch(() => null),
-    siteOfTenant(tenantId, "website").catch(() => null),
-    siteOfTenant(tenantId, "webshop").catch(() => null),
-    prisma.shift.findFirst({ where: { branch: { tenantId } }, select: { id: true } }).catch(() => null),
-    gewenstDashboard(),
-    // vlag `publiek-alleen-flexwerk` (20 nov): elk bedrijf alleen het dashboard personeel, ook met een webshop of rijschool
-    alleenFlexwerkAan().catch(() => false),
-  ]);
-  const feiten = {
-    keuze,
-    heeftRijschool: Boolean(rijschool),
-    heeftHoreca: Boolean(horeca),
-    heeftSite: Boolean(site),
-    heeftWebshop: Boolean(webshop),
-    heeftKlussen: Boolean(klus),
-    personeelModule: horeca?.modules.includes("personeel") ?? false,
-  };
-  const stand = bepaalWerkruimte(feiten, gewenst);
-  return {
-    ...(alleenFlexwerk ? alleenPersoneel(stand) : stand),
-    heeftRijschool: feiten.heeftRijschool,
-    heeftHoreca: feiten.heeftHoreca,
-    heeftSite: feiten.heeftSite,
-    heeftWebshop: feiten.heeftWebshop,
-    heeftKlussen: feiten.heeftKlussen,
-    horecaModules: horeca?.modules ?? [],
-  };
+  if (!tenantId) return { heeftKlussen: false };
+  const klus = await prisma.shift.findFirst({ where: { branch: { tenantId } }, select: { id: true } }).catch(() => null);
+  return { heeftKlussen: Boolean(klus) };
 });
 
 /**
- * Een dashboard aan het bedrijf toevoegen (bij het aanmelden, of "Dashboard toevoegen"); het wordt
- * het dashboard waarmee het bedrijf opent. `ook` voegt er nog meer toe (bijv. personeel).
+ * De keuze bij het aanmelden bewaren; het gekozen dashboard wordt het standaarddashboard. `ook` voegt er nog meer toe
+ * (bijv. personeel).
  */
 export async function voegDashboardToe(tenantId: string, soort: Werkruimte, ook: readonly Werkruimte[] = [], now = new Date()): Promise<WerkruimteKeuze> {
   const oud = await kvGet<unknown>(sleutel(tenantId)).then(leesKeuze).catch(() => null);
@@ -99,9 +36,4 @@ export async function voegDashboardToe(tenantId: string, soort: Werkruimte, ook:
   const nieuw: WerkruimteKeuze = { ...keuze, ookPersoneel: lijst.has("personeel"), dashboards: WERKRUIMTES.filter((w) => lijst.has(w)) };
   await kvSet(sleutel(tenantId), nieuw);
   return nieuw;
-}
-
-/** Cookie-instellingen voor het open dashboard: een jaar, alleen voor de server. */
-export function dashboardCookie(soort: Werkruimte): { name: string; value: string; path: string; maxAge: number; sameSite: "lax"; httpOnly: true; secure: boolean } {
-  return { name: DASHBOARD_COOKIE, value: soort, path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: true, secure: process.env.NODE_ENV === "production" };
 }

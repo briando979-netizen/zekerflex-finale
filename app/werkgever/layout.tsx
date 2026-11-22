@@ -1,4 +1,3 @@
-import { HorecaMenuTeller } from "@/components/horeca/MenuTeller";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
@@ -21,8 +20,7 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
-import type { ReactElement } from "react";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList, IPin, IUsers, IImage, ISettings, IActivity, IHelp } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IPin, IUsers, IActivity, IHelp } from "@/components/app/icons";
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
@@ -33,39 +31,10 @@ import { hulpTekstenWerkgever } from "@/lib/hulp/werkgever-teksten";
 import { BedrijfRondleiding } from "@/components/app/BedrijfRondleiding";
 import { rondleidingBedrijf } from "@/lib/onboarding/rondleiding-bedrijf";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
-import { featureEnabled } from "@/lib/flags";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
-import { heeftAfspraken } from "@/lib/afspraken/in-menu";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 
 export const dynamic = "force-dynamic";
-
-/** Een eigen icoon per tabblad van het rijschool- en horecabeheer in het menu. */
-const TAB_ICOON: Record<string, ReactElement> = {
-  overzicht: <IGrid />,
-  personeel: <IUsers />,
-  agenda: <ICalendar />,
-  leerlingen: <IUsers />,
-  berichten: <IChat />,
-  betalingen: <IWallet />,
-  team: <ICar />,
-  pakketten: <IList />,
-  website: <IGlobe />,
-  instellingen: <ISettings />,
-  app: <IPhone />,
-  reserveringen: <ICalendar />,
-  bestellingen: <IList />,
-  tafels: <IGrid />,
-  bezorgen: <IPin />,
-  archief: <IBriefcase />,
-  kassa: <IWallet />,
-  taken: <IClock />,
-  cijfers: <IActivity />,
-  menukaart: <IDoc />,
-  schermen: <IImage />,
-  modules: <IStar />,
-  gegevens: <ISettings />,
-};
 
 export default async function WerkgeverLayout({ children }: { children: ReactNode }) {
   const principal = await getPrincipal();
@@ -88,31 +57,25 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars, birthday, werkruimte, metAfspraken, alleenFlexwerk] = await Promise.all([
+  const [tenant, rating, avatars, birthday, werkruimte, alleenFlexwerk] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
     tenantId ? reviewSummary("company", tenantId) : Promise.resolve(null),
     getUserAvatars([principal.userId]),
     birthdayToday(principal.userId).catch(() => false),
-    // het open dashboard (personeel, rijschool, horeca, website, webshop) bepaalt het menu (lib/werkgever/werkruimte.ts)
+    // nog geen klus geplaatst: een kort startmenu (lib/werkgever/werkruimte.ts)
     werkruimteVan(tenantId),
-    // staat Afspraken in het menu? Alleen als het bedrijf het heeft ingericht; een storing geeft false
-    heeftAfspraken(tenantId),
-    // vlag `publiek-alleen-flexwerk`: dan alleen de flexwerk-werkruimte in de dashboardwisselaar (de pagina's blijven bereikbaar)
+    // vlag `publiek-alleen-flexwerk`: samengevoegde ingangen en een kort startmenu (lib/werkgever/werkruimte.ts)
     alleenFlexwerkAan().catch(() => false),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
   // in een voorbeeld (demo) wordt de uitlogknop een gewone uitgang-link (lib/auth/demo-sessie.ts)
   const demo = await inDemoSessie();
 
-  // elk onderdeel één keer; de werkruimte kiest welke en in welke volgorde
+  // elk onderdeel één keer; menuVoor() kiest welke en in welke volgorde
   const onderdelen: Record<MenuSleutel, Omit<NavItem, "section">> = {
     start: { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
-    rijschool: { href: "/werkgever/rijschool", label: "Rijschool inrichten", icon: <ICar /> },
-    horeca: { href: "/werkgever/horeca", label: "Zaak inrichten", icon: <IList /> },
-    studio: { href: "/studio/website", label: "Website bouwen", icon: <IGlobe /> },
-    winkel: { href: "/studio/webshop", label: "Webshop", icon: <IGlobe /> },
     klussen: { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
     kalender: { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
     planner: { href: "/werkgever/planner", label: "Roosterplanner", icon: <ICalendar /> },
@@ -125,8 +88,6 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     bank: { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> },
     favorieten: { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     berichten: { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
-    mail: { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },
-    whatsapp: { href: "/werkgever/whatsapp", label: t.nav.whatsapp, icon: <IChat /> },
     geblokkeerd: { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
     // met de vlag aan heet het kortweg "Uren" (goedkeuren én inchecken zitten er als tabbladen onder)
     uren: { href: "/werkgever/uren", label: alleenFlexwerk ? (locale === "en" ? "Hours" : "Uren") : t.nav.urenGoedkeuren, icon: <IClock /> },
@@ -136,10 +97,6 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     compliance: { href: "/werkgever/compliance", label: t.nav.compliance, icon: <IShield /> },
     overeenkomsten: { href: "/werkgever/overeenkomsten", label: t.nav.overeenkomsten, icon: <IDoc /> },
     bedrijf: { href: "/werkgever/bedrijf", label: t.nav.bedrijfsprofiel, icon: <IGrid /> },
-    website: { href: "/werkgever/website", label: "Website-beheer", icon: <IGlobe /> },
-    telefonie: { href: "/werkgever/telefonie", label: "Telefonie", icon: <IPhone /> },
-    reviews: { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar /> },
-    netwerk: { href: "/werkgever/netwerk", label: "Wifi en VPN", icon: <IShield /> },
     rapportages: { href: "/werkgever/rapportages", label: "Rapportages", icon: <IGrid /> },
     // personeel, kosten, ruimtes en bezetting in kaart brengen (lib/inkaart)
     inkaart: { href: "/werkgever/in-kaart", label: t.nav.inkaart, icon: <IActivity /> },
@@ -147,12 +104,6 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     kennisbank: { href: `${outlinePubliekeUrl()}/`, label: "Handleidingen", icon: <IDoc /> },
     // het hulpcentrum voor bedrijven op een eigen pagina (lib/hulp/werkgever-teksten.ts); het vraagteken in de kopbalk opent hetzelfde
     hulp: { href: "/werkgever/hulp", label: t.nav.hulp, icon: <IHelp /> },
-    locatie: { href: "/werkgever/op-locatie", label: "Op locatie", icon: <IGrid /> },
-    // per soort bedrijf een dashboard met alles wat erbij hoort (lib/branches)
-    branche: { href: "/werkgever/branche", label: "Jouw branche", icon: <IList /> },
-    // alleen in het menu als het bedrijf afspraken heeft ingericht (lib/afspraken/in-menu.ts); "Klantenkaart", want horeca en rijschool hebben al een groep "Klanten en contact"
-    afspraken: { href: "/werkgever/afspraken", label: "Afspraken", icon: <ICalendar /> },
-    klanten: { href: "/werkgever/klanten", label: "Klantenkaart", icon: <IUsers /> },
     // het blok Uitzendbureau, alleen bij een uitzendpartner (lib/uitzend/bureau-kern.ts)
     uitzendAanvragen: { href: "/werkgever/uitzend", label: locale === "en" ? "Requests" : "Aanvragen", icon: <IMail /> },
     uitzendKrachten: { href: "/werkgever/uitzend/krachten", label: locale === "en" ? "Temp workers" : "Uitzendkrachten", icon: <IUsers /> },
@@ -160,27 +111,15 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     uitzendKlanten: { href: "/werkgever/uitzend/klanten", label: locale === "en" ? "Clients and locations" : "Klanten en locaties", icon: <IPin /> },
     uitzendBureau: { href: "/werkgever/uitzend/bureau", label: locale === "en" ? "Agency details" : "Bureaugegevens", icon: <IShield /> },
   };
-  // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
-  const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });
-  // de Op locatie-modules (portofoon, toegang, kluis, printen) ook (lib/locatie)
-  const locatieAan = await featureEnabled("locatie-modules", { userId: principal.userId });
   const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : s === "uitzend" && locale === "en" ? "Staffing agency" : SECTIE_NAAM[s]);
-  // de beheerder: studio, rijschool- en horecabeheer, dashboards toevoegen
-  const beheerder = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
-  // de volgorde uit de Site-ontwerper (Menu), alleen voor het dashboard personeel; zonder eigen volgorde of bij een storing exact het gewone menu
-  const menuVolgorde = werkruimte.soort === "personeel" ? await getMenuVolgorde().catch(() => null) : null;
+  // de volgorde uit de Site-ontwerper (Menu); zonder eigen volgorde of bij een storing exact het gewone menu
+  const menuVolgorde = await getMenuVolgorde().catch(() => null);
   // uitzendpartner (lib/uitzend/partners.ts): dan het blok Uitzendbureau; een storing zegt nee
   const uitzendPartner = await isUitzendPartnerTenant(tenantId).catch(() => false);
   const nav: NavItem[] = pasMenuVolgordeToe(
-    menuVoor(werkruimte.soort, {
-      heeftAfspraken: metAfspraken,
-      heeftRijschool: werkruimte.heeftRijschool,
-      heeftHoreca: werkruimte.heeftHoreca,
-      horecaModules: werkruimte.horecaModules,
+    menuVoor({
       inApp,
-      // de studio eist HQ_ADMIN of PLATFORM_ADMIN (app/studio/layout.tsx)
-      studio: beheerder,
-      // vlag `publiek-alleen-flexwerk`: de niet-flexwerk-menu-items (telefonie, reviews) vallen weg
+      // vlag `publiek-alleen-flexwerk`: samengevoegde ingangen, zonder de losse handleidingen
       alleenFlexwerk,
       // nog geen klus geplaatst: een kort startmenu, de rest komt erbij na de eerste klus
       nogGeenKlussen: !werkruimte.heeftKlussen,
@@ -188,16 +127,10 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     }),
     menuVolgorde,
   )
-    .filter(({ sleutel }) => sleutel !== "netwerk" || netwerkAan)
     .filter(({ sleutel }) => sleutel !== "kennisbank" || kennisbankIngesteld())
-    .filter(({ sleutel }) => sleutel !== "locatie" || locatieAan)
-    .map(({ sleutel, sectie, tab }) => ({
+    .map(({ sleutel, sectie }) => ({
       ...onderdelen[sleutel],
-      // een tabblad van het rijschool- of horecabeheer als eigen onderdeel (lib/rijschool/tabs.ts, lib/horeca/tabs.ts)
-      ...(tab ? { href: `${onderdelen[sleutel].href}?tab=${tab.id}`, label: tab.label, icon: TAB_ICOON[tab.id] ?? onderdelen[sleutel].icon } : {}),
       ...(sectie ? { section: sectieNaam(sectie) } : {}),
-      // hoeveel bestellingen op de zaak wachten; alleen voor wie het horecabeheer mag openen (anders geeft de teller een reeks 403's)
-      ...(sleutel === "horeca" && tab?.id === "bestellingen" && beheerder ? { badge: <HorecaMenuTeller tekst={locale === "en" ? "new orders" : "nieuwe bestellingen"} /> } : {}),
     }));
 
   return (
@@ -218,7 +151,6 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         // het vraagteken: het hulpcentrum voor bedrijven, alleen de teksten in de taal van de app gaan mee (lib/hulp/werkgever-teksten.ts)
         hulp={hulpTekstenWerkgever(locale)}
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
-        dashboards={{ actief: werkruimte.soort, dashboards: werkruimte.dashboards, kanToevoegen: beheerder, alleenFlexwerk }}
         // "ZekerFlex OS" onderin de zijbalk: met de vlag aan alleen voor een platformbeheerder (een bedrijf dat personeel zoekt snapt het niet, 20 nov)
         toonOs={!alleenFlexwerk || hasRole(principal, "PLATFORM_ADMIN")}
         // met de vlag aan één plek voor bedrijfsgegevens: Bedrijfsprofiel (met daar een knop Instellingen), geen losse regel onderin

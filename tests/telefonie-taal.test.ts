@@ -74,13 +74,12 @@ describe("het scherm", () => {
     expect(comp).toContain('role="alert"');
   });
 
-  it("de werkerpagina kiest de taal op de server en geeft de teksten mee; werkgever en beheer geven niets mee", () => {
+  it("de werkerpagina kiest de taal op de server en geeft de teksten mee", () => {
     const werker = bron("app/dashboard/telefonie/page.tsx");
     expect(werker).toContain("const locale = await getLocale();");
     expect(werker).toContain("TELEFONIE_TEKSTEN[locale]");
     expect(werker).toContain("texts={tx}");
     expect(werker).toContain("lijnTexts={LIJN_TEKSTEN[locale]}");
-    expect(bron("app/werkgever/telefonie/page.tsx")).not.toContain("texts=");
   });
 
   it("het teksten-bestand haalt niets zwaars de browser in", () => {

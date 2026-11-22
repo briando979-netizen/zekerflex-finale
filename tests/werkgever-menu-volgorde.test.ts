@@ -5,7 +5,7 @@ import { menuVoor, PERSONEEL_SLEUTELS, type MenuOpties, type MenuPlek, type Menu
 import { BEHEER_STANDAARD, HOOFD_STANDAARD, MENU_NAAM, isStandaardMenuVolgorde, normalizeMenuVolgorde, pasMenuVolgordeToe, standaardMenuVolgorde } from "@/lib/werkgever/menu-volgorde";
 
 // De volgorde van het werkgeversmenu (Site-ontwerper, tabblad Menu, 13 nov): de beheerder versleept de onderdelen van het
-// dashboard personeel. Alleen de volgorde; er verdwijnt niets. Zonder eigen volgorde is het menu precies zoals het was.
+// menu. Alleen de volgorde; er verdwijnt niets. Zonder eigen volgorde is het menu precies zoals het was.
 
 const kv = vi.hoisted(() => new Map<string, unknown>());
 vi.mock("@/lib/storage/kv", () => ({
@@ -17,16 +17,16 @@ vi.mock("@/lib/storage/kv", () => ({
 import { getMenuVolgorde, resetMenuVolgorde, setMenuVolgorde } from "@/lib/werkgever/menu-volgorde-store";
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
-const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: false, heeftHoreca: false, inApp: false, studio: true };
-const menu = (o: Partial<MenuOpties> = {}) => menuVoor("personeel", { ...opties, ...o });
+const opties: MenuOpties = { inApp: false };
+const menu = (o: Partial<MenuOpties> = {}) => menuVoor({ ...opties, ...o });
 const sleutels = (m: MenuPlek[]) => m.map((p) => p.sleutel);
 const omgekeerd = () => ({ hoofd: [...HOOFD_STANDAARD].reverse(), beheer: [...BEHEER_STANDAARD].reverse() });
 
 beforeEach(() => kv.clear());
 
 describe("de standaard is het gewone menu", () => {
-  it("de lijsten volgen menuVoor: elk onderdeel van het dashboard personeel staat erin, in dezelfde volgorde", () => {
-    for (const o of [{}, { heeftAfspraken: false }, { inApp: true }]) {
+  it("de lijsten volgen menuVoor: elk onderdeel van het menu staat erin, in dezelfde volgorde", () => {
+    for (const o of [{}, { uitzendPartner: true }, { inApp: true }]) {
       const m = menu(o);
       const hoofd = m.filter((p) => !p.sectie && p.sleutel !== "start").map((p) => p.sleutel);
       const beheer = m.filter((p) => p.sectie === "beheer").map((p) => p.sleutel);
@@ -51,7 +51,7 @@ describe("de standaard is het gewone menu", () => {
 
 describe("een eigen volgorde", () => {
   it("verandert alleen de volgorde: er verdwijnt niets en er komt niets bij", () => {
-    for (const o of [{}, { heeftAfspraken: false }, { inApp: true }]) {
+    for (const o of [{}, { uitzendPartner: true }, { inApp: true }]) {
       const m = menu(o);
       const n = pasMenuVolgordeToe(m, omgekeerd());
       expect([...sleutels(n)].sort()).toEqual([...sleutels(m)].sort());
@@ -74,8 +74,9 @@ describe("een eigen volgorde", () => {
   });
 
   it("onbekende, dubbele en verkeerd geplaatste onderdelen vallen weg; wat ontbreekt komt achteraan", () => {
-    const v = normalizeMenuVolgorde({ hoofd: ["mail", "mail", "constructor", "uren", 4, "klussen"], beheer: ["klussen", "facturen", "toString"] });
-    expect(v.hoofd.slice(0, 2)).toEqual(["mail", "klussen"]);
+    const v = normalizeMenuVolgorde({ hoofd: ["berichten", "berichten", "constructor", "mail", "uren", 4, "klussen"], beheer: ["klussen", "facturen", "toString"] });
+    // "mail" stond er tot 22 nov 2026 in; een oude bewaarde volgorde laat hem gewoon vallen
+    expect(v.hoofd.slice(0, 2)).toEqual(["berichten", "klussen"]);
     expect(v.hoofd).toHaveLength(HOOFD_STANDAARD.length);
     expect(v.hoofd).not.toContain("uren" as MenuSleutel);
     expect(v.beheer[0]).toBe("facturen");
@@ -88,8 +89,8 @@ describe("een eigen volgorde", () => {
   });
 
   it("een onderdeel dat de volgorde niet kent, blijft in het menu staan", () => {
-    const m: MenuPlek[] = [{ sleutel: "start" }, { sleutel: "klussen" }, { sleutel: "website" }, { sleutel: "mail" }];
-    expect(sleutels(pasMenuVolgordeToe(m, { hoofd: ["mail", "klussen"], beheer: [] }))).toEqual(["start", "mail", "klussen", "website"]);
+    const m: MenuPlek[] = [{ sleutel: "start" }, { sleutel: "klussen" }, { sleutel: "planning" }, { sleutel: "berichten" }];
+    expect(sleutels(pasMenuVolgordeToe(m, { hoofd: ["berichten", "klussen"], beheer: [] }))).toEqual(["start", "berichten", "klussen", "planning"]);
   });
 });
 
@@ -111,12 +112,12 @@ describe("de opslag", () => {
 });
 
 describe("de layout, het paneel en de route", () => {
-  it("de layout past de volgorde alleen toe op het dashboard personeel, en een storing geeft het gewone menu", () => {
+  it("de layout past de volgorde toe, en een storing geeft het gewone menu", () => {
     const layout = bron("app/werkgever/layout.tsx");
-    expect(layout).toContain('const menuVolgorde = werkruimte.soort === "personeel" ? await getMenuVolgorde().catch(() => null) : null;');
+    expect(layout).toContain("const menuVolgorde = await getMenuVolgorde().catch(() => null);");
     expect(layout).toContain("const nav: NavItem[] = pasMenuVolgordeToe(");
-    // de schakelaars (netwerk, kennisbank, op locatie) filteren daarna nog steeds
-    expect(layout.indexOf("pasMenuVolgordeToe(")).toBeLessThan(layout.indexOf('.filter(({ sleutel }) => sleutel !== "netwerk" || netwerkAan)'));
+    // de schakelaar van de kennisbank filtert daarna nog steeds
+    expect(layout.indexOf("pasMenuVolgordeToe(")).toBeLessThan(layout.indexOf('.filter(({ sleutel }) => sleutel !== "kennisbank" || kennisbankIngesteld())'));
   });
 
   it("het paneel staat in het tabblad Menu, met verslepen, en laadt geen servercode", () => {

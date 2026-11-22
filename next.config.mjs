@@ -72,6 +72,13 @@ const nextConfig = {
         ["/werkgever/website/:rest*", "/werkgever"],
         ["/voorstel/:rest*", "/"],
         ["/websitevoorstel/:rest*", "/voor-bedrijven"],
+        // ook de werkruimtes rijschool en horeca en de losse onderdelen buiten flexwerk (telefonie, Google-reviews, wifi,
+        // op locatie, mailbox, WhatsApp, branche, afspraken en de klantenkaart). De openbare pagina's van rijscholen,
+        // horecazaken en boekpagina's (/rijschool, /horeca, /boeken, /scherm, /personeel) geven gewoon een 404.
+        ...["rijschool", "horeca", "telefonie", "google-reviews", "netwerk", "op-locatie", "mail", "whatsapp", "branche", "afspraken", "klanten"].flatMap((d) => [
+          [`/werkgever/${d}`, "/werkgever"],
+          [`/werkgever/${d}/:rest*`, "/werkgever"],
+        ]),
       ].map(([van, naar]) => ({ source: van, destination: naar, permanent: false })),
       // 16 nov: het eigen 5G-netwerk staat niet meer in het aanbod (vergunning en apparatuur per terrein, owner-todo)
       { source: "/aanbod/eigen-5g-netwerk", destination: "/aanbod", permanent: true },

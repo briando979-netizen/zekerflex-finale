@@ -17,7 +17,6 @@ import { freeAccess, isCompTenant, isCompUser, listComp, setComp } from "@/lib/b
 import { freePricing } from "@/lib/telephony/lines";
 import { DEFAULT_PRICING, quote } from "@/lib/telephony/plans";
 import { resolveTenantPlan } from "@/lib/api-plans/resolve";
-import { mayPublish } from "@/lib/sites/access";
 import { buildReverseBillingInvoices } from "@/lib/billing/self-billing";
 import type { Principal } from "@/lib/auth";
 
@@ -53,12 +52,6 @@ describe("kosteloos account", () => {
     expect(await freeAccess(null)).toBe(false);
   });
 
-  it("mag een website publiceren zonder abonnement; een gewone klant niet", async () => {
-    await setComp({ userId: "u-test", email: "t@x.nl", tenantIds: ["t-test"], on: true, reason: "", by: owner });
-    expect(await mayPublish(person("u-test", "HQ_ADMIN"), "t-test")).toBe(true);
-    expect(await mayPublish(person("u-klant", "HQ_ADMIN", "t-klant"), "t-klant")).toBe(false);
-  });
-
   it("krijgt het hoogste API-pakket", async () => {
     expect((await resolveTenantPlan("t-test")).key).toBe("free");
     await setComp({ userId: "u-test", email: "t@x.nl", tenantIds: ["t-test"], on: true, reason: "", by: owner });
@@ -78,7 +71,7 @@ describe("€ 0 in de praktijk", () => {
   });
 
   it("de telefoniepagina's tonen dezelfde prijzen als de aanvrager betaalt", () => {
-    for (const page of ["app/werkgever/telefonie/page.tsx", "app/dashboard/telefonie/page.tsx"]) {
+    for (const page of ["app/dashboard/telefonie/page.tsx"]) {
       const src = readFileSync(page, "utf8");
       expect(src, page).toContain("pricingFor(free)");
       expect(src, page).toContain("freeAccess(principal)");

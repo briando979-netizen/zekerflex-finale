@@ -11,7 +11,6 @@ import { recentNotes } from "@/lib/bank/notify";
 import { getDismissed, notifSignature } from "@/lib/notifications/dismissed";
 import { REACTIE_MARGE_MS } from "@/lib/offers/verval";
 import { BANK_AAN } from "@/lib/app-mode";
-import { afsprakenBelVoor } from "@/lib/afspraken/bel";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { MELDING_NL, type MeldingTeksten } from "@/lib/notifications/feed-teksten";
 import { MELDING_BEDRIJF_NL, type MeldingBedrijfTeksten } from "@/lib/notifications/bedrijf-teksten";
@@ -328,16 +327,6 @@ export async function getNotifications(
           ),
         );
       }
-    }
-  }
-
-  // ── nieuwe online afspraken (alleen de beheerder, net als de afsprakenpagina en de push/mail) ──
-  if (bedrijfKant && hasRole(principal, "HQ_ADMIN") && !admin) {
-    try {
-      const tenantId = (await resolveEmployerScope(principal)).tenantIds[0];
-      if (tenantId) out.push(...(await afsprakenBelVoor(tenantId, new Date(now))));
-    } catch {
-      /* ignore: de bel werkt ook zonder afspraken */
     }
   }
 

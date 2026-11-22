@@ -47,7 +47,6 @@ vi.mock("@/lib/dashboard/employer", () => ({ resolveEmployerScope: async () => (
 vi.mock("@/lib/bank/notify", () => ({ recentNotes: async () => [] }));
 vi.mock("@/lib/offers/verval", () => ({ REACTIE_MARGE_MS: 0 }));
 vi.mock("@/lib/app-mode", () => ({ BANK_AAN: false }));
-vi.mock("@/lib/afspraken/bel", () => ({ afsprakenBelVoor: async () => [] }));
 
 import { getNotifications } from "@/lib/notifications/feed";
 import { MELDING_NL } from "@/lib/notifications/feed-teksten";

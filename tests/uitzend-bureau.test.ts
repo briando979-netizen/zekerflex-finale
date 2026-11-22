@@ -20,7 +20,7 @@ import {
   type VerloningDienst,
 } from "@/lib/uitzend/bureau-kern";
 import { PARTNER_VOORWAARDEN_VERSIE } from "@/lib/uitzend/voorwaarden";
-import { UITZEND_SLEUTELS, dashboardVanPad, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
+import { UITZEND_SLEUTELS, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
 import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
 import { fmt, nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
@@ -168,24 +168,21 @@ describe("bureaugegevens en meldingen", () => {
 });
 
 describe("het menu Uitzendbureau", () => {
-  const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: false, heeftHoreca: false, inApp: false, studio: true };
+  const opties: MenuOpties = { inApp: false };
 
   it("alleen bij een uitzendpartner, als eigen blok tussen het hoofddeel en Beheer", () => {
-    const zonder = menuVoor("personeel", opties).map((p) => p.sleutel);
+    const zonder = menuVoor(opties).map((p) => p.sleutel);
     for (const s of UITZEND_SLEUTELS) expect(zonder).not.toContain(s);
-    const met = menuVoor("personeel", { ...opties, uitzendPartner: true });
+    const met = menuVoor({ ...opties, uitzendPartner: true });
     const blok = met.filter((p) => p.sectie === "uitzend").map((p) => p.sleutel);
     expect(blok).toEqual([...UITZEND_SLEUTELS]);
     const i = met.findIndex((p) => p.sectie === "uitzend");
     expect(met[i - 1]?.sectie).toBeUndefined();
     expect(met[i + UITZEND_SLEUTELS.length]?.sectie).toBe("beheer");
-    for (const soort of ["rijschool", "horeca", "website", "webshop"] as const) {
-      expect(menuVoor(soort, { ...opties, uitzendPartner: true }).some((p) => p.sectie === "uitzend"), soort).toBe(false);
-    }
   });
 
   it("blijft staan met de vlag alleen-flexwerk, ook vóór de eerste klus, en met een eigen menuvolgorde", () => {
-    const flex = menuVoor("personeel", { ...opties, uitzendPartner: true, alleenFlexwerk: true, nogGeenKlussen: true });
+    const flex = menuVoor({ ...opties, uitzendPartner: true, alleenFlexwerk: true, nogGeenKlussen: true });
     expect(flex.filter((p) => p.sectie === "uitzend").map((p) => p.sleutel)).toEqual([...UITZEND_SLEUTELS]);
     const gesorteerd = pasMenuVolgordeToe(flex, { hoofd: ["berichten", "klussen"], beheer: ["facturen", "uren"] });
     const i = gesorteerd.findIndex((p) => p.sectie === "uitzend");
@@ -193,7 +190,7 @@ describe("het menu Uitzendbureau", () => {
     expect(gesorteerd.slice(i + UITZEND_SLEUTELS.length).every((p) => p.sectie !== undefined)).toBe(true);
   });
 
-  it("elk onderdeel heeft een adres onder /werkgever/uitzend met een bestaande pagina, en hoort bij het dashboard personeel", () => {
+  it("elk onderdeel heeft een adres onder /werkgever/uitzend met een bestaande pagina", () => {
     const layout = lees("app/werkgever/layout.tsx");
     expect(layout).toContain("uitzendPartner,");
     for (const s of UITZEND_SLEUTELS) {
@@ -201,7 +198,6 @@ describe("het menu Uitzendbureau", () => {
       expect(m, s).not.toBeNull();
       const pad = m?.[1] ?? "";
       expect(existsSync(path.join(ROOT, `app${pad}/page.tsx`)), pad).toBe(true);
-      expect(dashboardVanPad(pad), pad).toBe("personeel");
     }
   });
 });

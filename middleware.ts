@@ -5,7 +5,6 @@ import { isPublicApiRoute } from "@/lib/auth/public-routes";
 import { TE_GROOT_ANTWOORD, teGroot } from "@/lib/http/openbare-grens";
 import { buildContentSecurityPolicy, generateNonce } from "@/lib/security/csp";
 import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
-import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
 import { APP_CHIP_COOKIE, APP_COOKIE, APP_IOS_COOKIE, isAppBlockedPath, isBankPath } from "@/lib/app-mode";
@@ -179,80 +178,13 @@ const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 // Een eigen domein van een bedrijf. Caddy's block for customer domains sets
 // x-zf-site-host and the zekerflex.com block strips it, so it can't be forged
 // from outside. Everything on such a domain — /login and /api included — stays
-// away from the app. Klantwebsites zijn weg (22 nov 2026, fase C: ZekerFlex is
-// alleen flexwerk): een domein zonder rijschool krijgt een nette 404.
+// away from the app. Klantwebsites en rijscholen op een eigen domein zijn weg
+// (22 nov 2026, fase C: ZekerFlex is alleen flexwerk): zo'n domein krijgt een
+// nette 404.
 // ---------------------------------------------------------------------------
-async function customerSite(req: NextRequest, raw: string): Promise<NextResponse> {
-  const host = siteHostFrom(raw);
-  if (!host) return new NextResponse("Onbekend domein", { status: 400 });
-  const rijschool = await rijschoolOpHost(host);
-  if (rijschool) return rijschoolSite(req, host, rijschool);
+function customerSite(raw: string): NextResponse {
+  if (!siteHostFrom(raw)) return new NextResponse("Onbekend domein", { status: 400 });
   return new NextResponse("Niet gevonden", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex" } });
-}
-
-// ---------------------------------------------------------------------------
-// Een rijschool op haar eigen domein (lib/rijschool/domein.ts). Het domein komt
-// binnen als klantdomein; de middleware kan niet bij de database en vraagt de
-// app zelf welke rijschool erbij hoort (kort onthouden, gedeeld via globalThis).
-// Lukt dat niet, dan een 404 (customerSite).
-// ---------------------------------------------------------------------------
-type RijschoolHost = { slug: string; online: boolean; hoofd: string };
-type RijschoolHostCache = Map<string, { r: RijschoolHost | null; tot: number }>;
-const RIJSCHOOL_HOSTS: RijschoolHostCache = ((globalThis as { __zfRijschoolHosts?: RijschoolHostCache }).__zfRijschoolHosts ??= new Map());
-const INTERNE_APP = process.env.INTERNAL_APP_URL ?? `http://127.0.0.1:${process.env.PORT ?? "3000"}`;
-
-async function rijschoolOpHost(host: string): Promise<RijschoolHost | null> {
-  const nu = Date.now();
-  const bekend = RIJSCHOOL_HOSTS.get(host);
-  if (bekend && bekend.tot > nu) return bekend.r;
-  const stop = new AbortController();
-  const klok = setTimeout(() => stop.abort(), 2000);
-  try {
-    const res = await fetch(`${INTERNE_APP}/api/rijschool/domein?host=${encodeURIComponent(host)}`, { signal: stop.signal, cache: "no-store" });
-    if (res.status !== 200 && res.status !== 404) return null;
-    const body = (await res.json()) as { rijschool?: RijschoolHost | null };
-    const r = res.status === 200 && body.rijschool?.slug ? body.rijschool : null;
-    if (RIJSCHOOL_HOSTS.size > 500) RIJSCHOOL_HOSTS.clear();
-    RIJSCHOOL_HOSTS.set(host, { r, tot: nu + (r ? 60_000 : 20_000) });
-    return r;
-  } catch {
-    return null; // niet onthouden: de volgende vraag probeert het opnieuw
-  } finally {
-    clearTimeout(klok);
-  }
-}
-
-function rijschoolSite(req: NextRequest, host: string, r: RijschoolHost): NextResponse {
-  const pad = req.nextUrl.pathname;
-  // www en zonder www: één hoofdadres, de andere vorm stuurt door
-  if (host !== r.hoofd && pad !== BEWIJS_PAD) {
-    return NextResponse.redirect(`https://${r.hoofd}${pad}${req.nextUrl.search}`, 308);
-  }
-  if (pad === "/robots.txt") {
-    return new NextResponse(robotsVoor(r.online, r.hoofd), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
-  }
-  // geen ZekerFlex-statistiek en geen ZekerFlex-service-worker op het domein van de rijschool
-  if (pad.startsWith("/api/analytics/")) return new NextResponse(null, { status: 204 });
-  if (pad === "/sw.js") {
-    return new NextResponse(
-      "self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',()=>self.registration.unregister());",
-      { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store" } },
-    );
-  }
-  const doel = rijschoolPad(r.slug, pad);
-  if (doel === null) return new NextResponse("Niet gevonden", { status: 404 });
-  if (doel.startsWith("/_next/")) return NextResponse.next();
-  const nonce = generateNonce();
-  const ctx: RequestContext = { cid: correlationId(req), nonce, csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce, pathname: doel }) };
-  const headers = new Headers(req.headers);
-  headers.set(CORRELATION_HEADER, ctx.cid);
-  headers.set("x-pathname", doel);
-  headers.set(NONCE_HEADER, ctx.nonce);
-  headers.set(CSP_HEADER, ctx.csp);
-  if (doel === pad) return decorate(NextResponse.next({ request: { headers } }), ctx);
-  const url = req.nextUrl.clone();
-  url.pathname = doel;
-  return decorate(NextResponse.rewrite(url, { request: { headers } }), ctx);
 }
 
 // ---------------------------------------------------------------------------
@@ -277,7 +209,7 @@ function voorstelSite(req: NextRequest): NextResponse {
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const siteHost = req.headers.get(SITE_HOST_HEADER);
-  if (siteHost !== null) return await customerSite(req, siteHost);
+  if (siteHost !== null) return customerSite(siteHost);
   if (req.headers.get(VOORSTEL_HEADER) !== null) return voorstelSite(req);
 
   // Te groot voor een openbare schrijfroute (12 nov, lib/http/openbare-grens.ts): 413 vóór de route de body leest.

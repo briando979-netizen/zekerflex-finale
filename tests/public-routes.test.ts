@@ -53,7 +53,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/terminal/abc123-sleutel",
     "/api/installatie/abc123def456.sleutel", // klant en monteur volgen een installatie met de code in het adres
     "/api/installatie/abc123def456.sleutel/positie",
-    "/api/boeken/kapper-jan", // boekpagina van een bedrijf: vrije tijden en boeken, IP-begrensd
     "/api/kaart/zoek", // ZekerFlex Kaart: adres zoeken (PDOK), IP-begrensd
     "/api/kaart/route", // ZekerFlex Kaart: route plannen via onze eigen routeplanner, IP-begrensd
     "/api/chip/sleutel", // the Android app opens the ID chip with a one-time code
@@ -66,7 +65,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/telephony/gather", // Twilio; elke telefonieroute controleert X-Twilio-Signature
     "/api/telephony/gather/vervolg", // Twilio komt hier na "een ogenblik" (<Redirect>), zelfde handtekening
     "/api/orgs/org_babycare/photo",
-    "/api/sites/domein-check", // Caddy's on-demand TLS ask
     "/api/media/youtube/dQw4w9WgXcQ", // our copy of a YouTube thumbnail
     "/api/indexnow-key", // IndexNow verifies site ownership without a session
     "/api/rekentools/uitkomst", // "stuur mij de uitkomst" on the public rekentools
@@ -87,21 +85,12 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/deal/0123456789abcdef", // tailored offer after a free scan (unguessable id)
     "/api/domeinen/zoek", // is a domain name still free (public RDAP)
     "/api/domeinen/aanvraag", // request a domain / transfer
-    "/api/rijschool/domein", // middleware lookup: which driving school owns this own domain
-    "/api/rijschool/domein/bewijs", // https proof on the own domain of a driving school
     "/api/oidc/authorize", // "Inloggen met ZekerFlex": the route itself sends a guest to /login
     "/api/oidc/token", // the service exchanges the code with its client secret
     "/api/oidc/jwks", // public signing key
     "/api/toegang/kenteken", // the barrier box asks whether a plate may enter (own token per branch)
     "/api/toegang/opdrachten", // the barrier box polls for manual open commands
     "/api/printen/agent", // the print agent fetches the label queue (own token per company)
-    "/api/horeca/scherm", // horeca screens: a paired device (own signed cookie) or the owner
-    "/api/horeca/scherm/koppel", // pair a device with a 15-minute code (IP-limited)
-    "/api/horeca/bon", // a guest's receipt as pdf or mail, only with a signed link to one paid receipt
-    "/api/agent/horeca", // AI assistants list restaurants with online booking
-    "/api/agent/horeca/de-zaak/beschikbaarheid", // free times for a day
-    "/api/agent/horeca/de-zaak/reserveringen", // book a table (rate-limited, same capacity check as the own site)
-    "/api/agent/horeca/reserveringen/token", // view or cancel with the signed cancel link
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -139,7 +128,6 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/geo/reverse", // het dichtstbijzijnde adres bij een punt: alleen met een sessie
     "/api/geo/search", // alleen met een sessie; /api/geo is niet als geheel openbaar aangemerkt
     "/api/calls/incoming",
-    "/api/sites/domein-check/extra", // exact match only
     "/api/werkgever/sites/domain",
     "/api/werkgever/netwerk",
     "/api/netwerk",
@@ -166,6 +154,15 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/voorstel/smileyapp/chat",
     "/api/voorstel/schwarzwald/account",
     "/api/websitevoorstel/0123456789abcdef/bekeken",
+    // rijschool, horeca, de boekpagina, Google-reviews en de certificaatvraag van Caddy zijn weg (22 nov 2026, fase C)
+    "/api/sites/domein-check",
+    "/api/rijschool/domein",
+    "/api/rijschool/site/rijschool-test/account",
+    "/api/horeca/site/de-zaak/reserveren",
+    "/api/horeca/bon",
+    "/api/agent/horeca",
+    "/api/boeken/kapper-jan",
+    "/api/review/abcdef",
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

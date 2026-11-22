@@ -31,6 +31,8 @@ export interface ZfApp {
 
 const bron = (id: string) => `utm_source=pwa-${id}`;
 
+// Horeca (met de app voor het eigen personeel), rijschool, webshop en website zijn op 22 nov 2026 weggehaald (fase C, alleen
+// flexwerk): die apps staan uit, dus hun manifest en icoon geven een 404; een oud beginadres stuurt door naar /werkgever.
 export const ZF_APPS: ZfApp[] = [
   {
     id: "werk",
@@ -63,7 +65,7 @@ export const ZF_APPS: ZfApp[] = [
     start: `/werkgever/horeca?${bron("horeca")}`,
     kleur: "#B45309",
     symbool: "bord",
-    beschikbaar: true,
+    beschikbaar: false,
   },
   {
     id: "personeel",
@@ -76,7 +78,7 @@ export const ZF_APPS: ZfApp[] = [
     start: `/personeel?${bron("personeel")}`,
     kleur: "#9A3412",
     symbool: "persoon",
-    beschikbaar: true,
+    beschikbaar: false,
   },
   {
     id: "rijschool",
@@ -87,7 +89,7 @@ export const ZF_APPS: ZfApp[] = [
     start: `/werkgever/rijschool?${bron("rijschool")}`,
     kleur: "#6D28D9",
     symbool: "stuur",
-    beschikbaar: true,
+    beschikbaar: false,
   },
   {
     id: "webshop",
@@ -98,7 +100,6 @@ export const ZF_APPS: ZfApp[] = [
     start: `/studio/webshop?${bron("webshop")}`,
     kleur: "#BE185D",
     symbool: "tas",
-    // de webshop en de websitestudio zijn weg (22 nov 2026, fase C); /studio stuurt door naar /werkgever
     beschikbaar: false,
   },
   {
