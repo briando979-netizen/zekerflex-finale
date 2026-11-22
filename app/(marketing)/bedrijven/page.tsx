@@ -135,8 +135,9 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
       </section>
 
       ),
-      // voordeur: wat wil je doen?
-      voordeur: <BedrijvenVoordeur alleenFlexwerk={alleenFlexwerk} />,
+      // voordeur: wat wil je doen? Met de vlag `publiek-alleen-flexwerk` bleef er maar één keuze over (Personeel) en
+      // staat "Plaats een klus" al in de kop; dan valt het blok weg (22 nov 2026, gebruikersonderzoek)
+      voordeur: alleenFlexwerk ? null : <BedrijvenVoordeur />,
       // aanbod: waar ben je naar op zoek?
       aanbod: (
       <AanbodKiezer alleenFlexwerk={alleenFlexwerk} />
