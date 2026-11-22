@@ -14,7 +14,7 @@ import { ldJson } from "@/lib/seo/json-ld";
 // was tot 22 nov per ongeluk geblokkeerd in robots.txt ("/start").
 const title = "Starten als uitzendkracht via een uitzendbureau";
 const description =
-  "Zo start je als uitzendkracht: download de app, zet het filter op Uitzendklussen en meld je aan. Je werkt op contract bij een uitzendbureau, met vakantiegeld en pensioen, en kiest zelf je diensten.";
+  "Zo start je als uitzendkracht: download de app, zet het filter op Uitzendklussen en meld je aan. Je werkt op contract bij een uitzendbureau.";
 
 export const metadata: Metadata = {
   title,

@@ -8,9 +8,9 @@ import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { AANBOD, FOUTEN, LEREN_AANMELD_PAD, LEREN_CONTACT_PAD, LEREN_OPEN_KLUSSEN_PAD, LEREN_PAD, PRIJZEN_GOEDGEKEURD, STAPPEN, VRAGEN, prijsTekst } from "@/lib/leren/klussen-krijgen";
 
-const title = "Zo krijg je klussen via een platform: zeven stappen die werken";
+const title = "Klussen krijgen via een platform: zeven stappen";
 const description =
-  "Geen reacties op je aanmeldingen? Leer in zeven stappen hoe je via een app of platform aan klussen komt: profiel, identiteitscontrole, beschikbaarheid, snel reageren en je eerste beoordeling. Gratis gids, profielcheck en workshops.";
+  "Geen reacties op je aanmeldingen? In zeven stappen aan klussen via een app of platform: een sterk profiel, je ID-check, beschikbaarheid en snel reageren.";
 
 export const metadata: Metadata = {
   title,

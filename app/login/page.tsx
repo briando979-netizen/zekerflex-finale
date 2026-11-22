@@ -16,9 +16,15 @@ import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { inIosApp } from "@/lib/app-mode-server";
 import { WELKOM_DICTS } from "@/lib/i18n/welkom";
 import { welkomTerug } from "@/lib/welkom/terug";
+import { canonical } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Inloggen" };
+// E?n canonieke /login: Google zag 45 varianten met ?callbackUrl=? als dubbele pagina's (Search Console, 22 nov 2026).
+export const metadata: Metadata = {
+  title: "Inloggen",
+  description: "Log in bij ZekerFlex en zie je klussen, diensten, uren en berichten.",
+  ...canonical("/login"),
+};
 
 function safePath(raw: string | undefined): string {
   if (!raw) return "/start";

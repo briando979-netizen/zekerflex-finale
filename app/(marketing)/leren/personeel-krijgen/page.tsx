@@ -20,9 +20,9 @@ import {
   prijsTekstBedrijf,
 } from "@/lib/leren/personeel-krijgen";
 
-const title = "Zo krijg je als bedrijf goede mensen via een platform: zeven stappen";
+const title = "Personeel krijgen via een platform: zeven stappen";
 const description =
-  "Weinig aanmeldingen op je klussen, of mensen die niet terugkomen? Leer in zeven stappen hoe je via een platform betrouwbare flexwerkers krijgt: een duidelijke klus, eerlijk tarief, op tijd plaatsen, snel reageren, goed ontvangen, favorieten en uren goedkeuren. Gratis gids en klus-check.";
+  "Weinig aanmeldingen op je klussen? In zeven stappen naar betrouwbare flexwerkers via een platform: een duidelijke klus, een eerlijk tarief en snel reageren.";
 
 export const metadata: Metadata = {
   title,

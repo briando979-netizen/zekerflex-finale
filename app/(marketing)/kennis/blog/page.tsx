@@ -4,7 +4,7 @@ import { POSTS, nlDate } from "@/lib/kennis/content";
 import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Blog",
+  title: "Blog over flexwerk en freelancen",
   description: "Nieuws en achtergrond over flexibel werken, de Wet DBA en het ZekerFlex-platform.",
   ...canonical("/kennis/blog"),
 };

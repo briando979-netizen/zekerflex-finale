@@ -9,7 +9,7 @@ import { AANSPRAKELIJKHEID_MAX_EURO, BOETE, PARTNER_VOORWAARDEN_DATUM, PARTNER_V
 
 const title = "Partnervoorwaarden voor uitzendbureaus";
 const description =
-  "De regels voor uitzendbureaus die hun uitzendklussen op ZekerFlex plaatsen: wie partner kan worden, wat het bureau als werkgever regelt, de kosten, de boetes en wat ZekerFlex doet bij een overtreding.";
+  "De regels voor uitzendbureaus op ZekerFlex: wie partner kan worden, wat het bureau als werkgever regelt, de kosten en wat er gebeurt bij een overtreding.";
 
 export const metadata: Metadata = {
   title,

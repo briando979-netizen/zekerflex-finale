@@ -6,9 +6,9 @@ import { paginaFoto } from "@/lib/marketing/fotos";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 
-const title = "ZekerFlex voor intercedenten: minder administratie, meer tijd voor mensen";
+const title = "ZekerFlex voor intercedenten: minder administratie";
 const description =
-  "Wat een intercedent op een dag doet en wat ZekerFlex daarvan overneemt: passende krachten voorstellen, certificaten controleren, uitval opvangen, een week inplannen, uren goedkeuren en loon en facturen regelen.";
+  "Wat ZekerFlex een intercedent uit handen neemt: passende krachten voorstellen, certificaten controleren, uitval opvangen en uren goedkeuren.";
 
 export const metadata: Metadata = {
   title,

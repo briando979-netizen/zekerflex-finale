@@ -10,7 +10,7 @@ import { PARTNER_VOORWAARDEN_PAD } from "@/lib/uitzend/voorwaarden";
 
 const title = "Voor uitzendbureaus: zet je uitzendklussen op ZekerFlex";
 const description =
-  "Uitzendbureau? Zet je diensten in de ZekerFlex-app onder je eigen naam. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. ZekerFlex rekent een vaste vergoeding per gewerkt uur.";
+  "Uitzendbureau? Zet je diensten onder je eigen naam in de ZekerFlex-app. Werkers melden zich meteen aan, jij neemt ze aan op je eigen uitzendcontract.";
 
 export const metadata: Metadata = {
   title,

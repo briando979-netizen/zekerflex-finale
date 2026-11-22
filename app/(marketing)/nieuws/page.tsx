@@ -9,7 +9,7 @@ import { geplaatsteBerichten } from "@/lib/nieuws/store";
 // De berichten schrijft de site zelf uit openbare bronnen (lib/nieuws); elk bericht noemt zijn bron.
 
 export const metadata: Metadata = {
-  title: "Nieuwsroom",
+  title: "Nieuws over flexwerk, regels en ondernemen",
   description: "Het laatste nieuws over flexwerk, de arbeidsmarkt en regels voor zzp'ers, uitzendkrachten en bedrijven. Kort uitgelegd, met de bron erbij.",
   ...canonical("/nieuws"),
 };

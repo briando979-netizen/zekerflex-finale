@@ -5,7 +5,7 @@ import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Whitepapers",
+  title: "Whitepapers voor freelancers",
   description:
     "Download de ZekerFlex-whitepapers: werken als freelancer, omzet- en inkomstenbelasting, de kleineondernemersregeling, aftrekposten, administratie en verzekering.",
   ...canonical("/kennis/whitepapers"),
