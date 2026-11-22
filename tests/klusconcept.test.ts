@@ -90,16 +90,23 @@ describe("klusconcept: naar Snel een klus plaatsen", () => {
 describe("klusconcept: één formulier neemt het concept over", () => {
   const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
 
-  it("Snel een klus plaatsen leest het concept, het dichtgeklapte formulier eronder niet", () => {
+  it("het uitgebreide formulier is de standaard en leest het concept; Snel een klus plaatsen (?snel=1) leest het alleen daar", () => {
     const snel = lees("components/werkgever/SnelPlaatsen.tsx");
     expect(snel).toContain("useKlusConcept({ aan: !voorinvulling, wis: true })");
     expect(snel).toContain("naarSnelFormulier(concept, minRateCents)");
     // de pauze en de omschrijving uit het concept gaan mee naar de server
     expect(snel).toContain('name="breakMinutes" value={String(pauze)}');
     expect(snel).toContain('name="description" value={omschrijving ?? sjabloon?.description ?? ""}');
+    // één formulier per scherm met `wis`: in de snelle weg neemt SnelPlaatsen het concept, anders het uitgebreide formulier (ook bij "Klus dupliceren" niet)
     const pagina = lees("app/werkgever/diensten/nieuw/page.tsx");
-    expect(pagina).toContain("leesConcept={!alleenFlexwerk}");
-    expect(lees("components/app/NewShiftForm.tsx")).toContain("useKlusConcept({ aan: !editing && leesConcept, wis: true })");
+    expect(pagina).toContain("leesConcept={!snelModus && !voorinvulling}");
+    expect(pagina).toContain('const snelModus = alleenFlexwerk && snelParam === "1";');
+    const formulier = lees("components/app/NewShiftForm.tsx");
+    expect(formulier).toContain("useKlusConcept({ aan: !editing && leesConcept, wis: true })");
+    // het concept vult het uitgebreide formulier: titel, omschrijving, tarief, pauze, plekken en tijden, en we openen bij de tweede stap
+    for (const stuk of ["setTitle(v.title);", "setDescription(v.description);", "setRateEuro(v.rateEuro);", "setBreakMin(v.breakMin);", "setPositions(v.positions);", "setStartsAt(v.startsAt);", "setEndsAt(v.endsAt);", "setFromWebsite(true);", "setStap(2);"]) {
+      expect(formulier, stuk).toContain(stuk);
+    }
   });
 
   it("de hook leest eerst deze browser en anders de server, en wist alleen met wis", () => {

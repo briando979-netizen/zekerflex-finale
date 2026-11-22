@@ -517,8 +517,10 @@ export const nl = {
   newShift: {
     title: "Klus uitzetten",
     eyebrow: "Nieuw",
-    subtitle: "Kies een sjabloon of vul het zelf in. Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert.",
+    subtitle: "Kies een functie of vul het zelf in. Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert.",
     back: "Terug",
+    // de korte weg blijft, maar het uitgebreide formulier is de standaard (22 nov 2026)
+    snelLink: "Liever snel? Plaats een klus in 1 minuut",
     // een bedrijf zonder vestiging: gewone taal en rechtstreeks naar de plek waar het adres erbij komt (20 nov 2026)
     noBranches: "We hebben eerst het adres van je bedrijf nodig. Daarmee vinden we werkers bij jou in de buurt.",
     // 22 nov 2026: het adres meteen hier, in één scherm (components/werkgever/EersteVestiging.tsx)
@@ -1849,6 +1851,16 @@ export const nl = {
   },
   newShiftForm: {
     opslaanMislukt: "Opslaan lukte niet. Probeer het opnieuw.",
+    // klus uitzetten in twee stappen: het uitgebreide formulier is de standaard (22 nov 2026)
+    stappenLabel: "Stappen om een klus uit te zetten",
+    stap1: "Klus omschrijven",
+    stap2: "Klus inplannen",
+    stap1Uitleg: "Wat voor werk is het? Kies een functie, of vul zelf in wat er moet gebeuren.",
+    stap2Uitleg: "Waar en wanneer, met hoeveel mensen en tegen welk tarief.",
+    volgende: "Volgende",
+    terug: "Terug",
+    titelKort: "Geef de klus een titel van minstens 3 tekens.",
+    kopieNota: "Dit is een kopie van een eerdere klus. Kies de nieuwe datum en tijd; vorige keer was het van {van} tot {tot}.",
     bezigUitzetten: "Bezig met uitzetten…",
     zetUit: "Zet {n} diensten uit & match",
     uitzetten: "Klus uitzetten & matchen",
@@ -1873,7 +1885,7 @@ export const nl = {
     zoekAdres: "Zoek adres…",
     postcode: "Postcode",
     plaats: "Plaats",
-    titel: "Titel van de dienst",
+    titel: "Titel van de klus",
     titelPlaceholder: "Bijv. Vakkenvuller avonddienst",
     omschrijving: "Omschrijving",
     optioneel: "(optioneel)",
@@ -1931,7 +1943,7 @@ export const nl = {
     annuleren: "Annuleren",
     voorbeeld: "Voorbeeld",
     dagen: "{n} dagen",
-    titelFallback: "Titel van de dienst",
+    titelFallback: "Titel van de klus",
     rijTarief: "Uurtarief",
     perUur: "€ {bedrag}/u",
     rijDuur: "Duur",
