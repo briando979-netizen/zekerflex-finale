@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { LOOKS, STANDAARD_LICHAAM, kleurHex, maatAdvies, maten, pastBijSilhouet, pasvormVoor, type Lichaam } from "@/lib/shop/paskamer";
-import { figuur, kledingstuk, lijf, tint, vloeiend } from "@/lib/shop/paspop-figuur";
+
+// De paskamer van de webshop (de tekening, de 3D-paspop en de opgeslagen stand) is op 22 nov 2026 weggehaald. De maten en
+// de koppeling van producten aan kledingstukken (lib/shop/paskamer.ts) blijven: de productlijst en de winkel-AI gebruiken ze.
 
 const man = (extra: Partial<Lichaam> = {}): Lichaam => ({ ...STANDAARD_LICHAAM.heren, ...extra });
 const vrouw = (extra: Partial<Lichaam> = {}): Lichaam => ({ ...STANDAARD_LICHAAM.dames, ...extra });
@@ -103,113 +105,10 @@ describe("kledingstukken uit de catalogus", () => {
   });
 });
 
-describe("de tekening", () => {
-  it("vloeiende paden zijn gesloten en bevatten geen NaN", () => {
-    const d = vloeiend([[0, 0], [10, 0], [10, 10], [0, 10]]);
-    expect(d.startsWith("M0,0")).toBe(true);
-    expect(d.endsWith("Z")).toBe(true);
-  });
-
-  it("tekent elk kledingstuk zonder kapotte getallen, voor man, vrouw en kind", () => {
-    const soorten = ["tshirt", "overhemd", "blouse", "hoodie", "overshirt", "fleece", "bodywarmer", "softshell", "hesje", "chino", "werkbroek", "thermobroek", "riem", "kniebeschermer", "werkschoen", "sneaker", "antislip", "sokken", "handschoen", "snijhandschoen", "pet", "helm", "bril", "tas"] as const;
-    for (const l of [man(), vrouw(), STANDAARD_LICHAAM.kind]) {
-      const f = figuur(l, maten(l));
-      const body = lijf(f, l);
-      expect(JSON.stringify(body)).not.toMatch(/NaN|Infinity/);
-      for (const s of soorten) {
-        const t = kledingstuk(f, s, "#336699", "#ffcc00", 0);
-        expect(t.voor.length, s).toBeGreaterThan(0);
-        expect(JSON.stringify(t), s).not.toMatch(/NaN|Infinity/);
-      }
-    }
-  });
-
-  it("een ruimere maat tekent een breder kledingstuk (romp = na de twee mouwen)", () => {
-    const l = man();
-    const f = figuur(l, maten(l));
-    const breedte = (d: string) => {
-      const xs = [...d.matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)].map((m) => Number(m[1]));
-      return Math.max(...xs) - Math.min(...xs);
-    };
-    const krap = kledingstuk(f, "tshirt", "#336699", undefined, -6).voor[2]?.d ?? "";
-    const ruim = kledingstuk(f, "tshirt", "#336699", undefined, 14).voor[2]?.d ?? "";
-    expect(breedte(ruim)).toBeGreaterThan(breedte(krap));
-  });
-
-  it("tint maakt donkerder en lichter", () => {
-    expect(tint("#808080", 0.5)).toBe("#404040");
-    expect(tint("#000000", 1.5)).toBe("#808080");
-  });
-});
-
 describe("openbare productlijst", () => {
   it("laat de inkoopprijs en interne verkopersvelden weg", async () => {
     const { publiekProduct } = await import("@/lib/shop/publiek");
     const uit = publiekProduct({ id: "p1", name: "Hesje", priceCents: 695, costCents: 210, sellerNote: "intern", sellerStatus: "goedgekeurd", sellerTenantId: "t1", variants: [] });
     expect(uit).toEqual({ id: "p1", name: "Hesje", priceCents: 695, variants: [] });
-  });
-});
-
-describe("opgeslagen paskamer", () => {
-  it("leest een geldige stand terug en valt bij rommel terug op de standaard", async () => {
-    const { leesStand, STANDAARD_STAND } = await import("@/components/marketing/paskamer/usePaskamer");
-    expect(leesStand(null)).toEqual(STANDAARD_STAND);
-    expect(leesStand("{kapot")).toEqual(STANDAARD_STAND);
-    const s = leesStand(JSON.stringify({ lichaam: { silhouet: "dames", lengte: 172, gewicht: 64, borst: "x", voorkeur: "ruim" }, huid: "#c58c6a", gezicht: "javascript:alert(1)", aan: [{ productId: "p1", maat: "M" }, { kapot: true }] }));
-    expect(s.lichaam).toMatchObject({ silhouet: "dames", lengte: 172, gewicht: 64, borst: null, voorkeur: "ruim" });
-    expect(s.huid).toBe("#c58c6a");
-    expect(s.gezicht).toBeNull();
-    expect(s.aan).toEqual([{ productId: "p1", maat: "M", kleur: null }]);
-  });
-
-  it("een lengte buiten het silhouet wordt de standaardlengte", async () => {
-    const { leesStand } = await import("@/components/marketing/paskamer/usePaskamer");
-    expect(leesStand(JSON.stringify({ lichaam: { silhouet: "kind", lengte: 250 } })).lichaam.lengte).toBe(134);
-  });
-});
-
-describe("3D-paspop", () => {
-  it("koppelt elke kledingsoort aan een bestaand 3D-onderdeel", async () => {
-    const { stuk3D } = await import("@/lib/shop/paspop3d/kleding");
-    const fs = await import("node:fs");
-    const manifest = JSON.parse(fs.readFileSync("public/paskamer/3d/manifest.json", "utf8")) as { delen: Record<string, unknown> };
-    const soorten = ["tshirt", "overhemd", "blouse", "hoodie", "overshirt", "fleece", "bodywarmer", "softshell", "hesje", "chino", "werkbroek", "thermobroek", "werkschoen", "sneaker", "antislip"] as const;
-    for (const sil of ["heren", "dames", "kind"] as const) {
-      for (const s of soorten) {
-        const d = stuk3D(s, "top", sil);
-        if (d && "deel" in d) expect(manifest.delen[d.deel], `${s}/${sil}`).toBeDefined();
-      }
-    }
-  });
-
-  it("gewichtfactor loopt van slank (-1) tot zwaar (+1)", async () => {
-    const { gewichtFactor } = await import("@/lib/shop/paspop3d/model");
-    expect(gewichtFactor("heren", 23.5)).toBe(0);
-    expect(gewichtFactor("heren", 10)).toBe(-1);
-    expect(gewichtFactor("dames", 60)).toBe(1);
-  });
-
-  it("de gezichtsfoto komt met de ogen op de ogen van het model", async () => {
-    const { gezichtsVlak, FOTO_OGEN } = await import("@/lib/shop/paspop3d/model");
-    const v = gezichtsVlak([0, 7.28, 1.25], [0, 6.16, 1.35]);
-    const top = v.midden[1] + v.maat[1] / 2;
-    expect(top - FOTO_OGEN * v.maat[1]).toBeCloseTo(7.28, 5);
-    expect(v.maat[0]).toBeCloseTo(v.maat[1] * 0.8, 5);
-  });
-
-  it("de opgeslagen stand kent haar met veilige standaardwaarden", async () => {
-    const { leesStand } = await import("@/components/marketing/paskamer/usePaskamer");
-    const s = leesStand(JSON.stringify({ lichaam: { silhouet: "dames" }, haar: "raar", haarKleur: "rood" }));
-    expect(s.haar).toBe("staart");
-    expect(s.haarKleur).toBe("#3b2a1f");
-  });
-});
-
-describe("3D-riem en tas", () => {
-  it("riem en tas worden accessoires op de paspop", async () => {
-    const { stuk3D } = await import("@/lib/shop/paspop3d/kleding");
-    expect(stuk3D("riem", "riem", "heren")).toEqual({ extra: "riem" });
-    expect(stuk3D("tas", "tas", "dames")).toEqual({ extra: "tas" });
-    expect(stuk3D("sokken", "sokken", "heren")).toBeNull();
   });
 });

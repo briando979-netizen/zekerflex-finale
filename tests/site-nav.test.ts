@@ -65,7 +65,8 @@ describe("menu van de openbare site (lib/marketing/site-nav.ts)", () => {
   it("de snelle knoppen in de homepagekop wijzen naar bestaande pagina's", () => {
     const hero = readFileSync(join(ROOT, "components", "marketing", "HeroStage.tsx"), "utf8");
     const hrefs = [...hero.matchAll(/href: "(\/[^"]*)"/g)].map((m) => m[1]!);
-    expect(hrefs.length).toBeGreaterThanOrEqual(3);
+    // sinds 22 nov 2026 nog twee: Website-check en Shop zijn weg
+    expect(hrefs.length).toBeGreaterThanOrEqual(2);
     for (const h of hrefs) expect(paginaBestaat(h), h).toBe(true);
   });
 

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SHOP_SECTIES, isStandaardShopIndeling, normalizeShopIndeling, standaardShopIndeling, zichtbareShopSecties } from "@/lib/ontwerp/shop-indeling";
+import { isStandaardShopIndeling, normalizeShopIndeling, standaardShopIndeling, zichtbareShopSecties } from "@/lib/ontwerp/shop-indeling";
 
 // De indeling van de webshop (Site-ontwerper, tabblad Webshop, 13 nov): de onderdelen onder de kop verslepen en verbergen.
 // Zonder eigen indeling is /shop de voorpagina zoals bol.com (15 nov, stap 6, lib/shop/etalage.ts): de oude onderdelen in de oude
@@ -37,17 +37,7 @@ describe("de standaard: de oude onderdelen in de oude volgorde, met de blokken v
     expect(zichtbareShopSecties(null, true)).toEqual(["assortiment", "meer", "service", "regelen", "nieuwsbrief"]);
   });
 
-  it("de pagina toont de onderdelen in de volgorde van de indeling; de kop en de achtergrondstrook zijn weg (18 nov)", () => {
-    const src = bron("app/shop/page.tsx");
-    expect(src).toContain("zichtbareShopSecties(await getShopIndeling(), browsing)");
-    // 18 nov, later op de dag: ook de achtergrondstrook weg (daar stond dezelfde persoon nog in); de instelling blijft voor "home"
-    expect(src).not.toContain("PaginaAchtergrond");
-    expect(src).not.toContain("ShopThuisHero");
-    expect(src).not.toContain("ShopPaskamerPromo");
-    for (const s of SHOP_SECTIES) expect(src, s.id).toContain(`    ${s.id}: `);
-    // "Populair" staat er alleen met vijf producten, zoals voorheen
-    expect(src).toContain("populair: featured.length === 5 ?");
-  });
+  // de pagina /shop zelf is op 22 nov 2026 weggehaald; de indeling (Beheer) blijft bestaan
 });
 
 describe("een eigen indeling", () => {

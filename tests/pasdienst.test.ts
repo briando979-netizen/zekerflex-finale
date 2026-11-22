@@ -94,14 +94,8 @@ describe("aan, uit en privacy", () => {
     expect(d?.eigen).toMatch(/paspop/);
   });
 
-  it("zonder uitdrukkelijke toestemming in het verzoek gaat er niets weg; de browser vraagt hem per keer", () => {
-    expect(bron("app/api/shop/paskamer/passen/route.ts")).toContain("toestemming: z.literal(true),");
-    const ui = bron("components/marketing/paskamer/EchtPassen.tsx");
-    expect(ui).toContain("if (!kleding || !akkoord) return;");
-    expect(ui).toContain("toestemming: true");
-    for (const f of ["lib/i18n/dictionaries.ts", "lib/i18n/dictionary-en.ts"]) expect(bron(f)).toMatch(/echtToestemming: "[^"]*FASHN[^"]*"/);
-  });
-
+  // de paskamer van de webshop (het scherm en POST /api/shop/paskamer/passen) is op 22 nov 2026 weggehaald; het beheer
+  // van de pasdienst en de verzegelde sleutel blijven
   it("niets van de foto of het beeld wordt bewaard of gelogd, en de sleutel staat verzegeld", () => {
     const s = bron("lib/shop/pasdienst.ts");
     // de KV krijgt alleen de instellingen (sleutel verzegeld, plafond), nooit de foto of het beeld
@@ -109,9 +103,6 @@ describe("aan, uit en privacy", () => {
     expect(s).toContain("nieuw.sleutel = sealSecret(s, DOEL);");
     expect(s).not.toMatch(/logger\.\w+\("[^"]*",\s*\{[^}]*\b(foto|beeld|link|sleutel|kleding|kop)\b/);
     expect(s).not.toMatch(/prisma\./);
-    const route = bron("app/api/shop/paskamer/passen/route.ts");
-    expect(route).not.toMatch(/logger\.|console\.|kvSet|prisma\.\w+\.(create|update|upsert)/);
-    expect(route).toContain('"Cache-Control": "private, no-store"');
   });
 
   it("het beheer is alleen voor platformbeheer en geeft de sleutel nooit terug", () => {

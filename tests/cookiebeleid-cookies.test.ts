@@ -107,7 +107,6 @@ const ZETTERS: Record<string, number> = {
   "components/i18n/I18nProvider.tsx": 1,
   "components/marketing/AankondigingsBalk.tsx": 1,
   "components/marketing/CookieConsent.tsx": 1,
-  "components/marketing/ShopModus.tsx": 1,
   "components/theme/ThemeToggle.tsx": 1,
   "components/welkom/WelkomCarousel.tsx": 1,
   "lib/horeca/apparaten.ts": 1,

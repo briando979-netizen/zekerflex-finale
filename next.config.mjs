@@ -83,9 +83,15 @@ const nextConfig = {
       // domeinnaam en abonnementen: gemeten op 22 nov had geen enkel echt bedrijf ze ooit gebruikt of ervoor betaald (alleen
       // test- en eigen accounts), dus de eigenaar koos "gooi weg". /aanbod (overzicht met alleen flexwerk) en de
       // personeel/geld-functiepagina's blijven, net als de klantsites (/site, /site-domein).
-      // Alleen exacte paden of paginapaden zonder punt: foto's in public/aanbod, public/voorbeeldsites en
-      // public/rijschool-software blijven gewoon laden. De webshop stuurt al zelf door (app/shop/layout.tsx).
+      // Later op 22 nov zijn de pagina's zelf uit de code gehaald (de webshop ook); deze omleidingen vangen de oude links op.
+      // De manifesten en iconen onder /apps/<id>/ en de kaartfoto's onder /voorbeeldsites/foto/ blijven bestaan.
+      // Alleen exacte paden of paginapaden zonder punt: foto's in public/aanbod, public/voorbeeldsites,
+      // public/rijschool-software en public/shop blijven gewoon laden, net als de partnerlink /shop/p/<code> (de studio
+      // deelt hem; app/shop/p/[code]/route.ts stuurt daarna naar /shop en zo naar de voorpagina).
       ...[
+        ["/shop", "/"],
+        ["/shop/:slug([^./]+)", "/"],
+        ["/shop/bestelling/:id", "/"],
         ["/apps", "/app"],
         ["/apps/:id", "/app"],
         ["/apps-en-spelletjes", "/app"],

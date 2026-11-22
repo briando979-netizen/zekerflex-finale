@@ -3,9 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 // De sitemap geeft alleen een lastmod waar de echte datum bekend is. "Nu" maakte van elke uitrol (en elke 10 minuten)
 // een wijziging van de hele site: gemeten 12 nov 2026, 320 van 337 regels op het tijdstip van de uitrol.
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: { shopProduct: { findMany: async () => [{ slug: "werkschoen", updatedAt: new Date("2026-10-01T10:00:00+02:00") }] } },
-}));
+vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 vi.mock("@/lib/public-shifts", () => ({
   publicOpenShifts: async () => [{ id: "klus1", createdAt: new Date("2026-11-10T08:00:00+01:00") }],
 }));
@@ -29,8 +27,8 @@ describe("sitemap", () => {
     // vaste pagina's: geen datum
     expect(pad("/prijzen")?.lastModified).toBeUndefined();
     expect(pad("/contact")?.lastModified).toBeUndefined();
-    // met een echte datum: die datum
-    expect((pad("/shop/werkschoen")?.lastModified as Date).toISOString()).toBe("2026-10-01T08:00:00.000Z");
+    // met een echte datum: die datum (de shopproducten staan er sinds 22 nov 2026 niet meer in: de webshop is weg)
+    expect(pad("/shop/werkschoen")).toBeUndefined();
     expect((pad("/klussen/klus1")?.lastModified as Date).toISOString()).toBe("2026-11-10T07:00:00.000Z");
     expect((pad("/p/actie")?.lastModified as Date).toISOString()).toBe("2026-11-05T12:00:00.000Z");
     expect((pad("/p/actie/en")?.lastModified as Date).toISOString()).toBe("2026-11-05T12:00:00.000Z");

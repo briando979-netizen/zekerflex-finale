@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { WEBSHOP_AAN } from "@/lib/shop/aan";
 
@@ -14,10 +15,21 @@ describe("de webshop staat uit", () => {
     expect(WEBSHOP_AAN).toBe(false);
   });
 
-  it("elke /shop-pagina gaat naar de voorpagina", () => {
-    const layout = lees("app/shop/layout.tsx");
-    expect(layout).toContain('if (!WEBSHOP_AAN) redirect("/");');
-    expect(layout.indexOf('redirect("/")')).toBeLessThan(layout.indexOf("await getLocale()"));
+  // 22 nov 2026: de shoppagina's zijn weg; next.config.mjs stuurt /shop en de oude shopadressen door naar de voorpagina.
+  // De foto's in public/shop en de partnerlink /shop/p/<code> (de studio deelt hem) blijven gewoon werken.
+  it("elke /shop-pagina gaat naar de voorpagina", async () => {
+    expect(existsSync(path.join(process.cwd(), "app/shop/page.tsx"))).toBe(false);
+    expect(existsSync(path.join(process.cwd(), "app/shop/layout.tsx"))).toBe(false);
+    type Regel = { source: string; destination: string; permanent: boolean };
+    const mod = (await import(pathToFileURL(path.join(process.cwd(), "next.config.mjs")).href)) as { default: { redirects: () => Promise<Regel[]> } };
+    const regels = await mod.default.redirects();
+    for (const bron of ["/shop", "/shop/:slug([^./]+)", "/shop/bestelling/:id"]) {
+      const r = regels.find((x) => x.source === bron);
+      expect(r, bron).toBeDefined();
+      expect(r?.destination, bron).toBe("/");
+      expect(r?.permanent, bron).toBe(false);
+    }
+    expect(existsSync(path.join(process.cwd(), "app/shop/p/[code]/route.ts"))).toBe(true);
   });
 
   it("de taken van de webshop doen niets meer, maar houden hun hartslag", () => {

@@ -2,9 +2,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEAL_MAX_DAGEN, blackFridayWeek, controleerDeal, dealActief, geldendePrijsCents, historieDekt, kortingProcent, laagsteIn30Dagen, variantActiePrijs } from "@/lib/shop/aanbieding";
-import { shopBanners } from "@/lib/shop/banners";
-import { toShopProduct } from "@/components/marketing/shop-product";
-import type { EtalageProduct } from "@/lib/shop/etalage";
 
 // Aanbiedingen in de webshop (18 nov 2026). De "van"-prijs is de laagste prijs van de 30 dagen vóór de aanbieding en
 // komt uit de prijshistorie; niemand typt hem in. Een aanbieding is echt lager en heeft een einddatum.
@@ -125,37 +122,7 @@ describe("regels voor een aanbieding", () => {
   });
 });
 
-describe("in de winkel", () => {
-  it("het etalageproduct krijgt alleen een van-prijs als de aanbieding nu loopt", () => {
-    const rij = { id: "p", name: "Stoel", priceCents: 3200, dealVanCents: 4000, dealEindigt: dag(2), variants: [{ id: "v", priceCents: 3600, dealVanCents: 4500, stock: 1 }] };
-    const aan = toShopProduct(rij, nu);
-    expect(aan.van).toBe(40);
-    expect(aan.variants[0]?.vanCents).toBe(4500);
-    const voorbij = toShopProduct({ ...rij, dealEindigt: dag(-2) }, nu);
-    expect(voorbij.van).toBeNull();
-    expect(voorbij.variants[0]?.vanCents).toBeNull();
-    expect(toShopProduct({ id: "q", name: "Tafel", priceCents: 1000 }, nu).van).toBeNull();
-  });
-
-  const p = (name: string, deal: boolean): EtalageProduct => ({ id: name, name, category: "Wonen & keuken", price: 20, opVoorraad: true, imageUrl: `/f/${name}.jpg`, deal });
-
-  it("de banner voor aanbiedingen komt pas bij drie echte aanbiedingen, in de Black Friday-week onder die naam", () => {
-    const twee = [p("a", true), p("b", true), p("c", false), p("d", false), p("e", false)];
-    expect(shopBanners(twee, new Date("2026-11-27T12:00:00+01:00")).some((b) => b.soort === "aanbieding")).toBe(false);
-    const drie = [p("a", true), p("b", true), p("c", true), p("d", false), p("e", false), p("f", false)];
-    const bf = shopBanners(drie, new Date("2026-11-27T12:00:00+01:00"));
-    expect(bf[0]).toMatchObject({ sleutel: "black-friday", soort: "aanbieding", aantal: 3, href: "/shop?deals=1#collectie" });
-    expect(shopBanners(drie, new Date("2027-02-10T12:00:00+01:00"))[0]?.sleutel).toBe("aanbiedingen");
-  });
-
-  it("de prijs toont de van-prijs doorgestreept met het percentage, en op de productpagina de regel over 30 dagen", () => {
-    const prijs = lees("components/marketing/ShopPrijs.tsx");
-    expect(prijs).toContain("<s>{shopMoney(van / 100)}</s>");
-    expect(prijs).toContain("-{procent}%");
-    expect(prijs).toContain("fmt(t.shop.dealLaagste, { bedrag: shopMoney(van / 100) })");
-  });
-});
-
+// "in de winkel" (etalage, banners en de prijs op de productpagina) is met de webshop op 22 nov 2026 weggehaald
 describe("in beheer en op de server", () => {
   it("de van-prijs is nergens in te typen: de route neemt alleen de nieuwe prijs en de laatste dag aan", () => {
     const route = lees("app/api/admin/shop/aanbieding/route.ts");

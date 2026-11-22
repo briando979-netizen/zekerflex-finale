@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { btwOverzicht, btwTarief, leesModus, prijsRegel, zonderBtw } from "@/lib/shop/modus";
 import { PAKKETTEN, lijstAlsCsv, lijstSamenvatting, lijstTotaal, verdeelOverMaten } from "@/lib/shop/zakelijk";
-import { isTestOfferte, offerteNotitie, offerteSchema } from "@/lib/shop/offerte-schema";
 import { pasvormVoor } from "@/lib/shop/paskamer";
 
 describe("particulier of zakelijk", () => {
@@ -81,43 +80,7 @@ describe("teambestelling", () => {
   });
 });
 
-describe("offerteverzoek", () => {
-  const geldig = { bedrijf: "Bouwbedrijf Test", naam: "Sam Test", email: "sam@bouw.nl", wensen: ["logo", "vestigingen"], medewerkers: 12, lijst: "4× Hesje (maat L)", akkoord: true };
-
-  it("accepteert een volledig verzoek en maakt er een leesbare notitie van", () => {
-    const o = offerteSchema.parse(geldig);
-    const n = offerteNotitie(o);
-    expect(n).toContain("Medewerkers: 12.");
-    expect(n).toContain("logo of bedrukking, leveren op meerdere adressen");
-    expect(n).toContain("4× Hesje (maat L)");
-  });
-
-  it("weigert zonder akkoord of met een onbekende wens", () => {
-    expect(offerteSchema.safeParse({ ...geldig, akkoord: false }).success).toBe(false);
-    expect(offerteSchema.safeParse({ ...geldig, wensen: ["gratis"] }).success).toBe(false);
-    expect(offerteSchema.safeParse({ ...geldig, email: "geen-mail" }).success).toBe(false);
-  });
-
-  it("herkent testadressen, zodat sales geen nepleads krijgt", () => {
-    expect(isTestOfferte("iemand@example.com")).toBe(true);
-    expect(isTestOfferte("qa@shop.test")).toBe(true);
-    expect(isTestOfferte("inkoop@bouwbedrijf.nl")).toBe(false);
-  });
-});
-
-describe("onlangs bekeken", () => {
-  it("houdt de nieuwste vooraan, zonder dubbele, hooguit 12", async () => {
-    const { leesBekeken, metBekeken } = await import("@/components/marketing/useOnlangsBekeken");
-    expect(leesBekeken(null)).toEqual([]);
-    expect(leesBekeken("{kapot")).toEqual([]);
-    expect(leesBekeken(JSON.stringify(["a", "b", "a", 3, ""]))).toEqual(["a", "b"]);
-    expect(metBekeken(["a", "b", "c"], "b")).toEqual(["b", "a", "c"]);
-    const veel = Array.from({ length: 12 }, (_, i) => `p${i}`);
-    expect(metBekeken(veel, "nieuw")).toHaveLength(12);
-    expect(metBekeken(veel, "nieuw")[0]).toBe("nieuw");
-  });
-});
-
+// het offerteverzoek (/api/shop/offerte) en "onlangs bekeken" zijn met de webshop op 22 nov 2026 weggehaald
 describe("bedrijfsgegevens bij een bestelling", () => {
   it("maakt een btw-nummer netjes en controleert de vorm", async () => {
     const { isBtwNummer, normaliseerBtw } = await import("@/lib/shop/zakelijk");

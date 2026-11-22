@@ -7,8 +7,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const h = vi.hoisted(() => ({ vlagAan: false }));
 
-// de sitemap leest inline prisma.shopProduct.findMany (buiten de .catch), dus die moet een functie zijn; de rest zit achter .catch
-vi.mock("@/lib/prisma", () => ({ prisma: { shopProduct: { findMany: async () => [] } } }));
+// de sitemap leest de database alleen achter een .catch (de shopproducten staan er sinds 22 nov 2026 niet meer in)
+vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 vi.mock("@/lib/nieuws/store", () => ({ geplaatsteBerichten: async () => [] }));
 vi.mock("@/lib/flags", async (importActual) => {
   const actual = await importActual<typeof import("@/lib/flags")>();
@@ -116,10 +116,11 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
 });
 
 describe("het hoofdmenu met de vlag aan", () => {
-  it("zonder vlag is het menu ongewijzigd (shop blijft; apps is sinds 22 nov weg)", () => {
+  it("zonder vlag is het menu ongewijzigd (shop en apps zijn sinds 22 nov 2026 helemaal weg)", () => {
     const keys = zichtbareNav(NAV, false).map((n) => n.key);
-    expect(keys).toContain("shop");
+    expect(keys).not.toContain("shop");
     expect(keys).not.toContain("apps");
+    expect(keys).toContain("aanbod");
     expect(zichtbareNav(NAV, false)).toBe(NAV);
   });
 
@@ -168,7 +169,8 @@ describe("de nachtelijke rondgang met de vlag aan", () => {
   it("zonder vlag staan de niet-flexwerk-pagina's gewoon in de rondgang", () => {
     const routes = openbareRoutes(undefined, false);
     expect(routes).toContain("/developers");
-    expect(routes).toContain("/shop");
+    // de shop is op 22 nov 2026 weggehaald: dus ook zonder vlag niet in de rondgang
+    expect(routes).not.toContain("/shop");
     expect(routes).toContain("/klussen");
     expect(routes).toContain("/aanbod");
   });
@@ -357,7 +359,8 @@ describe("de sitemap met de vlag aan", () => {
     h.vlagAan = false;
     const urls = (await bouwSitemap()).map((r) => r.url);
     expect(urls.some((u) => u.endsWith("/developers"))).toBe(true);
-    expect(urls.some((u) => u.endsWith("/shop"))).toBe(true);
+    // de shop is op 22 nov 2026 weggehaald
+    expect(urls.some((u) => /\/shop(\/|$)/.test(u))).toBe(false);
   });
 
   it("met de vlag aan vallen de verborgen pagina's uit de sitemap, de flexwerk-pagina's blijven", async () => {

@@ -228,31 +228,7 @@ export const NAV: NavEntry[] = [
       bedrijven: { eyebrow: "Personeel per branche", cta: CTA_BV, items: BRANCHES_BV },
     },
   },
-  {
-    key: "shop",
-    href: "/shop",
-    label: "Shop",
-    match: "/shop",
-    overzicht: "Naar de shop",
-    menu: {
-      werknemers: {
-        eyebrow: "ZekerFlex essentials",
-        cta: { label: "Bekijk de shop", href: "/shop" },
-        items: [
-          { title: "Werkdag essentials", desc: "Praktische items voor onderweg, op locatie en in je tas.", href: "/shop" },
-          { title: "Kleding & accessoires", desc: "Draag het merk dat werk zekerheid geeft.", href: "/shop#kleding" },
-        ],
-      },
-      bedrijven: {
-        eyebrow: "ZekerFlex shop",
-        cta: { label: "Naar de shop", href: "/shop" },
-        items: [
-          { title: "Teamwear", desc: "Herkenbaar en verzorgd op iedere locatie.", href: "/shop#kleding" },
-          { title: "Cadeaus voor je team", desc: "Kleine essentials met een grote glimlach.", href: "/shop#cadeaus" },
-        ],
-      },
-    },
-  },
+  // 22 nov 2026: de knoppen Shop en Apps & spelletjes zijn weg, met de webshop en de apps-pagina's
   {
     key: "over",
     href: "/over-ons",
@@ -342,7 +318,7 @@ export const DOELGROEP_PAGINA: Record<Audience, { label: string; href: string }>
 
 /**
  * Met de vlag `publiek-alleen-flexwerk` aan vallen de niet-flexwerk-knoppen
- * (shop, apps) weg uit de bovenbalk en het mobiele menu. Zonder de vlag (de
+ * (aanbod, prijzen) weg uit de bovenbalk en het mobiele menu. Zonder de vlag (de
  * standaard) blijft het menu precies zoals het was.
  */
 export function zichtbareNav(nav: NavEntry[], alleenFlexwerk: boolean): NavEntry[] {

@@ -75,19 +75,8 @@ describe("eigen teksten toepassen", () => {
   });
 });
 
-describe("de pagina, de omlijsting en het paneel", () => {
-  it("/shop past de eigen teksten toe vóór de onderdelen worden opgebouwd", () => {
-    const src = bron("app/shop/page.tsx");
-    expect(src).toContain('metShopTeksten(await getDict(), await getContentMap(contentKeys("shop.")).catch(() => ({})), await getLocale())');
-    expect(src.indexOf("metShopTeksten(")).toBeLessThan(src.indexOf("const onderdelen"));
-  });
-
-  it("de omlijsting geeft de eigen teksten door aan de onderdelen in de browser, en alleen als er een eigen tekst is", () => {
-    const src = bron("app/shop/layout.tsx");
-    expect(src).toContain("metShopTeksten(nl, ");
-    expect(src).toContain("t={eigen !== nl ? eigen : clientDict(locale)}");
-  });
-
+// de pagina /shop en zijn omlijsting zijn op 22 nov 2026 weggehaald; het paneel in Beheer blijft
+describe("het paneel", () => {
   it("het tabblad Webshop wijst naar het tabblad Teksten", () => {
     expect(bron("components/admin/ontwerper/ShopPaneel.tsx")).toContain("staan in het tabblad Teksten, onder Webshop");
   });

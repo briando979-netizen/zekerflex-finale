@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { CONSOLE_GROEPEN, consoleTaken, type ConsoleStand } from "@/lib/shop/console";
 import { ADMIN_HUBS } from "@/lib/admin/nav";
 import { isOntwerperTab } from "@/lib/ontwerp/tabs";
+import { doorgestuurdePaden } from "./hulp/doorgestuurd";
 
 // De Webshop-console (Beheer → Webshop & merk, 13 nov): één startpagina voor de webshop. Alleen echte cijfers, een eerlijke
 // melding als betalen dicht staat, en geen dode links.
@@ -39,13 +40,16 @@ describe("wat nu te doen", () => {
 });
 
 describe("de tegels", () => {
-  it("elke tegel en elke taak wijst naar een pagina die bestaat", () => {
+  it("elke tegel en elke taak wijst naar een pagina die bestaat", async () => {
     const inMenu = new Set(ADMIN_HUBS.flatMap((h) => h.pages.map((p) => p.href)));
     const adressen = [...CONSOLE_GROEPEN.flatMap((g) => g.tegels.map((t) => t.href)), ...consoleTaken({ ...GOED, betalen: false, zichtbaar: 0, uit: 2, zonderFoto: 1, lageVoorraad: 1, betaald30: 0 }).map((t) => t.href)];
+    // de webshop zelf (/shop) is op 22 nov 2026 weggehaald en stuurt door naar de voorpagina (next.config.mjs)
+    const doorgestuurd = await doorgestuurdePaden();
     for (const a of adressen) {
       const [pad, zoek] = a.split("?");
       if (pad === "/shop") {
-        expect(existsSync(path.join(process.cwd(), "app/shop/page.tsx"))).toBe(true);
+        expect(existsSync(path.join(process.cwd(), "app/shop/page.tsx"))).toBe(false);
+        expect(doorgestuurd.has("/shop")).toBe(true);
         continue;
       }
       expect(inMenu.has(pad ?? ""), a).toBe(true);

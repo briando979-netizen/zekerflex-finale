@@ -212,22 +212,13 @@ describe("Overschrijving ontvangen (PATCH status RECEIVED)", () => {
 });
 
 describe("de schermen", () => {
+  // de bestelpagina en de omlijsting van de webshop (OrderTracking, ShopChrome) zijn op 22 nov 2026 weggehaald
   it("de browser krijgt alleen het pure deel, nooit het bestand met het IBAN-controlecijfer (sepa → stripe, env)", () => {
-    for (const f of ["components/marketing/OrderTracking.tsx", "components/marketing/ShopChrome.tsx", "components/admin/ShopAdmin.tsx"]) {
+    for (const f of ["components/admin/ShopAdmin.tsx"]) {
       const s = lees(f);
       expect(s.startsWith('"use client"'), f).toBe(true);
       expect(s, f).not.toMatch(/from "@\/lib\/shop\/overschrijving(-server)?"/);
     }
-  });
-
-  it("de bestelpagina toont rekening, bedrag en kenmerk met een kopieerknop; de shop belooft alleen wat echt kan", () => {
-    const t = lees("components/marketing/OrderTracking.tsx");
-    expect(t).toContain("<Overmaken o={overschrijving} />");
-    expect(t).toContain('aria-live="polite"');
-    const c = lees("components/marketing/ShopChrome.tsx");
-    expect(c).toContain('betaalwijze === "online" ? ["iDEAL"');
-    expect(c).toContain('disabled={placing || items.length === 0 || betaalwijze === "dicht"}');
-    expect(lees("app/shop/layout.tsx")).toContain("huidigeShopBetaalwijze()");
   });
 
   it("terugbetalen via Stripe alleen bij een betaling via Stripe; de knop Overschrijving ontvangen bij een overschrijving", () => {

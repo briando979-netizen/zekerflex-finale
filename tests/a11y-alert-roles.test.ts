@@ -20,7 +20,6 @@ const NOT_A_MESSAGE = new Set([
   "components/auth/RegisterForm.tsx|pwInfo?.breached",
   "components/bank/BankInsurance.tsx|p.arrears",
   "components/bank/BankView.tsx|account.frozen",
-  "components/marketing/ShopChrome.tsx|promo",
   "app/(marketing)/developers/api/page.tsx|r.verplicht",
 ]);
 

@@ -46,7 +46,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/analytics/taal-vraag",
     "/api/shop/products",
     "/api/shop/media/abc123",
-    "/api/shop/paskamer/passen",
     "/api/shop/voorraadmelding/afmelden", // afmelden met de getekende link uit de bevestigingsmail (lib/shop/voorraadmelding.ts)
     "/api/shop/voorraadmelding", // "Laat me weten als hij er weer is": alleen een e-mailadres bij een uitverkochte maat, IP-begrensd (lib/shop/voorraadmelding.ts)
     "/api/shop/orders/abc123/beoordeling", // een koper beoordeelt zijn aankoop: alleen met het getekende token van de bestelling (lib/shop/beoordeling.ts)

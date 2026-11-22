@@ -49,14 +49,7 @@ describe("geen beloftes die niet kloppen", () => {
     expect(lees("app/werkgever/website/page.tsx")).toContain("betalenDicht={betalenDicht}");
   });
 
-  it("de productpagina van de shop belooft geen bezorgmoment en heeft geen actieve knop als bestellen dicht is", () => {
-    const s = lees("components/marketing/ProductDetail.tsx");
-    expect(s).toContain('const bestellenDicht = betaalwijze === "dicht";');
-    expect(s).toContain("const canBuy = Boolean(variant) && variantStock > 0 && !bestellenDicht;");
-    expect(s).toMatch(/!product\.seller && !bestellenDicht &&/);
-    expect(lees("components/marketing/ShopProductCard.tsx")).toContain("disabled={single.stock <= 0 || bestellenDicht}");
-  });
-
+  // de productpagina van de shop (ProductDetail, ShopProductCard) is op 22 nov 2026 weggehaald, met de hele webshop
   it("/demo noemt geen aantal krachten", () => {
     expect(lees("app/(marketing)/demo/page.tsx")).not.toMatch(/duizenden|honderden/);
   });

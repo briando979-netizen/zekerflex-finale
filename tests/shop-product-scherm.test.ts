@@ -169,8 +169,8 @@ describe("waar het staat", () => {
     expect(lees("app/api/shop/media/[id]/route.ts")).toContain("{ fotos: { has: `/api/shop/media/${params.id}` } }");
   });
 
-  it("de productpagina toont alle foto's; het beheer opent het nieuwe scherm", () => {
-    expect(lees("components/marketing/ProductDetail.tsx")).toContain("...(product.fotos ?? [])");
+  // de productpagina van de webshop is op 22 nov 2026 weggehaald
+  it("het beheer opent het nieuwe scherm", () => {
     const admin = lees("components/admin/ShopAdmin.tsx");
     expect(admin).toContain("<ShopProductScherm");
     expect(admin).toContain("setScherm({ product: null })");

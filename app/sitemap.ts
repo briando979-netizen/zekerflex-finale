@@ -2,7 +2,6 @@ import type { MetadataRoute } from "next";
 import { LEREN_PAD } from "@/lib/leren/klussen-krijgen";
 import { LEREN_BEDRIJF_PAD } from "@/lib/leren/personeel-krijgen";
 import { SITE } from "@/lib/seo";
-import { prisma } from "@/lib/prisma";
 import { GUIDES, POSTS } from "@/lib/kennis/content";
 import { geplaatsteBerichten } from "@/lib/nieuws/store";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
@@ -169,21 +168,13 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/toegankelijkheid", 0.3, "yearly"),
     entry("/verwerkersovereenkomst", 0.3, "yearly"),
 
-    // Shop — the storefront and every active product's own page
-    entry("/shop", 0.7, "daily"),
-    entry("/shop/paskamer", 0.6, "weekly"),
-    entry("/shop/zakelijk", 0.7, "weekly"),
-    ...(await prisma.shopProduct.findMany({
-      where: { active: true },
-      select: { slug: true, updatedAt: true },
-    }).catch(() => [] as { slug: string; updatedAt: Date }[])).map((p) => entry(`/shop/${p.slug}`, 0.6, "weekly", p.updatedAt)),
-
     // Websites van rijscholen op zekerflex.com (met een actief eigen domein: daar een eigen sitemap)
     ...(await rijschoolPadenVoorSitemap().catch(() => [])).map((p) => entry(p.pad, 0.5, "weekly", p.bijgewerkt)),
   ];
 
-  // Vlag `publiek-alleen-flexwerk`: de niet-flexwerk-pagina's (shop, apps, online-tools, website/webshop maken,
-  // branche-software, developers, …) vallen uit de sitemap. Ze blijven bestaan en bereikbaar via een directe link.
+  // Vlag `publiek-alleen-flexwerk`: de verborgen pagina's (developers, de klussenkaart, de partnerpagina's, /aanbod, …)
+  // vallen uit de sitemap. Ze blijven bestaan en bereikbaar via een directe link. De shop, de apps en de online-tools zijn
+  // sinds 22 nov 2026 helemaal weg (next.config.mjs stuurt ze door).
   if (await alleenFlexwerkAan().catch(() => false)) {
     return regels.filter((r) => !isNietFlexwerkPad(r.url.slice(SITE.url.length)));
   }

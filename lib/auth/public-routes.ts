@@ -38,8 +38,7 @@ const PUBLIC_PREFIXES = [
   "/api/analytics/taal-vraag", // anonieme telling per taalcode uit Accept-Language, zonder IP of gebruiker (lib/i18n/taal-vraag.ts)
   "/api/analytics/ping", // anonymous attention signals (time on page, tab away, leave), rate-limited
   "/api/companion", // owner's desktop Jarvis — its own personal-token auth (lib/companion)
-  "/api/shop", // public storefront reads; writes are admin-gated inside the route, behalve /api/shop/paskamer/passen:
-  // echt passen op de eigen foto (lib/shop/pasdienst.ts) — toestemming verplicht, IP-begrensd, dagplafond in euro's, niets bewaard
+  "/api/shop", // public storefront reads; writes are admin-gated inside the route (de webshop zelf is sinds 22 nov 2026 weg; Beheer, de bon en de voorraadmelding gebruiken dit nog)
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
   "/api/review-scan", // gratis review-scan (Google Places) + aanvraagformulier; IP- en dagbegrenzing, rapport op niet te raden id (lib/review-scan/run.ts)

@@ -19,7 +19,7 @@ function paginas(dir: string): string[] {
 }
 
 // Onderdelen die zelf de <h1> van de pagina maken.
-const MET_EIGEN_H1 = ["<SectorHub", "<SectorCity", "<SectorWorkerHub", "<SectorWorkerCity", "<UitzendJobBoard", "<HeroStage", "<LegalPage", "<ZakelijkSecties"];
+const MET_EIGEN_H1 = ["<SectorHub", "<SectorCity", "<SectorWorkerHub", "<SectorWorkerCity", "<UitzendJobBoard", "<HeroStage", "<LegalPage"];
 
 describe("openbare pagina's met SectionHead hebben een h1", () => {
   it("elke pagina met SectionHead heeft kop=\"h1\", een eigen <h1> of een onderdeel dat er een maakt", () => {

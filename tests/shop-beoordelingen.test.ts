@@ -121,21 +121,13 @@ describe("op de site", () => {
     ]);
   });
 
-  it("de productpagina en de kaartjes tonen alleen goedgekeurde beoordelingen, en zeggen het eerlijk als er geen zijn", () => {
+  // de shoppagina's (productpagina, kaartjes, bestelpagina) zijn op 22 nov 2026 weggehaald; de server en het beheer blijven
+  it("alleen goedgekeurde beoordelingen komen naar buiten", () => {
     const server = lees("lib/shop/beoordeling-server.ts");
     expect(server.match(/status: "zichtbaar"/g)).toHaveLength(2);
-    const pdp = lees("components/marketing/ProductDetail.tsx");
-    expect(pdp).toContain("t.shop.beoordelingGeen");
-    expect(pdp).toContain("t.shop.beoordelingKoper");
-    expect(lees("app/shop/[slug]/page.tsx")).toContain("beoordelingen.samenvatting.aantal > 0 ? { beoordelingen } : {}");
-    for (const f of ["app/shop/page.tsx", "app/shop/zakelijk/page.tsx"]) expect(lees(f)).toContain("beoordelingPerProduct(rows.map((r) => r.id))");
   });
 
-  it("beoordelen alleen met het token of als ingelogde koper, en het beheer ziet geen e-mailadres", () => {
-    const pagina = lees("app/shop/bestelling/[id]/page.tsx");
-    expect(pagina).toContain("koperToken = token;");
-    expect(pagina).toContain("koperToken = bonToken(id);");
-    expect(pagina).toMatch(/order && koperToken && magBeoordelen\(order\.status\)/);
+  it("het beheer ziet geen e-mailadres", () => {
     const lijst = lees("app/api/admin/shop/beoordelingen/route.ts");
     expect(lijst).toContain('withAdminAccess(["PLATFORM_ADMIN"]');
     expect(lijst).not.toMatch(/email/);

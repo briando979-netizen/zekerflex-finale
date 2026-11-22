@@ -24,8 +24,8 @@ const MOBIEL_MENU_ID = "mobiel-menu";
 
 /**
  * hoofdmenu: de eigen versie uit de Site-ontwerper (tabblad Menu); zonder = het standaardmenu (lib/marketing/site-nav.ts).
- * alleenFlexwerk: vlag `publiek-alleen-flexwerk` (de layout leest hem per request) — aan = de niet-flexwerk-knoppen (shop, apps)
- * en de pijlers online/branche vallen weg.
+ * alleenFlexwerk: vlag `publiek-alleen-flexwerk` (de layout leest hem per request) — aan = de niet-flexwerk-knoppen (aanbod,
+ * prijzen) en de pijlers online/branche vallen weg.
  */
 export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofdmenu?: Hoofdmenu | null; alleenFlexwerk?: boolean }) {
   const NAV = zichtbareNav(bouwNav(hoofdmenu), alleenFlexwerk);

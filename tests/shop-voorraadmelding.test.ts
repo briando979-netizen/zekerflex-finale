@@ -199,9 +199,8 @@ describe("ingeplugd", () => {
     expect(lees("app/api/internal/shop/voorraadmelding/route.ts")).toContain("checkInternalToken(request)");
   });
 
-  it("de productpagina toont het bij een gekozen, uitverkochte maat; afmelden gaat pas met een knop; een adres komt in geen log", () => {
-    expect(lees("components/marketing/ProductDetail.tsx")).toContain("{variant && variantStock <= 0 && <VoorraadMelding key={variant.id} variantId={variant.id} />}");
-    expect(lees("app/shop/voorraadmelding/page.tsx")).toContain("<VoorraadAfmelden v={v} a={a} s={s} />");
+  // de productpagina en de afmeldpagina van de webshop zijn op 22 nov 2026 weggehaald; de aanvragen, het wissen en de mail blijven
+  it("een adres komt in geen log", () => {
     const server = lees("lib/shop/voorraadmelding-server.ts");
     expect(server).not.toMatch(/logger\.\w+\([^)]*email/);
   });

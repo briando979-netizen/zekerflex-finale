@@ -22,7 +22,7 @@ describe("hoofdmenu uit de Site-ontwerper", () => {
         ...rest,
       ],
     });
-    expect(nav.map((n) => n.key)).toEqual(["prijzen", "aanbod", "branches", "shop", "over", "kennis"]);
+    expect(nav.map((n) => n.key)).toEqual(["prijzen", "aanbod", "branches", "over", "kennis"]);
     const p = nav[0];
     expect(p?.label).toBe("Tarieven");
     expect(p?.href).toBe("/prijzen");
@@ -59,8 +59,8 @@ describe("hoofdmenu uit de Site-ontwerper", () => {
   });
 
   it("een standaardknop zonder naam krijgt zijn standaardnaam terug", () => {
-    const m = normalizeHoofdmenu({ knoppen: [{ key: "shop", label: "   " }] });
-    expect(m.knoppen.find((k) => k.key === "shop")?.label).toBe("Shop");
+    const m = normalizeHoofdmenu({ knoppen: [{ key: "kennis", label: "   " }] });
+    expect(m.knoppen.find((k) => k.key === "kennis")?.label).toBe("Kennis");
     expect(isStandaardHoofdmenu(m)).toBe(false); // andere volgorde dan de standaard
   });
 });

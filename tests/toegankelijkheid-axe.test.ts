@@ -21,15 +21,7 @@ describe("toegankelijkheid (axe)", () => {
     expect(bron).toContain("</main>");
   });
 
-  it("de kleurbolletjes in de shop zijn één benoemd plaatje", () => {
-    expect(lees("components/marketing/ShopProductCard.tsx")).toMatch(/<p role="img" [^>]*aria-label=\{/);
-  });
-
-  it("de zichtbare tekst van het shop-logo past bij zijn naam (ZekerFlex shop)", () => {
-    const bron = lees("components/marketing/ShopChrome.tsx");
-    expect(bron).toContain('aria-label="ZekerFlex Shop"');
-    expect(bron).toContain('ZekerFlex{" "}<span');
-  });
+  // de reparaties in de shop (kleurbolletjes, logo) zijn met de webshop op 22 nov 2026 weggehaald
 
   it("het prijslabel op de klussenkaart staat niet als donkere tekst op goud zonder donkere regel", () => {
     // contrastmeting werker-app 13 nov: text-ink werd in het donker bijna wit op bg-money-bright (1,5:1). Sinds 20 nov
