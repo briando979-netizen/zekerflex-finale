@@ -8,6 +8,7 @@ import { draaiWerkerRondgang, type WerkerRondgang } from "@/lib/ops/rondgang-wer
 import { draaiWerkgeverRondgang, type WerkgeverRondgang } from "@/lib/ops/rondgang-werkgever";
 import { CITIES, REGIO_STEDEN } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
+import { FUNCTIES, functiePad } from "@/lib/seo-functies";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
@@ -96,9 +97,14 @@ export function openbareRoutes(
     .sort();
 }
 
-/** Alle openbare adressen van deze nacht: de vaste pagina's, de vaste extra adressen en de steekproef van stadspagina's. */
+/** De functiepagina's /werken-als/<functie> (22 nov 2026, lib/seo-functies.ts): dynamisch, maar een korte vaste lijst, dus elke nacht allemaal. */
+export function functiePaden(): string[] {
+  return FUNCTIES.map(functiePad);
+}
+
+/** Alle openbare adressen van deze nacht: de vaste pagina's, de vaste extra adressen, de functiepagina's en de steekproef van stadspagina's. */
 export function rondgangRoutes(nu: Date = new Date(), alleenFlexwerk = false): string[] {
-  return [...openbareRoutes(APP_PAGES, alleenFlexwerk), ...EXTRA_ADRESSEN, ...stadSteekproef(dagNummer(nu))];
+  return [...openbareRoutes(APP_PAGES, alleenFlexwerk), ...EXTRA_ADRESSEN, ...functiePaden(), ...stadSteekproef(dagNummer(nu))];
 }
 
 async function haal(url: string): Promise<{ status: number | null; body: string; contentType: string }> {

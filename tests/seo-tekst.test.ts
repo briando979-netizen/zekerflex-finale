@@ -69,6 +69,8 @@ describe("de pagina's", () => {
       "lib/seo-bijbaan.ts",
       "components/marketing/BijbaanLanding.tsx",
       "components/marketing/StadCijfers.tsx",
+      "lib/seo-functies.ts",
+      "components/marketing/FunctieLanding.tsx",
     ].map((f) => readFileSync(path.join(process.cwd(), f), "utf8"));
     for (const b of bronnen) expect(b).not.toMatch(/dezelfde dag|binnen uren|snel uitbetaald|word snel/i);
     for (const s of SECTORS) expect(s.werkUitleg.length, s.key).toBeGreaterThan(80);

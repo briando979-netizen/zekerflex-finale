@@ -65,6 +65,8 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
       { href: "/uitleg", label: "Uitleg in het kort" },
       { href: "/kennis#kennisbank", label: "Kennisbank" },
       { href: "/kennis/wet-dba", label: "Wet DBA" },
+      // 22 nov 2026: de functiepagina's (lib/seo-functies.ts); de kolom Platform zit op het maximum (MAX_LINKS)
+      { href: "/werken-als", label: "Werken als: per functie" },
       { href: "/kennis/werkgevers", label: "Helpcentrum werkgevers" },
       { href: "/kennis/whitepapers", label: "Whitepapers" },
       { href: "/rekentools", label: "Gratis rekentools" },

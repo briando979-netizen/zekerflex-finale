@@ -9,6 +9,7 @@ import { LinkRij, StadBlok, StadCijfers, Voordelen } from "@/components/marketin
 import { breadcrumbJsonLd } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
 import { STUDENT_BEDRIJF, UITZEND_BEDRIJF, UITZEND_WERKER, sectorStadPagina, sectorWerkStadPagina, type StadPagina, type Vraag } from "@/lib/seo-stad-pagina";
+import { WERKEN_ALS_PAD, functieLink, functiesVan } from "@/lib/seo-functies";
 
 // Shared template that renders a sector's hub + per-city landing pages from the
 // SECTORS config. Each page combines sector copy with the city's real local
@@ -311,6 +312,10 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
         </HeroMetFoto>
         <Voordelen lijst={workerBenefits(s)} />
         <WerkBlok kop={`Wat doe je als ${s.worker}?`} tekst={s.werkUitleg} />
+        {/* 22 nov 2026: per functie de taken, de tijden en het richttarief (lib/seo-functies.ts) */}
+        {functiesVan(s.key).length > 0 ? (
+          <LinkRij kop="Per functie: taken, tijden en tarief" links={[...functiesVan(s.key).map(functieLink), { href: WERKEN_ALS_PAD, label: "Alle functies" }]} />
+        ) : null}
         <h2 className="mt-14 font-display text-xl font-bold text-ink">{werkKop(s)} per stad</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {CITIES.map((c) => (

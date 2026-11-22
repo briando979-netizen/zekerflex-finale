@@ -9,6 +9,7 @@ import { geplaatsteBerichten } from "@/lib/nieuws/store";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
+import { FUNCTIES, functiePad } from "@/lib/seo-functies";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { SPINOFF_PRODUCTS } from "@/lib/products";
 import { eigenPaginas } from "@/lib/marketing/aanbod";
@@ -85,6 +86,9 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     // bijbaan: het overzicht en per stad (lib/seo-bijbaan.ts), 22 nov 2026
     entry("/bijbaan", 0.8, "weekly"),
     ...CITIES.map((c) => entry(`/bijbaan/${c.slug}`, 0.7, "weekly")),
+    // werken als …: het overzicht en per functie (lib/seo-functies.ts), 22 nov 2026
+    entry("/werken-als", 0.8, "weekly"),
+    ...FUNCTIES.map((f) => entry(functiePad(f), 0.7, "monthly")),
     // Sector-landingspagina's (horeca, logistiek, schoonmaak, evenementen, retail) × steden
     ...SECTORS.flatMap((s) => [
       entry(`/${s.slug}`, 0.8, "weekly"),

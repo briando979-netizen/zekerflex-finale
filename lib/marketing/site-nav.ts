@@ -57,7 +57,7 @@ const BEDRIJVEN_PADEN = [
   "/kennis/werkgevers",
   "/leren/personeel-krijgen",
 ] as const;
-const WERKNEMERS_PADEN = ["/voor-freelancers", "/starten-als-uitzendkracht", "/freelance-werk", "/klussen", "/open-diensten", "/app", "/leren/klussen-krijgen", "/bijbaan"] as const;
+const WERKNEMERS_PADEN = ["/voor-freelancers", "/starten-als-uitzendkracht", "/freelance-werk", "/klussen", "/open-diensten", "/app", "/leren/klussen-krijgen", "/bijbaan", "/werken-als"] as const;
 
 export function kantVanPad(pad: string): Audience | null {
   const onder = (basis: string) => pad === basis || pad.startsWith(`${basis}/`);
@@ -128,7 +128,11 @@ const KENNIS_ITEMS: MenuItem[] = [
 // Werknemers gaan naar de vacatures per branche, bedrijven naar personeel inhuren per branche.
 const BRANCHE_NAAM: Record<string, string> = { horeca: "Horeca & catering", logistiek: "Logistiek & magazijn" };
 const brancheNaam = (s: Sector): string => (Object.hasOwn(BRANCHE_NAAM, s.key) ? BRANCHE_NAAM[s.key]! : s.label);
-const BRANCHES_WN: MenuItem[] = SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.workerSlug}` }));
+// 22 nov 2026: daaronder de functiepagina's (/werken-als, lib/seo-functies.ts), voor wie op een functie zoekt
+const BRANCHES_WN: MenuItem[] = [
+  ...SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.workerSlug}` })),
+  { title: "Per functie", desc: "Werken als orderpicker, barista, schoonmaker …", href: "/werken-als" },
+];
 const BRANCHES_BV: MenuItem[] = SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.slug}` }));
 
 // "Apps & spelletjes": de knoppen "Ga naar …" uit lib/marketing/apps.ts

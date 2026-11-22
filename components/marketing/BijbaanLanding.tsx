@@ -18,6 +18,7 @@ import {
   type Soort,
 } from "@/lib/seo-bijbaan";
 import type { Vraag } from "@/lib/seo-stad";
+import { FUNCTIES, WERKEN_ALS_PAD, functieLink } from "@/lib/seo-functies";
 
 // /bijbaan en /bijbaan/<stad> (22 nov 2026): de tekst komt uit lib/seo-bijbaan.ts, de cijfers per stad uit lib/seo-stad.ts.
 // Zelfde blokken en klassen als de branchepagina's (components/marketing/SectorLanding.tsx). Servercomponenten.
@@ -109,6 +110,8 @@ export function BijbaanHub() {
           <Knoppen />
         </HeroMetFoto>
         <Soorten kop="Wat voor bijbaan kan het zijn?" lijst={p.soorten} />
+        {/* 22 nov 2026: per functie de taken, de tijden en het richttarief (lib/seo-functies.ts) */}
+        <LinkRij kop="Bijbaan per functie" links={[...FUNCTIES.map(functieLink), { href: WERKEN_ALS_PAD, label: "Alle functies" }]} />
         <Stappen />
         <div className="mt-12 max-w-3xl">
           <h2 className="font-display text-xl font-bold text-ink">Vanaf 18 jaar</h2>
