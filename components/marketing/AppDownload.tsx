@@ -1,24 +1,21 @@
 import Link from "next/link";
 import { InstallAppButton } from "@/components/marketing/InstallAppButton";
 import { TelefoonDemo } from "@/components/marketing/TelefoonDemo";
-import { CONTACTS } from "@/lib/seo";
 import { featureEnabled } from "@/lib/flags";
 import { TesterWordenForm } from "@/components/marketing/TesterWordenForm";
 import { ALLEEN_APP_VLAG } from "@/lib/app-vereist";
 
-// The Android app (com.zekerflex.app) is in Google Play testing, not yet
-// public. The test link only works for Gmail addresses on the tester list, so
-// the badge says "testversie" and the block below explains how to get on it.
+// De Android-app (com.zekerflex.app) staat in een testgroep op Google Play (nog geen gewone openbare vermelding). De link werkt
+// alleen voor Gmail-adressen die ZekerFlex op de lijst heeft gezet; het formulier hieronder regelt dat.
 const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
-// De iPhone-app staat als testversie in TestFlight; elke iPhone kan meedoen via deze openbare link.
-// Goedgekeurd door Apple op 10 nov 2026 (versie 1.0); de knop staat achter de vlag `iphone-appstore` tot de pagina openbaar is.
+// De iPhone-app staat in de App Store (goedgekeurd door Apple op 10 nov 2026), maar nog niet in de EU: Apple wacht op de
+// handelaarsstatus. In Nederland installeert een iPhone hem dus via TestFlight (openbare link). De App Store-knop staat achter de
+// vlag `iphone-appstore`; zet die pas aan als de app in Nederland in de App Store te vinden is.
 const APPSTORE_URL = "https://apps.apple.com/nl/app/zekerflex/id6832775836";
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
-// Zoals bij Android: een tik opent de mail van de bezoeker, al ingevuld, naar info@ met "tester worden".
-const IPHONE_MAILTO = `mailto:${CONTACTS.general}?subject=${encodeURIComponent("Tester worden: zet me op de lijst (iPhone)")}&body=${encodeURIComponent("Hallo ZekerFlex, ik wil de iPhone-app testen. Zet me alsjeblieft op de testerslijst.\n\nMijn Apple-ID (het e-mailadres waarmee ik op mijn iPhone in de App Store ben ingelogd):\n\n")}`;
-// 21 nov 2026: tester worden gaat met een formulier (components/marketing/TesterWordenForm.tsx), niet meer met een mail
+// 21 nov 2026: aanmelden voor Android gaat met een formulier (components/marketing/TesterWordenForm.tsx), niet met een mail
 
-function PlayBadgeTest() {
+function PlayBadge() {
   return (
     <a
       href={PLAY_TEST_URL}
@@ -33,51 +30,30 @@ function PlayBadgeTest() {
         <path d="m4.2 22.4 8.9-5.1 2-1.3-2.7-2.9-9.1 9.4c.3.1.6.1.9-.1Z" fill="currentColor" opacity=".5" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">Testversie · Android</span>
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">Android · testgroep</span>
         <span className="block text-sm font-bold">Google Play</span>
       </span>
     </a>
   );
 }
 
-function AppleBadgeTest({ live, store }: { live: boolean; store: boolean }) {
+function AppleBadge({ store }: { store: boolean }) {
   const inhoud = (
     <>
       <svg width="20" height="22" viewBox="0 0 24 24" aria-hidden fill="currentColor">
         <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.8ZM14.2 5.9c.6-.8 1.1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.8-1.3Z" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{store ? "Download in de" : live ? "Testversie · iPhone" : "Tester worden · iPhone"}</span>
-        <span className="block text-sm font-bold">{store ? "App Store" : live ? "TestFlight" : "App Store"}</span>
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{store ? "Download in de" : "iPhone · installeer via"}</span>
+        <span className="block text-sm font-bold">{store ? "App Store" : "TestFlight"}</span>
       </span>
     </>
   );
-  // De testlink neemt pas testers aan als Apple de beta heeft goedgekeurd (vlag `iphone-testflight`):
-  // tot dan een mailknop "tester worden" naar info@ (zoals bij Android) en een uitleg.
-  if (store) {
-    return (
-      <a
-        href={APPSTORE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-white transition hover:bg-white/[0.12]"
-      >
-        {inhoud}
-      </a>
-    );
-  }
-  return live ? (
+  return (
     <a
-      href={TESTFLIGHT_URL}
+      href={store ? APPSTORE_URL : TESTFLIGHT_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-white transition hover:bg-white/[0.12]"
-    >
-      {inhoud}
-    </a>
-  ) : (
-    <a
-      href={IPHONE_MAILTO}
       className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-white transition hover:bg-white/[0.12]"
     >
       {inhoud}
@@ -85,35 +61,19 @@ function AppleBadgeTest({ live, store }: { live: boolean; store: boolean }) {
   );
 }
 
-function IphoneNotice({ live }: { live: boolean }) {
-  if (!live) {
-    return (
-      <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
-        <p className="font-semibold text-white">De iPhone-app komt eraan</p>
-        <p className="mt-1">
-          De testversie voor de iPhone wacht op goedkeuring van Apple. Tik op{" "}
-          <a href={IPHONE_MAILTO} className="font-semibold text-brand-mint underline">
-            Tester worden
-          </a>
-          : je mailprogramma opent met een ingevulde mail aan ons. Verstuur die (met het e-mailadres waarmee je op je iPhone in de App Store bent
-          ingelogd), dan zetten we je op de testerslijst en krijg je bericht van Apple zodra je mee kunt doen.
-        </p>
-      </div>
-    );
-  }
+function IphoneNotice() {
   return (
     <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
-      <p className="font-semibold text-white">De iPhone-app is in testfase</p>
+      <p className="font-semibold text-white">iPhone: installeer via TestFlight</p>
       <p className="mt-1">
-        Je kunt hem nu al op je iPhone zetten via TestFlight, de testdienst van Apple. Het is nog een testversie: er kan af en toe
-        iets haperen.
+        In Nederland staat de app nog niet in de App Store. Je zet hem op je iPhone via TestFlight, de installatiedienst van Apple.
       </p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
         <li>Installeer de gratis app TestFlight uit de App Store.</li>
         <li>
           Open op je iPhone{" "}
           <a href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-mint underline">
-            de testlink
+            deze link
           </a>{" "}
           en tik op <em>Accepteren</em> en dan <em>Installeren</em>.
         </li>
@@ -122,23 +82,20 @@ function IphoneNotice({ live }: { live: boolean }) {
   );
 }
 
-function TestNotice() {
+function AndroidNotice() {
   return (
     <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
-      <p className="font-semibold text-white">De Android-app is in testfase</p>
-      <p className="mt-1">
-        Je kunt hem nu al installeren via Google Play. Het is nog een testversie: er kan af en toe iets haperen, en je
-        feedback helpt ons hem af te maken.
-      </p>
+      <p className="font-semibold text-white">Android: meld je aan voor de testgroep op Google Play</p>
+      <p className="mt-1">De Android-app staat in een testgroep op Google Play. Meld je aan, dan kun je hem installeren.</p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
         <li>
-          Vul je Gmail-adres in: het adres waarmee je in de Play Store bent ingelogd. We zetten je op de testerslijst.
+          Vul je Gmail-adres in: het adres waarmee je in de Play Store bent ingelogd. Wij zetten je op de lijst.
           <TesterWordenForm />
         </li>
         <li>
           Open daarna op je Android-telefoon{" "}
           <a href={PLAY_TEST_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-mint underline">
-            de testlink
+            deze link
           </a>{" "}
           en tik op <em>Word tester</em> en dan <em>Installeren</em>.
         </li>
@@ -152,9 +109,7 @@ function TestNotice() {
 }
 
 export async function AppDownload({ standalone = false }: { standalone?: boolean }) {
-  // vlag `iphone-testflight` (standaard uit): de knop komt pas als de testlink testers aanneemt
-  const iphone = await featureEnabled("iphone-testflight").catch(() => false);
-  // vlag `iphone-appstore` (standaard uit): de echte App Store-knop, zodra de pagina openbaar is
+  // vlag `iphone-appstore` (standaard uit): de echte App Store-knop, zodra de app in Nederland in de App Store staat
   const appStore = await featureEnabled("iphone-appstore").catch(() => false);
   // vlag "werker-omgeving alleen in de app" (standaard uit sinds 22 nov 2026: eerst de browser, dan de app)
   const alleenApp = await featureEnabled(ALLEEN_APP_VLAG).catch(() => false);
@@ -195,17 +150,17 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             )}
             <div className="mt-7 flex flex-wrap items-start gap-3">
               <InstallAppButton />
-              <AppleBadgeTest live={iphone} store={appStore} />
-              <PlayBadgeTest />
+              <AppleBadge store={appStore} />
+              <PlayBadge />
             </div>
             {standalone ? (
               <>
-                {!appStore && <IphoneNotice live={iphone} />}
-                <TestNotice />
+                {!appStore && <IphoneNotice />}
+                <AndroidNotice />
               </>
             ) : (
               <p className="mt-3 text-xs text-white/65">
-                {appStore ? "Android-app in testfase" : "iPhone- en Android-app in testfase"} —{" "}
+                {appStore ? "Android: testgroep op Google Play" : "iPhone: via TestFlight · Android: testgroep op Google Play"} —{" "}
                 <Link href="/app" className="underline hover:text-white/80">
                   zo doe je mee
                 </Link>

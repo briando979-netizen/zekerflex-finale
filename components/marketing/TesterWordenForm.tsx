@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-/** Tester worden voor de Android-app (21 nov 2026): het adres komt bij ZekerFlex op een lijst, zonder mailprogramma. */
+/** Aanmelden voor de testgroep van de Android-app (21 nov 2026): het adres komt bij ZekerFlex op een lijst, zonder mailprogramma. */
 export function TesterWordenForm() {
   const [email, setEmail] = useState("");
   const [stand, setStand] = useState<"leeg" | "bezig" | "klaar" | "fout">("leeg");
@@ -24,7 +24,7 @@ export function TesterWordenForm() {
   if (stand === "klaar") {
     return (
       <p role="status" className="mt-2 rounded-lg bg-white/[0.08] px-3 py-2 text-white">
-        ✓ Gelukt. We zetten je op de testerslijst. Open daarna de testlink hieronder.
+        ✓ Gelukt. We zetten je op de lijst. Open daarna de link hieronder.
       </p>
     );
   }
@@ -44,7 +44,7 @@ export function TesterWordenForm() {
         className="min-w-0 flex-1 rounded-lg border border-white/20 bg-white/[0.06] px-3 py-2 text-sm text-white placeholder:text-white/40"
       />
       <button type="submit" disabled={stand === "bezig" || !email.trim()} className="btn-mint text-sm disabled:opacity-60">
-        {stand === "bezig" ? "Bezig…" : "Tester worden"}
+        {stand === "bezig" ? "Bezig…" : "Aanmelden"}
       </button>
       {stand === "fout" && (
         <p role="alert" className="w-full text-xs text-red-300">
