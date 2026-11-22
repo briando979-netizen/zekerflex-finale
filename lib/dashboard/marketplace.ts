@@ -21,6 +21,7 @@ import { getKlusBeelden, type KlusBeeld } from "@/lib/profile/store";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { verborgenBedrijvenVoor } from "@/lib/admin/eigen-test-zicht";
 import { leesUitzendPartners } from "@/lib/uitzend/partners";
 import { isUitzendPartner } from "@/lib/uitzend/partners-kern";
 import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
@@ -101,7 +102,7 @@ export interface MarketplaceShift {
    * uitzendcontract aanvragen. Alleen gezet als het zo is.
    */
   uitzendPartner?: true;
-  /** klus van ons eigen testbedrijf (lib/shifts/testklus.ts): geen echt werk, de kaart zegt dat */
+  /** klus van ons eigen testbedrijf (lib/shifts/testklus.ts): voor de logica (sorteren, "Speciaal voor jou", "nieuw"); de kaart zegt er niets over */
   testklus: boolean;
   /** what other freelancers rated this company (null = no reviews yet) */
   companyRating?: { average: number; count: number } | null;
@@ -339,12 +340,19 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   // still holds the seat), so pull them in explicitly rather than by status.
   const replacementShiftIds = [...replacementByShift.keys()].filter((id) => !hiddenShiftIds.includes(id));
 
+  // Klussen van een eigen-testbedrijf zijn alleen voor eigen-test-accounts en interne accounts (lib/admin/eigen-test-regel.ts):
+  // ook een vergeten privé-pool of een klus die per ongeluk openbaar staat, blijft zo uit de lijst van echte werkers.
+  const eigenTest = await leesEigenTest();
+  const verborgen = await verborgenBedrijvenVoor(userId, eigenTest);
+  const zonderVerborgen = verborgen.length ? { branch: { tenantId: { notIn: verborgen } } } : {};
+
   const [openRows, replacementRows] = await Promise.all([
     prisma.shift.findMany({
       where: {
         status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] },
         startsAt: { gte: new Date() },
         id: { notIn: hiddenShiftIds },
+        ...zonderVerborgen,
         // A privately pool-invited shift stays hidden from the open
         // marketplace for everyone except an invited pool's own members.
         OR: [
@@ -358,7 +366,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     }),
     replacementShiftIds.length
       ? prisma.shift.findMany({
-          where: { id: { in: replacementShiftIds }, startsAt: { gte: new Date() } },
+          where: { id: { in: replacementShiftIds }, startsAt: { gte: new Date() }, ...zonderVerborgen },
           select: SHIFT_CARD_SELECT,
         })
       : Promise.resolve([]),
@@ -400,7 +408,6 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   // a missing logo never costs the list: the card falls back to the branch photo
   const beeldByTenant = await getKlusBeelden(visible.map((s) => s.branch.tenantId)).catch(() => new Map<string, KlusBeeld>());
   // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
-  const eigenTest = await leesEigenTest();
   const uitzendPartners = await leesUitzendPartners();
   // ZekerFlex is geen uitzender (lib/uitzend/model.ts): een oude uitzendklus van een bedrijf dat geen uitzendpartner is, heeft
   // geen bureau om een contract bij aan te vragen. Die laten we niet meer zien (reageren zou alleen een foutmelding geven).
@@ -566,6 +573,12 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
         }),
       )
     : false;
+
+  // Een klus van een eigen-testbedrijf bestaat voor wie hem niet mag zien niet (lib/admin/eigen-test-regel.ts): dezelfde
+  // uitkomst als bij een klus die er niet is (de pagina geeft dan een 404, geen 403). Wie er al op werkt of op reageerde, houdt hem.
+  if (!alreadyApplied && !(ownOffer && ownOffer.status !== "withdrawn")) {
+    if ((await verborgenBedrijvenVoor(userId)).includes(row.branch.tenantId)) return null;
+  }
 
   // Existing model agreement between this freelancer and this client, if any.
   const agreementRow = profile
