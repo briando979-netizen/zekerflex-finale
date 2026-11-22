@@ -5,8 +5,9 @@ import { useState } from "react";
 
 /**
  * Beheer → Bedrijf of Gebruiker: "Eigen test (telt niet mee)" (POST /api/admin/eigen-test, lib/admin/eigen-test.ts).
- * Een eigen test telt niet mee in de trechters en de analyse; bij een bedrijf gelden de klussen die daarna worden
- * aangemaakt als testklus. De stand komt na het opslaan van de server (sinds), niet uit de klik zelf.
+ * Een eigen test telt niet mee in de trechters en de analyse, en leeft los van echte gebruikers: zijn klussen zijn alleen voor
+ * eigen-test-accounts en intern personeel, en een eigen-test-werker reageert alleen op klussen van een eigen-testbedrijf
+ * (lib/admin/eigen-test-regel.ts). De stand komt na het opslaan van de server (sinds), niet uit de klik zelf.
  */
 export function EigenTestSchakelaar({ soort, id, sinds: beginSinds }: { soort: "tenant" | "user"; id: string; sinds: string | null }) {
   const router = useRouter();
@@ -42,7 +43,11 @@ export function EigenTestSchakelaar({ soort, id, sinds: beginSinds }: { soort: "
       </label>
       <p className="mt-1" style={{ color: "var(--a-mute)" }}>
         {aan
-          ? `Sinds ${datum}: telt niet mee in de trechters en de analyse${soort === "tenant" ? "; klussen die dit bedrijf vanaf dan plaatst, gelden als testklus (alleen voor interne accounts, niet naar Google of Indeed)" : ""}.`
+          ? `Sinds ${datum}: telt niet mee in de trechters en de analyse. ${
+              soort === "tenant"
+                ? "Zijn klussen zijn alleen te zien en te beantwoorden door accounts die ook als eigen test staan en door intern personeel (beheer, verkoop), niet door echte werkers, en komen niet bij Google of Indeed."
+                : "Dit account is onvindbaar voor echte bedrijven en reageert alleen op klussen van bedrijven die ook als eigen test staan."
+            }`
           : soort === "tenant"
             ? "Uit: dit bedrijf telt mee, en zijn klussen zijn gewone klussen."
             : "Uit: dit account telt mee."}

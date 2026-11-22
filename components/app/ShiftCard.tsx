@@ -160,8 +160,6 @@ export function ShiftCard({
         {/* de voet: chips links, het tarief groot rechts met "Verdien ~" eronder */}
         <div className="mt-3 flex items-end justify-between gap-3 border-t border-dashed border-hairstrong pt-3">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            {/* testklus van ons eigen testbedrijf: geen echt werk (lib/shifts/testklus.ts) */}
-            {shift.testklus && <KlusChip title={c.testklusUitleg}>{c.testklus}</KlusChip>}
             {special && <KlusChip tone="red">{c.specialForYou}</KlusChip>}
             {shift.viaUitzendbureau || shift.uitzendPartner ? <KlusChip tone="violet">{t.market.uitzendLabel}</KlusChip> : <KlusChip tone="teal">{c.freelance}</KlusChip>}
             {shift.isReplacement && <KlusChip tone="salmon">{c.invalklus}</KlusChip>}
