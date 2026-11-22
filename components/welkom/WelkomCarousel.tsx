@@ -116,13 +116,15 @@ export function WelkomCarousel({
   const slide = texts.slides[index] ?? texts.slides[0];
   const van = (n: number) => texts.slideOf.replace("{n}", String(n)).replace("{total}", String(AANTAL_SLIDES));
 
+  // 22 nov 2026 (eigenaar: "dat ziet er niet uit zo"): op een laag laptopscherm werd de foto een smalle strook. Vanaf lg een
+  // liggende kaart (foto links, paneel rechts); op een tablet nooit lager dan 640 px. Telefoon en app blijven gelijk.
   return (
     <main className="welkom-scherm flex min-h-[100dvh] items-center justify-center bg-ink md:p-8">
       <section
         aria-roledescription="carousel"
         aria-label={texts.carousel}
         onKeyDown={onKeyDown}
-        className="relative flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-ink md:h-[min(100dvh-4rem,820px)] md:rounded-3xl md:shadow-2xl"
+        className="relative flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-ink md:h-[min(100dvh-4rem,820px)] md:min-h-[640px] md:rounded-3xl md:shadow-2xl lg:h-[min(100dvh-4rem,600px)] lg:min-h-[480px] lg:max-w-[960px] lg:flex-row"
       >
         {/* foto's: eigen scroll-snap, vegen werkt native */}
         <div
@@ -144,7 +146,7 @@ export function WelkomCarousel({
                 src={src}
                 alt={texts.slides[i]?.alt ?? ""}
                 fill
-                sizes="(min-width: 448px) 448px, 100vw"
+                sizes="(min-width: 1024px) 560px, (min-width: 448px) 448px, 100vw"
                 priority={i === 0}
                 className="object-cover"
               />
@@ -154,7 +156,7 @@ export function WelkomCarousel({
         </div>
 
         {/* logo en taalkeuze over de foto */}
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 bg-gradient-to-b from-ink/50 to-transparent p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 bg-gradient-to-b from-ink/50 to-transparent p-4 pt-[max(1rem,env(safe-area-inset-top))] lg:right-[400px]">
           <span className="flex items-center gap-2 text-white">
             <LogoGlyph size={28} tone="light" />
             <span className="font-display text-lg font-bold">ZekerFlex</span>
@@ -165,7 +167,7 @@ export function WelkomCarousel({
         </div>
 
         {/* pijlen: vooral voor toetsenbord en muis; op de telefoon veeg je */}
-        <div className="pointer-events-none absolute inset-x-3 top-[28%] z-10 hidden justify-between md:flex">
+        <div className="pointer-events-none absolute inset-x-3 top-[28%] z-10 hidden justify-between md:flex lg:right-[412px] lg:top-1/2 lg:-translate-y-1/2">
           <button
             type="button"
             onClick={() => gaNaar(vorigeSlide(index))}
@@ -190,7 +192,7 @@ export function WelkomCarousel({
         <div
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
-          className="relative z-10 -mt-6 rounded-t-[28px] bg-paper px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5"
+          className="relative z-10 -mt-6 rounded-t-[28px] bg-paper px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 lg:mt-0 lg:flex lg:w-[400px] lg:shrink-0 lg:flex-col lg:justify-center lg:rounded-none lg:px-10 lg:py-8"
         >
           <div role="tablist" aria-label={texts.carousel} className="flex justify-center">
             {texts.slides.map((_, i) => (
