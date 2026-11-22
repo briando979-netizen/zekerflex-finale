@@ -66,7 +66,7 @@ export default async function KlussenPage(
     back: t.greet.back,
     birthday: t.greet.birthday,
   };
-  // Alleen testklussen (lib/shifts/testklus.ts)? Dan zeggen we eerlijk dat er nog geen echt werk is.
+  // Alleen testklussen (lib/shifts/testklus.ts)? Dan geen "ontdek"-regel onder de groet (de kaart zelf zegt er niets over).
   const alleenTest = alleenTestklussen(m.shifts);
   // wel klussen, maar geen echte binnen de reistijd van de werker: één eerlijke zin bovenaan de lijst
   const geenEchtInBuurt = m.shifts.length > 0 && geenEchteInDeBuurt(m.shifts, m.prefs.maxTravelMinutes);

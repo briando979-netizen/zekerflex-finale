@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const when = s.startsAt.toLocaleDateString("nl-NL", { day: "numeric", month: "long", timeZone: TZ });
   const title = `${s.title} in ${s.city} — ${rate(s.hourlyRateCents)} per uur`;
   const description = `Klus bij ${s.company} in ${s.city} op ${when}, ${rate(s.hourlyRateCents)} per uur. Reageer via ZekerFlex en kies zelf hoe snel je wordt uitbetaald.`;
-  // een testklus (lib/shifts/testklus.ts) hoort niet in Google
-  if (s.testklus) return { title: `Testklus: ${s.title}`, description, robots: { index: false, follow: false } };
+  // een testklus (lib/shifts/testklus.ts) hoort niet in Google: geen index, en geen JobPosting hieronder (zonder label op de pagina)
+  if (s.testklus) return { title, description, robots: { index: false, follow: false } };
   return { title, description, ...canonical(`/klussen/${s.id}`, { title, description }) };
 }
 
@@ -52,12 +52,6 @@ export default async function KlusPublicPage({ params }: { params: Promise<{ id:
         <Link href="/klussen" className="text-sm font-medium text-neutralx-500 hover:text-ink">
           ← Alle klussen
         </Link>
-        {s.testklus && (
-          <p className="mt-4 max-w-3xl rounded-xl border border-hairstrong bg-paper-soft px-4 py-3 text-sm text-neutralx-700">
-            <strong className="text-ink">Dit is een testklus van ZekerFlex.</strong> Er zit geen echt werk achter: je hoeft er niet heen en er
-            hoort geen betaling bij. We gebruiken hem om te testen of alles goed werkt.
-          </p>
-        )}
         <h1 className="mt-4 max-w-3xl font-display text-3xl font-bold leading-tight tracking-tight text-ink md:text-[2.6rem]">{s.title}</h1>
         <p className="mt-3 flex flex-wrap items-center gap-2 text-lg text-neutralx-600">
           <span>
