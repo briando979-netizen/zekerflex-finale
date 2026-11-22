@@ -4,7 +4,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 // De gegevens van een buitenlands bedrijf dat zich als opdrachtgever aanmeldde. Tenant heeft al
 // country en vatNumber; een registratienummer van buiten de EU en de uitslag van de btw-controle
 // staan hier. Zo'n bedrijf telt als aangemeld, maar blijft ongeverifieerd tot een beheerder het
-// goedkeurt (lib/company/verified.ts): één testklus, niemand inplannen.
+// goedkeurt (lib/company/verified.ts): één klus, niemand inplannen.
 // ---------------------------------------------------------------------------
 
 export interface BuitenlandBewijs {

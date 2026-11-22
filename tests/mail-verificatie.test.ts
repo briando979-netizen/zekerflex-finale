@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
 const { verificationEmail, welcomeEmail, onboardingReminderEmail } = await import("@/lib/mail");
+const { welcomeEmailT } = await import("@/lib/mail/werker/welkom");
 
 const AANVAL = `<img src=x onerror=alert(1)> Jan`;
 
@@ -59,19 +60,29 @@ describe("welcomeEmail en onboardingReminderEmail", () => {
     expect(w.html).not.toContain("https://zekerflex.com/login");
   });
 
-  it("met de ontwikkelingsnotitie leest een nieuwe gebruiker dat de klussen testklussen zijn, in vijf talen", () => {
+  it("met de ontwikkelingsnotitie leest een nieuwe gebruiker dat we begin volgend jaar online gaan, in vijf talen", () => {
     const w = welcomeEmail("Sam", "freelancer", "https://zekerflex.com", "zzp", { ontwikkelingsnotitie: true });
-    for (const stuk of ["testklussen", "Begin volgend jaar", "English:", "Polski:", "Română:", "Українською:"]) {
+    for (const stuk of ["nog in ontwikkeling", "Begin volgend jaar", "English:", "Polski:", "Română:", "Українською:"]) {
       expect(w.text).toContain(stuk);
     }
-    expect(w.html).toContain("testklussen");
+    expect(w.html).toContain("nog in ontwikkeling");
     expect(w.html).toContain("Українською");
   });
 
-  it("zonder de notitie (standaard) staat er niets over testklussen in de welkomstmail", () => {
+  it("de welkomstmail noemt nergens een testklus, met of zonder notitie, in welke taal ook", () => {
+    for (const taal of ["nl", "en", "pl", "ro", "uk"] as const) {
+      for (const notitie of [false, true]) {
+        const w = welcomeEmailT("Sam", "freelancer", "https://zekerflex.com", "zzp", { ontwikkelingsnotitie: notitie }, taal);
+        const alles = `${w.text}\n${w.html}`;
+        expect(alles, `${taal} notitie=${notitie}`).not.toMatch(/test ?klus|test jobs?|testow|тестов|de test\b/i);
+      }
+    }
+  });
+
+  it("zonder de notitie (standaard) staat er niets over de opbouwfase in de welkomstmail", () => {
     const w = welcomeEmail("Sam", "freelancer", "https://zekerflex.com", "zzp");
-    expect(w.text).not.toContain("testklussen");
-    expect(w.html).not.toContain("testklussen");
+    expect(w.text).not.toContain("nog in ontwikkeling");
+    expect(w.html).not.toContain("nog in ontwikkeling");
   });
 
   it("geen verwijzing naar de Sovereign Box meer in de voettekst", () => {

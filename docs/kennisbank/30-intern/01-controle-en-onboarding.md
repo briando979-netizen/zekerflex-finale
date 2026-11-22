@@ -3,7 +3,7 @@
 ## Bedrijven
 
 - Een KVK-nummer alleen maakt een bedrijf niet geverifieerd. Vertrouwd is: een bevestigd adres op het eigen maildomein, of een handmatige controle door ons (Admin → Bedrijven) met een melding erbij.
-- Tot die tijd: één proefklus, geen inplannen.
+- Tot die tijd: één klus, geen inplannen.
 - Elke week controleert de server opnieuw of ingeschreven bedrijven nog actief zijn in het Handelsregister (Admin → Bronnen → KVK-controle). Een opgeheven of insolvent bedrijf: klussen pauzeren en contact opnemen.
 
 ## Flexwerkers (KYC)

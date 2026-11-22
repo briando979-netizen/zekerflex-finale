@@ -2,7 +2,7 @@
 
 ## Ik kan niemand inplannen
 
-Staat je bedrijf nog in verificatie? Dan kun je één testklus plaatsen, maar nog niemand inplannen. Kijk op Jouw start bij de stap **Bedrijf verifiëren**. Meestal is het binnen een werkdag klaar; je krijgt bericht.
+Staat je bedrijf nog in verificatie? Dan kun je één klus plaatsen, maar nog niemand inplannen. Kijk op Jouw start bij de stap **Bedrijf verifiëren**. Meestal is het binnen een werkdag klaar; je krijgt bericht.
 
 Lukt het inplannen niet terwijl je wel geverifieerd bent? Dan staat de werker waarschijnlijk al op een andere klus in dezelfde tijd, of ligt het tarief onder het minimumtarief. Je ziet dat op de reactie.
 

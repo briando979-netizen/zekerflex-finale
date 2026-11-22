@@ -64,7 +64,7 @@ const nl: HulpTeksten = {
     {
       id: "bedrijf-verifieren",
       v: "Waarom moet ik mijn bedrijf laten verifiëren?",
-      a: "Zo weten werkers dat je een echt bedrijf bent. Vul op Jouw start je KVK-nummer in bij de stap Bedrijf verifiëren; meestal is het binnen een werkdag klaar. Tot die tijd kun je één testklus uitzetten. Iemand echt inplannen kan pas als je bedrijf is geverifieerd.",
+      a: "Zo weten werkers dat je een echt bedrijf bent. Vul op Jouw start je KVK-nummer in bij de stap Bedrijf verifiëren; meestal is het binnen een werkdag klaar. Tot die tijd kun je één klus uitzetten. Iemand echt inplannen kan pas als je bedrijf is geverifieerd.",
       link: { href: "/werkgever", label: "Naar Jouw start" },
     },
     {
@@ -228,7 +228,7 @@ const en: HulpTeksten = {
     {
       id: "bedrijf-verifieren",
       v: "Why do I have to verify my company?",
-      a: "It shows workers you are a real company. On Your start, enter your KVK number in the step to verify your company; it is usually done within one working day. Until then you can post one test job. Actually scheduling someone is only possible once your company is verified.",
+      a: "It shows workers you are a real company. On Your start, enter your KVK number in the step to verify your company; it is usually done within one working day. Until then you can post one job. Actually scheduling someone is only possible once your company is verified.",
       link: { href: "/werkgever", label: "Go to Your start" },
     },
     {

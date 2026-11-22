@@ -107,7 +107,7 @@ export function werkgeverStappen(f: WerkgeverFeiten): Stap<WerkgeverStapSleutel>
   const verificatie: Stap<WerkgeverStapSleutel> = { key: "verificatie", done: f.verified, href: "/werkgever", minuten: f.inControle ? 0 : 2 };
   const klus: Stap<WerkgeverStapSleutel> = { key: "klus", done: f.heeftKlus, href: "/werkgever/diensten/nieuw", minuten: 5 };
   // wij controleren het bedrijf met de hand: voor de werkgever valt daar niets te doen, dus die stap
-  // staat achteraan en de eerstvolgende stap is dan gewoon een (test)klus plaatsen
+  // staat achteraan en de eerstvolgende stap is dan gewoon een klus plaatsen
   return f.inControle && !f.verified ? [email, bedrijf, klus, verificatie] : [email, bedrijf, verificatie, klus];
 }
 
@@ -168,13 +168,13 @@ export function herinneringInhoud(reden: Exclude<HerinneringReden, "email">): { 
     case "bedrijf-gegevens":
       return {
         todo: "vul je KVK-nummer en eerste vestiging in",
-        why: "Zodra je bedrijf geverifieerd is, kun je klussen plaatsen en freelancers inplannen. Tot die tijd kun je één testklus uitzetten.",
+        why: "Zodra je bedrijf geverifieerd is, kun je klussen plaatsen en freelancers inplannen. Tot die tijd kun je één klus uitzetten.",
         href: "/werkgever",
       };
     case "bedrijf-verificatie":
       return {
         todo: "rond de verificatie van je bedrijf af",
-        why: "Je vestiging staat er al. Zodra je bedrijf is geverifieerd kun je mensen inplannen; tot die tijd kun je één testklus uitzetten.",
+        why: "Je vestiging staat er al. Zodra je bedrijf is geverifieerd kun je mensen inplannen; tot die tijd kun je één klus uitzetten.",
         href: "/werkgever",
       };
     case "bedrijf-klus":

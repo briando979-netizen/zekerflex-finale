@@ -146,7 +146,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
                     ? "Buitenlands bedrijf: zoek het zelf op en keur het zo nodig goed"
                     : verification.inControle
                     ? "KVK klopt: controleer of de aanmelder erbij hoort"
-                    : "Niet geverifieerd, alleen testklus"}
+                    : "Niet geverifieerd, mag één klus plaatsen"}
               </Pill>
             </div>
             <EigenTestSchakelaar soort="tenant" id={tenant.id} sinds={eigenTest.tenants[tenant.id] ?? null} />

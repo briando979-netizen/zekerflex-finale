@@ -60,4 +60,4 @@ Kies **Dienst uitzetten & matchen** (bij meerdere dagen: **Zet {n} diensten uit 
 
 - Een duidelijke titel en omschrijving geven meer reacties, ook van mensen die je nog niet kent.
 - Wil je alleen mensen die je kent? Kies **Eerst privé uitnodigen**.
-- Staat je bedrijf nog in verificatie, dan is dit je testklus. Je kunt er één plaatsen.
+- Staat je bedrijf nog in verificatie, dan kun je één klus plaatsen.

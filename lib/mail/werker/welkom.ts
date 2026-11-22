@@ -39,7 +39,7 @@ const TEKST: Record<MailTaal, WelkomTekst> = {
     preheader: "Je account is klaar. Dit is je volgende stap.",
     goedOm: "Goed om te weten",
     notitie:
-      "ZekerFlex is nog in ontwikkeling. De klussen die je ziet zijn testklussen: geen echt werk, je hoeft er niet heen en er hoort geen betaling bij. Begin volgend jaar gaan we online. Je kunt nu al proeven en bekijken hoe het er straks uitziet.",
+      "ZekerFlex is nog in ontwikkeling. Begin volgend jaar gaan we online. Je kunt nu al proeven en bekijken hoe het er straks uitziet.",
   },
   en: {
     subject: "Welcome to ZekerFlex",
@@ -56,7 +56,7 @@ const TEKST: Record<MailTaal, WelkomTekst> = {
     preheader: "Your account is ready. This is your next step.",
     goedOm: "Good to know",
     notitie:
-      "ZekerFlex is still in development. The jobs you see are test jobs: no real work, you don't have to go anywhere and there is no payment. We go online early next year. You can already try it out and see what it will look like.",
+      "ZekerFlex is still in development. We go online early next year. You can already try it out and see what it will look like.",
   },
   pl: {
     subject: "Witaj w ZekerFlex",
@@ -73,7 +73,7 @@ const TEKST: Record<MailTaal, WelkomTekst> = {
     preheader: "Twoje konto jest gotowe. To Twój następny krok.",
     goedOm: "Warto wiedzieć",
     notitie:
-      "ZekerFlex jest nadal w rozwoju. Zlecenia, które widzisz, to zlecenia testowe: bez prawdziwej pracy, nie musisz nigdzie jechać i nie ma żadnej płatności. Na początku przyszłego roku wystartujemy online. Już teraz możesz wszystko wypróbować i zobaczyć, jak to będzie wyglądać.",
+      "ZekerFlex jest nadal w rozwoju. Na początku przyszłego roku wystartujemy online. Już teraz możesz wszystko wypróbować i zobaczyć, jak to będzie wyglądać.",
   },
   ro: {
     subject: "Bun venit la ZekerFlex",
@@ -90,7 +90,7 @@ const TEKST: Record<MailTaal, WelkomTekst> = {
     preheader: "Contul tău este gata. Acesta este următorul tău pas.",
     goedOm: "Bine de știut",
     notitie:
-      "ZekerFlex este încă în dezvoltare. Joburile pe care le vezi sunt joburi de test: fără muncă reală, nu trebuie să mergi nicăieri și nu există plată. Pornim online la începutul anului viitor. Poți încerca deja și vedea cum va arăta.",
+      "ZekerFlex este încă în dezvoltare. Pornim online la începutul anului viitor. Poți încerca deja și vedea cum va arăta.",
   },
   uk: {
     subject: "Ласкаво просимо до ZekerFlex",
@@ -107,16 +107,16 @@ const TEKST: Record<MailTaal, WelkomTekst> = {
     preheader: "Твій обліковий запис готовий. Ось твій наступний крок.",
     goedOm: "Варто знати",
     notitie:
-      "ZekerFlex ще в розробці. Роботи, які ти бачиш, — тестові: без справжньої роботи, їхати нікуди не треба, і оплати немає. Ми запускаємося онлайн на початку наступного року. Ти вже зараз можеш спробувати й побачити, як це виглядатиме.",
+      "ZekerFlex ще в розробці. Ми запускаємося онлайн на початку наступного року. Ти вже зараз можеш спробувати й побачити, як це виглядатиме.",
   },
 };
 
 // De korte regels in de andere talen onderaan de Nederlandse mail (een Nederlandse lezer kan een andere moedertaal hebben).
 const ONTWIKKELING_TALEN: { taal: string; tekst: string }[] = [
-  { taal: "English", tekst: "ZekerFlex is still in development and the jobs you see are test jobs: no real work, no payment. We go online early next year." },
-  { taal: "Polski", tekst: "ZekerFlex jest nadal w rozwoju, a zlecenia, które widzisz, to zlecenia testowe: bez prawdziwej pracy i bez płatności. Na początku przyszłego roku wystartujemy online." },
-  { taal: "Română", tekst: "ZekerFlex este încă în dezvoltare, iar joburile pe care le vezi sunt joburi de test: fără muncă reală și fără plată. Pornim online la începutul anului viitor." },
-  { taal: "Українською", tekst: "ZekerFlex ще в розробці, а завдання, які ви бачите, — тестові: без справжньої роботи й без оплати. Ми запускаємося онлайн на початку наступного року." },
+  { taal: "English", tekst: "ZekerFlex is still in development. We go online early next year." },
+  { taal: "Polski", tekst: "ZekerFlex jest nadal w rozwoju. Na początku przyszłego roku wystartujemy online." },
+  { taal: "Română", tekst: "ZekerFlex este încă în dezvoltare. Pornim online la începutul anului viitor." },
+  { taal: "Українською", tekst: "ZekerFlex ще в розробці. Ми запускаємося онлайн на початку наступного року." },
 ];
 
 export function welcomeEmailT(

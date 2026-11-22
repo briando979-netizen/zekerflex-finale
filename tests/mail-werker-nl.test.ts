@@ -28,7 +28,8 @@ const GOLDEN: Record<string, string> = {
   verificatie_zonder: "b87105e688e21cb679fd159727d223cd10134a75ee1a523f2c5840784e150a9c",
   // 15 nov: de volgende stap in de welkomstmail is de 5 stappen van de app (niet meer "verificatie: KVK of btw + identiteit")
   welkom_zzp: "8896366ae7364c6afed636bc23495215c7e570ee344393355e6d5505f805cafd",
-  welkom_uitzend: "70a3665ba6cacad14acd1c6be999e239b1dc4903ca945b4e28b304ec52779c5d",
+  // 22 nov: de zin over "testklussen" is uit de ontwikkelingsnotitie (ook in de lijst met andere talen); de rest is gelijk gebleven
+  welkom_uitzend: "e4c7869fa21fe2e18c74fe3964b2fb1e6ee8ae28732546540faad26c83bc55f2",
   welkom_bedrijf: "92fd90c33c40d92702a2f2308b00cc056f788c8a06636e006b83f58bb0408c6c",
   id_ja: "db76768f535c2e2d707c9872923fbfdce3417a1737d148a739d26eb05ff771f8",
   id_nee: "87d276a61b037fb8fe87751d8a3b149d11df04947472edfce65895b81b610e68",

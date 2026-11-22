@@ -326,9 +326,9 @@ export default async function WerkgeverStartPage() {
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
           <p className="font-semibold text-ink">{inControle ? ws.controleTitel : ws.nietGeverifieerd}</p>
           <p className="mt-1">
-            {ws.testklusVoor}
-            <strong>{ws.testklusVet}</strong>
-            {ws.testklusNa}{" "}
+            {ws.eenKlusVoor}
+            <strong>{ws.eenKlusVet}</strong>
+            {ws.eenKlusNa}{" "}
             {verificatie.buitenlands ? (
               <>{ws.buitenland}</>
             ) : inControle ? (
