@@ -115,6 +115,25 @@ export const FOTOS: readonly Foto[] = [
   { slug: "campagne-promotie", thema: "jong", eigen: true, staand: true, alt: "Een promotiemedewerker houdt een dienblad met proefbekertjes vast in een winkelstraat", trefwoorden: ["promotie", "promotor", "sampling"] },
   { slug: "campagne-rijles", thema: "rijschool", eigen: true, staand: true, alt: "Een rij-instructeur leunt met de autosleutel in zijn hand tegen het portier van een witte lesauto", trefwoorden: ["rijschool", "rijles", "rijbewijs", "auto", "instructeur"] },
   { slug: "campagne-webwinkel", thema: "retail", eigen: true, staand: true, alt: "Een winkeleigenaar zit met een laptop en een pakketje aan de toonbank van haar winkel", trefwoorden: ["website", "webshop", "winkel", "ondernemer"] },
+  // 22 nov 2026: tweede reeks eigen campagnebeelden (Gemini, uit alleen tekst), per branche en voor /bijbaan
+  { slug: "campagne-koffiebar", thema: "horeca", eigen: true, staand: true, alt: "Een lachende barista schenkt melk in een kop koffie achter de bar van een koffiezaak", trefwoorden: ["horeca", "barista", "koffie", "bijbaan"] },
+  { slug: "campagne-terras", thema: "horeca", eigen: true, staand: true, alt: "Een ober loopt lachend met twee borden over een terras langs een gracht", trefwoorden: ["horeca", "bediening", "terras", "ober"] },
+  { slug: "campagne-keuken", thema: "horeca", eigen: true, staand: true, alt: "Een lachende kok zet een bord met eten op de werkbank in een restaurantkeuken", trefwoorden: ["horeca", "keuken", "kok", "afwas"] },
+  { slug: "campagne-hotelkamer", thema: "schoonmaak", eigen: true, staand: true, alt: "Een medewerker schudt lachend een kussen op in een lichte hotelkamer", trefwoorden: ["schoonmaak", "hotel", "housekeeping"] },
+  { slug: "campagne-gang", thema: "schoonmaak", eigen: true, staand: true, alt: "Een schoonmaakster met een mop en een emmer staat in een lange gang met een rode tegelvloer", trefwoorden: ["schoonmaak", "schoonmaker", "gebouw"] },
+  { slug: "campagne-orderpicker", thema: "logistiek", eigen: true, staand: true, alt: "Een orderpicker in een oranje hesje pakt een doos uit een hoge stelling in een magazijn", trefwoorden: ["logistiek", "magazijn", "orderpicker"] },
+  { slug: "campagne-laaddock", thema: "logistiek", eigen: true, staand: true, alt: "Een magazijnmedewerker trekt een palletwagen met een ingepakte pallet bij een laaddeur", trefwoorden: ["logistiek", "magazijn", "pallet", "laden"] },
+  { slug: "campagne-groenteboer", thema: "retail", eigen: true, staand: true, alt: "Een verkoopster legt appels in een krat bij een groentekraam in een winkelstraat", trefwoorden: ["retail", "winkel", "markt", "verkoop"] },
+  { slug: "campagne-boetiek", thema: "retail", eigen: true, staand: true, alt: "Een winkelmedewerker vouwt een trui op de toonbank van een kledingwinkel", trefwoorden: ["retail", "winkel", "kleding", "verkoop"] },
+  { slug: "campagne-festivalbar", thema: "jong", eigen: true, staand: true, alt: "Twee barmedewerkers lachen achter de bar van een festival, met publiek en een podium op de achtergrond", trefwoorden: ["evenement", "festival", "bar", "crew"] },
+  { slug: "campagne-opbouw", thema: "team", eigen: true, staand: true, alt: "Een crewlid loopt vroeg in de ochtend met een kabelrol over een grasveld naast een podium in opbouw", trefwoorden: ["evenement", "opbouw", "crew", "festival"] },
+  { slug: "campagne-sampling", thema: "jong", eigen: true, staand: true, alt: "Een promotiemedewerker deelt flesjes sap uit bij een station in een drukke straat", trefwoorden: ["promotie", "sampling", "promotor"] },
+  { slug: "campagne-kaasproeverij", thema: "jong", eigen: true, staand: true, alt: "Een promotiemedewerker houdt een plankje met kaasblokjes vast bij een kaaskraam op een overdekte markt", trefwoorden: ["promotie", "proeverij", "sampling"] },
+  { slug: "campagne-bakfiets", thema: "bezorgen", eigen: true, staand: true, alt: "Een bezorger fietst lachend met een zwarte bezorgbox over een brug bij een gracht", trefwoorden: ["bezorg", "fiets", "koerier"] },
+  { slug: "campagne-pakket", thema: "bezorgen", eigen: true, staand: true, alt: "Een bezorgster geeft een pakket aan een oudere man bij zijn voordeur", trefwoorden: ["bezorg", "pakket", "koerier"] },
+  { slug: "campagne-fietsend", thema: "jong", eigen: true, staand: true, alt: "Een jonge vrouw fietst lachend door een straat met de Domtoren van Utrecht op de achtergrond", trefwoorden: ["bijbaan", "student", "fiets"] },
+  { slug: "campagne-bloemenkraam", thema: "jong", eigen: true, staand: true, alt: "Een medewerker van een bloemenkraam houdt lachend een grote bos bloemen vast", trefwoorden: ["bijbaan", "markt", "winkel", "student"] },
+  { slug: "campagne-patatpauze", thema: "jong", eigen: true, staand: true, alt: "Twee collega's in schorten delen een bak patat tijdens hun pauze in een steegje", trefwoorden: ["bijbaan", "pauze", "team", "student"] },
 ];
 
 export function fotoPad(f: Pick<Foto, "slug">): string {
@@ -127,18 +146,18 @@ export function fotosVan(thema: FotoThema): Foto[] {
 
 /** Welke foto's bij welke sector horen (sleutels uit lib/seo-sectors.ts). */
 const SECTOR_FOTOS: Record<string, readonly string[]> = {
-  horeca: ["campagne-tap", "campagne-barista", "campagne-kok", "campagne-bediening", "campagne-deuropening"],
-  logistiek: ["campagne-scanner", "campagne-steekkar", "campagne-inpakken", "campagne-bestelbus"],
-  retail: ["campagne-kledingrek", "campagne-vouwen", "campagne-schap"],
-  evenementen: ["campagne-festival-crew", "campagne-podium", "campagne-crew-pauze"],
-  schoonmaak: ["campagne-ramen", "campagne-hotelbed"],
-  promotie: ["campagne-promotie"],
-  bezorging: ["campagne-bezorger", "campagne-aanbellen", "campagne-bestelbus"],
+  horeca: ["campagne-tap", "campagne-barista", "campagne-kok", "campagne-bediening", "campagne-deuropening", "campagne-koffiebar", "campagne-terras", "campagne-keuken"],
+  logistiek: ["campagne-scanner", "campagne-steekkar", "campagne-inpakken", "campagne-bestelbus", "campagne-orderpicker", "campagne-laaddock"],
+  retail: ["campagne-kledingrek", "campagne-vouwen", "campagne-schap", "campagne-groenteboer", "campagne-boetiek"],
+  evenementen: ["campagne-festival-crew", "campagne-podium", "campagne-crew-pauze", "campagne-festivalbar", "campagne-opbouw"],
+  schoonmaak: ["campagne-ramen", "campagne-hotelbed", "campagne-hotelkamer", "campagne-gang"],
+  promotie: ["campagne-promotie", "campagne-sampling", "campagne-kaasproeverij"],
+  bezorging: ["campagne-bezorger", "campagne-aanbellen", "campagne-bestelbus", "campagne-bakfiets", "campagne-pakket"],
   // de overzichtspagina's: bedrijven die personeel zoeken, en werkers die klussen zoeken
   algemeen: ["campagne-ondernemer", "campagne-rooster", "campagne-eigenaar", "campagne-bouw", "campagne-klembord", "campagne-monteur"],
   freelance: ["campagne-deuropening", "campagne-bezorger", "campagne-aanbellen", "campagne-autowassen", "campagne-wasstraat", "campagne-barista", "campagne-scanner"],
   // /bijbaan en /bijbaan/<stad> (lib/seo-bijbaan.ts): de branches waar een bijbaan in kan zitten
-  bijbaan: ["campagne-deuropening", "campagne-barista", "campagne-kledingrek", "campagne-festival-crew", "campagne-promotie", "campagne-bezorger", "campagne-scanner"],
+  bijbaan: ["campagne-deuropening", "campagne-barista", "campagne-kledingrek", "campagne-festival-crew", "campagne-promotie", "campagne-bezorger", "campagne-scanner", "campagne-fietsend", "campagne-bloemenkraam", "campagne-patatpauze", "campagne-koffiebar"],
 };
 
 /** Een foto voor een sectorpagina; de seed (bijv. de stad) kiest er één uit, zodat stadspagina's niet allemaal dezelfde tonen. */
