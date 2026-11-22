@@ -8,11 +8,13 @@
 //
 // Dit bestand bepaalt waar ze NIET meer naartoe gelinkt worden (menu, voorpagina,
 // voettekst), waar ze uit de sitemap/rondgang vallen en waar ze op noindex komen.
-// Sinds 22 nov 2026 sturen de oude productpagina's (apps, websites, logo, domein,
-// checks, rijschool-software, partnerplatform, abonnementen, aanbod) bovendien door
-// naar /voor-bedrijven of /app (next.config.mjs, eigenaar: "verwijder de shop en
-// apps enzo"); de flexwerk-onderdelen in deze lijst (developers, open-diensten,
-// partnerpagina's) blijven via een directe link bereikbaar.
+// Sinds 22 nov 2026 sturen de oude verkooppagina's en hulpmiddelen (apps, websites,
+// logo, advertentie, domein, website- en reviewcheck, rijschool-software,
+// partnerplatform, producten, abonnementen, de aanbodpagina's van online/branche)
+// bovendien door naar /voor-bedrijven of /app (next.config.mjs; eigenaar: "verwijder
+// de shop en apps enzo", en niemand gebruikte ze). /aanbod zelf en de flexwerk-
+// onderdelen in deze lijst (developers, open-diensten, partnerpagina's) blijven via
+// een directe link bereikbaar.
 //
 // Puur en browser-veilig (geen prisma/kv): het menu (client) en de server lezen
 // er allebei uit. De vlag zelf lees je met `featureEnabled(FLAG_ALLEEN_FLEXWERK)`

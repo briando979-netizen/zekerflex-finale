@@ -89,10 +89,6 @@ export default async function VoorBureausPage() {
             als plugin op je eigen systeem, als white-label platform onder je merk, of volledig self-hosted op je eigen infra.
           </p>
           <p className="mt-4 text-sm text-white/60">
-            Liever één losse module i.p.v. het hele platform?{" "}
-            <Link href="/producten" className="text-brand-mint underline">Bekijk de losse producten →</Link>
-          </p>
-          <p className="mt-2 text-sm text-white/60">
             Werk je als intercedent?{" "}
             <Link href="/intercedenten" className="text-brand-mint underline">Zie wat ZekerFlex van je werk overneemt →</Link>
           </p>

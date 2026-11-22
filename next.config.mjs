@@ -79,9 +79,10 @@ const nextConfig = {
       // 22 nov 2026 (eigenaar: "verwijder de shop en apps enzo, we zijn voor zzp, uitzend en flexwerk gegaan"): de oude
       // verkooppagina's (apps en spelletjes, websites, rijschool-software, partnerplatform, producten en de aanbodpagina's van
       // de pijlers online en branche) sturen door naar de flexwerkpagina voor bedrijven, de apps naar de ZekerFlex-app.
-      // Tijdelijk (307), zodat het terug kan. Bewust NIET omgeleid, want bestaande klanten, mails en dashboards gebruiken ze:
-      // /website-check en /review-check (rapporten), /logo-maker en /advertentie-op-maat (links in de vrijgavemail),
-      // /domeinnaam (bestellen en terugkeer), /abonnementen (Stripe-annuleeradres), /aanbod (overzicht) en de klantsites.
+      // Tijdelijk (307), zodat het terug kan. Ook de hulpmiddelen website-check, review-check, logo-maker, advertentie op maat,
+      // domeinnaam en abonnementen: gemeten op 22 nov had geen enkel echt bedrijf ze ooit gebruikt of ervoor betaald (alleen
+      // test- en eigen accounts), dus de eigenaar koos "gooi weg". /aanbod (overzicht met alleen flexwerk) en de
+      // personeel/geld-functiepagina's blijven, net als de klantsites (/site, /site-domein).
       // Alleen exacte paden of paginapaden zonder punt: foto's in public/aanbod, public/voorbeeldsites en
       // public/rijschool-software blijven gewoon laden. De webshop stuurt al zelf door (app/shop/layout.tsx).
       ...[
@@ -98,6 +99,14 @@ const nextConfig = {
         ["/starters", "/voor-bedrijven"],
         ["/voorbeeldsites", "/voor-bedrijven"],
         ["/nieuwe-home", "/"],
+        ["/website-check", "/voor-bedrijven"],
+        ["/review-check", "/voor-bedrijven"],
+        ["/logo-maker", "/voor-bedrijven"],
+        ["/logo-maker/:id", "/voor-bedrijven"],
+        ["/advertentie-op-maat", "/voor-bedrijven"],
+        ["/advertentie-op-maat/:id", "/voor-bedrijven"],
+        ["/domeinnaam", "/voor-bedrijven"],
+        ["/abonnementen", "/voor-bedrijven"],
         // de aanbodpagina's van de pijlers online en branche (lib/marketing/aanbod.ts); personeel en geld blijven
         ...["website", "webshop", "domeinnaam", "website-check", "advertentie-op-maat", "logo-maker", "starters", "review-check", "google-reviews", "telefonie", "zakelijke-mail", "horeca", "rijschool"].map((s) => [`/aanbod/${s}`, "/voor-bedrijven"]),
       ].map(([van, naar]) => ({ source: van, destination: naar, permanent: false })),

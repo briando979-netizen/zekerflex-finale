@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AANBOD, aanbodHref, eigenPaginas } from "@/lib/marketing/aanbod";
 import { aanbodBeeld, aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
+import { pijlerIsFlexwerk } from "@/lib/marketing/flexwerk-only";
 
 // Zichtbaarheid in Google en bij AI-assistenten (16 nov 2026, eigenaar: "boven in de zoekresultaten, met schermafbeeldingen
 // en betere foto's"): elk product toont zijn eigen beeld (een echt scherm, anders de eigen foto) bij het delen, in de JSON-LD
@@ -42,7 +43,9 @@ describe("llms.txt voor AI-assistenten", () => {
     const { GET } = await import("@/app/llms.txt/route");
     const tekst = await (await GET()).text();
     expect(tekst).toContain("## Aanbod");
-    for (const a of AANBOD.filter((x) => x.status === "beschikbaar")) expect(tekst, a.slug).toContain(`${aanbodHref(a)}`);
+    // 22 nov 2026: alleen flexwerk (eigenaar: "we zijn voor zzp, uitzend en flexwerk gegaan"); online en branche staan er niet meer in
+    for (const a of AANBOD.filter((x) => x.status === "beschikbaar" && pijlerIsFlexwerk(x.pijler))) expect(tekst, a.slug).toContain(`${aanbodHref(a)}`);
+    for (const a of AANBOD.filter((x) => !pijlerIsFlexwerk(x.pijler))) expect(tekst, a.slug).not.toContain(`- ${a.naam}:`);
     for (const a of AANBOD.filter((x) => x.status !== "beschikbaar")) expect(tekst, a.slug).not.toContain(`- ${a.naam}:`);
     expect(tekst).not.toMatch(/same-day|30-day payout/i);
   });
