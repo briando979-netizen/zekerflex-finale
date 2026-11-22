@@ -99,13 +99,16 @@ describe("de stappen bovenaan Klussen", () => {
   });
   it("elke 'Wijzigen' heeft een eigen naam per stap, en doelen zijn 44 px", () => {
     expect(aantal(s, /aria-label=\{`\$\{t\.wijzig\}: \$\{label\[k\]\}`\}/g)).toBe(3);
-    expect(s).toContain("h-11 w-11");
+    // de sluitknop (h-11 w-11) staat sinds 22 nov 2026 alleen op de pagina zelf (er stonden er twee boven elkaar)
+    expect(bron("app/dashboard/start/profiel/page.tsx")).toContain("h-11 w-11");
+    expect(s).not.toContain("setGesloten");
     expect(aantal(s, /min-h-\[44px\]/g)).toBeGreaterThanOrEqual(10);
   });
-  it("het keuzerondje van de werkvorm werkt met de pijltjestoetsen en heeft één tabstop", () => {
-    expect(s).toContain('role="radiogroup"');
+  it("de keuzerondjes van de werkvorm (Heb je een KVK-nummer?) werken met de pijltjestoetsen en hebben één tabstop", () => {
+    expect(aantal(s, /role="radiogroup"/g)).toBe(2);
     expect(s).toContain("ArrowRight");
-    expect(s).toContain("pick === null && opt === KINDS[0]");
+    expect(s).toContain("antwoord === null && a === ANTWOORDEN[0]");
+    expect(s).toContain("metKvk === null && opt === WERKVORMEN_MET_KVK[0]");
   });
   it("de foutmeldingen hebben role=alert en de voortgang een naam", () => {
     expect(aantal(s, /role="alert"/g)).toBeGreaterThanOrEqual(2);

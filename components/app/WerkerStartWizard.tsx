@@ -1,17 +1,31 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
 import { TIJDLIJN_VOLGORDE, stapVanTotaal, tijdlijnStappen, volgendeStap, type TijdlijnSleutel } from "@/lib/onboarding/laat-weten";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { ALLE_BRANCHES_ICOON, BRANCHE_OPTIES, brancheSamenvatting, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
+import { kvkAntwoordVan, werkvormNaAntwoord, WERKVORMEN_MET_KVK, type KvkAntwoord, type Werkvorm } from "@/lib/onboarding/kvk-vraag";
 
-type Kind = "zzp" | "flexwerker" | "uitzendkracht";
+type Kind = Werkvorm;
 type StepKey = TijdlijnSleutel;
 
-const KINDS: Kind[] = ["zzp", "flexwerker", "uitzendkracht"];
+// de werkvorm als vraag "Heb je een KVK-nummer?" (22 nov 2026, lib/onboarding/kvk-vraag.ts); de opgeslagen waarden blijven gelijk
+const ANTWOORDEN: readonly KvkAntwoord[] = ["ja", "nee"];
+
+/** Keuzerondjes met het toetsenbord: pijltjes verplaatsen de keuze en de focus (één tabstop per groep). */
+function pijlKeuze<T>(e: KeyboardEvent<HTMLButtonElement>, opties: readonly T[], huidig: T, kies: (v: T) => void) {
+  const stap = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+  if (!stap) return;
+  e.preventDefault();
+  const i = (opties.indexOf(huidig) + stap + opties.length) % opties.length;
+  const volgende = opties[i];
+  if (volgende === undefined) return;
+  kies(volgende);
+  e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[role="radio"]')[i]?.focus();
+}
 
 // Een branche is een rij met een pictogram-tegel en de naam (zoals het branche-scherm van YoungOnes, 20 nov): gekozen = rand
 // in de merkkleur plus een vinkje, niet alleen een kleur (ook te zien zonder kleur).
@@ -57,7 +71,9 @@ export function WerkerStartWizard({
   const t = ft.start;
   const router = useRouter();
   const [kind, setKind] = useState<Kind | null>(workerKind);
-  const [pick, setPick] = useState<Kind | null>(workerKind);
+  const [antwoord, setAntwoord] = useState<KvkAntwoord | null>(kvkAntwoordVan(workerKind));
+  const [metKvk, setMetKvk] = useState<Kind | null>(workerKind === "zzp" || workerKind === "flexwerker" ? workerKind : null);
+  const pick = werkvormNaAntwoord(antwoord, metKvk);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,7 +90,6 @@ export function WerkerStartWizard({
   const ORDER = TIJDLIJN_VOLGORDE;
   const first = volgendeStap(done);
   const [open, setOpen] = useState<StepKey>(first ?? "gegevens");
-  const [gesloten, setGesloten] = useState(false);
   const completed = ORDER.filter((k) => done[k]).length;
   const pct = Math.round((completed / ORDER.length) * 100);
   const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, gegevens: t.gegevensStep, identiteit: t.identiteitStep, foto: t.fotoStep, werkrecht: t.werkrechtStep, tweestap: t.tweestapStep };
@@ -172,21 +187,12 @@ export function WerkerStartWizard({
     : k === "tweestap" ? { href: "/dashboard/account/passkeys", tekst: t.tweestapCta }
     : null;
 
-  if (gesloten) return null;
-
   return (
     <section ref={kaartRef} className="mb-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-sm" aria-labelledby="werker-start-titel">
+      {/* geen eigen sluitknop: de pagina /dashboard/start/profiel heeft er al een (22 nov 2026: er stonden er twee boven elkaar) */}
       <div className="relative bg-gradient-to-br from-brand-700 via-brand-700 to-brand-500 px-5 pb-8 pt-5 text-white">
-        <button
-          type="button"
-          onClick={() => setGesloten(true)}
-          aria-label={t.sluiten}
-          className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          <span aria-hidden>×</span>
-        </button>
         <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{t.eyebrow}</p>
-        <h2 id="werker-start-titel" className="mt-1 pr-10 font-display text-2xl font-bold leading-tight">{t.laatWeten}</h2>
+        <h2 id="werker-start-titel" className="mt-1 font-display text-2xl font-bold leading-tight">{t.laatWeten}</h2>
         <p className="mt-1 text-sm text-white/85" role="status">
           {stap ? `${vulIn(t.stapVan, { n: stap.n, totaal: stap.totaal })}: ${label[stap.sleutel]}` : t.alleKlaar}
         </p>
@@ -273,43 +279,75 @@ export function WerkerStartWizard({
 
                 {isOpen && k === "kind" && (
                   <div className="mt-3 space-y-3">
+                    {/* "Heb je een KVK-nummer?" (22 nov 2026): Ja = voor jezelf (daaronder zzp'er of flexwerker), Nee = via een uitzendbureau */}
+                    <p className="text-sm font-semibold text-ink">{t.kvkVraag}</p>
                     <p className="text-xs text-neutralx-500">{t.kindHint}</p>
-                    <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={t.kindStep}>
-                      {KINDS.map((opt) => {
-                        const on = pick === opt;
+                    <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t.kvkVraag}>
+                      {ANTWOORDEN.map((a) => {
+                        const on = antwoord === a;
                         return (
                           <button
-                            key={opt}
+                            key={a}
                             type="button"
                             role="radio"
                             aria-checked={on}
                             // keuzerondje met het toetsenbord: één tabstop (de gekozen, of de eerste), pijltjes verplaatsen de keuze
-                            tabIndex={on || (pick === null && opt === KINDS[0]) ? 0 : -1}
-                            onKeyDown={(e) => {
-                              const stap = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-                              if (!stap) return;
-                              e.preventDefault();
-                              const volgende = KINDS[(KINDS.indexOf(opt) + stap + KINDS.length) % KINDS.length];
-                              if (!volgende) return;
-                              setError(null);
-                              setPick(volgende);
-                              const knoppen = e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[role="radio"]');
-                              knoppen?.[KINDS.indexOf(volgende)]?.focus();
-                            }}
+                            tabIndex={on || (antwoord === null && a === ANTWOORDEN[0]) ? 0 : -1}
+                            onKeyDown={(e) =>
+                              pijlKeuze(e, ANTWOORDEN, a, (v) => {
+                                setError(null);
+                                setAntwoord(v);
+                              })
+                            }
                             onClick={() => {
                               setError(null);
-                              setPick(opt);
+                              setAntwoord(a);
                             }}
                             className={`rounded-xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
                               on ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
                             }`}
                           >
-                            <span className="block text-sm font-semibold text-ink">{t.kinds[opt][0]}</span>
-                            <span className="mt-1 block text-xs leading-snug text-neutralx-500">{t.kinds[opt][1]}</span>
+                            <span className="block text-sm font-semibold text-ink">{a === "ja" ? t.kvkJa : t.kvkNee}</span>
+                            <span className="mt-1 block text-xs leading-snug text-neutralx-500">{a === "ja" ? t.kvkJaUitleg : t.kvkNeeUitleg}</span>
                           </button>
                         );
                       })}
                     </div>
+                    {antwoord === "ja" && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold text-ink">{t.kvkSoort}</p>
+                        <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t.kvkSoort}>
+                          {WERKVORMEN_MET_KVK.map((opt) => {
+                            const on = metKvk === opt;
+                            return (
+                              <button
+                                key={opt}
+                                type="button"
+                                role="radio"
+                                aria-checked={on}
+                                tabIndex={on || (metKvk === null && opt === WERKVORMEN_MET_KVK[0]) ? 0 : -1}
+                                onKeyDown={(e) =>
+                                  pijlKeuze<Kind>(e, WERKVORMEN_MET_KVK, opt, (v) => {
+                                    setError(null);
+                                    setMetKvk(v);
+                                  })
+                                }
+                                onClick={() => {
+                                  setError(null);
+                                  setMetKvk(opt);
+                                }}
+                                className={`rounded-xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                                  on ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
+                                }`}
+                              >
+                                <span className="block text-sm font-semibold text-ink">{t.kinds[opt][0]}</span>
+                                <span className="mt-1 block text-xs leading-snug text-neutralx-500">{t.kinds[opt][1]}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
                     {(kind === null || pick !== kind) &&
                       (richtingVast && kind !== null ? (
