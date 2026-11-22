@@ -10,13 +10,13 @@ const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8").sp
 describe("de voorpagina na het gebruikersonderzoek", () => {
   const home = lees("app/(marketing)/page.tsx");
 
-  it("'Zo ziet de app eruit': de knop gaat echt naar het voorbeeldaccount (of, met alleen-app, eerlijk naar /app)", () => {
+  // de voorbeeldaccounts zijn op 21 nov op verzoek van de eigenaar gewist: geen belofte van meekijken, de knop gaat naar /app
+  it("'Zo ziet de app eruit': geen belofte van een voorbeeldaccount, de knop gaat eerlijk naar /app", () => {
     expect(home).not.toContain("Bekijk de app van binnen");
     expect(home).toContain("Zo ziet de app eruit");
-    expect(home).toContain('<a href="/voorbeeld/werker"');
-    expect(home).toContain("featureEnabled(ALLEEN_APP_VLAG)");
-    // de route van het voorbeeld bestaat en opent de werker-app
-    expect(lees("app/voorbeeld/werker/route.ts")).toContain('new URL("/dashboard/klussen"');
+    expect(home).not.toContain("/voorbeeld/werker");
+    expect(home).not.toMatch(/voorbeeldaccount met verzonnen/);
+    expect(home).toContain('<Link href="/app" className="btn-mint text-base">Bekijk de app</Link>');
   });
 
   it("onder de kop één regel voor bedrijven: Personeel nodig? Plaats een klus", () => {
