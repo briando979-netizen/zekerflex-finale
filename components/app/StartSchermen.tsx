@@ -6,13 +6,19 @@ import { useFT } from "@/components/i18n/useFT";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { ALLE_BRANCHES_ICOON, BRANCHE_OPTIES, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 import type { Zoeklocatie } from "@/lib/worker/zoeklocatie-kern";
+import { POORT_STAPPEN } from "@/lib/onboarding/werker-poort";
+import { kvkAntwoordVan, nlPostcode, werkvormNaAntwoord, WERKVORMEN_MET_KVK, type KvkAntwoord, type Werkvorm } from "@/lib/onboarding/kvk-vraag";
 
 interface Hit {
   label: string;
   lat: number;
   lng: number;
   plaats?: string | null;
+  postcode?: string | null;
 }
+
+/** De schermen van de start: 1 plaats, 2 werkvorm ("Heb je een KVK-nummer?"), 3 branches. */
+type Scherm = 1 | 2 | 3;
 
 // Vaste donkere kleuren (nachtblauw, turquoise), zodat dit scherm er in het lichte en het donkere thema hetzelfde
 // uitziet: het is de start van de app van YoungOnes (20 nov 2026, eigenaar: "precies zoals YoungOnes").
@@ -25,17 +31,37 @@ const KNOP = "min-h-[56px] w-full rounded-xl bg-[#14D9C9] px-4 text-base font-bo
 const KNOP_OMLIJND = "min-h-[56px] w-full rounded-xl border border-white/70 px-4 text-base font-bold text-white transition hover:bg-white/10 disabled:opacity-50";
 
 /**
- * De start van een nieuwe werker als twee volschermstappen, zoals de app van YoungOnes: "Waar wil je klussen doen?"
- * (een plaats zoeken via PDOK, of de huidige locatie van het toestel; nooit vanzelf) en "In welke branches ben je
- * geïnteresseerd?" (rijen met een pictogram). Daarna "Bekijk de klussen" (naar Ontdekken) of "Maak een profiel aan"
- * (naar de stappen bovenaan Ontdekken). De plaats gaat naar /api/me/zoeklocatie, de branches naar /api/me/branches.
+ * De start van een nieuwe werker als volschermstappen, zoals de app van YoungOnes: "Waar wil je klussen doen?" (een
+ * postcode of plaats zoeken via PDOK, of de huidige locatie van het toestel; nooit vanzelf), "Heb je een KVK-nummer?" (de
+ * werkvorm, 22 nov 2026) en "In welke branches ben je geïnteresseerd?" (rijen met een pictogram). Daarna "Verder" (naar je
+ * gegevens) of "Bekijk de klussen" (naar Ontdekken). De plaats gaat naar /api/me/zoeklocatie, de werkvorm naar
+ * /api/me/richting, de branches naar /api/me/branches. Typt de werker zijn postcode, dan bewaren we die meteen ook als
+ * thuisbasis: dan vraagt "Je gegevens" hem niet nog eens (22 nov 2026, gebruikersonderzoek punt 6).
+ * De voortgang is dezelfde balk van vijf stappen als in de rest van de aanmelding (POORT_STAPPEN): plaats en werkvorm
+ * horen bij stap 1 (richting), de branches zijn stap 2; "Je gegevens" gaat verder met stap 3.
  */
-export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoeklocatie | null; brancheKeuze: BrancheKeuze | null }) {
+export function StartSchermen({
+  zoeklocatie,
+  brancheKeuze,
+  workerKind = null,
+}: {
+  zoeklocatie: Zoeklocatie | null;
+  brancheKeuze: BrancheKeuze | null;
+  /** de werkvorm als die al gekozen is (dan begint de start bij de branches) */
+  workerKind?: Werkvorm | null;
+}) {
   const ft = useFT();
   const t = ft.start;
   const tl = ft.loc;
   const router = useRouter();
-  const [stap, setStap] = useState<1 | 2>(zoeklocatie ? 2 : 1);
+  const [stap, setStap] = useState<Scherm>(!zoeklocatie ? 1 : !workerKind ? 2 : 3);
+
+  // stap 2: de werkvorm als vraag "Heb je een KVK-nummer?" (de opgeslagen waarden blijven zzp/flexwerker/uitzendkracht)
+  const [antwoord, setAntwoord] = useState<KvkAntwoord | null>(kvkAntwoordVan(workerKind));
+  const [metKvk, setMetKvk] = useState<Werkvorm | null>(workerKind === "zzp" || workerKind === "flexwerker" ? workerKind : null);
+  const [vormBezig, setVormBezig] = useState(false);
+  const [vormFout, setVormFout] = useState<string | null>(null);
+  const gekozenVorm = werkvormNaAntwoord(antwoord, metKvk);
 
   // stap 1: de plaats
   const [q, setQ] = useState("");
@@ -46,7 +72,7 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
   const [plek, setPlek] = useState<Zoeklocatie | null>(zoeklocatie);
   const tId = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // stap 2: de branches
+  // stap 3: de branches
   const [gekozen, setGekozen] = useState<Set<string>>(new Set(brancheKeuze?.alle ? BRANCHE_OPTIES.map((o) => o.key) : (brancheKeuze?.branches ?? [])));
   const alleGekozen = gekozen.size === BRANCHE_OPTIES.length;
   const [brancheBezig, setBrancheBezig] = useState(false);
@@ -72,7 +98,7 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
     }, 300);
   }, [q]);
 
-  async function bewaarPlek(nieuw: Zoeklocatie) {
+  async function bewaarPlek(nieuw: Zoeklocatie, thuis: { postcode: string; plaats: string | null } | null = null) {
     setBezig(true);
     setFout(null);
     try {
@@ -87,6 +113,15 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
         setFout(typeof msg === "string" ? msg : t.saveError);
         return;
       }
+      // de werker typte zijn postcode: meteen ook de thuisbasis (zoals "Bewaar en ga later verder" bij Je gegevens), dan
+      // vraagt die stap hem niet nog eens. Lukt dat niet, dan vraagt Je gegevens hem gewoon zoals altijd.
+      if (thuis) {
+        const body = new FormData();
+        body.set("identityMethod", "bewaren");
+        body.set("postalCode", thuis.postcode);
+        if (thuis.plaats) body.set("city", thuis.plaats);
+        await fetch("/api/onboarding", { method: "POST", body }).catch(() => null);
+      }
       setPlek((d as { zoeklocatie: Zoeklocatie }).zoeklocatie);
       setQ("");
       setHits([]);
@@ -95,6 +130,37 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
       setFout(t.saveError);
     } finally {
       setBezig(false);
+    }
+  }
+
+  /** Een gekozen zoekresultaat is de thuisbasis als de werker precies die postcode typte (geen plaats of los adres). */
+  function thuisVan(h: Hit): { postcode: string; plaats: string | null } | null {
+    const getypt = nlPostcode(q);
+    const gevonden = h.postcode ? nlPostcode(h.postcode) : null;
+    return getypt && gevonden === getypt ? { postcode: getypt, plaats: h.plaats?.trim() || null } : null;
+  }
+
+  async function bewaarWerkvorm() {
+    if (!gekozenVorm || vormBezig) return;
+    setVormBezig(true);
+    setVormFout(null);
+    try {
+      const res = await fetch("/api/me/richting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workerKind: gekozenVorm }),
+      });
+      if (!res.ok) {
+        const d: unknown = await res.json().catch(() => null);
+        const msg = d && typeof d === "object" && "error" in d ? (d as { error?: { message?: unknown } }).error?.message : null;
+        setVormFout(typeof msg === "string" ? msg : t.saveError);
+        return;
+      }
+      setStap(3);
+    } catch {
+      setVormFout(t.saveError);
+    } finally {
+      setVormBezig(false);
     }
   }
 
@@ -165,34 +231,103 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
         setBrancheBezig(false);
         return;
       }
-      // "Maak een profiel aan": naar de stappen bovenaan Ontdekken (de kaart heeft die kop als anker)
-      router.push(doel === "profiel" ? "/dashboard/klussen#werker-start-titel" : "/dashboard/klussen");
+      // "Verder": meteen naar Je gegevens (stap 3 van 5), niet eerst naar Ontdekken met een anker (22 nov 2026: daar viel de
+      // kaart "Geld verdienen?" half onder de kopbalk, en het was een "begin maar" te veel)
+      router.push(doel === "profiel" ? "/dashboard/verificatie" : "/dashboard/klussen");
     } catch {
       setBrancheFout(t.saveError);
       setBrancheBezig(false);
     }
   }
 
-  const voortgang = vulIn(t.stapVan, { n: stap, totaal: 2 });
+  // één voortgang voor de hele aanmelding (22 nov 2026): de vijf stappen van de poort. Plaats en werkvorm zijn stap 1, de
+  // branches stap 2; de stap die bezig is, is turquoise, wat klaar is wit.
+  const poortStap = stap === 3 ? 2 : 1;
+  const voortgang = vulIn(t.stapVan, { n: poortStap, totaal: POORT_STAPPEN.length });
+  const titel = stap === 1 ? tl.titel : stap === 2 ? t.kvkVraag : t.brancheTitel;
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#121418] text-white">
       <div className={`${KOP} px-5 pb-10 pt-6`}>
         <div className="flex items-center gap-4">
-          {stap === 2 && (
-            <button type="button" onClick={() => setStap(1)} aria-label={t.terugKnop} className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-white/15 text-2xl leading-none text-white">
+          {stap > 1 && (
+            <button type="button" onClick={() => setStap(stap === 3 ? 2 : 1)} aria-label={t.terugKnop} className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-white/15 text-2xl leading-none text-white">
               <span aria-hidden>‹</span>
             </button>
           )}
-          <div className="flex gap-2" role="progressbar" aria-label={voortgang} aria-valuenow={stap} aria-valuemin={1} aria-valuemax={2}>
-            <span className={`h-1.5 w-16 rounded-full ${stap === 1 ? "bg-[#14D9C9]" : "bg-white/30"}`} aria-hidden />
-            <span className={`h-1.5 w-16 rounded-full ${stap === 2 ? "bg-[#14D9C9]" : "bg-white/30"}`} aria-hidden />
+          <div className="flex flex-1 items-center gap-1.5" role="progressbar" aria-label={voortgang} aria-valuenow={poortStap} aria-valuemin={1} aria-valuemax={POORT_STAPPEN.length}>
+            {POORT_STAPPEN.map((p, i) => (
+              <span key={p.sleutel} className={`h-1.5 flex-1 rounded-full ${i + 1 < poortStap ? "bg-white" : i + 1 === poortStap ? "bg-[#14D9C9]" : "bg-white/25"}`} aria-hidden />
+            ))}
           </div>
         </div>
-        <h1 className="mt-10 font-display text-3xl font-extrabold leading-tight">{stap === 1 ? tl.titel : t.brancheTitel}</h1>
+        <p className="mt-3 text-sm font-semibold text-white/75">{voortgang}</p>
+        <h1 className="mt-6 font-display text-3xl font-extrabold leading-tight">{titel}</h1>
       </div>
 
-      {stap === 1 ? (
+      {stap === 2 ? (
+        <div className="flex flex-1 flex-col px-5 py-6">
+          <p className="text-base leading-snug text-white/85">{t.kindHint}</p>
+          {/* Ja/Nee als keuzerondjes; bij Ja daaronder de bestaande keuze zzp'er of flexwerker */}
+          <div className="mt-5 grid gap-2" role="radiogroup" aria-label={t.kvkVraag}>
+            {(["ja", "nee"] as const).map((a) => (
+              <button
+                key={a}
+                type="button"
+                role="radio"
+                aria-checked={antwoord === a}
+                onClick={() => {
+                  setVormFout(null);
+                  setAntwoord(a);
+                }}
+                className={`${RIJ} ${antwoord === a ? RIJ_AAN : RIJ_UIT}`}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-semibold">{a === "ja" ? t.kvkJa : t.kvkNee}</span>
+                  <span className="mt-0.5 block text-sm leading-snug text-white/65">{a === "ja" ? t.kvkJaUitleg : t.kvkNeeUitleg}</span>
+                </span>
+                {antwoord === a && <span className="text-[#14D9C9]" aria-hidden>✓</span>}
+              </button>
+            ))}
+          </div>
+          {antwoord === "ja" && (
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-white">{t.kvkSoort}</p>
+              <div className="mt-2 grid gap-2" role="radiogroup" aria-label={t.kvkSoort}>
+                {WERKVORMEN_MET_KVK.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="radio"
+                    aria-checked={metKvk === k}
+                    onClick={() => {
+                      setVormFout(null);
+                      setMetKvk(k);
+                    }}
+                    className={`${RIJ} ${metKvk === k ? RIJ_AAN : RIJ_UIT}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-base font-semibold">{t.kinds[k][0]}</span>
+                      <span className="mt-0.5 block text-sm leading-snug text-white/65">{t.kinds[k][1]}</span>
+                    </span>
+                    {metKvk === k && <span className="text-[#14D9C9]" aria-hidden>✓</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {vormFout && (
+            <p role="alert" className="mt-3 rounded-lg border border-[#F5C451] bg-[#FFF6DC] px-3 py-2 text-sm text-[#0B1238]">
+              {vormFout}
+            </p>
+          )}
+          <div className="sticky bottom-0 -mx-5 mt-6 bg-[#121418]/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+            <button type="button" onClick={() => void bewaarWerkvorm()} disabled={!gekozenVorm || vormBezig} className={KNOP}>
+              {vormBezig ? t.saving : t.pick}
+            </button>
+          </div>
+        </div>
+      ) : stap === 1 ? (
         <div className="flex flex-1 flex-col px-5 py-6">
           <p className="text-base leading-snug text-white/85">{t.locatieUitleg}</p>
           <label htmlFor="start-plaats" className="sr-only">
@@ -204,7 +339,7 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={tl.zoekPlaceholder}
+              placeholder={t.locatiePlaceholder}
               autoComplete="off"
               className="min-h-[56px] w-full rounded-xl border border-[#2A2F38] bg-[#1C1F26] px-4 pr-12 text-base text-white outline-none placeholder:text-white/50 focus:border-[#14D9C9]"
             />
@@ -221,7 +356,7 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
                 <li key={`${h.lat},${h.lng},${i}`}>
                   <button
                     type="button"
-                    onClick={() => void bewaarPlek({ lat: h.lat, lng: h.lng, label: h.plaats?.trim() || h.label })}
+                    onClick={() => void bewaarPlek({ lat: h.lat, lng: h.lng, label: h.plaats?.trim() || h.label }, thuisVan(h))}
                     disabled={bezig}
                     className="flex min-h-[56px] w-full items-center gap-4 py-2 text-left"
                   >
@@ -285,12 +420,14 @@ export function StartSchermen({ zoeklocatie, brancheKeuze }: { zoeklocatie: Zoek
               {brancheFout}
             </p>
           )}
+          {/* "Verder" (naar Je gegevens) is de hoofdweg; de klussen bekijken kan ook eerst (22 nov 2026: "Verder" in plaats van
+              "Maak een profiel aan", na "Account aanmaken" klonk dat als opnieuw beginnen) */}
           <div className="sticky bottom-0 -mx-5 mt-6 space-y-3 bg-[#121418]/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-            <button type="button" onClick={() => void bewaarBranches("klussen")} disabled={brancheBezig} className={KNOP}>
-              {brancheBezig ? t.saving : t.brancheBekijk}
+            <button type="button" onClick={() => void bewaarBranches("profiel")} disabled={brancheBezig} className={KNOP}>
+              {brancheBezig ? t.saving : t.brancheProfielAan}
             </button>
-            <button type="button" onClick={() => void bewaarBranches("profiel")} disabled={brancheBezig} className={KNOP_OMLIJND}>
-              {t.brancheProfielAan}
+            <button type="button" onClick={() => void bewaarBranches("klussen")} disabled={brancheBezig} className={KNOP_OMLIJND}>
+              {t.brancheBekijk}
             </button>
           </div>
         </div>

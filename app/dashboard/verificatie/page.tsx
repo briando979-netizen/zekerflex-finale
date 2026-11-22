@@ -294,6 +294,7 @@ export default async function VerificatiePage() {
           persoon={persoon}
           beginStap={begin}
           idKlaar={idKlaar}
+          woonKlaar={woonKlaar}
           inBehandeling={inBehandeling}
           tochOpnieuw={pt.attempt.tochOpnieuw}
           kanSluiten={poort?.klaar ?? true}

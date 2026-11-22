@@ -5,6 +5,7 @@ import { binnenNederland, maakZoeklocatie } from "@/lib/worker/zoeklocatie-kern"
 import { START_SCHERM_SINDS, startSchermTonen } from "@/lib/onboarding/werker-poort";
 import { ERASABLE_KV_PREFIXES } from "@/lib/privacy/user-kv";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
+import { kvkAntwoordVan, nlPostcode, werkvormNaAntwoord, WERKVORMEN_MET_KVK } from "@/lib/onboarding/kvk-vraag";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
@@ -65,11 +66,56 @@ describe("wie het startscherm ziet", () => {
   });
   it("de teksten in vijf talen", () => {
     for (const [taal, d] of Object.entries(FREELANCER_DICTS)) {
-      for (const k of ["locatieUitleg", "locatieVerder", "brancheTitel", "brancheProfielAan", "terugKnop"] as const) {
-        expect(d.start[k].length, `${taal} ${k}`).toBeGreaterThan(2);
-        if (taal !== "nl" && k !== "terugKnop") expect(d.start[k], `${taal} ${k}`).not.toBe(FREELANCER_DICTS.nl.start[k]);
+      for (const k of ["locatieUitleg", "locatieVerder", "locatiePlaceholder", "brancheTitel", "brancheProfielAan", "terugKnop", "kvkVraag", "kvkJa", "kvkJaUitleg", "kvkNee", "kvkNeeUitleg", "kvkSoort"] as const) {
+        expect(d.start[k].length, `${taal} ${k}`).toBeGreaterThan(1);
+        if (taal !== "nl" && !["terugKnop", "kvkNee"].includes(k)) expect(d.start[k], `${taal} ${k}`).not.toBe(FREELANCER_DICTS.nl.start[k]);
       }
       expect(d.start.locatieVerder).toContain("{plaats}");
+      // "Flexwerker" stuurde wie geen KVK heeft nog naar Uitzendkracht: dat doet nu de vraag "Heb je een KVK-nummer?"
+      expect(d.start.kinds.flexwerker[1], taal).not.toMatch(/Uitzendkracht|Agency worker|tymczasowy|temporar|Тимчасовий/);
     }
+    // 22 nov 2026 (gebruikersonderzoek punt 6): "Verder", niet "Maak een profiel aan"
+    expect(FREELANCER_DICTS.nl.start.brancheProfielAan).toBe("Verder");
+  });
+});
+
+describe("één keer vragen, één voortgang (22 nov 2026, gebruikersonderzoek punt 6 en 7)", () => {
+  it("de werkvorm als vraag: Nee = uitzendkracht, Ja = daarna zzp'er of flexwerker; de opgeslagen waarden blijven gelijk", () => {
+    expect(werkvormNaAntwoord("nee", null)).toBe("uitzendkracht");
+    expect(werkvormNaAntwoord("nee", "zzp")).toBe("uitzendkracht");
+    expect(werkvormNaAntwoord("ja", null)).toBeNull();
+    expect(werkvormNaAntwoord("ja", "zzp")).toBe("zzp");
+    expect(werkvormNaAntwoord("ja", "flexwerker")).toBe("flexwerker");
+    expect(werkvormNaAntwoord(null, "zzp")).toBeNull();
+    expect(kvkAntwoordVan("uitzendkracht")).toBe("nee");
+    expect(kvkAntwoordVan("flexwerker")).toBe("ja");
+    expect(kvkAntwoordVan(null)).toBeNull();
+    expect(WERKVORMEN_MET_KVK).toEqual(["zzp", "flexwerker"]);
+  });
+
+  it("herkent een Nederlandse postcode (die meteen de thuisbasis is)", () => {
+    expect(nlPostcode("9712 hn")).toBe("9712HN");
+    expect(nlPostcode(" 1011AB ")).toBe("1011AB");
+    expect(nlPostcode("Groningen")).toBeNull();
+    expect(nlPostcode("0123AB")).toBeNull();
+    expect(nlPostcode("1234SS")).toBeNull();
+  });
+
+  it("het startscherm vraagt plaats, werkvorm en branches met de voortgang van de hele aanmelding, en 'Verder' gaat naar je gegevens", () => {
+    const s = lees("components/app/StartSchermen.tsx");
+    expect(s).toContain('fetch("/api/me/richting"');
+    expect(s).toContain("POORT_STAPPEN.map((p, i)");
+    expect(s).toContain("aria-valuemax={POORT_STAPPEN.length}");
+    expect(s).toContain('router.push(doel === "profiel" ? "/dashboard/verificatie" : "/dashboard/klussen")');
+    expect(s).not.toContain("#werker-start-titel");
+    // een getypte postcode wordt ook de thuisbasis, via dezelfde route als "Bewaar en ga later verder"
+    expect(s).toContain('body.set("identityMethod", "bewaren")');
+    expect(lees("app/dashboard/start/page.tsx")).toContain("workerKind={fiscal?.workerKind ?? null}");
+  });
+
+  it("Je gegevens slaat 'Waar woon je?' over als de postcode al bekend is en er geen KVK-vraag is", () => {
+    const f = lees("components/app/OnboardingForm.tsx");
+    expect(f).toContain('setStap(woonKlaar && !requireKvk && stappen.includes("id") ? "id" : "woon");');
+    expect(lees("app/dashboard/verificatie/page.tsx")).toContain("woonKlaar={woonKlaar}");
   });
 });

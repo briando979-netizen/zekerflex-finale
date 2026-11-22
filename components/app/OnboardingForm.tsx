@@ -50,6 +50,7 @@ export function OnboardingForm({
   persoon,
   beginStap,
   idKlaar = false,
+  woonKlaar = false,
   kanSluiten = true,
   laatstePoging = null,
   bsnBekend = false,
@@ -63,6 +64,8 @@ export function OnboardingForm({
   beginStap: WieStap;
   /** de identiteit is al bevestigd: dan geen ID-check meer */
   idKlaar?: boolean;
+  /** de postcode van de thuisbasis is al bewaard: zonder KVK-vraag slaat "Verder" na stap 1 "Waar woon je?" over */
+  woonKlaar?: boolean;
   /** de verplichte poort (lib/onboarding/werker-poort.ts) mag niet gesloten worden */
   kanSluiten?: boolean;
   /** de vorige ID-poging (uitslag en redenen), getoond in de ID-stap */
@@ -465,7 +468,9 @@ export function OnboardingForm({
             begin={persoonNu}
             onKlaar={(stand) => {
               setPersoonNu(stand);
-              setStap("woon");
+              // de postcode is al bekend (bijv. getypt bij "Waar wil je klussen doen?") en er is geen KVK-vraag: dan niet
+              // nog eens "Waar woon je?", meteen de ID-check (22 nov 2026, gebruikersonderzoek punt 6). Terug kan altijd.
+              setStap(woonKlaar && !requireKvk && stappen.includes("id") ? "id" : "woon");
             }}
           />
         )}
