@@ -10,6 +10,8 @@ export const PWA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 export const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
 /** De iPhone-app als testversie in TestFlight (openbare link). */
 export const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
+/** De Google-groep van de testers: wie lid wordt, mag de Android-testversie meteen installeren (Play: testtrack via de groep, 22 nov 2026). */
+export const TESTGROEP_URL = "https://groups.google.com/g/zekerflex-testers";
 
 /** Draait de pagina als geïnstalleerde app (Android/Chrome standalone of iOS Safari "Zet op beginscherm")? */
 export function isStandaloneBrowser(w: Pick<Window, "matchMedia" | "navigator"> | undefined): boolean {
