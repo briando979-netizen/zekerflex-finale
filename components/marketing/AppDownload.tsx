@@ -4,6 +4,7 @@ import { TelefoonDemo } from "@/components/marketing/TelefoonDemo";
 import { CONTACTS } from "@/lib/seo";
 import { featureEnabled } from "@/lib/flags";
 import { TesterWordenForm } from "@/components/marketing/TesterWordenForm";
+import { ALLEEN_APP_VLAG } from "@/lib/app-vereist";
 
 // The Android app (com.zekerflex.app) is in Google Play testing, not yet
 // public. The test link only works for Gmail addresses on the tester list, so
@@ -155,6 +156,8 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
   const iphone = await featureEnabled("iphone-testflight").catch(() => false);
   // vlag `iphone-appstore` (standaard uit): de echte App Store-knop, zodra de pagina openbaar is
   const appStore = await featureEnabled("iphone-appstore").catch(() => false);
+  // vlag "werker-omgeving alleen in de app" (standaard uit sinds 22 nov 2026: eerst de browser, dan de app)
+  const alleenApp = await featureEnabled(ALLEEN_APP_VLAG).catch(() => false);
   return (
     <section id="app" className={`scroll-mt-24 ${standalone ? "" : "hero-ink"} text-white`}>
       <div className={`shell ${standalone ? "py-4" : "py-8 md:py-10"}`}>
@@ -204,10 +207,10 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
                 .
               </p>
             )}
-            {/* de knoppen rechtsboven sturen werkers hierheen (KOP_KNOPPEN). Je werkersomgeving gebruik je sinds 21 nov alleen in de
-                app (lib/app-vereist.ts); een account aanmaken kan wel hier, en bedrijven loggen in via de website. */}
+            {/* "alleen in de app" staat sinds 22 nov achter een vlag (lib/app-vereist.ts, standaard uit: eerst de browser). Een
+                account aanmaken kan altijd hier, en bedrijven loggen in via de website. */}
             <p className="mt-4 text-xs text-white/65">
-              Je werkersomgeving gebruik je in de app. Nog geen account?{" "}
+              {alleenApp ? "Je werkersomgeving gebruik je in de app." : "Je kunt ook gewoon in de browser beginnen."} Nog geen account?{" "}
               <Link href="/register" className="underline hover:text-white/80">
                 Maak er een aan
               </Link>

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
+import { ALLEEN_APP_VLAG } from "@/lib/app-vereist";
 
 // ---------------------------------------------------------------------------
 // Feature flags / remote config.
@@ -139,6 +140,16 @@ FLAG_REGISTRY.push({
   label: "Postbus info@ automatisch afhandelen",
   description:
     "Aan (echt) = elke 5 minuten: automatische mails gaan naar de map Automatisch, terugkaatsers naar de map Terugkaatsers, iemand die werk zoekt krijgt één eerste antwoord met de aanmeldlink (hooguit één per adres per 30 dagen, hooguit 20 per uur) en bij een mail van een bedrijf krijg je een melding. Er wordt nooit iets verwijderd en mails ouder dan 3 dagen blijven met rust. Uit (standaard, proef) = hij deelt alleen in en schrijft op wat hij zou doen; er wordt niets verplaatst en niets verstuurd. Kijk in Beheer, Mail.",
+  default: false,
+});
+
+// De werker-omgeving alleen in de app (lib/app-vereist.ts). 21 nov 2026 aan in de code; 22 nov 2026 (eigenaar: "eerst browser, dan
+// app") achter deze vlag, standaard uit: de app staat nog alleen in een testprogramma en bijna iedereen haakte af.
+FLAG_REGISTRY.push({
+  key: ALLEEN_APP_VLAG,
+  label: "Werkers: de werker-omgeving alleen in de app",
+  description:
+    "Aan = een werker die /dashboard in een gewone browser opent, ziet alleen het scherm \"Installeer de ZekerFlex-app\" (de Android-app, de iPhone-app en een geïnstalleerde web-app komen er wel in; beheerders mogen altijd kijken). Zet dit pas aan als de app gewoon in de Play Store en de App Store staat, zonder testgroep of TestFlight. Uit (standaard) = eerst de browser: de werker doet zijn startstappen en bekijkt de klussen gewoon op de website, en krijgt na de ID-check een kaart die de app voorstelt (wegklikbaar).",
   default: false,
 });
 
