@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { SHIFT_TEMPLATES, MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
 import { listPools } from "@/lib/pools/store";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
 import { PageHeader } from "@/components/app/ui";
 import { NewShiftForm } from "@/components/app/NewShiftForm";
 import { SnelPlaatsen } from "@/components/werkgever/SnelPlaatsen";
@@ -27,11 +29,17 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   const kopie = kopieId
     ? await prisma.shift.findFirst({
         where: { AND: [{ id: kopieId }, { branch: scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } } }] },
-        select: { title: true, description: true, dresscode: true, startsAt: true, endsAt: true, positions: true, hourlyRateCents: true, branchId: true, annuleerUren: true },
+        select: { title: true, description: true, dresscode: true, startsAt: true, endsAt: true, positions: true, hourlyRateCents: true, branchId: true, annuleerUren: true, branch: { select: { tenantId: true } } },
       })
     : null;
+  // een eigen-testbedrijf (lib/admin/eigen-test-regel.ts) houdt de pool van het origineel: de kopie gaat niet naar de open markt
+  const kopiePoolId =
+    kopieId && kopie && isEigenTestBedrijf(await leesEigenTest(), kopie.branch.tenantId)
+      ? (await prisma.shiftPoolInvite.findFirst({ where: { shiftId: kopieId }, select: { poolId: true } }))?.poolId
+      : undefined;
   const voorinvulling = kopie
     ? {
+        ...(kopiePoolId ? { poolId: kopiePoolId } : {}),
         titel: kopie.title,
         van: amsterdamClock(kopie.startsAt),
         tot: amsterdamClock(kopie.endsAt),

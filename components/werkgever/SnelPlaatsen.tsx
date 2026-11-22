@@ -49,6 +49,8 @@ export interface SnelVoorinvulling {
   annuleerUren: number;
   omschrijving: string;
   dresscode: string;
+  /** de pool van het origineel, alleen bij een eigen-testbedrijf (lib/admin/eigen-test-regel.ts): de kopie blijft privé */
+  poolId?: string | undefined;
 }
 
 export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "nl", voorinvulling, kostenplaatsen = [] }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten; locale?: "nl" | "en"; voorinvulling?: SnelVoorinvulling; /** kostenplaatsen/PO-nummers van het bedrijf (OrgProfileExtra.costCentres); leeg = geen keuze */ kostenplaatsen?: string[] }) {
@@ -187,6 +189,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
       <input type="hidden" name="hourlyRateCents" value={String(tariefCent)} />
       <input type="hidden" name="positions" value={String(personen)} />
       <input type="hidden" name="annuleerUren" value={annuleerUren} />
+      {voorinvulling?.poolId && <input type="hidden" name="poolId" value={voorinvulling.poolId} />}
 
       {stap === 1 && (
         <div className="mt-5 space-y-4">
