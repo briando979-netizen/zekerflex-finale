@@ -134,6 +134,9 @@ const nextConfig = {
       // stuurt voorgoed door (308). Een anker (#dba, #matching) neemt de browser mee. De omleidingen hierboven gaan meteen
       // naar /bedrijven, zonder tussenstap.
       { source: "/voor-bedrijven", destination: "/bedrijven", permanent: true },
+      // 22 nov 2026: de uitlegpagina "nog in de opbouwfase" klopt niet meer (de app is er, de voorbeeldaccounts zijn gewist); oude
+      // links (mails, de melding op het werkgeversstartscherm) gaan voorgoed (308) naar de voorpagina.
+      { source: "/opbouwfase", destination: "/", permanent: true },
       // Browsers, pdf-viewers en de linkvoorvertoning van Apple vragen deze vaste adressen in de root, ook al staat het
       // pictogram in de pagina-kop (13 nov: 17× /favicon.ico en 7× een apple-touch-icon als 404 in 2 dagen)
       { source: "/favicon.ico", destination: "/icons/icon-192.png", permanent: true },
