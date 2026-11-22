@@ -11,6 +11,7 @@ import { WERKGEVER_KAART, WERKGEVER_STAPPEN } from "@/lib/onboarding/werkgever-t
 import { OnboardingProgress } from "@/components/app/OnboardingProgress";
 import { tenantVerification } from "@/lib/company/verified";
 import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
+import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { maakBrancheKeuze } from "@/lib/shifts/branche-keuze";
 import { prisma } from "@/lib/prisma";
 import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
@@ -315,6 +316,8 @@ export default async function WerkgeverStartPage() {
 
   return (
     <>
+      {/* alleen hier, niet meer op elke werkgeverspagina (22 nov 2026, gebruikersonderzoek punt 14: hij duwde alles een half scherm omlaag) */}
+      <OpbouwfaseBalk soort="werkgever" />
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       {!startModus && !alleenFlexwerk && <EmployerDashboardHero />}
       {/* ook in de startmodus: een nieuw bedrijf met een klus van /klus-plaatsen zet die meteen uit (22 nov 2026) */}
