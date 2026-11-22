@@ -25,7 +25,6 @@
     "components/app/OnboardingOnderhoudBalk.tsx": 1,
     "components/app/OpbouwfaseBalk.tsx": 1,
     "components/app/PlanPicker.tsx": 2,
-    "components/app/SjabloonGalerij.tsx": 1,
     "components/app/TemplatesBoard.tsx": 1,
     "components/app/TerminalsBeheer.tsx": 7,
     "components/app/WerkgeverApiKeysBoard.tsx": 5,

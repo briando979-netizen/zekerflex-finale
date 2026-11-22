@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
@@ -16,6 +16,7 @@ import { FairPayMeter } from "@/components/app/FairPayMeter";
 import { toShiftFormValues } from "@/lib/klusconcept/concept";
 import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
+import { SJABLOON_EN, SJABLOON_NL } from "@/lib/shifts/sjabloon-kiezer-teksten";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
@@ -108,6 +109,8 @@ export function NewShiftForm({
     [templates, minRateCents],
   );
   const [tpl, setTpl] = useState("");
+  // "Of vul het zelf in" onder de functiekiezer brengt je naar dit veld
+  const titelRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(init?.title ?? "");
   const [description, setDescription] = useState(init?.description ?? "");
   const [dresscode, setDresscode] = useState(init?.dresscode ?? "");
@@ -291,6 +294,8 @@ export function NewShiftForm({
             const t = templates.find((x) => x.key === key);
             if (t) applyTemplate(t);
           }}
+          teksten={locale === "en" ? SJABLOON_EN : SJABLOON_NL}
+          onEigen={() => titelRef.current?.focus()}
         />
 
         {ownTemplates.length > 0 && (
@@ -396,7 +401,7 @@ export function NewShiftForm({
 
         <label className="block">
           <span className="field-label">{n.titel}</span>
-          <input name="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={n.titelPlaceholder} className="field-input" />
+          <input ref={titelRef} name="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={n.titelPlaceholder} className="field-input" />
         </label>
 
         <div>
