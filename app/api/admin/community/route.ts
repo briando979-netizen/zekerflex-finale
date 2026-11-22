@@ -46,9 +46,12 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (req, { principal 
   } else if (a.actie === "toelaten") {
     await laatWeerToe(a.userId);
     samenvatting = `Community: account ${a.userId} weer toegelaten`;
-  } else {
+  } else if (a.actie === "schrijven") {
     await zetInstelling({ schrijvenDicht: a.dicht });
     samenvatting = `Community: nieuwe berichten ${a.dicht ? "dicht" : "open"}`;
+  } else {
+    // TypeScript vernauwt de varianten met meer waarden niet na een ||-keten; deze tak komt in de praktijk nooit voor
+    throw AppError.validation("Deze actie begrijpen we niet.");
   }
   await recordAudit({
     category: "ADMIN",
