@@ -96,6 +96,11 @@ export const SOCIALS: { name: string; href: string }[] = [
   { name: "Instagram", href: "https://www.instagram.com/zekerflex" },
   { name: "TikTok", href: "https://www.tiktok.com/@zekerflex" },
   { name: "YouTube", href: "https://www.youtube.com/@Zekerflex" },
+  // 22 nov 2026 (eigenaar: "voeg alle links toe die we hebben"): de bedrijfsprofielen. Een persoonlijk LinkedIn-profiel hoort
+  // hier niet: sameAs moet naar het bedrijf wijzen.
+  { name: "Facebook", href: "https://www.facebook.com/zekerflex" },
+  { name: "X", href: "https://x.com/ZekerFlexNL" },
+  { name: "Threads", href: "https://www.threads.com/@zekerflex" },
   // Add the LinkedIn company page here once it's live — for a B2B platform it's
   // the strongest `sameAs` signal for entity resolution:
   // { name: "LinkedIn", href: "https://www.linkedin.com/company/zekerflex" },

@@ -38,6 +38,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/id-scan","file":"app/id-scan/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/installatie/[code]","file":"app/installatie/[code]/page.tsx","area":"Account & overig","dynamic":true},
   {"route":"/kyc/callback","file":"app/kyc/callback/page.tsx","area":"Account & overig","dynamic":false},
+  {"route":"/links","file":"app/links/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/login","file":"app/login/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/monteur/[code]","file":"app/monteur/[code]/page.tsx","area":"Account & overig","dynamic":true},
   {"route":"/offerte/[token]","file":"app/offerte/[token]/page.tsx","area":"Account & overig","dynamic":true},
