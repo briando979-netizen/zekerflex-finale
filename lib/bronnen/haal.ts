@@ -107,7 +107,7 @@ async function kvk(): Promise<Omit<Meting, "op" | "duurMs">> {
 }
 
 /** De pagina's die elke dag in een echte browser bekeken worden. */
-export const SCHERM_PAGINAS = ["/", "/login", "/aanbod", "/shop", "/werkgever/horeca"] as const;
+export const SCHERM_PAGINAS = ["/", "/login", "/aanbod", "/werkgever/horeca"] as const;
 
 async function schermen(): Promise<Omit<Meting, "op" | "duurMs">> {
   if (!scraperIngesteld()) return { ...lege("De browser-werker staat uit (SCRAPER_TOKEN ontbreekt in .env.production)."), tekst: "Nog niet ingesteld" };

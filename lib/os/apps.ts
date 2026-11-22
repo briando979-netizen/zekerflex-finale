@@ -166,9 +166,8 @@ const VERKOPER_APPS: OsApp[] = [
   { id: "v-websitevoorstellen", naam: "Websitevoorstellen", uitleg: "Een voorstel op maat maken en volgen.", href: "/sales/websitevoorstellen", icoon: "website", categorie: "groei", rollen: VERKOPER, zoek: ["offerte", "voorstel"] },
 ];
 
-/** Apps die iedereen heeft: de winkel, de kaart en de gereedschappen. */
+/** Apps die iedereen heeft: de kaart en de gereedschappen (de winkel is sinds 22 nov 2026 weg: alleen flexwerk). */
 const GEDEELDE_APPS: OsApp[] = [
-  { id: "g-shop", naam: "Winkel", uitleg: "Werkkleding, PBM en cadeaus.", href: "/shop", icoon: "winkel", categorie: "online", rollen: IEDEREEN, zoek: ["webshop", "kleding", "bestellen"] },
   { id: "g-kaart", naam: "Kaart", uitleg: "Nederland in kaart, met open diensten.", href: "/kaart", icoon: "kaart", categorie: "gereedschap", rollen: IEDEREEN, groot: true, zoek: ["gps", "navigatie"] },
   { id: "g-open-diensten", naam: "Open diensten", uitleg: "Alle beschikbare klussen op de kaart.", href: "/open-diensten", icoon: "werk", categorie: "werk", rollen: IEDEREEN },
   { id: "g-rekentools", naam: "Rekentools", uitleg: "Uurtarief, kosten en de Wet DBA-check.", href: "/rekentools", icoon: "rekenen", categorie: "gereedschap", rollen: IEDEREEN, zoek: ["calculator", "tarief"] },
@@ -269,7 +268,7 @@ export interface OsKaart {
 
 /** Wat standaard op het bureaublad staat als iemand nog niets heeft vastgezet. */
 export const STANDAARD_VASTGEZET: Record<OsRol, string[]> = {
-  werker: ["w-klussen", "w-diensten", "w-uren", "w-berichten", "w-uitbetalingen", "g-shop"],
+  werker: ["w-klussen", "w-diensten", "w-uren", "w-berichten", "w-uitbetalingen"],
   werkgever: ["b-start", "b-diensten", "b-uren", "b-kalender", "b-berichten", "b-facturen"],
   verkoper: ["v-sales", "v-websitevoorstellen", "g-kaart", "g-kennis", "g-aanbod"],
   admin: ["a-start", "a-te-doen", "a-cockpit", "a-gebruikers", "a-financien", "a-sales"],
