@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  DOELGROEP_PAGINA,
   SNELLE_ACTIES,
   eigenLinks,
   isExternal,
@@ -18,7 +17,7 @@ import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 
 // Het mobiele menu (onder 1024 px; laptops en groter krijgen de hoofdnavigatie in de kopbalk). Eerst wat je het vaakst komt doen (snelle
 // acties per doelgroep), dan de onderdelen als uitklapbare lijsten, en de knoppen
-// Inloggen / Start vandaag altijd onderin in beeld. SiteHeader legt de balk met
+// Inloggen en de hoofdknop van die kant (KOP_KNOPPEN) altijd onderin in beeld. SiteHeader legt de balk met
 // dit menu boven de bezoekerstip en de chatknop zolang het open is.
 // nav: het menu zoals de bovenbalk het toont (bouwNav: standaard + de eigen
 // aanpassingen uit de Site-ontwerper).
@@ -135,9 +134,8 @@ export function MobileMenu({
               </li>
             ))}
           </ul>
-          <Link href={DOELGROEP_PAGINA[doel].href} className="mt-3 inline-flex py-1 text-sm font-semibold text-brand-mint hover:underline">
-            {DOELGROEP_PAGINA[doel].label} →
-          </Link>
+          {/* geen losse "Alles voor werknemers →" meer: dat was dezelfde pagina als de tegel Starten als freelancer (22 nov 2026);
+              bij bedrijven is "Alles voor bedrijven" een tegel */}
 
           <nav aria-label="Onderdelen" className="mt-4 border-t border-white/10">
             {nav.map((n) => {
@@ -227,28 +225,17 @@ export function MobileMenu({
             </Link>
             .
           </p>
-          <Link href="/app" className="mt-3 inline-flex py-1 text-sm font-semibold text-white/75 hover:text-white">
-            Download de app →
-          </Link>
+          {/* geen losse "Download de app →" meer: de tegel bovenaan is genoeg (22 nov 2026, gebruikersonderzoek) */}
         </div>
       </div>
 
-      {/* altijd in beeld, ook met de duimen onderaan het scherm */}
+      {/* altijd in beeld, ook met de duimen onderaan het scherm: Inloggen (altijd /login) en de ene hoofdknop van die kant */}
       <div className="border-t border-white/10 bg-black/25 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-        {/* werkers: ook Inloggen (wie via de site een account maakte, logt hier in) */}
-        {KOP_KNOPPEN[doel].inloggen && (
-          <div className="shell mb-2.5">
-            <Link href={KOP_KNOPPEN[doel].inloggen!.href} className="block rounded-full border border-white/25 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10">
-              {KOP_KNOPPEN[doel].inloggen!.label}
-            </Link>
-          </div>
-        )}
-        <div className="shell grid grid-cols-2 gap-2.5">
-          {/* per kant (KOP_KNOPPEN): werkers naar de app, bedrijven inloggen of aanmelden */}
-          <Link href={KOP_KNOPPEN[doel].eerste.href} className="rounded-full bg-white px-4 py-3 text-center text-sm font-bold text-ink transition hover:bg-white/90">
+        <div className="shell flex gap-2.5">
+          <Link href={KOP_KNOPPEN[doel].eerste.href} className="flex-none rounded-full bg-white px-5 py-3 text-center text-sm font-bold text-ink transition hover:bg-white/90">
             {KOP_KNOPPEN[doel].eerste.label}
           </Link>
-          <Link href={KOP_KNOPPEN[doel].tweede.href} className="rounded-full bg-brand-mint px-4 py-3 text-center text-sm font-bold text-ink transition hover:brightness-105">
+          <Link href={KOP_KNOPPEN[doel].tweede.href} className="min-w-0 flex-1 rounded-full bg-brand-mint px-4 py-3 text-center text-sm font-bold text-ink transition hover:brightness-105">
             {KOP_KNOPPEN[doel].tweede.label}
           </Link>
         </div>

@@ -47,25 +47,6 @@ describe("geen beloftes die niet kloppen", () => {
     expect(lees("app/(marketing)/demo/page.tsx")).not.toMatch(/duizenden|honderden/);
   });
 
-  // 22 nov 2026 (gebruikersonderzoek punt 2): de tip "Er wachten klussen op je … reageer direct" stond er terwijl alle open
-  // klussen testklussen waren. Nu alleen een belofte van klussen als er een echte open staat; anders eerlijk. Nooit "direct".
-  it("de bezoekerstip belooft alleen klussen als er een echte openstaat, en nergens 'reageer direct'", () => {
-    expect(copyKeyVoor("werk", false)).toBe("werkStart");
-    expect(copyKeyVoor("exit", false)).toBe("exitStart");
-    expect(copyKeyVoor("werk", true)).toBe("werk");
-    expect(copyKeyVoor("bedrijf", false)).toBe("bedrijf");
-    expect(BEZOEKERSTIP.nl!.werkStart.title).toBe("We starten nu in jouw regio");
-    expect(BEZOEKERSTIP.nl!.werkStart.body).toBe("Meld je aan en hoor als eerste van nieuwe klussen.");
-    const alles = [lees("lib/marketing/bezoekerstip.ts"), lees("components/marketing/VisitorNudge.tsx")].join("\n");
-    expect(alles).not.toMatch(/Er wachten klussen op je|reageer direct|reageren direct|react right away|od razu się zgłoś|aplică imediat|одразу відгук/i);
-    for (const [taal, teksten] of Object.entries(BEZOEKERSTIP)) {
-      for (const k of ["werkStart", "exitStart"] as const) expect(teksten[k].href, `${taal} ${k}`).not.toBe("/klussen");
-    }
-    // de server telt de echte klussen (zonder testklussen) en geeft dat door aan de tip
-    expect(lees("app/(marketing)/layout.tsx")).toContain("<VisitorNudge echteKlussen={echteKlussen} />");
-    expect(lees("lib/marketing/echte-klussen.ts")).toContain("publicOpenShifts({ take: 1 })");
-  });
-
   it("/nieuwsbrief/afmelden zegt alleen 'Je bent afgemeld' met een geldige code", () => {
     const s = lees("app/(marketing)/nieuwsbrief/afmelden/page.tsx");
     expect(s).toContain('{afgemeld ? "Je bent afgemeld"');
@@ -124,5 +105,27 @@ describe("geen interne notities of Engelse vaktaal voor klanten", () => {
   it("de fiscale samenvatting volgt de facturatiewijze van de server (een uitzendkracht krijgt een loonstrook)", () => {
     expect(lees("components/app/FiscalForm.tsx")).toContain('resolvedInvoiceMode: facturatie ?? "reverse-billing"');
     expect(lees("app/dashboard/fiscaal/page.tsx")).toContain("facturatie={invoiceModeFor(fiscal)}");
+  });
+});
+
+// 22 nov 2026 (gebruikersonderzoek punt 2): apart blok, zodat het samenvoegen met de bedrijvenkant geen botsing geeft
+describe("de bezoekerstip belooft geen klussen die er niet zijn", () => {
+  // 22 nov 2026 (gebruikersonderzoek punt 2): de tip "Er wachten klussen op je … reageer direct" stond er terwijl alle open
+  // klussen testklussen waren. Nu alleen een belofte van klussen als er een echte open staat; anders eerlijk. Nooit "direct".
+  it("de bezoekerstip belooft alleen klussen als er een echte openstaat, en nergens 'reageer direct'", () => {
+    expect(copyKeyVoor("werk", false)).toBe("werkStart");
+    expect(copyKeyVoor("exit", false)).toBe("exitStart");
+    expect(copyKeyVoor("werk", true)).toBe("werk");
+    expect(copyKeyVoor("bedrijf", false)).toBe("bedrijf");
+    expect(BEZOEKERSTIP.nl!.werkStart.title).toBe("We starten nu in jouw regio");
+    expect(BEZOEKERSTIP.nl!.werkStart.body).toBe("Meld je aan en hoor als eerste van nieuwe klussen.");
+    const alles = [lees("lib/marketing/bezoekerstip.ts"), lees("components/marketing/VisitorNudge.tsx")].join("\n");
+    expect(alles).not.toMatch(/Er wachten klussen op je|reageer direct|reageren direct|react right away|od razu się zgłoś|aplică imediat|одразу відгук/i);
+    for (const [taal, teksten] of Object.entries(BEZOEKERSTIP)) {
+      for (const k of ["werkStart", "exitStart"] as const) expect(teksten[k].href, `${taal} ${k}`).not.toBe("/klussen");
+    }
+    // de server telt de echte klussen (zonder testklussen) en geeft dat door aan de tip
+    expect(lees("app/(marketing)/layout.tsx")).toContain("<VisitorNudge echteKlussen={echteKlussen} />");
+    expect(lees("lib/marketing/echte-klussen.ts")).toContain("publicOpenShifts({ take: 1 })");
   });
 });

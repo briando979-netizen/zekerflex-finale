@@ -6,7 +6,6 @@ import { guideBySlug } from "@/lib/kennis/content";
 import { whitepaperBySlug } from "@/lib/kennis/whitepapers";
 import {
   AANBOD_KOLOMMEN,
-  DOELGROEP_PAGINA,
   NAV,
   SNELLE_ACTIES,
   isExternal,
@@ -43,7 +42,6 @@ const alleLinks = (): string[] => {
     for (const it of k.items) links.push(it.href);
   }
   for (const lijst of Object.values(SNELLE_ACTIES)) for (const s of lijst) links.push(s.href);
-  for (const d of Object.values(DOELGROEP_PAGINA)) links.push(d.href);
   links.push(startHref("werknemers"), startHref("bedrijven"));
   return links;
 };
@@ -92,6 +90,7 @@ describe("menu van de openbare site (lib/marketing/site-nav.ts)", () => {
       expect(n.overzicht?.length ?? 0, n.key).toBeGreaterThan(0);
       if (n.menu) expect(Object.keys(n.menu).sort()).toEqual(["bedrijven", "werknemers"]);
     }
-    expect(startHref("bedrijven")).toContain("type=bedrijf");
+    // 22 nov 2026: de hoofdknop voor bedrijven is "Plaats een klus" (zonder account, met de kosten)
+    expect(startHref("bedrijven")).toBe("/klus-plaatsen");
   });
 });

@@ -19,7 +19,8 @@ import { COPY, copyKeyVoor, type Kind } from "@/lib/marketing/bezoekerstip";
 
 const DONE_KEY = "zf_nudge_done";
 
-const COMPANY = /^\/(voor-bedrijven|prijzen|personeel-inhuren|demo)(\/|$)/;
+// /bedrijven erbij: /voor-bedrijven is daarin samengevoegd (22 nov 2026) en stuurt door
+const COMPANY = /^\/(bedrijven|voor-bedrijven|prijzen|personeel-inhuren|demo)(\/|$)/;
 const WORK = /^\/($|klussen|freelance-werk|voor-freelancers|uitzendbureau)/;
 // Pagina's die sowieso over werk gaan — daar blijft het de "werk"-nudge,
 // ongeacht de schakelaar. Op de homepage bepaalt de schakelaar het.
