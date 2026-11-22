@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { INTERNE_ADRESSEN, heeftEigenTest, isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
+import { eigenTestGebruikerIds } from "@/lib/admin/eigen-test-zicht";
 
 // ---------------------------------------------------------------------------
 // Testklussen en echte werkers. Achter een testklus (lib/shifts/testklus.ts)
@@ -12,20 +14,12 @@ import { leesEigenTest } from "@/lib/admin/eigen-test";
 //     accounts aan (testklusOntvangers): geen voorstel, push of mail meer
 //     voor echte werkers;
 //   - de acceptatiescore telt voorstellen voor een testklus niet mee (testklusIds).
-// In de klussenlijst blijft een testklus zichtbaar, met label en uitleg.
+// In de klussenlijst blijft een testklus zichtbaar (zonder label: sinds 22 nov 2026 zegt de werker-app het niet meer); een klus
+// van een eigen-testbedrijf alleen voor eigen-test-accounts en interne accounts (lib/admin/eigen-test-regel.ts).
 // ---------------------------------------------------------------------------
 
-/** Einde van het adres van testaccounts en van ZekerFlex zelf (zoals isReservedTestAddress in lib/mail). */
-export const INTERNE_ADRESSEN = [
-  ".test",
-  ".example",
-  ".invalid",
-  ".localhost",
-  "@localhost",
-  "@example.com",
-  "@zekerflex.com",
-  "@zekerflex.nl",
-] as const;
+// De lijst met interne adressen staat in het pure bestand lib/admin/eigen-test-regel.ts (ook voor wie hier niets van de database wil).
+export { INTERNE_ADRESSEN };
 
 export interface TestklusOntvanger {
   freelancerId: string;
@@ -36,8 +30,11 @@ export interface TestklusOntvanger {
  * Werkers die een testklus wél als voorstel krijgen: beheer en verkoop van
  * ZekerFlex, leden van het bedrijf dat de testklus plaatste, en testadressen.
  * Een gewist account (disabledAt gezet, adres op .invalid) hoort er niet bij.
+ * Is het bedrijf als eigen test gemarkeerd (lib/admin/eigen-test-regel.ts), dan horen ook de eigen-test-werkers erbij.
  */
 export async function testklusOntvangers(tenantId: string): Promise<TestklusOntvanger[]> {
+  const eigenTest = await leesEigenTest();
+  const eigenIds = isEigenTestBedrijf(eigenTest, tenantId) ? await eigenTestGebruikerIds(eigenTest) : [];
   const rows = await prisma.freelancerProfile.findMany({
     where: {
       user: {
@@ -45,6 +42,7 @@ export async function testklusOntvangers(tenantId: string): Promise<TestklusOntv
         OR: [
           { memberships: { some: { OR: [{ role: { in: ["PLATFORM_ADMIN", "SALES"] } }, { tenantId }] } } },
           ...INTERNE_ADRESSEN.map((eind) => ({ email: { endsWith: eind, mode: "insensitive" as const } })),
+          ...(eigenIds.length ? [{ id: { in: eigenIds } }] : []),
         ],
       },
     },
@@ -72,16 +70,24 @@ export function klusKenmerk(s: { title: string; createdAt?: Date | string | null
  * open klussen waren testklussen, en een geo-push en de volgers van het testbedrijf bereikten nog echte werkers; volgers,
  * job-alerts, stand-by, "in de buurt" en de spoedoproep met sms/WhatsApp filterden niet). Een gewone klus mag naar
  * iedereen, een testklus alleen naar interne accounts (testklusOntvangers). In de klussenlijst blijft een testklus
- * gewoon zichtbaar, met label (lib/dashboard/marketplace.ts): dit gaat alleen over ongevraagde meldingen.
+ * gewoon zichtbaar (lib/dashboard/marketplace.ts): dit gaat alleen over ongevraagde meldingen.
+ * Daarbovenop de grondregel voor de privé-accounts (lib/admin/eigen-test-regel.ts): een klus van een eigen-testbedrijf gaat
+ * alleen naar interne en eigen-test-accounts, en een eigen-test-account krijgt nooit een melding over een klus van een echt
+ * bedrijf.
  * Maak hem één keer per ronde: de interne accounts per bedrijf worden onthouden.
  */
 export async function testklusMeldfilter(): Promise<{ isTest: (s: KlusKenmerk) => boolean; mag: (s: KlusKenmerk, userId: string) => Promise<boolean> }> {
   const eigenTest = await leesEigenTest();
   const intern = new Map<string, Promise<Set<string>>>();
+  // wie als eigen test geldt: één keer opgevraagd, en alleen als er iets gemarkeerd is
+  let eigenIds: Promise<Set<string>> | null = null;
+  const eigenTestIds = () => (eigenIds ??= heeftEigenTest(eigenTest) ? eigenTestGebruikerIds(eigenTest).then((l) => new Set(l)) : Promise.resolve(new Set<string>()));
   const isTest = (s: KlusKenmerk) =>
     isTestklus({ title: s.title, bedrijf: s.bedrijf ?? null, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.tenantId, createdAt: s.createdAt }) });
   const mag = async (s: KlusKenmerk, userId: string) => {
-    if (!isTest(s)) return true;
+    const eigenBedrijf = isEigenTestBedrijf(eigenTest, s.tenantId);
+    if (!eigenBedrijf && (await eigenTestIds()).has(userId)) return false;
+    if (!eigenBedrijf && !isTest(s)) return true;
     let ids = intern.get(s.tenantId);
     if (!ids) {
       ids = testklusOntvangers(s.tenantId).then((r) => new Set(r.map((o) => o.userId)));
