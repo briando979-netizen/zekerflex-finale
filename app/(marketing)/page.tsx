@@ -198,6 +198,7 @@ export default async function WerkHomePage() {
               ) : (
                 // een gewone link (volledige paginalading): /voorbeeld/werker is een route die een alleen-lezen sessie zet en
                 // doorstuurt; geen voorladen, anders maakt elke bezoeker die langs scrolt al een sessie aan
+                // eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig (zie hierboven)
                 <a href="/voorbeeld/werker" className="btn-mint text-base">Bekijk het voorbeeld</a>
               )}
               <Link href={WERK_AANMELDEN} className="btn-ghost text-base">Of maak gratis je profiel</Link>

@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/prisma", () => ({ prisma: {} }));
+vi.mock("@/lib/storage/kv", () => ({ kvGet: async () => null, kvSet: async () => undefined }));
+
 import { ALLEEN_APP_VLAG, APP_PAGINA_URL, isStandaloneBrowser, PWA_COOKIE, toestelVan, werkerOmgevingToegestaan } from "@/lib/app-vereist";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { FLAG_REGISTRY } from "@/lib/flags";
