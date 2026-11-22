@@ -42,9 +42,6 @@ export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?
                       <Link href={aanbodHref(a)} className="min-w-0 font-medium text-ink hover:underline">
                         {a.naam}
                       </Link>
-                      {a.status === "binnenkort" && (
-                        <span className="ml-auto flex-shrink-0 rounded-full bg-plan-soft px-2 py-0.5 text-[11px] font-semibold text-plan-ink">Binnenkort</span>
-                      )}
                     </li>
                   ))}
                 </ul>

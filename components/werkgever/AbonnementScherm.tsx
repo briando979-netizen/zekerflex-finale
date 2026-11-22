@@ -119,7 +119,6 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
                   <li key={i.slug} className="relative rounded-2xl bg-white p-4 shadow-card">
                     <p className="text-sm font-semibold text-ink">
                       {inApp ? i.naam : <Link href={i.href} className="underline-offset-2 hover:underline">{i.naam}</Link>}
-                      {!i.beschikbaar && <span className="ml-2 text-xs font-semibold text-neutralx-600">Binnenkort</span>}
                     </p>
                     <p className="mt-1 text-sm text-neutralx-600">{i.kort}</p>
                     <p className="mt-2 text-sm font-semibold text-money-ink">{i.prijs}</p>

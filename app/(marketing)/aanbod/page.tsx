@@ -86,9 +86,6 @@ export default async function AanbodPagina() {
                           {a.naam}
                         </Link>
                       </h3>
-                      {a.status === "binnenkort" && (
-                        <span className="flex-shrink-0 rounded-full bg-plan-soft px-2.5 py-1 text-xs font-semibold text-plan-ink">Binnenkort</span>
-                      )}
                     </div>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-neutralx-600">{a.kort}</p>
                     <p className="mt-4 text-sm">

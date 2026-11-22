@@ -4,8 +4,9 @@
 // krijgt. Puur bestand: geen prisma/kv, dus ook bruikbaar in client-code.
 //
 // Prijzen staan hier alleen als ze echt vastliggen (de staffel komt uit
-// lib/pricing/tiers.ts); anders "op aanvraag". Iets wat nog op een sleutel of
-// keuze van de eigenaar wacht, staat op "binnenkort".
+// lib/pricing/tiers.ts); anders "op aanvraag". Iets wat nog niet bestaat of op een
+// sleutel of keuze van de eigenaar wacht, hoort hier niet (nergens "binnenkort";
+// 22 nov 2026: de status "binnenkort" en zijn labels zijn weggehaald).
 
 import type { Werkruimte } from "@/lib/werkgever/werkruimte";
 import { BTW_TEKST, STANDAARD_PRIJZEN, vanafTekst } from "@/lib/advertentie/regels";
@@ -44,7 +45,7 @@ export interface AanbodItem {
   voorWie: string;
   /** alleen als de prijs vastligt; anders tonen we "op aanvraag" */
   prijs?: string;
-  status: "beschikbaar" | "binnenkort";
+  status: "beschikbaar";
   /** bestaande openbare pagina; zonder dit krijgt het item /aanbod/<slug> */
   pagina?: string;
   /** de knop om te beginnen */
