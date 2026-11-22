@@ -179,9 +179,6 @@ export function MobileMenu({
                                   <li key={it.href}>
                                     <Link href={it.href} className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-white/80 hover:text-white">
                                       <span className="min-w-0">{it.naam}</span>
-                                      {it.binnenkort && (
-                                        <span className="ml-auto flex-shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/70">Binnenkort</span>
-                                      )}
                                     </Link>
                                   </li>
                                 ))}

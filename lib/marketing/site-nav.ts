@@ -268,7 +268,7 @@ export interface MegaKolom {
   naam: string;
   kort: string;
   href: string;
-  items: { naam: string; href: string; binnenkort: boolean }[];
+  items: { naam: string; href: string }[];
 }
 export const AANBOD_KOLOMMEN: MegaKolom[] = PIJLERS.map((p) => ({
   sleutel: p.sleutel,
@@ -278,7 +278,6 @@ export const AANBOD_KOLOMMEN: MegaKolom[] = PIJLERS.map((p) => ({
   items: AANBOD.filter((a) => a.pijler === p.sleutel).map((a) => ({
     naam: a.naam,
     href: aanbodHref(a),
-    binnenkort: a.status === "binnenkort",
   })),
 }));
 

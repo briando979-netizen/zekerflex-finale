@@ -62,7 +62,7 @@ function KopBeeld({ a, pijler }: { a: AanbodItem; pijler: Pijler }) {
         </span>
         <span className="min-w-0">
           <span className="block truncate font-display text-[15px] font-bold">{a.naam}</span>
-          <span className={`text-[11px] font-semibold ${a.status === "beschikbaar" ? "text-ok" : "text-plan-ink"}`}>{a.status === "beschikbaar" ? "Beschikbaar" : "Binnenkort"}</span>
+          <span className="text-[11px] font-semibold text-ok">Beschikbaar</span>
         </span>
       </div>
       <ul className="mt-3 space-y-1.5 text-[12px]">
@@ -128,7 +128,6 @@ export function AanbodStandaard({ a, pijler }: { a: AanbodItem; pijler: Pijler }
             </p>
             <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold md:text-6xl">{a.naam}</h1>
             <p className="mt-6 max-w-2xl text-lg text-white/75">{a.kort}</p>
-            {a.status === "binnenkort" && <p className="mt-6 inline-block rounded-full bg-plan-soft px-3 py-1 text-sm font-semibold text-plan-ink">Binnenkort beschikbaar</p>}
             <ul className="mt-6 space-y-2 text-[15px] text-white/85">
               {a.punten.slice(0, 3).map((p) => (
                 <li key={p} className="flex gap-2">

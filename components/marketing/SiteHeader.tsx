@@ -373,9 +373,6 @@ function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: Menu
                     className="group flex items-center gap-1.5 rounded-lg py-1 text-[13px] text-white/80 transition-colors hover:text-white"
                   >
                     <span className="min-w-0">{it.naam}</span>
-                    {it.binnenkort && (
-                      <span className="flex-shrink-0 rounded-full bg-white/10 px-1.5 py-px text-[10px] font-semibold text-white/65">Binnenkort</span>
-                    )}
                   </Link>
                 </li>
               ))}

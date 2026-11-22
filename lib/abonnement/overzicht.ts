@@ -70,7 +70,6 @@ export interface UitbreidingRegel {
   naam: string;
   kort: string;
   prijs: string;
-  beschikbaar: boolean;
   href: string;
 }
 
@@ -94,7 +93,6 @@ export function uitbreidingen(alleenFlexwerk = false): UitbreidingGroep[] {
       naam: a.naam,
       kort: a.kort,
       prijs: a.prijs ?? "Prijs volgt",
-      beschikbaar: a.status === "beschikbaar",
       href: aanbodHref(a),
     })),
   })).filter((g) => g.items.length > 0);

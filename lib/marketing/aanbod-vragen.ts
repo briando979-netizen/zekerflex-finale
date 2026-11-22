@@ -14,7 +14,7 @@ export function standaardVragen(a: AanbodItem): { vraag: string; antwoord: strin
     { vraag: "Voor wie is het?", antwoord: `${a.voorWie}.` },
     {
       vraag: "Hoe begin ik?",
-      antwoord: a.status === "beschikbaar" ? `Via de knop "${a.start.label}". Liever eerst meekijken? Vraag een demo aan.` : `Het is nog niet beschikbaar. Via de knop "${a.start.label}" laat je weten dat je interesse hebt.`,
+      antwoord: `Via de knop "${a.start.label}". Liever eerst meekijken? Vraag een demo aan.`,
     },
     {
       vraag: "Werkt het samen met de rest van ZekerFlex?",
