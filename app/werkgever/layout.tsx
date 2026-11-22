@@ -12,7 +12,6 @@ import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { DemoBanner } from "@/components/app/DemoBanner";
 import { DEMO_BANNER_WERKGEVER } from "@/components/app/demo-banner-texts";
 import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
-import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
@@ -158,7 +157,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         toonInstellingen={!alleenFlexwerk}
         {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}
       >
-        <OpbouwfaseBalk soort="werkgever" />
+        {/* de opbouwfase-melding staat sinds 22 nov 2026 alleen op het startscherm (app/werkgever/page.tsx) */}
         {children}
         <ChatDock />
         {/* de rondleiding voor bedrijven: na de eerste sessie één keer, daarna via het vraagteken (lib/onboarding/rondleiding-bedrijf.ts) */}

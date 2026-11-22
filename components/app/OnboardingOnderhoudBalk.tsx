@@ -5,7 +5,7 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 const WERKGEVER = {
   titel: "We verbeteren de aanmelding",
   // kort gehouden (20 nov): de lange tekst ("wacht even met aanmelden") joeg een nieuw bedrijf weg; over de opbouwfase
-  // gaat de blauwe balk in de layout al (OpbouwfaseBalk).
+  // gaat de blauwe balk op het startscherm al (OpbouwfaseBalk, sinds 22 nov 2026 niet meer op elke pagina).
   tekst: "Loopt er iets vast of wordt iets niet goed gelezen? Ga gerust door of probeer het later nog eens. Via het vraagteken bovenaan helpen we je verder.",
 };
 

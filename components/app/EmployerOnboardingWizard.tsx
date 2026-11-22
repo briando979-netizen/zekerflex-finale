@@ -417,39 +417,46 @@ export function EmployerOnboardingWizard({
   );
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_1.15fr]">
-      {/* Left — checklist */}
-      <div className="space-y-6">
-        <div className="rounded-2xl border border-hair bg-white p-1.5">
-          <div className="border-b border-hair px-3.5 pb-2 pt-2.5 text-xs text-neutralx-500">
-            {fmt(o.stepProgress, { step: stepNo, total: ORDER.length, min: minutesLeft, pct })}
-          </div>
-          <ol className="mt-1 space-y-0.5">
-            {STEP_META.map((it) => {
-              const isActive = it.key === open;
+    <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
+      {/* De stappen, één keer (22 nov 2026, gebruikersonderzoek B11): de lijst links, de stippen en de kop herhaalden de
+          uitklapblokken. Nu de voortgang en daaronder de stappen zelf, met hun uitleg in de kop. */}
+      <div>
+        <p className="text-xs text-neutralx-500">{fmt(o.stepProgress, { step: stepNo, total: ORDER.length, min: minutesLeft, pct })}</p>
+        <div className="mt-2 flex gap-1.5" aria-hidden>
+          {ORDER.map((k, i) => (
+            <span key={k} className={`h-1.5 flex-1 rounded-full ${i < completed ? "bg-brand-500" : "bg-hairstrong"}`} />
+          ))}
+        </div>
+        <div className="mt-4 space-y-2">
+          {panels
+            .filter((p) => p.key !== "klaar" || completed === ORDER.length)
+            .sort((a, b) => (a.key === "klaar" ? 99 : ORDER.indexOf(a.key)) - (b.key === "klaar" ? 99 : ORDER.indexOf(b.key)))
+            .map((p) => {
+              const isOpen = open === p.key;
+              const hint = STEP_META.find((s) => s.key === p.key)?.hint;
               return (
-                <li key={it.key}>
+                <div key={p.key} className={`rounded-xl border ${isOpen ? "border-brand-500 bg-white" : "border-hair bg-paper"}`}>
                   <button
                     type="button"
-                    onClick={() => setOpen(it.key)}
-                    className={`flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left ${
-                      isActive ? "bg-brand-50" : "hover:bg-paper-soft"
-                    }`}
+                    onClick={() => setOpen(p.key)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left"
                   >
-                    <Dot done={done[it.key]} active={isActive} />
-                    <span>
-                      <span className={`block text-sm ${isActive ? "font-semibold text-ink" : "text-ink"}`}>
-                        {it.label}
-                      </span>
-                      {it.hint && <span className="block text-[11px] text-neutralx-500">{it.hint}</span>}
+                    <Dot done={p.key === "klaar" ? false : done[p.key]} active={isOpen} />
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-sm font-semibold ${isOpen ? "text-ink" : "text-neutralx-600"}`}>{p.title}</span>
+                      {hint && !done[p.key] && <span className="block text-[11px] text-neutralx-500">{hint}</span>}
                     </span>
+                    <span aria-hidden className="text-neutralx-400">{isOpen ? "▲" : "▼"}</span>
                   </button>
-                </li>
+                  {isOpen && <div className="border-t border-hair px-4 py-4">{p.body}</div>}
+                </div>
               );
             })}
-          </ol>
         </div>
+      </div>
 
+      <div className="space-y-6">
         {/* "Jouw eerste klus" pas als het bedrijf is geverifieerd: daarvoor leidt het alleen af van de KVK-stap (20 nov) */}
         {initial.verified && (
         <div>
@@ -482,48 +489,6 @@ export function EmployerOnboardingWizard({
               {o.helpChat}
             </Link>
           </div>
-        </div>
-      </div>
-
-      {/* Right — wizard */}
-      <div>
-        <div className="mb-1 flex gap-1.5">
-          {ORDER.map((k, i) => (
-            <span key={k} className={`h-1.5 flex-1 rounded-full ${i < completed ? "bg-brand-500" : "bg-hairstrong"}`} />
-          ))}
-        </div>
-        <div className="mb-5 mt-3 flex items-center justify-between">
-          {ORDER.map((k) => (
-            <Dot key={k} done={done[k]} active={k === open} />
-          ))}
-        </div>
-
-        <h2 className="font-display text-lg font-bold text-ink">
-          {panels.find((p) => p.key === open)?.title ?? o.stepOrg}
-        </h2>
-        <div className="mt-3 space-y-2">
-          {panels
-            .filter((p) => p.key !== "klaar" || completed === ORDER.length)
-            .sort((a, b) => (a.key === "klaar" ? 99 : ORDER.indexOf(a.key)) - (b.key === "klaar" ? 99 : ORDER.indexOf(b.key)))
-            .map((p) => {
-              const isOpen = open === p.key;
-              return (
-                <div key={p.key} className={`rounded-xl border ${isOpen ? "border-brand-500 bg-white" : "border-hair bg-paper"}`}>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(p.key)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left"
-                  >
-                    <Dot done={p.key === "klaar" ? false : done[p.key]} active={isOpen} />
-                    <span className={`flex-1 text-sm font-semibold ${isOpen ? "text-ink" : "text-neutralx-600"}`}>
-                      {p.title}
-                    </span>
-                    <span className="text-neutralx-400">{isOpen ? "▲" : "▼"}</span>
-                  </button>
-                  {isOpen && <div className="border-t border-hair px-4 py-4">{p.body}</div>}
-                </div>
-              );
-            })}
         </div>
       </div>
     </div>

@@ -12,7 +12,8 @@ const WERKGEVER = {
 };
 
 /**
- * Balk bovenaan /dashboard en /werkgever zolang ZekerFlex nog niet officieel
+ * Balk bovenaan het startscherm van /werkgever (sinds 22 nov 2026 niet meer op elke
+ * werkgeverspagina; bij werkers staat hij sinds 10 nov niet) zolang ZekerFlex nog niet officieel
  * live is: testklussen, gegevens veilig, ideeën welkom (/opbouwfase). Uit te
  * zetten zonder uitrol met de flag "opbouwfase-melding" (Admin → Systeem).
  */

@@ -9,6 +9,23 @@ import { en } from "@/lib/i18n/dictionary-en";
 
 const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 
+describe("rustiger werkgeversschermen (punt 14)", () => {
+  it("de opbouwfase-melding staat alleen op het startscherm, niet meer in de layout", () => {
+    expect(lees("app/werkgever/layout.tsx")).not.toContain("<OpbouwfaseBalk");
+    expect(lees("app/werkgever/page.tsx")).toContain('<OpbouwfaseBalk soort="werkgever" />');
+  });
+
+  it("de stappen staan één keer op het startscherm: geen tweede lijst, geen stippenrij en geen dubbele kop", () => {
+    const wizard = lees("components/app/EmployerOnboardingWizard.tsx");
+    expect(wizard).not.toContain("STEP_META.map(");
+    expect(wizard).not.toContain("{ORDER.map((k) => (\n            <Dot");
+    expect(wizard).not.toContain("panels.find((p) => p.key === open)?.title");
+    // de uitklapblokken zelf blijven, met de uitleg van de stap in de kop
+    expect(wizard).toContain("aria-expanded={isOpen}");
+    expect(wizard).toContain('STEP_META.find((s) => s.key === p.key)?.hint');
+  });
+});
+
 describe("de KVK-stap vraagt niet opnieuw wat al bekend is", () => {
   const wizard = lees("components/app/EmployerOnboardingWizard.tsx");
 
