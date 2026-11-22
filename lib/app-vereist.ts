@@ -17,10 +17,21 @@ export const PWA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 export const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
 /** De iPhone-app als testversie in TestFlight (openbare link). */
 export const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
-/** De Google-groep van de testers: wie lid wordt, mag de Android-testversie meteen installeren (Play: testtrack via de groep, 22 nov 2026). */
+/** De Google-groep voor Android: wie lid wordt, mag de app uit de besloten groep op Google Play meteen installeren (22 nov 2026). */
 export const TESTGROEP_URL = "https://groups.google.com/g/zekerflex-testers";
 /** Waar de QR-code op de computer naartoe gaat: de appspagina, met per toestel de weg naar de app (22 nov 2026). */
 export const APP_PAGINA_URL = "https://zekerflex.com/app";
+
+/**
+ * De korte regel onder de installeerknoppen (23 nov 2026, eigenaar: geen woord "test" in kopjes, badges en korte regels). Hij
+ * blijft waar: de app staat in de EU nog niet in de App Store (iPhone: uitnodiging) en Android zit in een besloten groep
+ * (uitnodiging). "Of open ZekerFlex gewoon in je browser" alleen zolang de browser werkt, dus met de vlag "alleen in de app" uit.
+ * Staat de app wel in de App Store (vlag iphone-appstore), dan gaat de regel alleen nog over Android.
+ */
+export function installRegel(o: { appStore: boolean; alleenApp: boolean }): string {
+  const wie = o.appStore ? "Android" : "iPhone en Android";
+  return `${wie}: installeer met een uitnodiging${o.alleenApp ? "" : ", of open ZekerFlex gewoon in je browser"}`;
+}
 
 /** Draait de pagina als geïnstalleerde app (Android/Chrome standalone of iOS Safari "Zet op beginscherm")? */
 export function isStandaloneBrowser(w: Pick<Window, "matchMedia" | "navigator"> | undefined): boolean {

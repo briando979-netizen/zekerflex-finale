@@ -15,8 +15,9 @@ const KNOP_OMLIJND = "flex min-h-[52px] w-full items-center justify-between roun
 
 /**
  * De weg naar de app, per toestel één (22 nov 2026, gebruikersonderzoek: een iPhone zag ook de Android-stappen, en op de
- * computer stond alleen "open dit op je telefoon"). iPhone: op het beginscherm of TestFlight. Android: de installeerknop van de
- * browser of het menu, dan de testgroep en Google Play. Computer: een QR-code naar zekerflex.com/app. Het toestel bepalen we
+ * computer stond alleen "open dit op je telefoon"). iPhone: op het beginscherm of met de uitnodiging (TestFlight). Android: de
+ * installeerknop van de browser of het menu, dan de Google-groep en Google Play. Computer: een QR-code naar zekerflex.com/app.
+ * Geen woord "test" in kopjes en knoppen (23 nov 2026); de productnamen staan in de uitleg eronder. Het toestel bepalen we
  * pas in de browser (useEffect), zodat de server en de browser hetzelfde tekenen. Vaste donkere kleuren: het scherm
  * "Installeer de app" (AppVereist) en de kaart op Ontdekken (AppVoorstelKaart) zijn in elk thema donker.
  */

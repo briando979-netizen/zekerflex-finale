@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-/** Aanmelden voor de testgroep van de Android-app (21 nov 2026): het adres komt bij ZekerFlex op een lijst, zonder mailprogramma. */
+/** Aanmelden voor de besloten groep van de Android-app (21 nov 2026): het adres komt bij ZekerFlex op een lijst, zonder mailprogramma. */
 export function TesterWordenForm() {
   const [email, setEmail] = useState("");
   const [stand, setStand] = useState<"leeg" | "bezig" | "klaar" | "fout">("leeg");

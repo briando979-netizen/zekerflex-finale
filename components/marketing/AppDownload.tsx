@@ -3,10 +3,13 @@ import { InstallAppButton } from "@/components/marketing/InstallAppButton";
 import { TelefoonDemo } from "@/components/marketing/TelefoonDemo";
 import { featureEnabled } from "@/lib/flags";
 import { TesterWordenForm } from "@/components/marketing/TesterWordenForm";
-import { ALLEEN_APP_VLAG } from "@/lib/app-vereist";
+import { ALLEEN_APP_VLAG, installRegel } from "@/lib/app-vereist";
 
-// De Android-app (com.zekerflex.app) staat in een testgroep op Google Play (nog geen gewone openbare vermelding). De link werkt
-// alleen voor Gmail-adressen die ZekerFlex op de lijst heeft gezet; het formulier hieronder regelt dat.
+// De Android-app (com.zekerflex.app) staat in een besloten groep op Google Play (nog geen gewone openbare vermelding). De link
+// werkt alleen voor Gmail-adressen die ZekerFlex op de lijst heeft gezet; het formulier hieronder regelt dat.
+// 23 nov 2026 (eigenaar): geen woord "test" in kopjes, badges en korte regels; in de uitleg-stappen staan de echte productnamen
+// (TestFlight, Google Play) wel, want de werker moet ze kunnen vinden. Het blijft waar: de app staat in de EU nog niet in de App
+// Store en Android zit in een besloten groep; de korte regel staat in installRegel (lib/app-vereist.ts).
 const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
 // De iPhone-app staat in de App Store (goedgekeurd door Apple op 10 nov 2026), maar nog niet in de EU: Apple wacht op de
 // handelaarsstatus. In Nederland installeert een iPhone hem dus via TestFlight (openbare link). De App Store-knop staat achter de
@@ -30,8 +33,8 @@ function PlayBadge() {
         <path d="m4.2 22.4 8.9-5.1 2-1.3-2.7-2.9-9.1 9.4c.3.1.6.1.9-.1Z" fill="currentColor" opacity=".5" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">Android · testgroep</span>
-        <span className="block text-sm font-bold">Google Play</span>
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">Android</span>
+        <span className="block text-sm font-bold">Installeren met uitnodiging</span>
       </span>
     </a>
   );
@@ -44,8 +47,8 @@ function AppleBadge({ store }: { store: boolean }) {
         <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.8ZM14.2 5.9c.6-.8 1.1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.8-1.3Z" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{store ? "Download in de" : "iPhone · installeer via"}</span>
-        <span className="block text-sm font-bold">{store ? "App Store" : "TestFlight"}</span>
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{store ? "Download in de" : "iPhone"}</span>
+        <span className="block text-sm font-bold">{store ? "App Store" : "Installeren met uitnodiging"}</span>
       </span>
     </>
   );
@@ -64,9 +67,10 @@ function AppleBadge({ store }: { store: boolean }) {
 function IphoneNotice() {
   return (
     <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
-      <p className="font-semibold text-white">iPhone: installeer via TestFlight</p>
+      <p className="font-semibold text-white">iPhone: installeer met een uitnodiging</p>
       <p className="mt-1">
-        In Nederland staat de app nog niet in de App Store. Je zet hem op je iPhone via TestFlight, de installatiedienst van Apple.
+        In de EU staat de app nog niet in de App Store. Je zet hem op je iPhone met een uitnodiging, via TestFlight: de
+        installatiedienst van Apple.
       </p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
         <li>Installeer de gratis app TestFlight uit de App Store.</li>
@@ -85,8 +89,8 @@ function IphoneNotice() {
 function AndroidNotice() {
   return (
     <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
-      <p className="font-semibold text-white">Android: meld je aan voor de testgroep op Google Play</p>
-      <p className="mt-1">De Android-app staat in een testgroep op Google Play. Meld je aan, dan kun je hem installeren.</p>
+      <p className="font-semibold text-white">Android: installeer met een uitnodiging</p>
+      <p className="mt-1">De Android-app staat in een besloten groep op Google Play. Meld je aan voor die groep, dan kun je hem installeren.</p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
         <li>
           Vul je Gmail-adres in: het adres waarmee je in de Play Store bent ingelogd. Wij zetten je op de lijst.
@@ -160,9 +164,9 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
               </>
             ) : (
               <p className="mt-3 text-xs text-white/65">
-                {appStore ? "Android: testgroep op Google Play" : "iPhone: via TestFlight · Android: testgroep op Google Play"} —{" "}
+                {installRegel({ appStore, alleenApp })} —{" "}
                 <Link href="/app" className="underline hover:text-white/80">
-                  zo doe je mee
+                  zo werkt het
                 </Link>
                 .
               </p>
@@ -170,7 +174,7 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             {/* "alleen in de app" staat sinds 22 nov achter een vlag (lib/app-vereist.ts, standaard uit: eerst de browser). Een
                 account aanmaken kan altijd hier, en bedrijven loggen in via de website. */}
             <p className="mt-4 text-xs text-white/65">
-              {alleenApp ? "Je werkersomgeving gebruik je in de app." : "Je kunt ook gewoon in de browser beginnen."} Nog geen account?{" "}
+              {alleenApp ? "Je werkersomgeving gebruik je in de app. " : ""}Nog geen account?{" "}
               <Link href="/register" className="underline hover:text-white/80">
                 Maak er een aan
               </Link>
