@@ -16,7 +16,7 @@
     "app/werkgever/templates/page.tsx": 1,
     "components/app/AgreementsList.tsx": 1,
     "components/app/BirthdayForm.tsx": 2,
-    "components/app/BranchesBoard.tsx": 2,
+    "components/app/BranchesBoard.tsx": 1,
     "components/app/ColorLegend.tsx": 1,
     "components/app/EmployerDashboardHero.tsx": 1,
     "components/app/EmployerOnboardingWizard.tsx": 1,

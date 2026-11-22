@@ -6,31 +6,49 @@ export interface PickedAddress {
   label: string;
   lat: number;
   lng: number;
+  /** from PDOK (/api/geo/search); empty for a street or place without a postcode */
+  postcode?: string | null | undefined;
+  plaats?: string | null | undefined;
 }
 
 interface Hit {
   label: string;
   lat: number;
   lng: number;
+  postcode?: string | null;
+  plaats?: string | null;
 }
 
 /**
  * Free-text address search against the PDOK Locatieserver (/api/geo/search —
  * the same gratis, gezaghebbend NL-adresregister used elsewhere in the app),
  * forcing the caller to pick a real, geocoded address rather than typing
- * arbitrary free text. Used for vestigingen (app/werkgever/locaties) and
- * eenmalige klus-locaties (NewShiftForm) so both get the same "verification".
+ * arbitrary free text. Used for vestigingen (components/werkgever/VestigingFormulier.tsx)
+ * and eenmalige klus-locaties (NewShiftForm) so both get the same "verification".
+ * The pick carries PDOK's postcode and place, so the caller fills those in itself.
  */
 export function AddressAutocomplete({
   value,
   onPick,
   placeholder = "Zoek adres…",
+  id,
+  beginZoek = "",
+  alleenAdressen = false,
+  onWijzig,
 }: {
   value: PickedAddress | null;
   onPick: (address: PickedAddress) => void;
   placeholder?: string;
+  /** for a <label htmlFor> */
+  id?: string;
+  /** text already in the search box, e.g. the place of a drafted klus */
+  beginZoek?: string;
+  /** only real addresses (always with a postcode), for a vestiging */
+  alleenAdressen?: boolean;
+  /** typing after a pick: the caller forgets the picked address, so the field can be changed */
+  onWijzig?: () => void;
 }) {
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(beginZoek);
   const [hits, setHits] = useState<Hit[]>([]);
   const [open, setOpen] = useState(false);
   const tId = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,7 +61,7 @@ export function AddressAutocomplete({
     }
     tId.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/geo/search?q=${encodeURIComponent(q.trim())}`, { cache: "no-store" });
+        const res = await fetch(`/api/geo/search?q=${encodeURIComponent(q.trim())}${alleenAdressen ? "&soort=adres" : ""}`, { cache: "no-store" });
         const data = await res.json();
         setHits(data.results ?? []);
       } catch {
@@ -53,13 +71,15 @@ export function AddressAutocomplete({
     return () => {
       if (tId.current) clearTimeout(tId.current);
     };
-  }, [q]);
+  }, [q, alleenAdressen]);
 
   return (
     <div className="relative">
       <input
+        {...(id ? { id } : {})}
         value={value ? value.label : q}
         onChange={(e) => {
+          if (value && onWijzig) onWijzig();
           setQ(e.target.value);
           setOpen(true);
         }}
@@ -75,7 +95,7 @@ export function AddressAutocomplete({
               <button
                 type="button"
                 onClick={() => {
-                  onPick(h);
+                  onPick({ label: h.label, lat: h.lat, lng: h.lng, postcode: h.postcode ?? null, plaats: h.plaats ?? null });
                   setQ("");
                   setHits([]);
                   setOpen(false);
@@ -88,11 +108,7 @@ export function AddressAutocomplete({
           ))}
         </ul>
       )}
-      {value && (
-        <p className="mt-1 text-xs text-neutralx-500">
-          ✓ Adres gevonden op {value.lat.toFixed(5)}, {value.lng.toFixed(5)}
-        </p>
-      )}
+      {value && <p className="mt-1 text-xs text-neutralx-500">✓ Adres gevonden</p>}
     </div>
   );
 }

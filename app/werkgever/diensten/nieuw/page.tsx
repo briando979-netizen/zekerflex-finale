@@ -8,6 +8,7 @@ import { listPools } from "@/lib/pools/store";
 import { PageHeader } from "@/components/app/ui";
 import { NewShiftForm } from "@/components/app/NewShiftForm";
 import { SnelPlaatsen } from "@/components/werkgever/SnelPlaatsen";
+import { EersteVestiging } from "@/components/werkgever/EersteVestiging";
 import { SNEL_EN, SNEL_NL } from "@/components/werkgever/snel-teksten";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
@@ -92,18 +93,17 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
       />
 
       {branches.length === 0 ? (
-        // zonder vestiging kan er geen klus uit (12 nov: hier liep het dood). Het adres komt erbij op Locaties; dat
-        // mag alleen een beheerder (zelfde poort als POST /api/werkgever/branches), een ander leest wie hij moet vragen.
-        <div className="card border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
-          <p>{n.noBranches}</p>
-          {hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") ? (
-            <Link href="/werkgever/locaties" className="btn-primary mt-3 inline-flex px-4 py-2 text-sm">
-              {n.addAddress} →
-            </Link>
-          ) : (
+        // zonder vestiging kan er geen klus uit (12 nov: hier liep het dood). Sinds 22 nov vult een beheerder het adres
+        // meteen hier in (EersteVestiging, zelfde poort als POST /api/werkgever/branches); daarna staat het klusformulier er.
+        // Een ander leest wie hij moet vragen.
+        hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") ? (
+          <EersteVestiging />
+        ) : (
+          <div className="card border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
+            <p>{n.noBranches}</p>
             <p className="mt-2">{n.askAdmin}</p>
-          )}
-        </div>
+          </div>
+        )
       ) : alleenFlexwerk ? (
         <>
           <SnelPlaatsen
