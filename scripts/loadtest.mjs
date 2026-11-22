@@ -22,7 +22,7 @@ const CONNECTIONS = Number(process.env.LOAD_CONNECTIONS ?? 20);
 // paths are covered by the E2E critical-path spec, not hammered here.
 const TARGETS = [
   { name: "marketing home", path: "/" },
-  { name: "voor-bedrijven", path: "/voor-bedrijven" },
+  { name: "bedrijven", path: "/bedrijven" },
   { name: "voor-freelancers", path: "/voor-freelancers" },
   { name: "status page", path: "/status" },
   { name: "health API", path: "/api/status" },

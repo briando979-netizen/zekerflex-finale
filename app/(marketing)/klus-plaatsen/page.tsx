@@ -61,7 +61,7 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
           __html: ldJson([
-            breadcrumbJsonLd([["Home", "/"], ["Voor bedrijven", "/voor-bedrijven"], ["Klus plaatsen", "/klus-plaatsen"]]),
+            breadcrumbJsonLd([["Home", "/"], ["Voor bedrijven", "/bedrijven"], ["Klus plaatsen", "/klus-plaatsen"]]),
             {
               "@context": "https://schema.org",
               "@type": "FAQPage",
@@ -74,7 +74,7 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
         {/* op de telefoon een compactere kop (12 nov, meting op 390 px): anders lag het eerste veld onder de cookiemelding */}
         <div className="shell py-8 md:py-20">
           <p className="eyebrow text-brand-mint">
-            <Link href="/voor-bedrijven" className="hover:underline">
+            <Link href="/bedrijven" className="hover:underline">
               Voor bedrijven
             </Link>{" "}
             · klus plaatsen

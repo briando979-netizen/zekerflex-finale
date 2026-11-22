@@ -15,7 +15,8 @@ describe("homepage-indeling uit de Site-ontwerper", () => {
     expect(isStandaardHomeIndeling(standaardHomeIndeling())).toBe(true);
     // de volgorde van vóór de ontwerper, met sinds 11 nov de voordeur "Wat wil je doen?" vooraan, en sinds 14 nov
     // zonder de blokken voor werkers (freelancers, werkvormen, app): /bedrijven is alleen voor bedrijven
-    expect(ALLE).toEqual(["voordeur", "vertrouwen", "aanbod", "branches", "hoe", "bedrijven", "cijfers", "functies", "zekerheid", "citaat", "vragen", "oproep"]);
+    // sinds 22 nov de rekentools van /voor-bedrijven, dat in /bedrijven is opgegaan
+    expect(ALLE).toEqual(["voordeur", "vertrouwen", "aanbod", "branches", "hoe", "bedrijven", "cijfers", "functies", "zekerheid", "citaat", "rekentools", "vragen", "oproep"]);
   });
 
   it("verbergt en verplaatst", () => {

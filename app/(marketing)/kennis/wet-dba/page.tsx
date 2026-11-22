@@ -46,7 +46,7 @@ export default function WetDbaPage() {
             écht betekenen, en hoe ZekerFlex het risico op schijnzelfstandigheid voor jou zo klein mogelijk maakt.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/voor-bedrijven#dba" className="btn-mint">
+            <Link href="/bedrijven" className="btn-mint">
               Zo werkt de Wet DBA-monitor
             </Link>
             <Link href="/register?type=bedrijf" className="btn-ghost-invert">

@@ -95,7 +95,7 @@ export function CtaBand({
   body,
   primaryHref = "/register",
   primaryLabel = "Account aanmaken",
-  secondaryHref = "/voor-bedrijven",
+  secondaryHref = "/bedrijven",
   secondaryLabel = "Voor bedrijven",
   cms,
 }: {

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 const KNOPPEN: { label: string; onder: string; href: string; hoofd?: boolean; extern?: boolean }[] = [
   // werkers komen binnen zoals in de app: eerst de welkomstcarrousel, dan aanmaken (lib/welkom)
   { label: "Aanmelden als werker", onder: "Gratis, klussen bij jou in de buurt", href: "/welkom", hoofd: true },
-  { label: "Personeel nodig? Plaats je klus", onder: "Eerste maand gratis", href: "/voor-bedrijven" },
+  { label: "Personeel nodig? Plaats je klus", onder: "Eerste maand gratis", href: "/bedrijven" },
   { label: "Download de app", onder: "Android en iPhone", href: "/app" },
   { label: "Praat mee in de ZekerFlex community", onder: "Nieuws, vragen en ideeën", href: COMMUNITY_URL, extern: true },
   { label: "Naar de website", onder: "zekerflex.com", href: "/" },

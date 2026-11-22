@@ -52,7 +52,7 @@ export const CONTENT_REGISTRY: ContentItem[] = [
 
   // ─────────────────────────────────────────────────────────── Compliance
   { key: "comp.eyebrow", group: "Homepage — compliance", label: "Bovenregel", default: "Zeker zit het goed" },
-  { key: "comp.title", group: "Homepage — compliance", label: "Titel", default: "Compliance is geen bijzaak — het zit in de kern" },
+  { key: "comp.title", group: "Homepage — compliance", label: "Titel", default: "Binnen de regels werken, zonder gedoe" },
   { key: "comp.lead", group: "Homepage — compliance", label: "Introtekst", default: "ZekerFlex controleert doorlopend of een samenwerking binnen de regels blijft, en grijpt in vóór het misgaat.", multiline: true },
 
   // ─────────────────────────────────────────────────────────── Testimonial
@@ -76,23 +76,11 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "cta.primary", group: "Homepage — slot-oproep", label: "Knop 1", default: "Klus plaatsen" },
   { key: "cta.secondary", group: "Homepage — slot-oproep", label: "Knop 2", default: "Bekijk de prijzen" },
 
-  // ─────────────────────────────────────────────────────────── Voor bedrijven (/voor-bedrijven)
-  { key: "vb.eyebrow", group: "Voor bedrijven — hero", label: "Bovenregel", default: "Voor bedrijven" },
-  { key: "vb.title", group: "Voor bedrijven — hero", label: "Titel", default: "Betrouwbare mensen, precies wanneer je ze nodig hebt." },
-  { key: "vb.lead", group: "Voor bedrijven — hero", label: "Introtekst", default: "Zet een dienst uit en ZekerFlex regelt de rest: de match, de overeenkomst, de check-in, de facturatie en de compliance.", multiline: true },
-  { key: "vb.cta1", group: "Voor bedrijven — hero", label: "Knop 1", default: "Organisatie aanmelden" },
-  { key: "vb.cta2", group: "Voor bedrijven — hero", label: "Knop 2", default: "Bekijk de prijzen" },
-  { key: "vb.sys.eyebrow", group: "Voor bedrijven — secties", label: "Het systeem: bovenregel", default: "Het systeem" },
-  { key: "vb.sys.title", group: "Voor bedrijven — secties", label: "Het systeem: titel", default: "Van dienst uitzetten tot factuur — één doorlopend proces" },
-  { key: "vb.tools.eyebrow", group: "Voor bedrijven — secties", label: "Rekentools: bovenregel", default: "Reken het zelf uit" },
-  { key: "vb.tools.title", group: "Voor bedrijven — secties", label: "Rekentools: titel", default: "Twee gratis rekentools voor werkgevers" },
-  { key: "vb.tools.intro", group: "Voor bedrijven — secties", label: "Rekentools: introtekst", default: "Zonder account, en alles wordt in je eigen browser berekend." },
-  { key: "vb.faq.eyebrow", group: "Voor bedrijven — secties", label: "Vragen: bovenregel", default: "Veelgestelde vragen" },
-  { key: "vb.faq.title", group: "Voor bedrijven — secties", label: "Vragen: titel", default: "Goed om te weten" },
-  { key: "vb.cta.title", group: "Voor bedrijven — slot-oproep", label: "Titel", default: "Zet vandaag je eerste dienst uit" },
-  { key: "vb.cta.body", group: "Voor bedrijven — slot-oproep", label: "Tekst", default: "Meld je organisatie aan, richt je vestigingen in en nodig je managers uit. Binnen een uur operationeel.", multiline: true },
-  { key: "vb.cta.primary", group: "Voor bedrijven — slot-oproep", label: "Knop 1", default: "Organisatie aanmelden" },
-  { key: "vb.cta.secondary", group: "Voor bedrijven — slot-oproep", label: "Knop 2", default: "Voor freelancers" },
+  // ─────────────────────────────────────────────────────────── Rekentools (/bedrijven)
+  // 22 nov 2026: /voor-bedrijven is opgegaan in /bedrijven; zijn rekentools staan daar nu als blok, zijn andere teksten zijn weg
+  { key: "tools.eyebrow", group: "Homepage — rekentools", label: "Bovenregel", default: "Reken het zelf uit" },
+  { key: "tools.title", group: "Homepage — rekentools", label: "Titel", default: "Gratis rekentools voor werkgevers" },
+  { key: "tools.intro", group: "Homepage — rekentools", label: "Introtekst", default: "Zonder account, en alles wordt in je eigen browser berekend." },
 
   // ─────────────────────────────────────────────────────────── Voor freelancers (/voor-freelancers)
   { key: "vf.eyebrow", group: "Voor freelancers — hero", label: "Bovenregel", default: "Voor freelancers" },
@@ -202,7 +190,7 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "how.s3.title", group: "Homepage — hoe het werkt", label: "Stap 3: titel", default: "Keur de uren goed, de factuur volgt" },
   { key: "how.s3.body", group: "Homepage — hoe het werkt", label: "Stap 3: tekst", default: "Je mensen checken in op locatie. Na de dienst keur je de uren met één klik goed en maakt ZekerFlex de factuur automatisch aan.", multiline: true },
   { key: "emp.points", group: "Homepage — blok bedrijven", label: "Voordelen (één per regel)", default: "Je klus bij geverifieerde werkers in de buurt; jij kiest wie je inroostert\nUren goedkeuren met GPS check-in — facturen volgen vanzelf\nWet DBA-risico's zichtbaar vóór ze een probleem worden\nAlleen betalen bij gebruik: € 3,50 platformkosten per gewerkt uur", multiline: true },
-  { key: "emp.cta", group: "Homepage — blok bedrijven", label: "Knop", default: "Voor bedrijven" },
+  { key: "emp.cta", group: "Homepage — blok bedrijven", label: "Knop", default: "Plaats een klus" },
   { key: "cijfers.1", group: "Homepage — cijfers", label: "Onder cijfer 1 (€ 3,50)", default: "standaard platformkosten per gewerkt uur, lager bij volume" },
   { key: "cijfers.2", group: "Homepage — cijfers", label: "Onder cijfer 2 (€ 0)", default: "abonnement en opstartkosten" },
   { key: "cijfers.3", group: "Homepage — cijfers", label: "Onder cijfer 3 (GPS)", default: "check-in en urengoedkeuring op locatie" },
@@ -238,7 +226,7 @@ export const lijstRegels = (waarde: string) =>
     .map((r) => r.trim())
     .filter(Boolean);
 
-/** Alle sleutels van één groep-voorvoegsel (bv. "vb." voor /voor-bedrijven), voor getContentMap op die pagina. */
+/** Alle sleutels van één groep-voorvoegsel (bv. "vf." voor /voor-freelancers), voor getContentMap op die pagina. */
 export const contentKeys = (prefix: string) => CONTENT_REGISTRY.filter((c) => c.key.startsWith(prefix)).map((c) => c.key);
 
 const KEY = "content:overrides";

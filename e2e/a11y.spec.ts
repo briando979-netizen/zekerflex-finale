@@ -57,7 +57,7 @@ async function audit(page: import("@playwright/test").Page, label: string) {
 
 const PUBLIC_PAGES: Array<[string, string]> = [
   ["home", "/"],
-  ["voor-bedrijven", "/voor-bedrijven"],
+  ["bedrijven", "/bedrijven"],
   ["voor-freelancers", "/voor-freelancers"],
   ["uitzendbureau", "/uitzendbureau"],
   ["login", "/login"],

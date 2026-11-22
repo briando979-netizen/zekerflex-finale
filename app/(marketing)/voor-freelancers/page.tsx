@@ -258,7 +258,7 @@ export default async function VoorFreelancersPage() {
             </div>
             <p className="mt-6 text-sm text-white/60">
               Ben je een bedrijf?{" "}
-              <Link href="/voor-bedrijven" className="font-semibold text-white underline" data-cms-key="vf.cta.secondary">
+              <Link href="/bedrijven" className="font-semibold text-white underline" data-cms-key="vf.cta.secondary">
                 {v("vf.cta.secondary")}
               </Link>
             </p>

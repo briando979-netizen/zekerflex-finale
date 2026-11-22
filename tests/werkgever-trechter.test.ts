@@ -41,7 +41,9 @@ describe("bezoek en hoofdknop", () => {
   it("herkent de pagina, ook met een zoekvraag of een schuine streep erachter", () => {
     expect(paginaVan("/klus-plaatsen?functie=horeca&plaats=Utrecht")).toBe("/klus-plaatsen");
     expect(paginaVan("/prijzen/")).toBe("/prijzen");
-    expect(paginaVan("/voor-bedrijven#faq")).toBe("/voor-bedrijven");
+    expect(paginaVan("/bedrijven#faq")).toBe("/bedrijven");
+    // sinds 22 nov 2026 samengevoegd in /bedrijven: het oude adres stuurt door en telt niet apart
+    expect(paginaVan("/voor-bedrijven")).toBeNull();
     expect(paginaVan("/voor-freelancers")).toBeNull();
     expect(paginaVan("/demo-bekijken")).toBeNull();
   });
@@ -54,11 +56,11 @@ describe("bezoek en hoofdknop", () => {
   it("telt unieke sessies per pagina en per venster, en klikken alleen op de hoofdknop van die pagina", () => {
     const rij = (type: BezoekRij["type"], path: string, sessionId: string, dagen: number, label: string | null = null): BezoekRij => ({ type, path, sessionId, label, at: dagenTerug(dagen) });
     const rijen: BezoekRij[] = [
-      rij("PAGEVIEW", "/voor-bedrijven", "a", 1),
-      rij("PAGEVIEW", "/voor-bedrijven", "a", 1), // dezelfde sessie telt één keer
-      rij("PAGEVIEW", "/voor-bedrijven", "b", 20),
-      rij("CLICK", "/voor-bedrijven", "a", 1, "Organisatie aanmelden"),
-      rij("CLICK", "/voor-bedrijven", "b", 20, "Menu"), // geen hoofdknop
+      rij("PAGEVIEW", "/bedrijven", "a", 1),
+      rij("PAGEVIEW", "/bedrijven", "a", 1), // dezelfde sessie telt één keer
+      rij("PAGEVIEW", "/bedrijven", "b", 20),
+      rij("CLICK", "/bedrijven", "a", 1, "Plaats een klus"),
+      rij("CLICK", "/bedrijven", "b", 20, "Menu"), // geen hoofdknop
       rij("PAGEVIEW", "/klus-plaatsen?functie=horeca", "c", 3),
       rij("CLICK", "/klus-plaatsen", "c", 3, "Plaats deze klus"),
       rij("PAGEVIEW", "/demo", "d", 45), // buiten 30 dagen
@@ -66,7 +68,7 @@ describe("bezoek en hoofdknop", () => {
     ];
     const zeven = Object.fromEntries(bezoekPerPagina(rijen, NU, 7).map((p) => [p.pagina, [p.sessies, p.klikken]]));
     const dertig = Object.fromEntries(bezoekPerPagina(rijen, NU, 30).map((p) => [p.pagina, [p.sessies, p.klikken]]));
-    expect(zeven).toEqual({ "/voor-bedrijven": [1, 1], "/voor-bureaus": [0, 0], "/klus-plaatsen": [1, 1], "/prijzen": [0, 0], "/demo": [0, 0] });
-    expect(dertig).toEqual({ "/voor-bedrijven": [2, 1], "/voor-bureaus": [0, 0], "/klus-plaatsen": [1, 1], "/prijzen": [0, 0], "/demo": [0, 0] });
+    expect(zeven).toEqual({ "/bedrijven": [1, 1], "/voor-bureaus": [0, 0], "/klus-plaatsen": [1, 1], "/prijzen": [0, 0], "/demo": [0, 0] });
+    expect(dertig).toEqual({ "/bedrijven": [2, 1], "/voor-bureaus": [0, 0], "/klus-plaatsen": [1, 1], "/prijzen": [0, 0], "/demo": [0, 0] });
   });
 });

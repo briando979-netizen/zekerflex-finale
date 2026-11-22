@@ -2,8 +2,8 @@ import Link from "next/link";
 import { SECTORS, inhurenKop, werkKop } from "@/lib/seo-sectors";
 import { topSteden } from "@/lib/seo-cities";
 
-// Links naar de branche- en stadspagina's (22 nov 2026): /voor-freelancers en /voor-bedrijven linkten nog niet naar de
-// steden, en /voor-bedrijven ook niet naar de branches. Werkers gaan naar /<branche>-vacatures en /freelance-werk/<stad>,
+// Links naar de branche- en stadspagina's (22 nov 2026): /voor-freelancers en de bedrijvenpagina linkten nog niet naar de
+// steden, en de bedrijvenpagina (sinds 22 nov /bedrijven) ook niet naar de branches. Werkers gaan naar /<branche>-vacatures en /freelance-werk/<stad>,
 // bedrijven naar /<branche>-personeel-inhuren en /personeel-inhuren/<stad>. De steden in de volgorde van lib/seo-cities.ts
 // (TOP_STEDEN: waar het meest op gezocht wordt).
 

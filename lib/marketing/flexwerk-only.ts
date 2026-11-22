@@ -11,7 +11,7 @@
 // Sinds 22 nov 2026 zijn de oude verkooppagina's en hulpmiddelen (apps, websites,
 // logo, advertentie, domein, website- en reviewcheck, rijschool-software,
 // partnerplatform, producten, abonnementen) en de webshop helemaal uit de code; hun
-// oude adressen sturen door naar /voor-bedrijven, /app of de voorpagina
+// oude adressen sturen door naar /bedrijven, /app of de voorpagina
 // (next.config.mjs; eigenaar: "verwijder de shop en apps enzo", en niemand gebruikte
 // ze). /aanbod zelf en de flexwerk-onderdelen in deze lijst (developers,
 // open-diensten, partnerpagina's) blijven via een directe link bereikbaar.

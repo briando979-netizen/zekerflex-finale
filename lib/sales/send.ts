@@ -45,7 +45,7 @@ const veilig = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&l
 
 /**
  * De mail zoals een bedrijf hem krijgt: de tekst, een knop en de voetregel. Zonder eigen knop (een campagne met een vaste
- * tekst kan er een hebben, lib/sales/campagne-tekst.ts) is het de gewone knop naar /voor-bedrijven. De voorbeeldmail aan
+ * tekst kan er een hebben, lib/sales/campagne-tekst.ts) is het de gewone knop naar /bedrijven (tot 22 nov /voor-bedrijven, dat nu doorstuurt). De voorbeeldmail aan
  * de beheerder (app/api/admin/sales/campaigns/[id]/testmail) bouwt hiermee precies dezelfde mail.
  */
 export function bouwOutreachMail(input: {
@@ -62,7 +62,7 @@ export function bouwOutreachMail(input: {
     .map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">${p}</p>`)
     .join("");
   const basis = env.APP_BASE_URL.replace(/\/+$/, "");
-  const knop = input.knop ?? { url: `${basis}/voor-bedrijven`, tekst: "Bekijk ZekerFlex voor bedrijven" };
+  const knop = input.knop ?? { url: `${basis}/bedrijven`, tekst: "Bekijk ZekerFlex voor bedrijven" };
   const cta = mailButton(knop.url, veilig(knop.tekst));
   const html = mailShell(
     input.subject,

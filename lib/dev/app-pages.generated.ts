@@ -285,7 +285,6 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/uitzendpartner","file":"app/(marketing)/uitzendpartner/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/uitzendpartner/voorwaarden","file":"app/(marketing)/uitzendpartner/voorwaarden/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/verwerkersovereenkomst","file":"app/(marketing)/verwerkersovereenkomst/page.tsx","area":"Marketing","dynamic":false},
-  {"route":"/voor-bedrijven","file":"app/(marketing)/voor-bedrijven/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/voor-bureaus","file":"app/(marketing)/voor-bureaus/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/voor-freelancers","file":"app/(marketing)/voor-freelancers/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/voorwaarden","file":"app/(marketing)/voorwaarden/page.tsx","area":"Marketing","dynamic":false},

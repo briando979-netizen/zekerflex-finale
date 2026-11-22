@@ -74,7 +74,7 @@ export default async function OpenShiftsPage() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/register" className="btn-mint text-base">Ik zoek werk</Link>
-              <Link href="/voor-bedrijven" className="btn-ghost text-base">Ik zoek mensen</Link>
+              <Link href="/bedrijven" className="btn-ghost text-base">Ik zoek mensen</Link>
               <Link href="/open-diensten/3d" className="btn-ghost text-base">Bekijk vraag en aanbod in 3D</Link>
             </div>
             <p className="mt-4 text-xs text-neutralx-400">

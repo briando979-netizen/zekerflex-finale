@@ -52,7 +52,7 @@ export function bedrijfTrechter(bedrijven: readonly BedrijfFeiten[], nu: Date, d
 
 // --- Bezoek -------------------------------------------------------------------
 
-export const WERKGEVER_PAGINAS = ["/voor-bedrijven", "/voor-bureaus", "/klus-plaatsen", "/prijzen", "/demo"] as const;
+export const WERKGEVER_PAGINAS = ["/bedrijven", "/voor-bureaus", "/klus-plaatsen", "/prijzen", "/demo"] as const;
 export type WerkgeverPagina = (typeof WERKGEVER_PAGINAS)[number];
 
 /**

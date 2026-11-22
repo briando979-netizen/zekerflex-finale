@@ -79,7 +79,7 @@ export default async function KlussenPage() {
         body="Bedrijven plaatsen een klus in een paar minuten en betalen € 3,50 per gewerkt uur — geen abonnement, geen uitzendmarge."
         primaryHref="/register"
         primaryLabel="Gratis account maken"
-        secondaryHref="/voor-bedrijven"
+        secondaryHref="/bedrijven"
         secondaryLabel="Voor bedrijven"
       />
     </>

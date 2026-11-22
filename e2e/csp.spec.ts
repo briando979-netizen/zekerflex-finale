@@ -13,7 +13,7 @@ function directive(csp: string, name: string): string {
 }
 
 test("every response carries the hardened CSP baseline", async ({ request }) => {
-  const res = await request.get("/voor-bedrijven");
+  const res = await request.get("/bedrijven");
   const csp = res.headers()["content-security-policy"];
   expect(csp, "CSP header present").toBeTruthy();
   expect(csp).toContain("default-src 'self'");
@@ -24,7 +24,7 @@ test("every response carries the hardened CSP baseline", async ({ request }) => 
 });
 
 test("production CSP: script-src is nonce + strict-dynamic, no unsafe-inline", async ({ request }) => {
-  const res = await request.get("/voor-bedrijven");
+  const res = await request.get("/bedrijven");
   const csp = res.headers()["content-security-policy"] ?? "";
   const scriptSrc = directive(csp, "script-src");
 
@@ -36,8 +36,8 @@ test("production CSP: script-src is nonce + strict-dynamic, no unsafe-inline", a
 });
 
 test("production CSP: the nonce is fresh per request", async ({ request }) => {
-  const a = (await request.get("/voor-bedrijven")).headers()["content-security-policy"] ?? "";
-  const b = (await request.get("/voor-bedrijven")).headers()["content-security-policy"] ?? "";
+  const a = (await request.get("/bedrijven")).headers()["content-security-policy"] ?? "";
+  const b = (await request.get("/bedrijven")).headers()["content-security-policy"] ?? "";
   const nonceA = a.match(/'nonce-([^']+)'/)?.[1];
   test.skip(!nonceA, "dev server — no nonce");
   const nonceB = b.match(/'nonce-([^']+)'/)?.[1];
@@ -59,7 +59,7 @@ test("production CSP: the page's JS runs — nonce propagated, no CSP violations
     }
   });
 
-  const res = await page.goto("/voor-bedrijven", { waitUntil: "networkidle" });
+  const res = await page.goto("/bedrijven", { waitUntil: "networkidle" });
   const csp = res?.headers()["content-security-policy"] ?? "";
   test.skip(!csp.includes("'nonce-"), "dev server — strict path not exercised");
   const nonce = csp.match(/'nonce-([^']+)'/)![1];

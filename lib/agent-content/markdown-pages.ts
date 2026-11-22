@@ -26,7 +26,7 @@ ${SITE.description}
 - € 3,50 platformkosten per gewerkt uur, alleen als er daadwerkelijk iemand werkt. Geen abonnement, geen opstartkosten.
 - Reverse billing: ZekerFlex stelt de facturen op namens je, geen gedoe met zzp-facturen.
 - Automatische Wet DBA-signalen (urenconcentratie, opeenvolgende weken, omzetafhankelijkheid).
-- Meer: ${SITE.url}/voor-bedrijven
+- Meer: ${SITE.url}/bedrijven
 
 ## Veelgestelde vragen
 

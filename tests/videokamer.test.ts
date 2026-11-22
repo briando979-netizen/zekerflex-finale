@@ -28,7 +28,7 @@ describe("de videokamer", () => {
   });
 
   it("de pagina's tonen hun video niet meer; /uitleg wijst naar alle video's", () => {
-    for (const f of ["app/(marketing)/voor-bedrijven/page.tsx", "app/(marketing)/voor-freelancers/page.tsx", "app/(marketing)/prijzen/page.tsx", "components/marketing/SectorLanding.tsx"]) {
+    for (const f of ["app/(marketing)/bedrijven/page.tsx", "app/(marketing)/voor-freelancers/page.tsx", "app/(marketing)/prijzen/page.tsx", "components/marketing/SectorLanding.tsx"]) {
       expect(lees(f), f).not.toMatch(/PaginaVideoBlok|ReclameVideoBlok/);
     }
     expect(lees("app/(marketing)/uitleg/page.tsx")).toContain('href="/uitleg/videos"');

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { failOnConsoleErrors, expectNoConsoleErrors } from "./helpers";
 
-const PAGES = ["/", "/voor-bedrijven", "/voor-freelancers", "/uitzendbureau", "/status"];
+const PAGES = ["/", "/bedrijven", "/voor-freelancers", "/uitzendbureau", "/status"];
 
 for (const path of PAGES) {
   test(`public page renders: ${path}`, async ({ page }) => {
