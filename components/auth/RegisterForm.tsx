@@ -216,10 +216,11 @@ export function RegisterForm({
   }
 
   // Een gratis adres (gmail, hotmail, …) zegt niets over een bedrijf: dan staat de bezoeker onder werknemer,
-  // tenzij hij zelf "personeel zoeken" koos of via een product (webshop, rijschool, …) kwam: een kleine
-  // webwinkel gebruikt vaak gewoon gmail.
+  // tenzij hij zelf "personeel zoeken" koos, via een bedrijvenknop kwam (?type=bedrijf) of via een product
+  // (webshop, rijschool, …): een kleine zaak gebruikt vaak gewoon gmail. 22 nov 2026 (funnelmeting): wie via een
+  // bedrijvenpagina kwam en een gmail-adres typte, werd stil werker en het bedrijfsveld verdween.
   const gratisMail = isGratisMail(emailDomein(email));
-  const [bedrijfGekozen, setBedrijfGekozen] = useState(defaultDashboard !== undefined);
+  const [bedrijfGekozen, setBedrijfGekozen] = useState(defaultType === "bedrijf" || defaultDashboard !== undefined);
   const [naarWerk, setNaarWerk] = useState(false);
   useEffect(() => {
     if (gratisMail && type === "bedrijf" && !bedrijfGekozen) {

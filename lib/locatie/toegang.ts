@@ -291,7 +291,7 @@ async function meld(tenantId: string, branchId: string, event: ToegangEvent, ins
     const body = event.besluit.open
       ? `${plaat} bij ${vestiging} om ${tijd}${rooster?.shiftTitel ? ` · ${rooster.shiftTitel}` : ""}. De slagboom is open.`
       : `${plaat} om ${tijd}: ${event.besluit.naam ? `${event.besluit.naam}, ` : ""}${event.besluit.reden === "onbekend" ? "niet in de lijst" : "nu niet ingepland"}. Niet geopend.`;
-    if (ids.length) await sendUserPush(ids, { title: kop, body, data: { type: "SHIFT", url: "/werkgever/op-locatie?tab=toegang", tag: `toegang-${branchId}` }, ttlSeconds: 3600 });
+    if (ids.length) await sendUserPush(ids, { title: kop, body, data: { type: "SHIFT", url: "/werkgever", tag: `toegang-${branchId}` }, ttlSeconds: 3600 });
   }
   if (instel.meldWerker && event.besluit.open && event.besluit.userId) {
     // aan een werker: in zijn app-taal (WORKER_PUSH)

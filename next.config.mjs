@@ -126,6 +126,8 @@ const nextConfig = {
         ["/abonnementen", "/voor-bedrijven"],
         // de aanbodpagina's van de pijlers online en branche (lib/marketing/aanbod.ts); personeel en geld blijven
         ...["website", "webshop", "domeinnaam", "website-check", "advertentie-op-maat", "logo-maker", "starters", "review-check", "google-reviews", "telefonie", "zakelijke-mail", "horeca", "rijschool"].map((s) => [`/aanbod/${s}`, "/voor-bedrijven"]),
+        // de netwerk- en op-locatiepakketten: hun werkgeversschermen zijn bij de opruiming van fase C weggehaald
+        ...["wifi-op-de-werkvloer", "veilige-werkplek", "portofoon-in-de-app", "toegang-op-kenteken", "sleutelkluis", "badges-en-labels-printen"].map((s) => [`/aanbod/${s}`, "/voor-bedrijven"]),
       ].map(([van, naar]) => ({ source: van, destination: naar, permanent: false })),
       // Browsers, pdf-viewers en de linkvoorvertoning van Apple vragen deze vaste adressen in de root, ook al staat het
       // pictogram in de pagina-kop (13 nov: 17× /favicon.ico en 7× een apple-touch-icon als 404 in 2 dagen)

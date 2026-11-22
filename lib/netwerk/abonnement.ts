@@ -108,8 +108,8 @@ export async function startModule(tenantId: string, raw: StartInput, door: Princ
     aantal: input.aantal,
     ...(input.variant ? { variant: input.variant } : {}),
     unitAmountCents: perEenheid,
-    successUrl: `${baseUrl}/werkgever/netwerk?pakket=${input.sleutel}&betaald=1`,
-    cancelUrl: `${baseUrl}/werkgever/netwerk?pakket=${input.sleutel}&geannuleerd=1`,
+    successUrl: `${baseUrl}/werkgever?pakket=${input.sleutel}&betaald=1`,
+    cancelUrl: `${baseUrl}/werkgever?pakket=${input.sleutel}&geannuleerd=1`,
   });
   if (!session.url) throw AppError.upstream("Kon geen betaalscherm starten. Probeer het zo opnieuw.");
   const stand = await zetModuleStand(tenantId, input.sleutel, { ...basis, status: "wacht-op-betaling", stripeSessionId: session.id });
