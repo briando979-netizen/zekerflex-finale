@@ -13,6 +13,7 @@ import { findOverlappingShift, overlapMessageSelf, overlapParams } from "@/lib/s
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { klusToegang } from "@/lib/admin/eigen-test-zicht";
 import { isTestwerker } from "@/lib/testwerker/adres";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { dienstUren, pastBinnenMaxUren, urenBijBedrijf } from "@/lib/werkgever/max-uren";
@@ -94,10 +95,16 @@ export async function applyToShift(
   const partnerKlus = await isUitzendPartnerTenant(shift.branch.tenantId);
   if (!partnerKlus && !eligible.ok) throw nietKlaar();
   // het testwerkeraccount van de eigenaar (lib/testwerker/adres.ts) reageert alleen op testklussen, nooit op echt werk
-  const eigenTestKlus = isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
+  const eigenTest = await leesEigenTest();
+  const eigenTestKlus = isEigenTestKlus(eigenTest, { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
   if (isTestwerker(profile.user.email) && !isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
     throw AppError.forbidden("Met het testaccount kun je alleen op testklussen reageren.").metSleutel("apply.alleenTestklus");
   }
+  // privé-accounts van de eigenaar (lib/admin/eigen-test-regel.ts): een klus van een eigen-testbedrijf bestaat niet voor wie hem
+  // niet mag zien, en een eigen-test-werker reageert niet op een klus van een echt bedrijf
+  const toegang = await klusToegang(userId, shift.branch.tenantId, eigenTest);
+  if (!toegang.zien) throw AppError.notFound("Deze dienst bestaat niet meer.").metSleutel("apply.bestaatNiet");
+  if (!toegang.reageren) throw AppError.precondition("Deze dienst is nog niet open voor aanmeldingen.").metSleutel("apply.nietOpen");
   // een gewone uitzendklus is alleen voor uitzendkrachten van ZekerFlex; bij een uitzendpartner mag iedereen een contract aanvragen
   if (shift.viaUitzendbureau && !partnerKlus && eligible.track !== "payroll") {
     throw AppError.forbidden("Deze klus loopt via een uitzendbureau; reageren kan alleen als uitzendkracht.").metSleutel("apply.uitzendOnly");

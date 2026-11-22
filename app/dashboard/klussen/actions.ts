@@ -7,6 +7,7 @@ import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { createCounterOffer } from "@/lib/offers/store";
+import { klusToegang } from "@/lib/admin/eigen-test-zicht";
 import { probeerVasteSchil } from "@/lib/pools/vaste-schil";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { pushShiftTaken } from "@/lib/notifications/employer-push";
@@ -122,6 +123,10 @@ export async function counterOfferAction(
       },
     });
     if (!shift) return { ok: false, message: "Deze dienst bestaat niet meer." };
+    // privé-accounts van de eigenaar (lib/admin/eigen-test-regel.ts): dezelfde antwoorden als applyToShift
+    const toegang = await klusToegang(principal.userId, shift.branch.tenantId);
+    if (!toegang.zien) return { ok: false, message: "Deze dienst bestaat niet meer." };
+    if (!toegang.reageren) return { ok: false, message: "Deze dienst is nog niet open voor aanmeldingen." };
     // Klus van een uitzendpartner (lib/uitzend/partners-kern.ts): het bureau is de werkgever. De eisen van ZekerFlex
     // (KVK/IBAN, of BSN en de ZekerFlex-uitzendovereenkomst) gelden dan niet, en de reactie is een aanvraag voor een
     // uitzendcontract tegen het vaste uurloon.

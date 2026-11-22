@@ -22,8 +22,9 @@ import { loadWorkerPrefs, prefsAllowShift, prefsAllowTravel, type WorkerPrefs } 
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { invitedPoolMemberUserIds } from "@/lib/pools/store";
 import { isTestklus } from "@/lib/shifts/testklus";
-import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { isEigenTestKlus, type EigenTest } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestBedrijf, zonderEigenTestAccounts } from "@/lib/admin/eigen-test-regel";
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
@@ -133,13 +134,16 @@ async function loadCandidatePool(shift: {
   viaUitzendbureau: boolean;
   uitzendPartner?: boolean;
   restrictToUserIds?: string[] | null;
+  /** de eigen-test-set, alleen bij een klus van een echt bedrijf: een eigen-test-account krijgt die niet voorgesteld */
+  zonderEigenTest?: EigenTest | null;
 }): Promise<CandidateInput[]> {
   const now = new Date();
   const profiles = await prisma.freelancerProfile.findMany({
     where: {
       isBlacklisted: false,
-      // het testwerkeraccount van de eigenaar krijgt geen voorstellen (lib/testwerker/adres.ts)
-      user: { kycStatus: "VERIFIED", disabledAt: null, ...zonderTestwerker() },
+      // het testwerkeraccount van de eigenaar krijgt geen voorstellen (lib/testwerker/adres.ts), een eigen-test-account
+      // alleen voor klussen van eigen-testbedrijven (lib/admin/eigen-test-regel.ts)
+      user: { kycStatus: "VERIFIED", disabledAt: null, ...zonderTestwerker(), ...zonderEigenTestAccounts(shift.zonderEigenTest ?? null) },
       OR: [
         { matchingBlockedUntil: null },
         { matchingBlockedUntil: { lte: now } },
@@ -256,9 +260,12 @@ export async function runMatchingForShift(
     let restrictToUserIds =
       shift.visibility === "POOL_ONLY" ? await invitedPoolMemberUserIds(shift.id) : null;
     // Een testklus nooit als voorstel (of automatisch ingepland) naar echte
-    // werkers, alleen naar interne accounts (lib/shifts/testklus-db.ts).
-    const eigenTestKlus = isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
-    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
+    // werkers, alleen naar interne accounts (lib/shifts/testklus-db.ts); bij een klus van een eigen-testbedrijf ook naar de
+    // eigen-test-werkers. Andersom krijgt een eigen-test-werker geen klus van een echt bedrijf (lib/admin/eigen-test-regel.ts).
+    const eigenTest = await leesEigenTest();
+    const eigenTestKlus = isEigenTestKlus(eigenTest, { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
+    const eigenTestBedrijf = isEigenTestBedrijf(eigenTest, shift.branch.tenantId);
+    if (eigenTestBedrijf || isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
       const intern = new Set((await testklusOntvangers(shift.branch.tenantId)).map((o) => o.userId));
       restrictToUserIds = (restrictToUserIds ?? [...intern]).filter((id) => intern.has(id));
     }
@@ -275,6 +282,7 @@ export async function runMatchingForShift(
       restrictToUserIds,
       viaUitzendbureau: shift.viaUitzendbureau,
       uitzendPartner,
+      zonderEigenTest: eigenTestBedrijf ? null : eigenTest,
     });
     // The worker's own settings (min rate, available dayparts, max travel): no offer outside them.
     const prefsByUser = await loadWorkerPrefs(loaded.map((c) => c.userId)).catch(() => new Map<string, Partial<WorkerPrefs>>());
