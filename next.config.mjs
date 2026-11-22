@@ -105,6 +105,8 @@ const nextConfig = {
         ["/starters", "/voor-bedrijven"],
         ["/voorbeeldsites", "/voor-bedrijven"],
         ["/nieuwe-home", "/"],
+        // de voorbeeldaccounts (demo) zijn op 21 nov op verzoek van de eigenaar gewist: oude links naar de app-pagina
+        ["/voorbeeld", "/app"],
         ["/website-check", "/voor-bedrijven"],
         ["/review-check", "/voor-bedrijven"],
         ["/logo-maker", "/voor-bedrijven"],

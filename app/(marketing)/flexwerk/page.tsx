@@ -201,7 +201,7 @@ export default function FlexwerkPage() {
               telefoon en betaald wordt, zonder je aan te melden.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/voorbeeld" className="btn-mint text-base">Bekijk de app</Link>
+              <Link href="/app" className="btn-mint text-base">Bekijk de app</Link>
               <Link href={WERK_AANMELDEN} className="btn-ghost text-base">Of maak gratis je profiel</Link>
             </div>
           </Reveal>
