@@ -25,8 +25,10 @@ export function AuthShell({
   locale?: Locale;
   /**
    * App-weergave: donkere verloop-kop met logo en titel, de velden in een wit afgerond paneel. Op de telefoon vult hij
-   * het scherm; op de computer staat precies hetzelfde scherm als een kaart in het midden (21 nov 2026, eigenaar: "inloggen
+   * het scherm; op de computer staat hetzelfde scherm als een kaart in het midden (21 nov 2026, eigenaar: "inloggen
    * in de browser dezelfde interface als in de app"). Dan geen foto en geen aparte computerkop.
+   * Vanaf lg ligt de kaart (22 nov 2026): de groene kop links, de velden rechts, zodat inloggen op een laag
+   * laptopscherm zonder scrollen past (staand was de kaart zo’n 890px hoog), net als de welkomstcarrousel.
    */
   mobile?: { title: string; subtitle: string; back: string; backHref: string };
 }) {
@@ -35,10 +37,10 @@ export function AuthShell({
 
   if (mobile) {
     return (
-      <main className="grid min-h-screen bg-paper lg:place-items-center lg:bg-[radial-gradient(circle_at_50%_-10%,rgba(14,92,74,0.16),transparent_60%)] lg:px-6 lg:py-10">
-        <div className="flex min-h-[100dvh] w-full flex-col bg-[linear-gradient(165deg,#0B3B3A_0%,#0E5C4A_55%,#0C0E12_100%)] lg:min-h-0 lg:w-[440px] lg:overflow-hidden lg:rounded-[28px] lg:shadow-[0_30px_80px_-24px_rgba(12,14,18,0.45)]">
-          <div className="px-6 pb-2 pt-[max(1.25rem,env(safe-area-inset-top))] text-center text-white lg:pt-6">
-            <div className="flex items-center justify-between gap-3">
+      <main className="grid min-h-screen bg-paper lg:place-items-center lg:bg-[radial-gradient(circle_at_50%_-10%,rgba(14,92,74,0.16),transparent_60%)] lg:px-6 lg:py-6">
+        <div className="flex min-h-[100dvh] w-full flex-col bg-[linear-gradient(165deg,#0B3B3A_0%,#0E5C4A_55%,#0C0E12_100%)] lg:min-h-0 lg:w-[880px] lg:max-w-full lg:flex-row lg:overflow-hidden lg:rounded-[28px] lg:shadow-[0_30px_80px_-24px_rgba(12,14,18,0.45)]">
+          <div className="px-6 pb-2 pt-[max(1.25rem,env(safe-area-inset-top))] text-center text-white lg:relative lg:flex lg:w-[380px] lg:shrink-0 lg:flex-col lg:justify-center lg:px-10 lg:py-24">
+            <div className="flex items-center justify-between gap-3 lg:absolute lg:inset-x-6 lg:top-6">
               <Link
                 href={mobile.backHref}
                 aria-label={mobile.back}
@@ -59,8 +61,9 @@ export function AuthShell({
             </div>
             <h1 className="mt-5 font-display text-3xl font-bold">{mobile.title}</h1>
             <p className="mt-1.5 text-sm text-white/75">{mobile.subtitle}</p>
+            <p className="hidden text-xs text-white/45 lg:absolute lg:inset-x-6 lg:bottom-6 lg:block">{a.shell.tagline}</p>
           </div>
-          <div className="mt-7 flex-1 rounded-t-[28px] bg-paper px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-8 lg:pb-8">
+          <div className="mt-7 flex-1 rounded-t-[28px] bg-paper px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-8 lg:mt-0 lg:flex lg:flex-col lg:justify-center lg:rounded-none lg:px-12 lg:py-7">
             <div className="mx-auto w-full max-w-sm">
               <div>{children}</div>
               <div className="mt-6 text-sm text-neutralx-600">{footer}</div>
