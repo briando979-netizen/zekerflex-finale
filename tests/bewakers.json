@@ -9,6 +9,7 @@
     "tests/api-toegang.test.ts",
     "tests/auto-uitrol.test.ts",
     "tests/backup-ophalen.test.ts",
+    "tests/bedrijven-samengevoegd.test.ts",
     "tests/bellen-whatsapp.test.ts",
     "tests/bewakers.test.ts",
     "tests/bezoekstatistiek-bewaren.test.ts",

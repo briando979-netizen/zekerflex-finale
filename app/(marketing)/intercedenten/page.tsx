@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 const TAKEN: { taak: string; zekerflex: string; href: string; label: string }[] = [
   {
     taak: "Passende kandidaten zoeken",
-    zekerflex: "Je plaatst een dienst en ZekerFlex stelt direct passende, geverifieerde flexwerkers voor. Krachten die goed bevallen zet je bij je favorieten of in een vaste pool.",
+    zekerflex: "Je plaatst een dienst; hij komt bij geverifieerde flexwerkers in de buurt en jij kiest wie je inroostert. Krachten die goed bevallen zet je bij je favorieten of in een vaste pool.",
     href: "/bedrijven",
     label: "Flexwerkers inhuren",
   },

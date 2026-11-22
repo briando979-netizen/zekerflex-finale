@@ -53,6 +53,7 @@ describe("geen beloftes die niet kloppen", () => {
       /direct passende|matcht direct|rangschikt direct|direct bij de beste|nodigt automatisch de beste|beste match wordt direct|in golven|instantly (matches|ranks)|automatically invites the best/i;
     for (const p of [
       "app/(marketing)/bedrijven/page.tsx",
+      "app/(marketing)/intercedenten/page.tsx",
       "lib/marketing/aanbod.ts",
       "lib/i18n/dictionaries.ts",
       "lib/i18n/dictionary-en.ts",
