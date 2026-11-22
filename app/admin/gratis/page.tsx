@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { KpiStrip, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { GratisAi } from "@/components/admin/GratisAi";
@@ -102,6 +103,9 @@ export default async function GratisPage() {
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--a-text)" }}>
                     <Pill tone={tegoedLaag(kvkTegoed) ? "crit" : kvkTegoed ? "ok" : "neutral"}>{tegoedLaag(kvkTegoed) ? "Tegoed op" : kvkTegoed ? "Tegoed" : "Niet gemeten"}</Pill>
                     <span>{kvkRegel}</span>
+                    <Link href="/admin/kvk-controle" className="font-medium hover:underline" style={{ color: "var(--a-accent-ink)" }}>
+                      Zelf controleren, zonder tegoed →
+                    </Link>
                   </div>
                 )}
                 {d.env?.length ? (

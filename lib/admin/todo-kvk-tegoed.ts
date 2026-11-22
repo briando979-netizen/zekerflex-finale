@@ -33,6 +33,7 @@ export function kvkTegoedTodo(t: KvkTegoed | null, wachtend: number, zonderContr
           : "KVK-tegoed: weer voldoende",
     why: `ZekerFlex controleert KVK-nummers van werkers en werkgevers bij KVKBase, op ${plan}. Is het tegoed op, dan wacht elke controle tot er weer tegoed is${wachtend > 0 ? ` (nu ${wachtend} wachtend)` : ""}: zzp'ers met alleen een KVK-nummer kunnen dan niet reageren, en nieuwe bedrijven worden niet vanzelf geverifieerd.${werkers}${fout}`,
     how: [
+      "Liever nu al verder zonder tegoed? Controleer een KVK-nummer zelf op kvk.nl/zoeken (gratis) en keur het met de hand goed: Beheer → Mensen & bedrijven → KVK-controle (voor wachtende werkers en voor bedrijven).",
       "Kies een bron: de officiële KVK-API (€ 6,20 per maand; zoeken is gratis per vraag, en dat bevestigt nummer, naam en of het bedrijf actief is) of KVKBase Starter (€ 9 per maand, 1.000 tokens).",
       "Geef de keuze aan Claude: die zet de sleutel en de koppeling klaar. Het tegoed staat in Beheer → Alles gratis.",
       "Wachtende controles gaan vanzelf door zodra er weer tegoed is (elke 30 minuten een herkansing). Deze taak vinkt zichzelf af als het tegoed weer boven de 10 is.",

@@ -50,6 +50,8 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/gebruikers", label: "Gebruikers" },
       { href: "/admin/onboarding", label: "Onboarding" },
       { href: "/admin/bedrijven", label: "Bedrijven" },
+      // KVK-nummers zelf controleren op kvk.nl en met de hand goedkeuren, voor werkers en bedrijven (22 nov 2026)
+      { href: "/admin/kvk-controle", label: "KVK-controle" },
       { href: "/admin/uitzendbureau", label: "Uitzendbureau" },
       { href: "/admin/werker-trechter", label: "Werkerstrechter" },
       { href: "/admin/werkgever-trechter", label: "Werkgeverstrechter" },

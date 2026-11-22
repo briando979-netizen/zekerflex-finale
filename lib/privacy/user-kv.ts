@@ -59,6 +59,8 @@ export const ERASABLE_KV_PREFIXES = [
   "kvk-wacht:werker:",
   // het nummer waar de herkansing op opgaf (lib/kvk/tegoed-opslag.ts)
   "kvk-opgegeven:werker:",
+  // een KVK-controle die de beheerder met de hand deed (lib/kvk/handmatig-server.ts): nummer, zijn naam en zijn reden
+  "kvk-handmatig:werker:",
   "id-overdracht:",
   "id-overdracht-merk:",
   "id-overdracht-ander:",
@@ -128,8 +130,11 @@ type KvWaar =
   | { key: { equals: string } }
   | { AND: [{ key: { startsWith: string } }, { key: { endsWith: string } }] };
 
-/** Hele waarde afschermen: dit zijn (versleutelde) inloggegevens. */
-const SECRET_KEY_PREFIXES = ["auth-2fa:", "mailbox-connection:"];
+/**
+ * Hele waarde afschermen: dit zijn (versleutelde) inloggegevens, en interne beheernotities (kvk-handmatig:, 22 nov 2026: de
+ * naam van de beheerder en zijn reden horen niet in de export aan de gebruiker; die rij wordt wel gewist met het account).
+ */
+const SECRET_KEY_PREFIXES = ["auth-2fa:", "mailbox-connection:", "kvk-handmatig:"];
 /** Woorden in een veldnaam (camelCase/snake_case) die op een geheim wijzen, op welke diepte ook. */
 const SECRET_WORDS = new Set(["password", "passwd", "pwd", "secret", "token", "sealed", "cipher", "ciphertext", "totp", "otp", "hash", "pin", "privatekey", "apikey", "ssh", "credentials"]);
 const HIDDEN = "[afgeschermd]";
