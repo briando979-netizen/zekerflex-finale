@@ -3,6 +3,8 @@ import { chatJson, llmConfigProblem } from "@/lib/ai/client";
 import { FACTS } from "@/lib/ads/generate";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isNietOpenbaar } from "@/lib/admin/eigen-test-regel";
 import { tekst } from "@/lib/orchestration/antwoord";
 import { CONTACTS, SITE } from "@/lib/seo";
 import type { Doelgroep } from "@/lib/social/model";
@@ -38,11 +40,14 @@ const DOELGROEP_BRIEF: Record<Doelgroep, string> = {
 export async function weekFeiten(nu: Date = new Date()): Promise<string> {
   try {
     const tot = new Date(nu.getTime() + 7 * 24 * 3600 * 1000);
-    const klussen = await prisma.shift.findMany({
+    const eigenTest = await leesEigenTest();
+    const rijen = await prisma.shift.findMany({
       where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, visibility: "PUBLIC", startsAt: { gte: nu, lte: tot } },
-      select: { branch: { select: { city: true } } },
+      select: { title: true, createdAt: true, branch: { select: { city: true, tenantId: true, tenant: { select: { name: true } } } } },
       take: 500,
     });
+    // een bericht aan het publiek noemt alleen echt werk: geen testklussen en geen klussen van een eigen-testbedrijf
+    const klussen = rijen.filter((k) => !isNietOpenbaar(eigenTest, { title: k.title, bedrijf: k.branch.tenant.name, tenantId: k.branch.tenantId, createdAt: k.createdAt }));
     if (klussen.length === 0) return "";
     const perStad = new Map<string, number>();
     for (const k of klussen) perStad.set(k.branch.city, (perStad.get(k.branch.city) ?? 0) + 1);
