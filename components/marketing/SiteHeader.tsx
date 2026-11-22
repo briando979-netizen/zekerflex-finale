@@ -137,7 +137,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
         </Link>
 
         {/* With every label on one line the full bar needs ~1.500px. Below
-            1280 the menu button takes over (at 1024 Inloggen fell off-screen),
+            1280 the menu button takes over (at 1024 Inloggen fell off-screen; 22 nov 2026 again: at 1024 the bar was 1.115px wide and "Start vandaag" fell off, so the switch point is xl again),
             1280–1365 gets tighter gaps, and the Werknemers/Bedrijven switch
             only shows from 1600 (at 1536 only ~20px was left, less than a
             Windows scrollbar; the audience still follows the URL and the last
@@ -145,7 +145,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
         <nav
           aria-label="Hoofdnavigatie"
           ref={navRef}
-          className="ml-1 hidden items-center gap-0.5 lg:flex xl:ml-2 xl:gap-3 min-[1366px]:ml-6 min-[1366px]:gap-6"
+          className="ml-1 hidden items-center gap-0.5 xl:ml-2 xl:flex xl:gap-3 min-[1366px]:ml-6 min-[1366px]:gap-6"
         >
           {NAV.map((n) => {
             const active =
@@ -211,7 +211,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
 
         {/* audience toggle */}
         {/* de schakelaar Werkers | Bedrijven: zoals bij YoungOnes al vanaf een laptop zichtbaar (met de vlag alleen flexwerk is het menu kort genoeg) */}
-        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 lg:flex">
+        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 xl:flex">
           <Link
             href="/"
             onClick={() => pick("werknemers")}
@@ -233,7 +233,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
         </div>
 
         {/* per kant (KOP_KNOPPEN): Inloggen (altijd /login) en de ene hoofdknop van die kant (22 nov 2026) */}
-        <div className="ml-auto hidden items-center gap-2 lg:ml-0 lg:flex xl:gap-3">
+        <div className="ml-auto hidden items-center gap-2 xl:ml-0 xl:flex xl:gap-3">
           <Link
             href={knoppen.eerste.href}
             className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-[13px] font-bold text-ink transition hover:bg-white/90 xl:px-4 xl:text-sm"
@@ -250,7 +250,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
 
         {/* telefoon/tablet: de schakelaar Werkers | Bedrijven naast de menuknop (22 nov 2026, eigenaar: "niet meer te zien op
             de telefoon, alleen in het hamburgermenu"); de belangrijkste knop past daar pas vanaf 640px naast */}
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:hidden">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 xl:hidden">
           {!open && (
             <div role="group" aria-label="Werkers of bedrijven" className="flex items-center rounded-full border border-white/15 bg-white/[0.06] p-0.5">
               <Link

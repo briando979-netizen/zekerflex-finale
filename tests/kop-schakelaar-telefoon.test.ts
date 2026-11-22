@@ -8,9 +8,9 @@ import { describe, expect, it } from "vitest";
 const kop = readFileSync(path.join(process.cwd(), "components/marketing/SiteHeader.tsx"), "utf8").split("\r\n").join("\n");
 
 describe("de schakelaar Werkers | Bedrijven op de telefoon", () => {
-  const mobiel = kop.slice(kop.indexOf('<div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:hidden">'));
+  const mobiel = kop.slice(kop.indexOf('<div className="ml-auto flex items-center gap-1.5 sm:gap-2 xl:hidden">'));
 
-  it("staat in de bovenbalk naast de menuknop (alleen onder lg), met allebei de kanten", () => {
+  it("staat in de bovenbalk naast de menuknop (onder 1280px, ook op een kleine laptop), met allebei de kanten", () => {
     expect(mobiel.length).toBeGreaterThan(0);
     const blok = mobiel.slice(0, mobiel.indexOf("ref={burgerRef}"));
     expect(blok).toContain('aria-label="Werkers of bedrijven"');

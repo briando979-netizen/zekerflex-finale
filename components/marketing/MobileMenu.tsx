@@ -15,7 +15,7 @@ import {
 } from "@/lib/marketing/site-nav";
 import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 
-// Het mobiele menu (onder 1024 px; laptops en groter krijgen de hoofdnavigatie in de kopbalk). Eerst wat je het vaakst komt doen (snelle
+// Het mobiele menu (onder 1280 px; laptops en groter krijgen de hoofdnavigatie in de kopbalk). Eerst wat je het vaakst komt doen (snelle
 // acties per doelgroep), dan de onderdelen als uitklapbare lijsten, en de knoppen
 // Inloggen en de hoofdknop van die kant (KOP_KNOPPEN) altijd onderin in beeld. SiteHeader legt de balk met
 // dit menu boven de bezoekerstip en de chatknop zolang het open is.
@@ -94,7 +94,7 @@ export function MobileMenu({
       onClick={(e) => {
         if ((e.target as HTMLElement).closest("a")) onClose();
       }}
-      className="fixed inset-x-0 bottom-0 top-16 flex lg:top-[68px] animate-slide-up-fade flex-col border-t border-white/10 text-white lg:hidden"
+      className="fixed inset-x-0 bottom-0 top-16 flex lg:top-[68px] animate-slide-up-fade flex-col border-t border-white/10 text-white xl:hidden"
       style={{ background: "rgb(var(--zf-inkt-rgb, 12 14 18))", ...(boven !== null ? { top: boven } : {}) }}
     >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
