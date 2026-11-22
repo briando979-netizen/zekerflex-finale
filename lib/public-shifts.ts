@@ -3,6 +3,7 @@ import { haversineMeters } from "@/lib/geo/geofencing";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus, type EigenTest } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
 
 // ---------------------------------------------------------------------------
 // Open klussen as the public (not logged-in) web sees them: /klussen, the city
@@ -108,7 +109,11 @@ export async function publicOpenShifts(opts: { near?: { lat: number; lng: number
   // Testklussen horen niet in openbare lijsten (en dus niet bij Google); op de eigen site van een bedrijf wel.
   // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
   const eigenTest = await leesEigenTest();
-  let out = rows.map((s) => toPublic(s, eigenTest)).filter((s) => opts.tenantId || !s.testklus);
+  // en elke klus van een eigen-testbedrijf, ook van vóór de markering (lib/admin/eigen-test-regel.ts)
+  let out = rows
+    .filter((r) => opts.tenantId || !isEigenTestBedrijf(eigenTest, r.branch.tenantId))
+    .map((s) => toPublic(s, eigenTest))
+    .filter((s) => opts.tenantId || !s.testklus);
   if (near) {
     const { lat, lng, km } = near;
     out = out.filter((s) => haversineMeters({ latitude: lat, longitude: lng }, { latitude: s.latitude, longitude: s.longitude }) <= km * 1000);
@@ -125,7 +130,10 @@ export async function publicShift(id: string): Promise<PublicShift | null> {
     where: { id, status: { in: [...OPEN] }, visibility: "PUBLIC", startsAt: { gt: new Date() } },
     select,
   })) as Row | null;
-  return s ? toPublic(s, await leesEigenTest()) : null;
+  if (!s) return null;
+  // een klus van een eigen-testbedrijf bestaat voor bezoekers niet (lib/admin/eigen-test-regel.ts): net als een klus die er niet is
+  const eigenTest = await leesEigenTest();
+  return isEigenTestBedrijf(eigenTest, s.branch.tenantId) ? null : toPublic(s, eigenTest);
 }
 
 /** schema.org JobPosting — what makes a klus show up in Google's job search. */

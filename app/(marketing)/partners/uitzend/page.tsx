@@ -6,6 +6,8 @@ import { paginaFoto } from "@/lib/marketing/fotos";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { prisma } from "@/lib/prisma";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { zonderEigenTestAccounts } from "@/lib/admin/eigen-test-regel";
 import { BASE_FEE_PER_HOUR_CENTS } from "@/lib/pricing/tiers";
 import { PARTNER_VOORWAARDEN_PAD, TERMIJN } from "@/lib/uitzend/voorwaarden";
 
@@ -79,10 +81,10 @@ const FAQ = [
   },
 ];
 
-/** Live cijfers voor op de pagina; null als de database niet bereikbaar is (dan blijft het blok weg). Testadressen tellen niet mee. */
+/** Live cijfers voor op de pagina; null als de database niet bereikbaar is (dan blijft het blok weg). Testadressen en eigen-test-accounts tellen niet mee. */
 async function liveCijfers(): Promise<{ werkers: number; metId: number } | null> {
   try {
-    const echt = { disabledAt: null, NOT: { email: { endsWith: ".test" } } };
+    const echt = { disabledAt: null, NOT: { email: { endsWith: ".test" } }, ...zonderEigenTestAccounts(await leesEigenTest()) };
     const [werkers, metId] = await Promise.all([
       prisma.freelancerProfile.count({ where: { user: echt } }),
       prisma.user.count({ where: { ...echt, kycStatus: "VERIFIED", freelancerProfile: { isNot: null } } }),

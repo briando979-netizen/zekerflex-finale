@@ -1,6 +1,8 @@
 import { ShiftStatus, ShiftVisibility } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/lib/storage/kv";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isNietOpenbaar } from "@/lib/admin/eigen-test-regel";
 
 // ---------------------------------------------------------------------------
 // Geaggregeerde data voor de publieke "waar is er werk"-kaart. We tonen open
@@ -27,11 +29,12 @@ export interface OpenShiftMap {
 }
 
 const OPEN_STATUSES: ShiftStatus[] = [ShiftStatus.OPEN, ShiftStatus.MATCHING, ShiftStatus.PARTIALLY_FILLED];
-const CACHE_KEY = "open-shift-map:v1";
+const CACHE_KEY = "open-shift-map:v2";
 const CACHE_TTL_MS = 180_000; // 3 min
 
 async function compute(): Promise<OpenShiftMap> {
-  const shifts = await prisma.shift.findMany({
+  const eigenTest = await leesEigenTest();
+  const rows = await prisma.shift.findMany({
     where: {
       status: { in: OPEN_STATUSES },
       visibility: ShiftVisibility.PUBLIC,
@@ -39,12 +42,15 @@ async function compute(): Promise<OpenShiftMap> {
     },
     select: {
       title: true,
+      createdAt: true,
       hourlyRateCents: true,
-      branch: { select: { city: true, latitude: true, longitude: true } },
+      branch: { select: { city: true, latitude: true, longitude: true, tenantId: true, tenant: { select: { name: true } } } },
     },
     take: 3000,
     orderBy: { startsAt: "asc" },
   });
+  // een openbare kaart telt geen testklussen en geen klussen van een eigen-testbedrijf (lib/admin/eigen-test-regel.ts)
+  const shifts = rows.filter((s) => !isNietOpenbaar(eigenTest, { title: s.title, bedrijf: s.branch.tenant.name, tenantId: s.branch.tenantId, createdAt: s.createdAt }));
 
   interface Agg { name: string; latSum: number; lngSum: number; count: number; min: number; max: number; titles: string[] }
   const byCity = new Map<string, Agg>();
