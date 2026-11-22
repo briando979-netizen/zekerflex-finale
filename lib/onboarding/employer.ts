@@ -196,7 +196,7 @@ export async function submitEmployerOnboarding(
     // De KVK-koppeling geeft technische, Engelse fouten ("No Handelsregister entry…"): hier in gewoon Nederlands.
     reasons.push(
       limiet
-        ? "We controleren je KVK-nummer later; je kunt verder met je aanmelding."
+        ? "We controleren je KVK-nummer zelf; je hoort binnen 1 werkdag van ons. Je kunt gewoon verder met je aanmelding."
         : err instanceof AppError && err.status === 404
         ? "Dit KVK-nummer staat niet in het Handelsregister."
         : err instanceof AppError && err.status === 422 && /cijfers/.test(err.message)
@@ -205,7 +205,7 @@ export async function submitEmployerOnboarding(
             ? "Het Handelsregister is nu niet bereikbaar. Probeer het over een paar minuten opnieuw."
             : (err as { code?: string }).code === "P2002"
               ? "Dit KVK-nummer hoort al bij een ander ZekerFlex-account. Is dit jouw bedrijf? Neem contact met ons op, dan zoeken we het uit."
-              : "Het KVK-nummer kon niet worden gecontroleerd.",
+              : "We controleren je KVK-nummer zelf; je hoort binnen 1 werkdag van ons.",
     );
   }
 
