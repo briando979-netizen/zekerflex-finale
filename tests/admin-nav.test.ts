@@ -58,10 +58,16 @@ describe("indeling van de beheeromgeving", () => {
     for (const hub of ADMIN_HUBS.filter((h) => !h.verborgen)) expect(hub.pages.length, hub.id).toBeLessThanOrEqual(12);
   });
 
-  it("webshop, websites, telefonie, bank en AI-proeven staan niet in een zichtbaar onderdeel", () => {
+  it("telefonie, bank en AI-proeven staan niet in een zichtbaar onderdeel", () => {
     const zichtbaar = new Set(ADMIN_HUBS.filter((h) => !h.verborgen).flatMap((h) => h.pages.map((p) => p.href)));
-    for (const href of ["/admin/webshop", "/admin/shop", "/admin/website-beheer", "/admin/websitevoorstellen", "/admin/telefonie", "/admin/talkaro", "/admin/bank", "/admin/ai-trader", "/admin/sim", "/admin/kantoor", "/admin/horeca-betalingen"]) {
+    for (const href of ["/admin/telefonie", "/admin/bank", "/admin/ai-trader", "/admin/sim", "/admin/kantoor"]) {
       expect(zichtbaar.has(href), href).toBe(false);
+    }
+    // 22 nov 2026 (fase C): de beheerpagina's van webshop, websites, scans, advertenties, hardware, installaties, branches,
+    // horeca-betalingen en Talkaro zijn weg, ook uit het verborgen onderdeel
+    const overal = new Set(ADMIN_HUBS.flatMap((h) => h.pages.map((p) => p.href)));
+    for (const href of ["/admin/webshop", "/admin/shop", "/admin/shop-ai", "/admin/verkoop-via-ai", "/admin/website-beheer", "/admin/websitevoorstellen", "/admin/scans", "/admin/advertentie-op-maat", "/admin/talkaro", "/admin/hardware", "/admin/installaties", "/admin/branches", "/admin/horeca-betalingen"]) {
+      expect(overal.has(href), href).toBe(false);
     }
     // wat wél bij flexwerk hoort, staat zichtbaar: ook de Site-ontwerper en de huisstijl van de eigen site
     for (const href of ["/admin/gebruikers", "/admin/bedrijven", "/admin/onboarding", "/admin/vooruitblik", "/admin/disputes", "/admin/facturen", "/admin/berichten", "/admin/zekerflex-ai", "/admin/gratis", "/admin/systeem", "/admin/te-doen", "/admin/ontwerper", "/admin/huisstijl"]) {

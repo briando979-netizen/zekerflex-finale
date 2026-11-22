@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Online betalen (Stripe) staat dicht (11 nov 2026). De domeinzoeker belooft dan geen "Bestel en betaal" met iDEAL of
@@ -15,7 +13,6 @@ vi.mock("@/lib/rijschool/herkomst", () => ({ zelfdeHerkomst: () => true }));
 vi.mock("@/lib/sales/leads", () => ({ createLead: async () => void h.leads++ }));
 vi.mock("@/lib/mail", () => ({ sendMail: async (m: { to: string }) => void h.mails.push(m) }));
 
-const lees = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
 beforeEach(() => {
   h.uit = null;
@@ -57,21 +54,5 @@ describe("aanvragen", () => {
     expect(r.status).toBe(200);
     expect(h.leads).toBe(1);
     expect(h.mails).toHaveLength(1);
-  });
-});
-
-describe("de zoeker", () => {
-  const zoeker = lees("components/domeinen/DomeinZoeker.tsx");
-  const bedrijf = lees("app/api/werkgever/domeinen/route.ts");
-
-  it("bestellen alleen als betalen aan staat of het eerste jaar inbegrepen is; anders aanvragen", () => {
-    expect(zoeker).toContain('(werkgever && keuze.soort === "registreren" && keuze.prijsCent !== null && (betalen || inBundel(keuze.domein)) ? (');
-    // zonder antwoord van de server nooit aannemen dat betalen kan
-    expect(zoeker).toContain("const [betalen, setBetalen] = useState(false);");
-    expect(zoeker.match(/setBetalen\(d\.betalen === true\)/g)).toHaveLength(2);
-    // "log in om direct te bestellen en te betalen" alleen als dat ook echt kan
-    expect(zoeker).toContain('{keuze && !werkgever && betalen && keuze.soort === "registreren" && (');
-    expect(zoeker).toContain("Online betalen staat op dit moment uit");
-    expect(bedrijf).toContain("betalen: !uit");
   });
 });

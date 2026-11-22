@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Webshop: betalen per bankoverschrijving zolang Stripe dicht is (15 nov 2026, lib/shop/overschrijving.ts).
@@ -62,7 +60,6 @@ import { PATCH } from "@/app/api/shop/orders/[id]/route";
 import { rekeningBruikbaar, shopBetaalwijze, shopOverschrijvingVoor } from "@/lib/shop/overschrijving";
 import { SHOP_BETAALTERMIJN_DAGEN, shopKenmerk, wachtOpOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
 
-const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8").split("\r\n").join("\n");
 const ORDER_ID = "cmh7x2k9q0000abcd1234wxyz";
 const VARIANT = { id: "var_1", size: "M", color: "Zwart", priceCents: null, stock: 3, product: { id: "prod_1", name: "Fleece vest", priceCents: 3995, imageUrl: "/shop/fleece.jpg" } };
 const KLANT = { firstName: "Sanne", lastName: "Test", email: "sanne@klant.test", address: "Teststraat 1", postalCode: "9711AA", city: "Groningen" };
@@ -208,22 +205,5 @@ describe("Overschrijving ontvangen (PATCH status RECEIVED)", () => {
     expect(orderUpdateMany).not.toHaveBeenCalled();
     expect(variantUpdateMany).not.toHaveBeenCalled();
     expect(sendMail).not.toHaveBeenCalled();
-  });
-});
-
-describe("de schermen", () => {
-  // de bestelpagina en de omlijsting van de webshop (OrderTracking, ShopChrome) zijn op 22 nov 2026 weggehaald
-  it("de browser krijgt alleen het pure deel, nooit het bestand met het IBAN-controlecijfer (sepa → stripe, env)", () => {
-    for (const f of ["components/admin/ShopAdmin.tsx"]) {
-      const s = lees(f);
-      expect(s.startsWith('"use client"'), f).toBe(true);
-      expect(s, f).not.toMatch(/from "@\/lib\/shop\/overschrijving(-server)?"/);
-    }
-  });
-
-  it("terugbetalen via Stripe alleen bij een betaling via Stripe; de knop Overschrijving ontvangen bij een overschrijving", () => {
-    const a = lees("components/admin/ShopAdmin.tsx");
-    expect(a).toContain('["RECEIVED", "CONFIRMED", "SHIPPED"].includes(order.status) && order.stripePaymentIntentId');
-    expect(a).toContain("Overschrijving ontvangen");
   });
 });

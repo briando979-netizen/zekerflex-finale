@@ -35,7 +35,6 @@ cat > /etc/crontabs/root <<EOF
 10 1 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/kennisgraaf/snapshot"
 0 8 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/tick"
 0 8,12,16 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/offers-sweep"
-0 7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/scans/dagoverzicht"
 # elke 15 min: verzegelde chipgegevens (MRZ-sleutel, chipsessies, uitslagen) echt wissen als ze te oud zijn (lib/kyc/chip/sessie.ts)
 */15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/kyc/chip-opruimen"
 # elke minuut: geplande chatberichten versturen die aan de beurt zijn ("later versturen", lib/messaging/gepland.ts)
@@ -86,9 +85,6 @@ cat > /etc/crontabs/root <<EOF
 30 7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/melder/rapport?soort=wacht"
 # elke 10 min: het geheugen van de server meten en de eigenaar waarschuwen voor het te laat is (lib/ops/geheugen.ts)
 */10 * * * * wget -q -O /dev/null -T 30 "$H" "$APP/api/internal/backup/check?alleen=geheugen"
-*/5 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/website/uptime"
-0 6 * * 1 wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/website/weekly-check"
-30 1 * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/website/site-backups"
 45 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/website-check/opruimen"
 55 4 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/sitechat/opruimen"
 # Klantgegevens in afspraken na 2 jaar wissen (naam, telefoon, e-mail, opmerking; de afspraak blijft als lege regel).

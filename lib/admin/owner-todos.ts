@@ -38,10 +38,9 @@ import { liveVersie } from "@/lib/bouwer/versie";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
 import { dmarcNlTodo, dmarcStappenTodo, leesDmarcRecord, type DmarcStand } from "@/lib/admin/todo-dmarc";
-import { scanOpvolgTodo } from "@/lib/admin/todo-scans";
 import { introductieTodos } from "@/lib/admin/todo-introductie";
 import { verschuldigdeBeloningen } from "@/lib/introducties/beloning";
-import { CONCEPT_WACHT_DAGEN, wachtendeConcepten, wachtendeScans, wachtendeVoorstellen } from "@/lib/admin/verkoop-wacht";
+import { CONCEPT_WACHT_DAGEN, wachtendeConcepten } from "@/lib/admin/verkoop-wacht";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
 import { alpacaSleutelInfo } from "@/lib/trader/alpaca";
 import { featureEnabled } from "@/lib/flags";
@@ -199,7 +198,7 @@ async function testAccountCount(): Promise<number | null> {
   }
 }
 
-// De tellers voor websitevoorstellen, scans en concept-mails staan in lib/admin/verkoop-wacht.ts:
+// De teller voor concept-mails staat in lib/admin/verkoop-wacht.ts:
 // dezelfde cijfers als de kaart "Verkoop: dit wacht op jou" op het beheerstartscherm.
 export { CONCEPT_WACHT_DAGEN };
 
@@ -259,7 +258,7 @@ async function bonnenMailStand(): Promise<BonnenMailStand> {
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
   const base = env.APP_BASE_URL ?? "";
-  const [webhookEvents, products, issuing, llm, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling, bouwer, unsent, concepten] = await Promise.all([
+  const [webhookEvents, products, issuing, llm, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling, bouwer, concepten] = await Promise.all([
     stripeWebhookEvents(),
     getProducts().catch(() => []),
     stripeIssuingActive(),
@@ -273,7 +272,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     vagueBranchCities(),
     playIngesteld().catch(() => false),
     bouwerInstellingen().catch(() => null),
-    wachtendeVoorstellen().then((w) => (w ? w.aantal : null)),
     wachtendeConcepten(),
   ]);
   const [beeldGelukt, beeldSlot, dmarcStand, gratis] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld"), leesDmarc(hoofddomeinVan(base)), getGratisStand().catch(() => null)]);
@@ -321,8 +319,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // DMARC in stappen (14 nov): rapporten (rua) en daarna p=quarantine; en zekerflex.nl zonder DKIM (lib/admin/todo-dmarc.ts)
   const dmarcStappen = dmarcStappenTodo(dmarcStand);
   const dmarcNl = hoofddomeinVan(base) === "zekerflex.com" ? dmarcNlTodo(await leesDmarc("zekerflex.nl"), await heeftDkim("zekerflex.nl")) : null;
-  // gratis scans die op opvolging wachten (14 nov): stonden alleen in de dagmail aan sales@ (lib/admin/todo-scans.ts)
-  const scanOpvolg = scanOpvolgTodo(await wachtendeScans());
   // het bol-tegoed van "Introduceer een bedrijf" (17 nov, lib/introducties/beloning.ts): één taak per verschuldigde beloning;
   // afvinken = verstuurd. Een leesfout geeft geen taak (de beloning blijft staan en komt bij de volgende keer terug)
   const introductieBeloningen = introductieTodos(await verschuldigdeBeloningen().catch(() => []), manual);
@@ -361,7 +357,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(pasdienst ? [pasdienst] : []),
     ...(dmarcStappen ? [dmarcStappen] : []),
     ...(dmarcNl ? [dmarcNl] : []),
-    ...(scanOpvolg ? [scanOpvolg] : []),
     ...introductieBeloningen,
     {
       id: "llm",
@@ -1522,20 +1517,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("vercel-duplicate"),
     },
     {
-      id: "websitevoorstellen-versturen",
-      group: "Overig",
-      title: unsent ? `${unsent} websitevoorstel${unsent === 1 ? " staat" : "len staan"} klaar om te versturen` : "Websitevoorstellen versturen",
-      why: "ZekerFlex maakt websitevoorstellen voor leads, maar alleen een mens verstuurt ze. Een voorstel dat langer dan 2 dagen als concept blijft liggen, verloopt na 30 dagen zonder dat het bedrijf het ooit zag. Wie het maakte krijgt ook een pushmelding, maar alleen op een toestel met meldingen aan.",
-      how: [
-        "Open Beheer → Websitevoorstellen (of Sales → Websitevoorstellen).",
-        "Bekijk het voorstel, kopieer de klaarstaande mailtekst, stuur hem vanuit je eigen mail en zet het voorstel op 'Verstuurd'.",
-        "Past een voorstel niet (meer), trek het dan in. Deze taak vinkt zichzelf af als er geen voorstel meer ligt te wachten.",
-      ],
-      auto: true,
-      done: unsent === 0,
-      ...(unsent === null ? { doneNote: "kon de voorstellen nu niet tellen" } : {}),
-    },
-    {
       id: "bonnetjes-alias",
       group: "Beheer & veiligheid",
       title: "Alias bonnetjes@zekerflex.com aanmaken (bonnen per mail)",
@@ -1609,7 +1590,7 @@ export const NIET_FLEXWERK_TAKEN: ReadonlySet<string> = new Set([
   "issuing-active", "insurer", "bank-name", "map-3d", "play-rijschool-apps",
   "locatie-prijzen", "locatie-toegang-kastje", "locatie-printer", "locatie-portofoon-proef",
   "zakelijke-mail-kosten", "telefonie-prijzen", "telefonie-saldo", "twilio-085", "telefonie-acm", "telefonie-partner",
-  "netwerk-vpn-dns", "netwerk-radius", "websitevoorstellen-versturen", "stripe-btw", "loonheffingennummer",
+  "netwerk-vpn-dns", "netwerk-radius", "stripe-btw", "loonheffingennummer",
   "image", "gratis-ai-bronnen", "cloudflare-ai", "hf-token",
 ]);
 

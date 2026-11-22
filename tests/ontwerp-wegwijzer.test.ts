@@ -50,7 +50,8 @@ describe("de wegwijzer", () => {
     const tabs = WEGWIJZER.flatMap((r) => ("tab" in r.doel ? [r.doel.tab] : []));
     expect(tabs).toContain("shop");
     expect(tabs).toContain("home");
-    expect(WEGWIJZER.some((r) => "pagina" in r.doel && r.doel.pagina === "/admin/shop")).toBe(true);
+    // de beheerpagina's van de webshop zijn op 22 nov 2026 weggehaald
+    expect(WEGWIJZER.some((r) => "pagina" in r.doel && ["/admin/shop", "/admin/webshop", "/admin/shop-ai"].includes(r.doel.pagina))).toBe(false);
   });
 
   it("Beheer → Instellingen toont de wegwijzer boven de andere kaarten", () => {

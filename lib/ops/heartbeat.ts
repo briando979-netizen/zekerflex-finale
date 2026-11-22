@@ -56,9 +56,6 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "db-backup", label: "Database-back-up", maxAgeHours: 26 },
   // elke zondag na de back-up (deploy/backup/entrypoint.sh, run_verify), gemeld door /api/internal/backup/check
   { job: "db-backup-verify", label: "Back-up: diepgaande hersteltest", maxAgeHours: 24 * 8 + 2 },
-  { job: "site-uptime", label: "Uptime-bewaking klantsites", maxAgeHours: 2 },
-  { job: "site-weekly-check", label: "Wekelijkse check klantsites", maxAgeHours: 24 * 8 },
-  { job: "site-backups", label: "Back-ups klantsites", maxAgeHours: 26 },
   { job: "website-check-opruimen", label: "Verlopen voorbeeldsites van de website-check opruimen", maxAgeHours: 26 },
   { job: "sitechat-opruimen", label: "Websitechats na 90 dagen stilte wissen", maxAgeHours: 26 },
   { job: "afspraken-bewaartermijn", label: "Afspraken: klantgegevens na 2 jaar wissen", maxAgeHours: 26 },
@@ -103,8 +100,6 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "bing-indienen", label: "Bing: pagina's indienen", maxAgeHours: 26 },
   // 08, 12 en 16 UTC: offerte-aanvragen in sales@/info@ herkennen
   { job: "sales-offers", label: "Offerte-AI (mailbox)", maxAgeHours: 26 },
-  // dagelijks 07:00 UTC: dagoverzicht van de gratis scans aan sales@ (alleen een mail als er iets gebeurde)
-  { job: "scan-dagoverzicht", label: "Scans & deals: dagoverzicht aan sales", maxAgeHours: 26 },
   // elke 15 min: verzegelde chipgegevens van de ID-controle opruimen (lib/kyc/chip/sessie.ts ruimChipOp)
   { job: "chip-opruimen", label: "ID-controle: chipgegevens opruimen", maxAgeHours: 2 },
   // elke minuut: geplande chatberichten versturen (lib/messaging/gepland.ts, "later versturen")

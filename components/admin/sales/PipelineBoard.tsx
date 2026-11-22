@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import type { LeadDto } from "@/components/admin/SalesDashboard";
-import { WEBSITE_OPPORTUNITY_BELOW, leadWebsiteUrl } from "@/lib/sales/website-score-shared";
+import { WEBSITE_OPPORTUNITY_BELOW } from "@/lib/sales/website-score-shared";
 
 // ---------------------------------------------------------------------------
 // Salesforce-achtig kanban-bord voor de sales-pijplijn. Kolommen per fase,
@@ -86,21 +85,6 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
     }
   }, []);
 
-  // read their site and build the new one (lib/sales/website-proposal.ts); sending it stays a person's job
-  const proposal = useCallback(async (id: string, name: string) => {
-    setBusy(`${id}:voorstel`);
-    setMsg(`Websitevoorstel voor ${name}: website lezen, foto's ophalen, nieuwe site bouwen…`);
-    try {
-      const res = await fetch("/api/admin/websitevoorstellen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leadId: id }) });
-      const d = await res.json().catch(() => ({}));
-      setMsg(res.ok ? `Websitevoorstel voor ${d.proposal?.bedrijf ?? name} staat klaar. Bekijk en verstuur het onder Websitevoorstellen.` : (d?.error?.message ?? "Het voorstel maken lukte niet."));
-    } catch {
-      setMsg("Netwerkfout.");
-    } finally {
-      setBusy(null);
-    }
-  }, []);
-
   const scrape = useCallback(async (id: string) => {
     setBusy(`${id}:scrape`);
     setMsg(null);
@@ -133,11 +117,6 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
         {msg && (
           <span role="status" className="text-xs font-medium" style={{ color: "var(--a-text)" }}>
             {msg}
-            {msg.includes("Websitevoorstellen") && (
-              <Link href="/admin/websitevoorstellen" className="ml-1 underline">
-                Openen
-              </Link>
-            )}
           </span>
         )}
       </div>
@@ -242,17 +221,6 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                           className="a-button !min-h-0 !px-2 !py-0.5 text-[11px]"
                         >
                           {busy === `${l.id}:scrape` ? "Zoeken…" : "Zoek nummer"}
-                        </button>
-                      )}
-                      {leadWebsiteUrl(l.sourceUrl) && (
-                        <button
-                          type="button"
-                          onClick={() => void proposal(l.id, l.companyName)}
-                          disabled={busy !== null}
-                          title="Lees hun website en bouw een nieuwe, luxere website als voorstel"
-                          className="a-button !min-h-0 !px-2 !py-0.5 text-[11px]"
-                        >
-                          {busy === `${l.id}:voorstel` ? "Bouwen…" : "Websitevoorstel"}
                         </button>
                       )}
                     </div>

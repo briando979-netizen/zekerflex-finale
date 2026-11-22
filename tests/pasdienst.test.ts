@@ -104,10 +104,4 @@ describe("aan, uit en privacy", () => {
     expect(s).not.toMatch(/logger\.\w+\("[^"]*",\s*\{[^}]*\b(foto|beeld|link|sleutel|kleding|kop)\b/);
     expect(s).not.toMatch(/prisma\./);
   });
-
-  it("het beheer is alleen voor platformbeheer en geeft de sleutel nooit terug", () => {
-    const r = bron("app/api/admin/shop/pasdienst/route.ts");
-    expect(r.match(/withAdminAccess\(\["PLATFORM_ADMIN"\]/g)?.length).toBe(3);
-    expect(r).not.toMatch(/sleutel: info\.sleutel|openSecret/);
-  });
 });

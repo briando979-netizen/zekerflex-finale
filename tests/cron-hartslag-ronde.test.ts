@@ -59,7 +59,6 @@ describe("cron-hartslag: elke hartslag bewaakt, elke bewaking gevoed", () => {
   it("de maandelijkse en wekelijkse taken hebben een venster dat minstens hun schema dekt", () => {
     const venster = (job: string) => WATCHED_CRONS.find((c) => c.job === job)?.maxAgeHours ?? 0;
     expect(venster("pensioen-aangifte")).toBeGreaterThanOrEqual(31 * 24);
-    expect(venster("site-weekly-check")).toBeGreaterThanOrEqual(7 * 24);
     expect(venster("db-backup-verify")).toBeGreaterThanOrEqual(7 * 24);
   });
 });

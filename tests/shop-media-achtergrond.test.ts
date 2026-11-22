@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { GEEN_ACHTERGROND, kiesWeergave, leesInstelling, leesKeuze, magVideoSpelen } from "@/lib/ontwerp/achtergrond-core";
-import { conceptProductVoorFoto, kanZichtbaarWorden } from "@/lib/shop/media-product";
 
 const FOTO = "mabcdefghij123";
 const FOTO2 = "mzzzzzzzzzz999";
@@ -50,23 +49,3 @@ describe("achtergrond: lezen en kiezen", () => {
   });
 });
 
-describe("foto naar verborgen product", () => {
-  it("maakt een verborgen concept met de foto en een unieke slug", () => {
-    const a = conceptProductVoorFoto({ id: FOTO, naam: "Paraplu Zwart" });
-    const b = conceptProductVoorFoto({ id: FOTO2, naam: "Paraplu Zwart" });
-    expect(a).toMatchObject({ name: "Paraplu Zwart", active: false, priceCents: 0, imageUrl: `/beeld/${FOTO}` });
-    expect(a.slug).toMatch(/^[a-z0-9-]+$/);
-    expect(a.slug).not.toBe(b.slug);
-    expect(a.description.length).toBeGreaterThanOrEqual(10);
-  });
-  it("een rare of lege naam geeft toch een geldig product", () => {
-    const p = conceptProductVoorFoto({ id: FOTO, naam: "é" });
-    expect(p.name.length).toBeGreaterThanOrEqual(2);
-    expect(p.slug).toMatch(/^[a-z0-9-]+$/);
-  });
-  it("zichtbaar kan alleen met foto en prijs", () => {
-    expect(kanZichtbaarWorden({ imageUrl: null, priceCents: 500 })).toMatch(/foto/);
-    expect(kanZichtbaarWorden({ imageUrl: "/beeld/x", priceCents: 0 })).toMatch(/prijs/);
-    expect(kanZichtbaarWorden({ imageUrl: "/beeld/x", priceCents: 500 })).toBeNull();
-  });
-});

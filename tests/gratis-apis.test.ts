@@ -32,7 +32,6 @@ describe("wisselkoersen van de ECB", () => {
     const p = { titel: "Pen", omschrijving: "", fotos: [], prijsCents: 29, valuta: "USD" };
     expect(linkWaarschuwingen(p, { euroCents: 26, koersDatum: "13 november 2026" })[0]).toContain("Tegen de koers van de Europese Centrale Bank van 13 november 2026 is dat € 0,26");
     expect(linkWaarschuwingen(p)[0]).toContain("reken hem zelf om");
-    expect(lees("components/admin/WinkelAI.tsx")).toContain("else if (d.inkoopEuroCents) setInkoop(");
   });
 });
 

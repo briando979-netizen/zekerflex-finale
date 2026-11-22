@@ -199,7 +199,7 @@ describe("wachttijd met het eigen model (alles gratis)", () => {
     expect(lees("lib/sitechat/antwoord.ts")).toMatch(/timeoutMs: 25_000,\s*interactief: true/);
     expect(lees("lib/chat/assist.ts")).toMatch(/timeoutMs: 20_000,\s*interactief: true/);
     expect(lees("lib/companion/index.ts")).toMatch(/purpose: "companion",\s*interactief: true/);
-    for (const achtergrond of ["lib/orchestration/core.ts", "lib/boekhouding/bonnen/uitlezen.ts", "lib/review-scan/analyse.ts"]) {
+    for (const achtergrond of ["lib/orchestration/core.ts", "lib/boekhouding/bonnen/uitlezen.ts"]) {
       expect(lees(achtergrond), achtergrond).not.toMatch(/interactief: true/);
     }
   });

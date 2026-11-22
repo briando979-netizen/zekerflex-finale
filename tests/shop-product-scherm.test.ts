@@ -170,13 +170,4 @@ describe("waar het staat", () => {
   });
 
   // de productpagina van de webshop is op 22 nov 2026 weggehaald
-  it("het beheer opent het nieuwe scherm", () => {
-    const admin = lees("components/admin/ShopAdmin.tsx");
-    expect(admin).toContain("<ShopProductScherm");
-    expect(admin).toContain("setScherm({ product: null })");
-    const scherm = lees("components/admin/ShopProductScherm.tsx");
-    expect(scherm).toContain("multiple");
-    expect(scherm).toContain('method: "PUT"');
-    expect(scherm).toContain("onDrop={opDrop}");
-  });
 });

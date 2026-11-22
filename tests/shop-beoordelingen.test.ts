@@ -127,13 +127,6 @@ describe("op de site", () => {
     expect(server.match(/status: "zichtbaar"/g)).toHaveLength(2);
   });
 
-  it("het beheer ziet geen e-mailadres", () => {
-    const lijst = lees("app/api/admin/shop/beoordelingen/route.ts");
-    expect(lijst).toContain('withAdminAccess(["PLATFORM_ADMIN"]');
-    expect(lijst).not.toMatch(/email/);
-    expect(lees("app/api/admin/shop/beoordelingen/[id]/route.ts").match(/withAdminAccess<\{ id: string \}>\(\["PLATFORM_ADMIN"\]/g)).toHaveLength(2);
-  });
-
   it("de migratie maakt alleen de nieuwe tabel, met één beoordeling per product per bestelling", () => {
     const sql = lees("prisma/migrations/20261115190000_shop_review/migration.sql");
     expect(sql).toContain('CREATE TABLE "ShopReview"');

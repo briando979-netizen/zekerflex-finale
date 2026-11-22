@@ -41,10 +41,6 @@ const PUBLIC_PREFIXES = [
   "/api/shop", // public storefront reads; writes are admin-gated inside the route (de webshop zelf is sinds 22 nov 2026 weg; Beheer, de bon en de voorraadmelding gebruiken dit nog)
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
-  "/api/review-scan", // gratis review-scan (Google Places) + aanvraagformulier; IP- en dagbegrenzing, rapport op niet te raden id (lib/review-scan/run.ts)
-  "/api/advertentie", // advertentie op maat (/advertentie-op-maat): maken, de beelden en "Deze wil ik". Het niet te raden id (128 bit) is de sleutel; de beeldroute geeft vóór vrijgave alleen een klein beeld met ingebakken watermerk (lib/advertentie/regels.ts beeldBesluit), IP-begrensd met 429. Vrijgeven en beheren blijft achter de login (/api/admin/advertentie-op-maat)
-  "/api/logo-maker", // logo maker (/logo-maker): maken, de beelden en "Deze wil ik", zelfde opzet als /api/advertentie. Het niet te raden id (128 bit) is de sleutel; de beeldroute geeft vóór vrijgave alleen een klein beeld met ingebakken watermerk (lib/logo/regels.ts logoBesluit), IP-begrensd met 429. Vrijgeven en beheren blijft achter de login (/api/admin/advertentie-op-maat)
-  "/api/deal", // voorstel op maat na een gratis scan: "bekeken" en "akkoord"; het niet te raden id is de sleutel, IP-begrensd (lib/scans/deal.ts)
   "/api/rekentools", // "stuur mij de uitkomst" op de openbare rekentools: IP-begrensd, verborgen anti-botveld, toestemming verplicht; rekent zelf opnieuw (lib/rekentools/uitkomst.ts)
   "/api/klus-plaatsen", // /klus-plaatsen: de openbare voorpagina van een bedrijf lezen om de klus in te vullen; IP- en dagbegrenzing, alleen openbare adressen, niets bewaard (app/api/klus-plaatsen/website); /via telt alleen een maandtotaal van de tip van een werker (geen persoon, geen adres)
   "/api/media/youtube", // eigen kopie van een YouTube-voorbeeldplaatje (klik-om-af-te-spelen video); alleen YouTube-ids, één vaste host, IP-begrensd
@@ -56,7 +52,6 @@ const PUBLIC_PREFIXES = [
   "/api/printen/agent", // de printagent op een computer op locatie haalt de labelwachtrij op en meldt wat geprint is; eigen token per bedrijf (lib/locatie/printen.ts), IP-begrensd
   "/api/id-overdracht", // "verder op je telefoon": de telefoon (niet ingelogd) opent, laat lezen en levert de foto's in met een eenmalige code van 20 min (in de body, IP-begrensd; lib/kyc/overdracht.ts). Starten en de stand bekijken (/api/onboarding/overdracht) blijft achter de login
   "/api/chip", // de Android-app leest de chip van paspoort/ID-kaart: sleutel ophalen en uitslag sturen met een eenmalige code (10 min, in de body, IP-begrensd; lib/kyc/chip/sessie.ts). Starten en de uitslag bekijken (/api/onboarding/chip) blijft achter de login
-  "/api/installatie", // een klant volgt de monteur en de monteur zet zijn stap en positie: de code in het adres (id plus handtekening per rol, lib/installatie/store.ts) is de sleutel, IP- en per-afspraak-begrensd, nooit gelogd. Afspraken maken en beheren (/api/admin/installaties) blijft achter de login
   "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts)
   "/api/partner-lead", // aanvraagformulier voor partnerpakketten op de openbare pagina's (lib/products.ts): gevalideerd, IP-begrensd, maakt een lead; 14 nov 2026 gaf dit een 401 voor bezoekers zonder account
   "/api/uitzendbureau", // contactformulier op /voor-bureaus: gevalideerd, IP-begrensd, maakt een lead; zelfde gat als /api/partner-lead

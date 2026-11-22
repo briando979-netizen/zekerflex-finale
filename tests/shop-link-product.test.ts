@@ -66,13 +66,6 @@ describe("prijzen", () => {
 });
 
 describe("de route, het opslaan en het scherm", () => {
-  it("de route is alleen voor de platformbeheerder en slaat niets op", () => {
-    const route = bron("app/api/admin/shop-ai/link/route.ts");
-    expect(route).toContain('withAdminAccess(["PLATFORM_ADMIN"]');
-    expect(route).not.toContain("prisma");
-    // begrensd per gebruiker
-    expect(route).toContain('enforceRateLimit({ name: "shop-ai-link", identifier: principal.userId');
-  });
 
   it("ophalen gaat via de veilige ophaler en het logboek krijgt alleen de website, nooit het hele adres", () => {
     const server = bron("lib/shop/link-product-server.ts");
@@ -95,22 +88,6 @@ describe("de route, het opslaan en het scherm", () => {
     expect(ai).toMatch(/fotoUrl: z\.string\(\)\.trim\(\)\.max\(600\)\.regex\(\/\^https:/);
   });
 
-  it("het scherm heeft het vak voor de link en het adres van de foto, met de uitleg over marktplaatsen", () => {
-    const scherm = bron("components/admin/WinkelAI.tsx");
-    expect(scherm).toContain('"/api/admin/shop-ai/link"');
-    expect(scherm).toContain("Link naar het product bij je leverancier");
-    expect(scherm).toContain("Adres van de productfoto");
-    expect(scherm).toContain("...(fotoUrl.trim() ? { fotoUrl: fotoUrl.trim() } : {}),");
-    expect(scherm).toContain("AliExpress, Temu en Amazon laten dat niet toe");
-    expect(scherm).toContain("controleer of je de foto mag gebruiken");
-    expect(scherm).toContain("De verkoopprijs kies je zelf.");
-  });
-
-  it("de wegwijzer zegt waar je de webshop beheert", () => {
-    const w = bron("lib/ontwerp/wegwijzer.ts");
-    expect(w).toContain('doel: { pagina: "/admin/shop" }');
-    expect(w).toContain('doel: { pagina: "/admin/shop-ai" }');
-  });
 });
 
 describe("meer bronnen: winkelsystemen met een gegevensadres", () => {
@@ -163,15 +140,5 @@ describe("een winkel die we niet kunnen lezen: eerlijk zeggen, geen lege poging"
   it("een lege titel (AliExpress, Temu of Amazon zonder gegevens) is niet bruikbaar", () => {
     expect(isBruikbaar(leesProductPagina("<html><head><title>AliExpress</title></head><body></body></html>", BASIS))).toBe(false);
     expect(isBruikbaar(leesProductPagina("<html><head><title></title></head></html>", BASIS))).toBe(false);
-  });
-
-  it("de melding zegt in gewoon Nederlands dat de winkel niet te lezen is en dat je de tekst zelf plakt; het scherm toont hem als fout, zonder concept", () => {
-    const server = bron("lib/shop/link-product-server.ts");
-    expect(server).toContain("Grote marktplaatsen zoals AliExpress, Temu en Amazon laten hun pagina's niet door een programma lezen.");
-    expect(server).toContain("Bij Alibaba werkt de link van één product (…/product-detail/… of …/product-introduction/…), een overzicht zoals de dropshipping-producten niet.");
-    expect(server).toContain("Kopieer anders zelf de naam en de omschrijving en plak ze in het vak hieronder");
-    expect(server).toContain("throw AppError.validation(NIET_LEESBAAR)");
-    const scherm = bron("components/admin/WinkelAI.tsx");
-    expect(scherm).toContain("setLinkMelding({ tekst: (e as Error).message, fout: true })");
   });
 });

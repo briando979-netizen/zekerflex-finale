@@ -13,7 +13,7 @@ export function VerkoopKaart({ stand }: { stand: VerkoopWacht }) {
     return (
       <Panel title="Verkoop: dit wacht op jou" subtitle="Niets wordt vanzelf verstuurd; wat hier verschijnt, verstuur jij.">
         <p className="text-sm" style={{ color: "var(--a-mute)" }}>
-          {stand.onbekend.length ? "Niets te doen in wat te lezen was; een deel kon nu niet worden geteld." : "Niets te doen. Nieuwe concept-mails, scans en voorstellen komen hier vanzelf te staan."}
+          {stand.onbekend.length ? "Niets te doen in wat te lezen was; een deel kon nu niet worden geteld." : "Niets te doen. Nieuwe concept-mails en warme leads komen hier vanzelf te staan."}
         </p>
       </Panel>
     );

@@ -1,9 +1,6 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { centenNaarEuro, effectieveVoorraad, euroNaarCenten, heeftWijziging, slugUitNaam, snelWijziging, uniekeSlug, voorraadInLijst, voorraadNaarGetal } from "@/lib/shop/product-formulier";
 
-const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8").split("\r\n").join("\n");
 
 describe("prijzen in euro in plaats van centen", () => {
   it("leest een bedrag zoals een mens het typt", () => {
@@ -86,34 +83,5 @@ describe("snel aanpassen in de lijst", () => {
 
   it("zichtbaar of verborgen is ook een wijziging", () => {
     expect(snelWijziging(een, { prijsTekst: "12,95", voorraadTekst: "10", actief: false }).product).toEqual({ active: false });
-  });
-});
-
-describe("de lijst en het formulier in Beheer", () => {
-  it("de lijst gebruikt de bestaande opslaan-routes, neemt de serverversie over en meldt fouten met role=alert", () => {
-    const cellen = lees("components/admin/ShopSnelCellen.tsx");
-    expect(cellen).toContain("/api/shop/products/${product.id}`, { method: \"PATCH\"");
-    expect(cellen).toContain("/variants/${w.variant.id}");
-    expect(cellen).toContain("onBijgewerkt(serverProduct, serverVariant)");
-    expect(cellen).toContain('role="alert"');
-    expect(cellen).toContain('role="switch"');
-    expect(cellen).not.toMatch(/window\.alert|\balert\(/);
-    expect(cellen).toContain("kanZichtbaarWorden(");
-    const scherm = lees("components/admin/ShopAdmin.tsx");
-    expect(scherm).toContain("<ShopSnelCellen");
-    expect(scherm).toContain("setProducts((lijst) => lijst.map((p) => (p.id === product.id ?");
-    // geen tweede opslaan-route gebouwd
-    expect(lees("app/api/shop/products/[id]/route.ts")).toContain("export const PATCH");
-  });
-
-  it("het formulier vraagt euro's, maakt het webadres zelf en verbergt de zeldzame velden", () => {
-    const scherm = lees("components/admin/ShopAdmin.tsx");
-    expect(scherm).toContain("Verkoopprijs in euro");
-    expect(scherm).not.toContain("Verkoop (centen)");
-    expect(scherm).not.toContain("Inkoop (centen)");
-    expect(scherm).toContain("Webadres (optioneel)");
-    expect(scherm).toContain("uniekeSlug(slugUitNaam(form.name)");
-    expect(scherm).toContain("Meer opties (badge, volgorde, collectie)");
-    expect(scherm).toContain("Vul de verkoopprijs in euro in, bijvoorbeeld 12,95.");
   });
 });

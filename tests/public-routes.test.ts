@@ -51,8 +51,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/shop/orders/abc123/beoordeling", // een koper beoordeelt zijn aankoop: alleen met het getekende token van de bestelling (lib/shop/beoordeling.ts)
     "/api/company/search",
     "/api/terminal/abc123-sleutel",
-    "/api/installatie/abc123def456.sleutel", // klant en monteur volgen een installatie met de code in het adres
-    "/api/installatie/abc123def456.sleutel/positie",
     "/api/kaart/zoek", // ZekerFlex Kaart: adres zoeken (PDOK), IP-begrensd
     "/api/kaart/route", // ZekerFlex Kaart: route plannen via onze eigen routeplanner, IP-begrensd
     "/api/chip/sleutel", // the Android app opens the ID chip with a one-time code
@@ -71,18 +69,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/auth/werkgever", // /klus-plaatsen: is the caller's own session a werkgever? (yes/no only)
     "/api/auth/passkey", // begin van inloggen met passkey: eenmalige challenge, IP-begrensd (zonder sessie, je logt juist in)
     "/api/auth/callback/passkey", // NextAuth: de passkey-provider zelf (controleert challenge, handtekening en account)
-    "/api/review-scan", // free public review-scan
-    "/api/review-scan/lead", // its contact form
     "/api/klus-plaatsen/website", // /klus-plaatsen reads a company's public front page
-    "/api/advertentie", // advertentie op maat: maken zonder account
-    "/api/advertentie/0123456789abcdef0123456789abcdef/beeld", // het voorbeeld met watermerk (het id is de sleutel)
-    "/api/advertentie/0123456789abcdef0123456789abcdef/aanvraag", // "Deze wil ik"
-    "/api/advertentie/voorbeeld/bakker", // voorbeeldadvertentie op de landingspagina
-    "/api/logo-maker", // logo maker: maken zonder account
-    "/api/logo-maker/0123456789abcdef0123456789abcdef/beeld", // het voorbeeld met watermerk (het id is de sleutel)
-    "/api/logo-maker/0123456789abcdef0123456789abcdef/aanvraag", // "Deze wil ik"
-    "/api/logo-maker/voorbeeld/bakkerij", // voorbeeldlogo op de landingspagina
-    "/api/deal/0123456789abcdef", // tailored offer after a free scan (unguessable id)
     "/api/domeinen/zoek", // is a domain name still free (public RDAP)
     "/api/domeinen/aanvraag", // request a domain / transfer
     "/api/oidc/authorize", // "Inloggen met ZekerFlex": the route itself sends a guest to /login
@@ -163,6 +150,14 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/agent/horeca",
     "/api/boeken/kapper-jan",
     "/api/review/abcdef",
+    // de gratis scans met hun deal, advertenties en logo's op maat en het volgen van de monteur zijn weg (22 nov 2026, fase C)
+    "/api/review-scan",
+    "/api/review-scan/lead",
+    "/api/deal/0123456789abcdef",
+    "/api/advertentie",
+    "/api/advertentie/0123456789abcdef0123456789abcdef/beeld",
+    "/api/logo-maker",
+    "/api/installatie/abc123def456.sleutel",
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

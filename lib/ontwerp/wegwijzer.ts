@@ -32,21 +32,6 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "home" },
   },
   {
-    wat: "Alles van de webshop op één pagina (Mijn winkel)",
-    uitleg: "Hoe je webshop ervoor staat, wat er nu moet gebeuren, en een knop naar elk onderdeel: producten, bestellingen, uiterlijk en de AI-hulp.",
-    doel: { pagina: "/admin/webshop" },
-  },
-  {
-    wat: "De webshop beheren: producten, prijzen, voorraad en bestellingen",
-    uitleg: "Alles van je eigen webshop op één plek: producten toevoegen en aanpassen, foto's, voorraad, kortingscodes en bestellingen.",
-    doel: { pagina: "/admin/shop" },
-  },
-  {
-    wat: "Een product toevoegen vanaf een link of een idee",
-    uitleg: "Plak de link naar het product bij je leverancier, of beschrijf het in gewone woorden. De AI schrijft de Nederlandse tekst en rekent de prijs uit je marge uit. Het product staat uit tot jij het aanzet.",
-    doel: { pagina: "/admin/shop-ai" },
-  },
-  {
     wat: "De webshop indelen",
     uitleg: "Sleep de onderdelen van de shop-pagina naar een andere plek of verberg ze. Opslaan zet het meteen live.",
     doel: { tab: "shop" },
@@ -55,11 +40,6 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     wat: "De teksten van de webshop",
     uitleg: "Alle teksten van de shop staan in het tabblad Teksten, onder Webshop. Een eigen tekst geldt voor de Nederlandse shop.",
     doel: { tab: "teksten" },
-  },
-  {
-    wat: "Producten, prijzen, foto's en collecties",
-    uitleg: "Producten toevoegen of aanpassen, varianten (maat en kleur), voorraad, bundels en de foto's van de shop.",
-    doel: { pagina: "/admin/shop" },
   },
   {
     wat: "Het menu bovenaan en de voettekst",

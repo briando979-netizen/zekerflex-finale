@@ -23,16 +23,6 @@ describe("de bron bij een conceptproduct in Beheer", () => {
     expect(bronRegel(null)).toBeNull();
     expect(bronRegel({ pagina: null, foto: null })).toBeNull();
   });
-
-  it("de route is strikt voor platformbeheer en geeft de korte adressen; het scherm toont de regel klein", () => {
-    const route = bron("app/api/admin/shop-ai/bronnen/route.ts");
-    expect(route).toContain('["PLATFORM_ADMIN"]');
-    expect(bron("lib/shop/link-product-server.ts")).toContain("kortAdres(r.value?.pagina)");
-    const scherm = bron("components/admin/ShopAdmin.tsx");
-    expect(scherm).toContain("/api/admin/shop-ai/bronnen");
-    expect(scherm).toContain("bronRegel(bronnen[product.id])");
-    expect(scherm).toContain("text-[11px]");
-  });
 });
 
 describe("de prompt van maakConcept belooft niets", () => {

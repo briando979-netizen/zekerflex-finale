@@ -2,8 +2,8 @@
 // De indeling van de beheeromgeving. Sinds 21 nov 2026 (eigenaar: "geef admin een
 // betere gebruiksinterface, haal al die extra dingen weg") gaat het beheer alleen
 // nog over het flexwerk-platform: zeven onderdelen, elk met eigen pagina's die als
-// tabbladen boven de pagina staan. Alles wat publiek verborgen is (webshop,
-// websites maken, telefonie, rijschool, horeca, AI-trader, bank …) staat onderaan
+// tabbladen boven de pagina staan. Alles wat publiek verborgen is (telefonie,
+// verbinding, op locatie, AI-trader, bank …) staat onderaan
 // in één dichtgeklapt onderdeel "Overig (verborgen)": de pagina's blijven bestaan
 // en bereikbaar, maar liggen niet meer in de weg. Alleen data, dus ook bruikbaar
 // in de zoekbalk en in tests (die controleren dat elke pagina hier in staat).
@@ -139,7 +139,7 @@ export const ADMIN_HUBS: AdminHub[] = [
   {
     id: "overig",
     label: "Overig (verborgen)",
-    blurb: "Buiten het flexwerk-platform: webshop, websites, telefonie, modules en proeven",
+    blurb: "Buiten het flexwerk-platform: telefonie, verbinding, op locatie, oude winkelonderdelen en proeven",
     icon: "more",
     verborgen: true,
     pages: [
@@ -151,7 +151,6 @@ export const ADMIN_HUBS: AdminHub[] = [
       // geld
       { href: "/admin/efacturen", label: "E-facturen" },
       { href: "/admin/stripe/werkbank", label: "Stripe-werkbank" },
-      { href: "/admin/horeca-betalingen", label: "Horeca-betalingen" },
       { href: "/admin/bank", label: "Bank (gestopt)" },
       { href: "/admin/betalingen", label: "AI-betalingen" },
       { href: "/admin/icp", label: "ICP-opgave" },
@@ -159,36 +158,24 @@ export const ADMIN_HUBS: AdminHub[] = [
       // sales en marketing
       { href: "/admin/sales/partners", label: "Partnercampagnes" },
       { href: "/admin/aanbestedingen", label: "Aanbestedingen (TenderNed)" },
-      { href: "/admin/websitevoorstellen", label: "Websitevoorstellen" },
-      { href: "/admin/scans", label: "Scans & deals" },
-      { href: "/admin/advertentie-op-maat", label: "Advertenties en logo's op maat" },
-      { href: "/admin/talkaro", label: "Talkaro" },
       { href: "/admin/offertes", label: "Offerte-AI" },
       { href: "/admin/beller", label: "AI-beller" },
       { href: "/admin/telefonie", label: "Telefonie" },
       { href: "/admin/netwerk", label: "Verbinding (wifi, VPN, 5G)" },
       { href: "/admin/op-locatie", label: "Op locatie (portofoon, toegang, kluis, printen)" },
-      { href: "/admin/hardware", label: "Hardware (kassa, printers, schermen)" },
-      { href: "/admin/installaties", label: "Installaties (monteur volgen)" },
       { href: "/admin/kaart", label: "Kaart (bedrijven op de kaart)" },
-      { href: "/admin/branches", label: "Branches (modules per soort bedrijf)" },
       { href: "/admin/recruiter", label: "AI-recruiter" },
       { href: "/admin/social", label: "Sociale media" },
       { href: "/admin/nieuws", label: "Nieuwsroom" },
       { href: "/admin/ads", label: "Advertenties" },
       { href: "/admin/campagnes", label: "Campagnepagina's" },
       { href: "/admin/nieuwsbrief", label: "Nieuwsbrief" },
-      // webshop en websites
-      { href: "/admin/webshop", label: "Mijn winkel" },
-      { href: "/admin/shop", label: "Webshop" },
-      { href: "/admin/verkoop-via-ai", label: "Verkoop via AI" },
-      { href: "/admin/shop-ai", label: "Winkel-AI" },
+      // de partners, verkopers en de rest van de oude winkel
       { href: "/admin/markten", label: "Agenten & markten" },
       { href: "/admin/partners", label: "Partnerprogramma" },
       { href: "/admin/verkopers", label: "Verkopers" },
       { href: "/admin/studio", label: "Studio" },
       { href: "/admin/video", label: "Video-editor" },
-      { href: "/admin/website-beheer", label: "Website-beheer" },
       { href: "/admin/domeinen", label: "Domeinen" },
       // AI-proeven
       { href: "/admin/ai-trader", label: "AI-trader" },

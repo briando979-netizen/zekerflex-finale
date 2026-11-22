@@ -124,32 +124,12 @@ describe("regels voor een aanbieding", () => {
 
 // "in de winkel" (etalage, banners en de prijs op de productpagina) is met de webshop op 22 nov 2026 weggehaald
 describe("in beheer en op de server", () => {
-  it("de van-prijs is nergens in te typen: de route neemt alleen de nieuwe prijs en de laatste dag aan", () => {
-    const route = lees("app/api/admin/shop/aanbieding/route.ts");
-    expect(route).toMatch(/const startSchema = z\.object\(\{\n\s+productId: [^\n]+\n\s+prijsCents: [^\n]+\n[^\n]*\n\s+totEnMet: [^\n]+\n\}\);/);
-    expect(route).toContain('withAdminAccess(["PLATFORM_ADMIN"]');
-    const scherm = lees("components/admin/ShopAanbieding.tsx");
-    expect(scherm).not.toMatch(/vanCents: naarCenten|laagste30Cents: naarCenten/);
-  });
 
   it("starten controleert tegen de historie en stoppen zet de gewone prijs terug", () => {
     const server = lees("lib/shop/aanbieding-server.ts");
     expect(server).toContain("const fout = controleerDeal({ nieuwCents: a.nieuwCents, laagste, eindigt: a.eindigt, nu, historieVolledig: historie.dekt });");
     expect(server).toContain("data: { priceCents: a.nieuwCents, dealVanCents: laagste, dealNormaalCents: product.priceCents, dealEindigt: a.eindigt }");
     expect(server).toContain("data: { priceCents: normaal, dealVanCents: null, dealNormaalCents: null, dealEindigt: null }");
-  });
-
-  it("geen aanbieding op een product van een verkoper, een variant alleen doorgestreept met eigen dekking, en prijzen op slot", () => {
-    const server = lees("lib/shop/aanbieding-server.ts");
-    expect(server).toContain("if (product.sellerTenantId !== null) throw AppError.validation(");
-    expect(server).toContain("if (!(await historieVan(product.id, nu, v.id)).dekt) continue;");
-    expect(server).toContain("variantVan.set(v.id, Math.min(l, laagste, v.priceCents));");
-    expect(server).toContain("priceCents: { lt: prisma.shopProduct.fields.dealVanCents }");
-    expect(lees("app/api/shop/products/[id]/variants/[variantId]/route.ts")).toContain("nu.product.dealNormaalCents !== null && nu.priceCents !== d.priceCents");
-    // het productscherm bewaart de prijs alleen als hij gewijzigd is, en neemt de prijs van de server over na starten of stoppen
-    const scherm = lees("components/admin/ShopProductScherm.tsx");
-    expect(scherm).toContain("...(product && prijs === basisPrijsCents ? {} : { priceCents: prijs ?? 0 }),");
-    expect(scherm).toContain("setBasisPrijsCents(prijsCents);");
   });
 
   it("de database houdt elke prijswijziging zelf bij, en wie de prijs wijzigt tijdens een aanbieding moet eerst stoppen", () => {
