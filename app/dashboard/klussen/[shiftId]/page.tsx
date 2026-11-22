@@ -17,6 +17,9 @@ import { KlusRoute } from "@/components/app/KlusRoute";
 import { ReageerButton } from "@/components/app/ReageerModal";
 import { shiftCategory } from "@/lib/shifts/category";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { verborgenBedrijvenVoor } from "@/lib/admin/eigen-test-zicht";
 import { MODE_ORDER, type TravelModeKey } from "@/lib/geo/travel-modes";
 import type { RouteModus } from "@/lib/geo/route-core";
 import { money, moneyExact } from "@/components/app/ui";
@@ -76,6 +79,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const upcoming = start.getTime() > Date.now();
   const shiftEnded = new Date(s.endsAt).getTime() < Date.now();
   const cat = shiftCategory(s.title, s.skill);
+  // klussen van een eigen-testbedrijf alleen voor eigen-test-accounts en interne accounts (lib/admin/eigen-test-regel.ts)
+  const eigenTest = await leesEigenTest();
+  const verborgen = await verborgenBedrijvenVoor(principal.userId, eigenTest);
 
   const [offers, orgReviews, orgExtra, otherShifts, fiscal, followsClient, andereKlussen] = await Promise.all([
     listCounterOffers(500),
@@ -97,15 +103,25 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     isFollowing(principal.userId, s.clientTenantId),
     // "Misschien zijn deze klussen ook iets voor jou" onderaan (zoals YoungOnes, 21 nov): andere open klussen op de open markt
     prisma.shift.findMany({
-      where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, visibility: "PUBLIC", startsAt: { gte: new Date() }, id: { not: s.id } },
-      select: { id: true, title: true, startsAt: true, hourlyRateCents: true, branch: { select: { city: true, tenant: { select: { name: true } } } } },
+      where: {
+        status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] },
+        visibility: "PUBLIC",
+        startsAt: { gte: new Date() },
+        id: { not: s.id },
+        ...(verborgen.length ? { branch: { tenantId: { notIn: verborgen } } } : {}),
+      },
+      select: { id: true, title: true, createdAt: true, startsAt: true, hourlyRateCents: true, branch: { select: { city: true, tenantId: true, tenant: { select: { name: true } } } } },
       orderBy: { startsAt: "asc" },
       take: 30,
     }),
   ]);
   // dezelfde soort werk eerst, echte klussen vóór testklussen, dan de eerstvolgende; hoogstens vier
   const ookVoorJou = andereKlussen
-    .map((k) => ({ ...k, zelfdeSoort: shiftCategory(k.title, null).key === cat.key, test: isTestklus({ title: k.title, bedrijf: k.branch.tenant.name }) }))
+    .map((k) => ({
+      ...k,
+      zelfdeSoort: shiftCategory(k.title, null).key === cat.key,
+      test: isTestklus({ title: k.title, bedrijf: k.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: k.branch.tenantId, createdAt: k.createdAt }) }),
+    }))
     .sort((a, b) => Number(a.test) - Number(b.test) || Number(b.zelfdeSoort) - Number(a.zelfdeSoort) || a.startsAt.getTime() - b.startsAt.getTime())
     .slice(0, 4);
   const isPayroll = invoiceModeFor(fiscal) === "payroll";
@@ -410,12 +426,6 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
       )}
 
       <div className="mx-auto max-w-2xl px-4 py-5">
-        {s.testklus && (
-          <p className="mb-4 rounded-xl border border-hairstrong bg-paper-soft px-3.5 py-3 text-sm text-neutralx-700">
-            <strong className="block text-ink">{ft.card.testklus}</strong>
-            {ft.card.testklusUitleg}
-          </p>
-        )}
         {/* de bedrijfsnaam, niet de vestiging ("Eenmalige locatie — adres"); het adres staat bij de kaart hieronder */}
         <p className="text-sm font-semibold text-brand-600">{s.company}</p>
         <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-ink">{s.title}</h1>
