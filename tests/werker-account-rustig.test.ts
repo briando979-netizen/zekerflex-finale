@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { netteHandleidingenUrl } from "@/lib/kennisbank/nette-url";
 
 // Het scherm Account van de werker (/dashboard/account), sinds 21 nov 2026 in de opzet van de app van YoungOnes
 // (eigenaar: "alles weg en in de stijl van YoungOnes"): geen "Ziek melden" zonder geplande of eerder aangenomen klus,
@@ -50,12 +51,9 @@ describe("werker — scherm Account", () => {
       "{ label: t.favorites,",
       "{ label: t.hidden,",
       "{ label: t.personal,",
-      "{ label: t.address,",
-      "{ label: t.experience,",
       '{ label: t.business, href: "/dashboard/fiscaal" }',
       "{ label: t.insurance,",
       "{ label: t.invoices,",
-      "{ label: t.email,",
       "{ label: t.password,",
       "{ label: t.delete,",
       "{ label: t.kb,",
@@ -64,6 +62,19 @@ describe("werker — scherm Account", () => {
     expect([...volgorde].sort((a, b) => a - b)).toEqual(volgorde);
     // de pushkaart staat tussen feedback en favorieten (in de JSX, na de lijst met rijen)
     expect(bron.indexOf("<PushToggle cardTexts={ft.accountDelen.push} />")).toBeLessThan(bron.indexOf("{GROEPEN.map("));
+  });
+
+  // 22 nov 2026 (gebruikersonderzoek): vier rijen naar dezelfde profielpagina werden er één, en de handleidingen staan er
+  // niet op het kale serveradres (sslip.io)
+  it("één rij naar Mijn gegevens, en de handleidingen alleen met een nette naam", () => {
+    expect(bron.match(/href: "\/dashboard\/profiel"/g)).toHaveLength(1);
+    for (const weg of ["{ label: t.address,", "{ label: t.experience,", "{ label: t.email,"]) expect(bron, weg).not.toContain(weg);
+    expect(bron).toContain("netteHandleidingenUrl(`${outlinePubliekeUrl()}/`)");
+    expect(netteHandleidingenUrl("https://kennis.37-97-226-24.sslip.io/")).toBeNull();
+    expect(netteHandleidingenUrl("http://37.97.226.24/")).toBeNull();
+    expect(netteHandleidingenUrl("")).toBeNull();
+    expect(netteHandleidingenUrl("https://kennis.zekerflex.com/")).toBe("https://kennis.zekerflex.com/");
+    expect(readFileSync(join(__dirname, "..", "app/dashboard/layout.tsx"), "utf8")).toContain("netteHandleidingenUrl(");
   });
 
   it("heeft geen regel ZekerFlex OS meer in de lijst van de werker", () => {
