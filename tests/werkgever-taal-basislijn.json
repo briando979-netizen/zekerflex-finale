@@ -2,7 +2,6 @@
   "uitleg": "Bestanden die /werkgever laadt en nog harde Nederlandse zinnen hebben (3+ woorden). De werkgeversapp is Nederlands en Engels (EMPLOYER_LOCALES); nieuwe tekst hoort in lib/i18n/dictionaries.ts en dictionary-en.ts. Het getal mag alleen dalen: een vertaald bestand verlaagt zijn getal of verdwijnt hier.",
   "bestanden": {
     "app/werkgever/diensten/[shiftId]/bewerken/page.tsx": 1,
-    "app/werkgever/diensten/[shiftId]/page.tsx": 1,
     "app/werkgever/inchecken/page.tsx": 1,
     "app/werkgever/inchecken/sticker/[id]/page.tsx": 2,
     "app/werkgever/instellingen/page.tsx": 1,

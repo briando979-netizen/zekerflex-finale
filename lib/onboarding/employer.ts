@@ -174,7 +174,7 @@ export async function submitEmployerOnboarding(
       alertOwnerLater({
         key: `bedrijf-controle:${tenantId}`,
         title: `Buitenlands bedrijf wacht op controle: ${b.companyName ?? "nieuwe opdrachtgever"} (${landNaam(input.land)})`,
-        detail: `Dit bedrijf zit niet in het KVK. Opgegeven: ${b.detail}. Zoek het bedrijf zelf op, neem zo nodig contact op en keur het goed in Admin → Bedrijven. Tot die tijd kan het één testklus plaatsen.`,
+        detail: `Dit bedrijf zit niet in het KVK. Opgegeven: ${b.detail}. Zoek het bedrijf zelf op, neem zo nodig contact op en keur het goed in Admin → Bedrijven. Tot die tijd kan het één klus plaatsen.`,
         severity: "warning",
         url: `/admin/bedrijven/${tenantId}`,
       });

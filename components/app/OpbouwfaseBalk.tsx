@@ -6,7 +6,7 @@ import { OpbouwfaseMelding } from "@/components/app/OpbouwfaseMelding";
 const WERKGEVER = {
   titel: "ZekerFlex is nog in de opbouwfase",
   tekst:
-    "Bedankt dat je er al bij bent! Wat je ziet werkt echt, maar we zijn nog niet officieel gestart. Sommige klussen en kandidaten zijn testgegevens van ons zelf, om te zien of alles goed werkt. Je gegevens zijn veilig en je hoeft niets te verwijderen. Probeer gerust alles uit en vertel ons je ideeën.",
+    "Bedankt dat je er al bij bent! Wat je ziet werkt echt, maar we zijn nog niet officieel gestart. Je gegevens zijn veilig en je hoeft niets te verwijderen. Probeer gerust alles uit en vertel ons je ideeën.",
   meer: "Lees meer",
   sluit: "Melding sluiten",
 };
@@ -14,7 +14,7 @@ const WERKGEVER = {
 /**
  * Balk bovenaan het startscherm van /werkgever (sinds 22 nov 2026 niet meer op elke
  * werkgeverspagina; bij werkers staat hij sinds 10 nov niet) zolang ZekerFlex nog niet officieel
- * live is: testklussen, gegevens veilig, ideeën welkom (/opbouwfase, sinds 22 nov 2026 een omleiding naar de voorpagina). Uit te
+ * live is: gegevens veilig, ideeën welkom (/opbouwfase, sinds 22 nov 2026 een omleiding naar de voorpagina). Uit te
  * zetten zonder uitrol met de flag "opbouwfase-melding" (Admin → Systeem).
  */
 export async function OpbouwfaseBalk() {

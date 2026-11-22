@@ -543,7 +543,7 @@ export function onboardingReminderEmail(
       ? {
           href: `${base}/werkgever`,
           todo: "vul je KVK-nummer en eerste vestiging in",
-          why: "Zodra je bedrijf geverifieerd is, kun je klussen plaatsen en freelancers inplannen. Tot die tijd kun je één testklus uitzetten.",
+          why: "Zodra je bedrijf geverifieerd is, kun je klussen plaatsen en freelancers inplannen. Tot die tijd kun je één klus uitzetten.",
         }
       : kind === "uitzendkracht"
         ? {

@@ -50,7 +50,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
     ? await getEmployerRelations(scope.tenantIds[0])
     : { favorites: [], blocked: [] };
   const verified = scope.tenantIds[0] ? await isTenantVerified(scope.tenantIds[0]) : true;
-  if (!verified) QUEUE_LABEL.VIEWED = "Heeft gereageerd";
+  if (!verified) QUEUE_LABEL.VIEWED = d.queueResponded;
   const ratings = await freelancerRatings([...s.assigned.map((a) => a.userId), ...s.queue.slice(0, 10).map((q) => q.userId)]);
   const stars = (userId: string) => {
     const r = ratings.get(userId);
@@ -156,11 +156,8 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
 
       {!verified && (
         <div className="mb-6 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
-          <p className="font-semibold text-ink">Dit is een testklus</p>
-          <p className="mt-1">
-            Freelancers kunnen reageren — je ziet ze hieronder bij &ldquo;Heeft gereageerd&rdquo; en kunt ze al een bericht sturen.
-            Inplannen kan pas zodra je bedrijf is goedgekeurd; wie gereageerd heeft krijgt dan automatisch een melding om te bevestigen.
-          </p>
+          <p className="font-semibold text-ink">{d.controleTitel}</p>
+          <p className="mt-1">{fmt(d.controleTekst, { label: d.queueResponded })}</p>
         </div>
       )}
 

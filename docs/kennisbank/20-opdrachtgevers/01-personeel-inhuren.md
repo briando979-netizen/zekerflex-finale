@@ -4,7 +4,7 @@
 
 1. Maak een account en vul het KVK-nummer in. We controleren het in het Handelsregister.
 2. Bevestig je e-mailadres. Een bedrijf met een eigen maildomein wordt meteen vertrouwd; anders kijkt een medewerker van ZekerFlex even mee (meestal binnen een werkdag).
-3. Tot de controle klaar is kun je één proefklus plaatsen, nog zonder inplannen.
+3. Tot de controle klaar is kun je één klus plaatsen, nog zonder inplannen.
 
 ## Een klus plaatsen
 

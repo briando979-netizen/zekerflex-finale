@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Unverified company: one test klus, reactions allowed, nobody scheduled.
+// Unverified company: one klus, reactions allowed, nobody scheduled.
 
 const m = vi.hoisted(() => ({
   tenant: { type: "ENTERPRISE_HQ", companyRegistration: null as null | { isActive: boolean; insolvent: boolean } },
@@ -31,18 +31,21 @@ describe("company verification gate", () => {
     m.shifts = 0;
   });
 
-  it("a new company without KVK is not verified and may place exactly one test klus", async () => {
+  it("a new company without KVK is not verified and may place exactly one klus", async () => {
     expect((await tenantVerification("t1")).verified).toBe(false);
     expect(await assertMayPlaceShift("t1")).toEqual({ test: true });
     m.shifts = 1;
-    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één testklus/);
+    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één klus/);
+    // 22 nov 2026 (eigenaar): nergens het woord "test" in wat een bedrijf te lezen krijgt
+    const fout = await assertMayPlaceShift("t1").then(() => null, (e: unknown) => e as Error);
+    expect(fout?.message ?? "").not.toMatch(/test/i);
   });
 
   it("active KVK alone is not enough: anyone can type a number, so ZekerFlex checks by hand (inControle)", async () => {
     m.tenant.companyRegistration = { isActive: true, insolvent: false };
     expect(await tenantVerification("t1")).toEqual({ verified: false, via: null, inControle: true });
     m.shifts = 1;
-    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één testklus/);
+    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één klus/);
   });
 
   it("active KVK + proof the registrant belongs to it (own domain) → verified, unlimited klussen", async () => {

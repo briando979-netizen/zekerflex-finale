@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Een bedrijf buiten Nederland heeft geen KVK: het blijft ongeverifieerd tot een beheerder het goedkeurt,
-// en mag in de tussentijd één testklus plaatsen.
+// en mag in de tussentijd één klus plaatsen.
 
 const m = vi.hoisted(() => ({
   tenant: { type: "ENTERPRISE_HQ", country: "DE", vatNumber: "DE123456789" as string | null, companyRegistration: null },
@@ -46,10 +46,10 @@ describe("verificatie van een buitenlands bedrijf", () => {
     expect(await tenantVerification("t1")).toEqual({ verified: false, via: null, inControle: false });
   });
 
-  it("mag één testklus plaatsen, daarna niet meer", async () => {
+  it("mag één klus plaatsen, daarna niet meer", async () => {
     expect(await assertMayPlaceShift("t1")).toEqual({ test: true });
     m.shifts = 1;
-    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één testklus/);
+    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één klus/);
   });
 
   it("na goedkeuring door een beheerder is het geverifieerd en onbeperkt", async () => {

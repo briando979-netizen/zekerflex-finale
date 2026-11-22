@@ -36,7 +36,7 @@ Je bent geverifieerd als je KVK-inschrijving actief is **en** duidelijk is dat j
 
 ### Wat kan er voor de verificatie?
 
-- Je kunt **één testklus** plaatsen. Werkers zien hem en kunnen reageren.
+- Je kunt **één klus** plaatsen. Werkers zien hem en kunnen reageren.
 - Je kunt **nog niemand inplannen**. Dat kan pas zodra je bedrijf is geverifieerd. Werkers die reageerden, krijgen daarna een melding om te bevestigen.
 
 ### Je profiel instellen

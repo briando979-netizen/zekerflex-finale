@@ -7,7 +7,7 @@ import { getBuitenlandBewijs } from "@/lib/company/buitenland";
 // ---------------------------------------------------------------------------
 // Is this company (tenant) verified enough to actually staff people?
 //
-// Until it is, a company may place ONE test klus: it is visible and freelancers
+// Until it is, a company may place ONE klus: it is visible and freelancers
 // can respond, but nobody gets scheduled on it (no assignment, no timesheet,
 // no invoice). Verified means any of:
 //   - the KVK registration checks out as active in the Handelsregister AND the
@@ -90,13 +90,13 @@ export async function setTenantApproval(tenantId: string, approved: boolean, by:
   await kvSet(approvalKey(tenantId), { approved, at: new Date().toISOString(), by });
 }
 
-/** Unverified companies get one test klus (not counting cancelled ones). */
+/** Unverified companies get one klus (not counting cancelled ones). */
 export async function assertMayPlaceShift(tenantId: string): Promise<{ test: boolean }> {
   if (await isTenantVerified(tenantId)) return { test: false };
   const existing = await prisma.shift.count({ where: { branch: { tenantId }, status: { not: "CANCELLED" } } });
   if (existing >= 1) {
     throw AppError.precondition(
-      "Je kunt één testklus plaatsen zolang je bedrijf nog niet is geverifieerd. Vul je bedrijfsgegevens in bij Jouw start → Bedrijf verifiëren (het KVK-nummer, of voor een buitenlands bedrijf het btw- of registratienummer); zodra je bedrijf is goedgekeurd kun je onbeperkt klussen plaatsen en mensen inplannen.",
+      "Je kunt één klus plaatsen zolang je bedrijf nog niet is geverifieerd. Vul je bedrijfsgegevens in bij Jouw start → Bedrijf verifiëren (het KVK-nummer, of voor een buitenlands bedrijf het btw- of registratienummer); zodra je bedrijf is goedgekeurd kun je onbeperkt klussen plaatsen en mensen inplannen.",
     );
   }
   return { test: true };
@@ -107,7 +107,7 @@ export const UNVERIFIED_ASSIGN_MESSAGE =
 
 /**
  * The company just became verified: tell every freelancer who reacted to its
- * test klus that they can now confirm (re-tapping "aannemen" schedules them).
+ * klus that they can now confirm (re-tapping "aannemen" schedules them).
  * Best-effort push; returns how many people were told.
  */
 export async function notifyPendingReactions(tenantId: string): Promise<number> {

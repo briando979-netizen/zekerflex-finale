@@ -23,7 +23,7 @@ export const WERKGEVER_STAPPEN: Record<WerkgeverStapSleutel, { title: string; wh
   },
   verificatie: {
     title: "Bedrijf laten verifiëren",
-    why: "Zodra je bedrijf is geverifieerd kun je mensen inplannen. Tot die tijd kun je één testklus plaatsen.",
+    why: "Zodra je bedrijf is geverifieerd kun je mensen inplannen. Tot die tijd kun je één klus plaatsen.",
   },
   klus: {
     title: "Je eerste klus plaatsen",
