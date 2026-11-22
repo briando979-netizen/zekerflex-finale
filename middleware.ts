@@ -136,8 +136,8 @@ function next(
 // Android app (TWA) mode: the app always launches /start?utm_source=twa, which
 // sets APP_COOKIE. With it, the public marketing site is off-limits — any page
 // outside APP_ALLOWED bounces to /start (→ login or your own dashboard). Legal
-// pages Google Play requires, the shop and the kennisbank (linked from the
-// dashboards) stay reachable; the bank pages are blocked (lib/app-mode.ts).
+// pages Google Play requires and the kennisbank (linked from the dashboards)
+// stay reachable; the bank pages are blocked (lib/app-mode.ts).
 // /?app=0 leaves app mode.
 // ---------------------------------------------------------------------------
 const APP_ALLOWED = [
@@ -148,11 +148,8 @@ const APP_ALLOWED = [
   "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
   // 22 nov 2026 (rondgang): "Join de community" (/nieuwsbrief) en "Status" in de werker-app stuurden terug naar /start
   "/nieuwsbrief", "/status",
-  "/shop", "/kennis", "/offline",
-  // de bestanden van de paskamer (public/paskamer: meetmodel, wasm, 3D-paspop). De middleware vangt alles op wat geen afbeelding of lettertype is
-  // (.mjs, .wasm, .task, .tflite, .bin, .json), dus zonder dit stuurde de app-modus ze door naar /start: de import van vision_bundle.mjs kreeg
-  // HTML terug ("text/html is geen JavaScript") en "Op mijn foto" werkte in de iPhone- en Android-app nooit. Er is geen pagina onder /paskamer.
-  "/paskamer",
+  // de webshop en de paskamer zijn weg (22 nov 2026)
+  "/kennis", "/offline",
   // inchecken op locatie: de korte link op de NFC-sticker en het scherm bij de ingang (lib/incheck)
   "/i", "/terminal",
   // "verder op je telefoon": de QR-code van de ID-scan opent deze pagina, ook als de app op de telefoon staat

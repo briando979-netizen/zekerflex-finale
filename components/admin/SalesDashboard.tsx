@@ -339,7 +339,6 @@ export function SalesDashboard({ initialLeads, initialFilter }: { initialLeads: 
                             {l.websiteCheck.platform ? ` · ${l.websiteCheck.platform}` : ""}
                           </span>
                           {l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW && <APill tone="warn">Kans voor Website-beheer</APill>}
-                          <a href={`/website-check?r=${l.websiteCheck.checkId}`} target="_blank" rel="noopener noreferrer" className="underline">Rapport</a>
                         </p>
                       )}
                       {l.notes && (

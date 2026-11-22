@@ -32,8 +32,16 @@ describe("de webshop staat uit", () => {
     expect(existsSync(path.join(process.cwd(), "app/shop/p/[code]/route.ts"))).toBe(true);
   });
 
-  it("de taken van de webshop doen niets meer, maar houden hun hartslag", () => {
-    for (const r of ["agent-catalogus", "voorraadmelding", "cj-bijwerken", "cj-fotos-verhuizen", "cj-volgen", "cj-wachtrij"]) {
+  // 22 nov 2026 (fase C): de taken van CJ en de productlijst voor AI-assistenten zijn weg; de voorraadmelding blijft (die ruimt oude adressen op)
+  it("de taken van CJ en de productlijst voor AI-assistenten zijn weg", () => {
+    for (const r of ["agent-catalogus", "cj-bijwerken", "cj-fotos-verhuizen", "cj-volgen", "cj-wachtrij"]) {
+      expect(existsSync(path.join(process.cwd(), `app/api/internal/shop/${r}/route.ts`)), r).toBe(false);
+      expect(lees("deploy/cron/entrypoint.sh"), r).not.toContain(`/api/internal/shop/${r}"`);
+    }
+  });
+
+  it("de voorraadmelding doet niets meer, maar houdt zijn hartslag", () => {
+    for (const r of ["voorraadmelding"]) {
       const src = lees(`app/api/internal/shop/${r}/route.ts`);
       expect(src, r).toContain("if (!WEBSHOP_AAN) {");
       expect(src, r).toContain(`recordCronRun("${r}", true);`);

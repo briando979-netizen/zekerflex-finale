@@ -179,10 +179,7 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                         </span>
                       )}
                       {l.websiteCheck && (
-                        <a
-                          href={`/website-check?r=${l.websiteCheck.checkId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <span
                           title={`Website ${l.websiteCheck.host}: ${l.websiteCheck.score}/100${l.websiteCheck.score < WEBSITE_OPPORTUNITY_BELOW ? " · kans voor Website-beheer" : ""}`}
                           className="rounded px-1.5 text-[10px] font-bold"
                           style={{
@@ -191,7 +188,7 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                           }}
                         >
                           Web {l.websiteCheck.score}
-                        </a>
+                        </span>
                       )}
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: "var(--a-mute)" }}>

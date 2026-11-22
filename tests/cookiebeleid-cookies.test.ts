@@ -63,7 +63,6 @@ const VERWACHT: Record<string, Verwacht> = {
   zf_cookie_consent: { bron: "components/marketing/CookieConsent.tsx", looptijd: () => constante("components/marketing/CookieConsent.tsx", "oneYear") },
   zf_locale: { bron: "lib/i18n/config.ts", looptijd: () => constante("lib/i18n/config.ts", "LOCALE_MAX_AGE") },
   zf_theme: { bron: "lib/theme/config.ts", looptijd: () => constante("lib/theme/config.ts", "THEME_MAX_AGE") },
-  zf_shop_modus: { bron: "lib/shop/modus.ts", looptijd: () => constante("lib/shop/modus.ts", "MODUS_MAX_AGE") },
   zf_welkom: { bron: "lib/welkom/slides.ts", looptijd: () => uit("lib/welkom/slides.ts", new RegExp(`WELKOM_COOKIE\\}=1; path=/; max-age=\\$\\{${SOM}\\}`)) },
   zf_balk_dicht: { bron: "lib/ontwerp/balk.ts", looptijd: () => uit("components/marketing/AankondigingsBalk.tsx", new RegExp(`BALK_COOKIE\\}=\\$\\{id\\}; Max-Age=\\$\\{${SOM}\\}`)) },
   zf_app: { bron: "lib/app-mode.ts", looptijd: () => uit("middleware.ts", new RegExp(`res\\.cookies\\.set\\(APP_COOKIE, "1", \\{ path: "/", maxAge: ${SOM},`)) },

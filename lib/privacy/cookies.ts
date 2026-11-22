@@ -39,7 +39,6 @@ export const GEPLAATSTE_COOKIES: readonly GeplaatsteCookie[] = [
   { namen: ["zf_cookie_consent"], doel: "onthoudt dat je de cookiemelding hebt gezien", looptijd: JAAR },
   { namen: ["zf_locale"], doel: "onthoudt je taal", looptijd: JAAR },
   { namen: ["zf_theme"], doel: "onthoudt of je de lichte of donkere weergave koos", looptijd: JAAR },
-  { namen: ["zf_shop_modus"], doel: "onthoudt of je in de webshop particulier of zakelijk winkelt", looptijd: JAAR },
   { namen: ["zf_welkom"], doel: "onthoudt dat je het welkomstscherm al hebt gezien", looptijd: JAAR },
   { namen: ["zf_balk_dicht"], doel: "onthoudt dat je de aankondigingsbalk hebt weggeklikt", looptijd: 30 * DAG },
   { namen: ["zf_app", "zf_app_ios", "zf_app_chip"], doel: "onthoudt dat je de Android- of iPhone-app gebruikt (en of die de chip van een ID-kaart kan lezen), zodat je de app-weergave krijgt", looptijd: JAAR },

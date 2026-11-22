@@ -74,16 +74,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "auto-uitrol", label: "Auto-uitrol: main controleren en live zetten", maxAgeHours: 0.5 },
   // elke 10 min: de nieuwste main alvast controleren vóór het live zetten (lib/bouwer/controles.ts)
   { job: "controles-tick", label: "Controle van main (TypeScript, eslint, tests)", maxAgeHours: 2 },
-  // elk kwartier: de productlijst voor AI-assistenten bij Stripe (lib/shop/agent-handel-server.ts)
-  { job: "agent-catalogus", label: "Verkoop via AI: productlijst bij Stripe", maxAgeHours: 2 },
   // elk kwartier: "Laat me weten als hij er weer is" in de webshop (lib/shop/voorraadmelding-server.ts)
   { job: "voorraadmelding", label: "Webshop: mail als iets weer op voorraad is", maxAgeHours: 2 },
-  // elke 2 minuten: de wachtrij "Alles overnemen" van CJ (lib/shop/cj/wachtrij.ts); zonder wachtrij telt de ronde ook als geslaagd
-  { job: "cj-wachtrij", label: "Webshop: wachtrij Alles overnemen (CJ)", maxAgeHours: 1 },
-  { job: "cj-bijwerken", label: "Webshop: CJ-producten bijwerken (categorie, voorraad, tekst)", maxAgeHours: 1 },
-  { job: "cj-fotos-verhuizen", label: "Webshop: CJ-foto's naar schijf (alleen met de vlag aan)", maxAgeHours: 2 },
-  // elk half uur: bestellingen bij CJ Dropshipping volgen tot de track & trace (lib/shop/cj/bestelling.ts)
-  { job: "cj-volgen", label: "Webshop: bestellingen bij CJ volgen", maxAgeHours: 2 },
   // elke 10 min: AI-opdrachten van de video-editor op de achtergrond (lib/video/wachtrij.ts)
   { job: "video-wachtrij", label: "Video-editor: wachtrij op de achtergrond", maxAgeHours: 2 },
   // elke 10 min: sociale media: berichten plaatsen en autopilot (lib/social/publiceer.ts)
