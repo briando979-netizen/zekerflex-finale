@@ -46,6 +46,26 @@ describe("geen beloftes die niet kloppen", () => {
     expect(lees("app/(marketing)/demo/page.tsx")).not.toMatch(/duizenden|honderden/);
   });
 
+  // 22 nov 2026 (gebruikersonderzoek, punt 2): "Direct passende kandidaten" en "ZekerFlex matcht direct de beste kandidaten"
+  // naast "Bereikt 2 werkers binnen 40 km". De klus komt bij geverifieerde werkers in de buurt en het bedrijf kiest zelf.
+  it("bedrijven krijgen geen belofte van directe of 'de beste' kandidaten", () => {
+    const OUD =
+      /direct passende|matcht direct|rangschikt direct|direct bij de beste|nodigt automatisch de beste|beste match wordt direct|in golven|instantly (matches|ranks)|automatically invites the best/i;
+    for (const p of [
+      "app/(marketing)/bedrijven/page.tsx",
+      "app/(marketing)/voor-bedrijven/page.tsx",
+      "lib/marketing/aanbod.ts",
+      "lib/i18n/dictionaries.ts",
+      "lib/i18n/dictionary-en.ts",
+    ]) {
+      expect(lees(p), p).not.toMatch(OUD);
+    }
+    // het tekstregister (Site-ontwerper): de standaard niet, en een oude eigen versie valt terug op de standaard
+    const register = lees("lib/content/store.ts");
+    expect(register).not.toMatch(/De beste match wordt direct toegewezen\./);
+    expect(register).toContain('(key === "how.s2.body" && /direct toegewezen|beste match/i.test(value))');
+  });
+
   it("/nieuwsbrief/afmelden zegt alleen 'Je bent afgemeld' met een geldige code", () => {
     const s = lees("app/(marketing)/nieuwsbrief/afmelden/page.tsx");
     expect(s).toContain('{afgemeld ? "Je bent afgemeld"');

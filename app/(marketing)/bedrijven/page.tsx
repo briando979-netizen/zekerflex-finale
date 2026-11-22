@@ -90,7 +90,8 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
               <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">Zeker van je mensen.</span>
             </h1>
             <p className="fluid-lead mt-4 max-w-lg text-white/75">
-              Plaats je klus en ZekerFlex stelt direct passende, geverifieerde mensen voor. Inchecken, uren goedkeuren en facturen lopen in één omgeving.
+              {/* eerlijk (22 nov 2026): geen belofte over snelheid of de beste mensen; de klus komt bij werkers in de buurt en het bedrijf kiest */}
+              Plaats je klus: hij komt bij geverifieerde werkers in de buurt en jij kiest wie je inroostert. Inchecken, uren goedkeuren en facturen lopen in één omgeving.
             </p>
             <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
               <Link href="/klus-plaatsen" className="btn-mint text-base">
@@ -101,7 +102,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
               </Link>
             </div>
             <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white/70">
-              {["Geverifieerde mensen", "Alleen betalen voor gewerkte uren", "Direct passende kandidaten"].map((p) => (
+              {["Geverifieerde mensen", "Alleen betalen voor gewerkte uren", "Jij kiest wie je inroostert"].map((p) => (
                 <li key={p} className="flex items-center gap-2">
                   <Vink />
                   {p}

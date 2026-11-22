@@ -198,7 +198,7 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "how.s1.title", group: "Homepage — hoe het werkt", label: "Stap 1: titel", default: "Zet je klus uit" },
   { key: "how.s1.body", group: "Homepage — hoe het werkt", label: "Stap 1: tekst", default: "Kies de functie, de plek, de tijden, het aantal mensen en het uurtarief. Samenstellen kan zonder account; online zetten doe je met een gratis account.", multiline: true },
   { key: "how.s2.title", group: "Homepage — hoe het werkt", label: "Stap 2: titel", default: "Wij zoeken de juiste mensen" },
-  { key: "how.s2.body", group: "Homepage — hoe het werkt", label: "Stap 2: tekst", default: "ZekerFlex rangschikt geverifieerde kandidaten op reistijd, betrouwbaarheid en vakmatch. De beste match wordt direct toegewezen.", multiline: true },
+  { key: "how.s2.body", group: "Homepage — hoe het werkt", label: "Stap 2: tekst", default: "Je klus komt bij geverifieerde werkers in de buurt. Wie reageert, zie je op volgorde van reistijd, betrouwbaarheid en ervaring; jij kiest wie je inroostert.", multiline: true },
   { key: "how.s3.title", group: "Homepage — hoe het werkt", label: "Stap 3: titel", default: "Keur de uren goed, de factuur volgt" },
   { key: "how.s3.body", group: "Homepage — hoe het werkt", label: "Stap 3: tekst", default: "Je mensen checken in op locatie. Na de dienst keur je de uren met één klik goed en maakt ZekerFlex de factuur automatisch aan.", multiline: true },
   { key: "emp.points", group: "Homepage — blok bedrijven", label: "Voordelen (één per regel)", default: "Automatische matching en toewijzing per vestiging\nUren goedkeuren met GPS check-in — facturen volgen vanzelf\nWet DBA-risico's zichtbaar vóór ze een probleem worden\nAlleen betalen bij gebruik: € 3,50 platformkosten per gewerkt uur", multiline: true },
@@ -252,7 +252,9 @@ function publicValue(key: string, value: string | undefined): string {
   // continuing to publish the specific hosting and DBA guarantees we removed.
   if (
     (key === "hero.eyebrow" && /lokaal gehost|100%.*nederland/i.test(value)) ||
-    (key === "hero.lead" && /wet dba.?proof|goedgekeurde modelovereenkomst|volledig in nederland gehost/i.test(value))
+    (key === "hero.lead" && /wet dba.?proof|goedgekeurde modelovereenkomst|volledig in nederland gehost/i.test(value)) ||
+    // 22 nov 2026: geen belofte dat de beste kandidaat "direct" wordt toegewezen (het bedrijf kiest zelf)
+    (key === "how.s2.body" && /direct toegewezen|beste match/i.test(value))
   ) {
     return fallback;
   }
