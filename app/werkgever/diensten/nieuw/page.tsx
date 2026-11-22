@@ -16,7 +16,7 @@ import { amsterdamClock } from "@/lib/time/amsterdam";
 
 export const dynamic = "force-dynamic";
 
-export default async function NieuweDienstPage({ searchParams }: { searchParams: Promise<{ kopie?: string | string[] }> }) {
+export default async function NieuweDienstPage({ searchParams }: { searchParams: Promise<{ kopie?: string | string[]; snel?: string | string[] }> }) {
   const d = await getDict();
   const n = d.newShift;
   const principal = await requirePrincipal();
@@ -24,6 +24,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   // ?kopie=<klus>: "Klus dupliceren" (naar YoungOnes) — dezelfde klus als vertrekpunt, alleen de datum is nieuw
   const sp = await searchParams;
   const kopieId = Array.isArray(sp.kopie) ? sp.kopie[0] : sp.kopie;
+  const snelParam = Array.isArray(sp.snel) ? sp.snel[0] : sp.snel;
   const kopie = kopieId
     ? await prisma.shift.findFirst({
         where: { AND: [{ id: kopieId }, { branch: scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } } }] },
@@ -56,16 +57,19 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   const [pools, extra, alleenFlexwerk, locale] = await Promise.all([
     tenantId ? listPools(tenantId) : Promise.resolve([]),
     tenantId ? getOrgProfileExtra(tenantId).catch((): OrgProfileExtra => ({})) : Promise.resolve<OrgProfileExtra>({}),
-    // vlag `publiek-alleen-flexwerk` (20 nov): eerst de korte weg in drie stappen, het uitgebreide formulier eronder
+    // vlag `publiek-alleen-flexwerk` (20 nov): daarmee is er ook de korte weg in drie stappen (SnelPlaatsen), via een link
     alleenFlexwerkAan().catch(() => false),
     getLocale(),
   ]);
+  // 22 nov: het uitgebreide formulier (twee stappen, alle opties) is de standaard; "Snel een klus plaatsen" alleen via ?snel=1
+  const snelModus = alleenFlexwerk && snelParam === "1";
+  const kopieQuery = kopieId ? `kopie=${encodeURIComponent(kopieId)}` : "";
   const beeld = tenantId ? klusBeeldVan(tenantId, extra) : { logoUrl: null, useLogo: false };
   // kostenplaatsen/PO-nummers van het bedrijf (Facturen → factuurgegevens): keuze bij het plaatsen
   const kostenplaatsen = (extra.costCentres ?? []).map((k) => k.trim()).filter(Boolean);
 
   const volledig = (
-    <div className="surface p-6">
+    <div className="surface p-4 sm:p-6">
       <NewShiftForm
         branches={branches}
         templates={SHIFT_TEMPLATES}
@@ -73,8 +77,10 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
         pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}
         beeld={{ ...beeld, canChange: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") }}
         kostenplaatsen={kostenplaatsen}
-        // het concept van /klus-plaatsen gaat naar het formulier dat open staat: met de vlag is dat "Snel een klus plaatsen"
-        leesConcept={!alleenFlexwerk}
+        // het concept van /klus-plaatsen gaat naar het formulier dat open staat; in de snelle weg (?snel=1) neemt SnelPlaatsen het
+        // concept, en bij "Klus dupliceren" is de gekozen klus het vertrekpunt
+        leesConcept={!snelModus && !voorinvulling}
+        {...(voorinvulling ? { voorinvulling } : {})}
       />
     </div>
   );
@@ -104,8 +110,13 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
             <p className="mt-2">{n.askAdmin}</p>
           </div>
         )
-      ) : alleenFlexwerk ? (
+      ) : snelModus ? (
         <>
+          <p className="mb-4 text-sm">
+            <Link href={kopieQuery ? `/werkgever/diensten/nieuw?${kopieQuery}` : "/werkgever/diensten/nieuw"} className="inline-flex min-h-[44px] items-center font-semibold text-brand-600 hover:underline">
+              ← {d.werkgeverStart.alleOpties}
+            </Link>
+          </p>
           <SnelPlaatsen
             branches={branches}
             sjablonen={SHIFT_TEMPLATES.map((s) => ({ key: s.key, label: s.label, hourlyRateCents: s.hourlyRateCents, description: s.description, dresscode: s.dresscode }))}
@@ -115,16 +126,18 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
             kostenplaatsen={kostenplaatsen}
             {...(voorinvulling ? { voorinvulling } : {})}
           />
-          {/* meer opties (meerdere dagen, eenmalige locatie, pools, dresscode, foto): het uitgebreide formulier, dichtgeklapt */}
-          <details className="mt-6">
-            <summary className="cursor-pointer text-sm font-semibold text-brand-600 hover:underline">
-              {d.werkgeverStart.alleOpties}
-            </summary>
-            <div className="mt-4">{volledig}</div>
-          </details>
         </>
       ) : (
-        volledig
+        <>
+          {alleenFlexwerk && (
+            <p className="mb-2 text-sm">
+              <Link href={`/werkgever/diensten/nieuw?snel=1${kopieQuery ? `&${kopieQuery}` : ""}`} className="inline-flex min-h-[44px] items-center font-semibold text-brand-600 hover:underline">
+                {n.snelLink}
+              </Link>
+            </p>
+          )}
+          {volledig}
+        </>
       )}
     </div>
   );
