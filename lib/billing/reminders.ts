@@ -8,6 +8,8 @@ import { getOrgProfileExtra } from "@/lib/profile/store";
 import { vervaldatumVan, type TermijnFactuur } from "@/lib/billing/betaaltermijn";
 import { payUrl } from "@/lib/billing/pay-link";
 import { invoicesOnHold } from "@/lib/billing/clawback";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
 
 // ---------------------------------------------------------------------------
 // Payment reminders for client invoices (hours + platform fee + uitzend):
@@ -132,7 +134,9 @@ export async function setReminderSettings(enabled: boolean, adminUserId: string)
 /** Daily: advance every overdue client invoice one step through the reminder flow. */
 export async function runInvoiceReminders(now = new Date()): Promise<ReminderRunResult> {
   if (!(await getReminderSettings()).enabled) return { checked: 0, mailed: 0, escalated: 0, disabled: true };
-  const invoices = await openInvoices();
+  // een eigen-testbedrijf (lib/admin/eigen-test-regel.ts) krijgt geen herinnering en de eigenaar geen melding over zijn eigen factuur
+  const eigenTest = await leesEigenTest();
+  const invoices = (await openInvoices()).filter((inv) => !isEigenTestBedrijf(eigenTest, inv.recipientTenantId));
   // per company: invoices that reached a stage beyond what we already did
   const byTenant = new Map<string, { name: string; rows: { id: string; number: string; totalCents: number; due: Date; target: number; done: number }[] }>();
   for (const inv of invoices) {

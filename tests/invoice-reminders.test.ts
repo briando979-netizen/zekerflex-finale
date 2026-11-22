@@ -161,4 +161,28 @@ describe("reminder schedule", () => {
     expect(list).toHaveLength(2);
     expect(list[0]).toMatchObject({ daysLate: 5, stage: 1, tenantName: "Super BV" });
   });
+
+  // 22 nov 2026 (privé-accounts van de eigenaar): een eigen-testbedrijf krijgt geen herinnering en de eigenaar geen melding
+  // "ruim over de termijn" over zijn eigen factuur; andere bedrijven blijven gewoon een herinnering krijgen.
+  it("een eigen-testbedrijf krijgt geen herinnering en geen melding aan de eigenaar", async () => {
+    const wis = () => {
+      (globalThis as { __zfEigenTest?: unknown }).__zfEigenTest = undefined;
+    };
+    wis();
+    kv.set("systeem:eigen-test", { tenants: { t1: "2026-10-01T00:00:00.000Z" }, users: {} });
+    m.invoices = [inv("a"), inv("x", 7_000, "t2")];
+    try {
+      expect(await runInvoiceReminders(at(3))).toMatchObject({ checked: 1, mailed: 1 });
+      expect(m.mail).toHaveBeenCalledTimes(1);
+      const text = (m.mail.mock.calls[0]![0] as { text: string }).text;
+      expect(text).toContain("F-x");
+      expect(text).not.toContain("F-a");
+      await runInvoiceReminders(at(10));
+      await runInvoiceReminders(at(17));
+      expect(m.alert).toHaveBeenCalledTimes(1);
+      expect(m.alert).toHaveBeenCalledWith(expect.objectContaining({ key: "invoice-overdue:t2" }));
+    } finally {
+      wis();
+    }
+  });
 });

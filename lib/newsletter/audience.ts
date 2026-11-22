@@ -3,6 +3,8 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { listSubscribers } from "@/lib/newsletter/store";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { zonderEigenTestAccounts } from "@/lib/admin/eigen-test-regel";
 
 // ---------------------------------------------------------------------------
 // Who an admin broadcast goes to. "subscribers" are the double-opt-in
@@ -77,6 +79,8 @@ async function accountEmails(audience: Audience): Promise<string[]> {
       disabledAt: null,
       emailVerifiedAt: { not: null },
       ...(roles ? { memberships: { some: { role: { in: [...roles] } } } } : {}),
+      // de privé-accounts van de eigenaar (lib/admin/eigen-test-regel.ts) staan niet in een nieuwsbrief
+      ...zonderEigenTestAccounts(await leesEigenTest()),
     },
     select: { email: true },
   });
