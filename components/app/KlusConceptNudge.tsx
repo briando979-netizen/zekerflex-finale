@@ -1,23 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { CONCEPT_KEY, parseConcept, type KlusConcept } from "@/lib/klusconcept/concept";
-import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 
 // On the werkgever home: a klus drafted on /klus-plaatsen before sign-up is
-// waiting in this browser. Only reads it; NewShiftForm takes it over (and
-// clears it) when the werkgever opens Nieuwe dienst.
+// waiting (in this browser, or the copy kept at sign-up). Only reads it; the
+// form on Nieuwe dienst takes it over (and clears it).
 export function KlusConceptNudge() {
-  const [concept, setConcept] = useState<KlusConcept | null>(null);
-
-  useEffect(() => {
-    try {
-      setConcept(parseConcept(localStorage.getItem(CONCEPT_KEY), Date.now(), amsterdamDayKey(new Date())));
-    } catch {
-      /* storage blocked: nothing to show */
-    }
-  }, []);
+  const concept = useKlusConcept();
 
   if (!concept) return null;
   const [y, m, d] = concept.date.split("-").map(Number);

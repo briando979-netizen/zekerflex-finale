@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { canPostShift, conceptCost, conceptHours, conceptOntbreekt, klusUrl, parseConcept, SECTOR_TEMPLATE, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
+import { canPostShift, conceptCost, conceptHours, conceptOntbreekt, klusUrl, naarSnelFormulier, parseConcept, SECTOR_TEMPLATE, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
 import { SECTORS } from "@/lib/seo-sectors";
 
 const base: KlusConcept = {
@@ -55,6 +57,59 @@ describe("klusconcept: naar het klusformulier", () => {
 
   it("puts a night shift's end on the next day, also across a month", () => {
     expect(toShiftFormValues({ ...base, date: "2026-11-30", start: "22:00", end: "06:00" }).endsAt).toBe("2026-12-01T06:00");
+  });
+});
+
+// 22 nov 2026 (gebruikersonderzoek B07/B21): na het aanmelden was "Snel een klus plaatsen" leeg, terwijl de server het concept had.
+describe("klusconcept: naar Snel een klus plaatsen", () => {
+  it("vult functie, datum, tijden, aantal, pauze en tarief in en opent op de laatste stap", () => {
+    expect(naarSnelFormulier(base, 1_620)).toEqual({
+      titel: "Bediening / horeca",
+      omschrijving: "Gasten bedienen.",
+      datum: "2026-11-20",
+      van: "09:00",
+      tot: "17:00",
+      personen: 2,
+      pauze: 30,
+      tarief: "17.00",
+      stap: 3,
+    });
+  });
+
+  it("zet een uur met één cijfer om naar twee (een tijdveld wil 09:00) en houdt het minimumtarief aan", () => {
+    const v = naarSnelFormulier({ ...base, start: "9:00", rateCents: 1_500 }, 1_620);
+    expect(v.van).toBe("09:00");
+    expect(v.tarief).toBe("16.20");
+  });
+
+  it("een nachtdienst opent bij de tijden: het snelle formulier kent geen eindtijd na middernacht", () => {
+    expect(naarSnelFormulier({ ...base, start: "22:00", end: "06:00" }, 1_620).stap).toBe(2);
+  });
+});
+
+describe("klusconcept: één formulier neemt het concept over", () => {
+  const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
+
+  it("Snel een klus plaatsen leest het concept, het dichtgeklapte formulier eronder niet", () => {
+    const snel = lees("components/werkgever/SnelPlaatsen.tsx");
+    expect(snel).toContain("useKlusConcept({ aan: !voorinvulling, wis: true })");
+    expect(snel).toContain("naarSnelFormulier(concept, minRateCents)");
+    // de pauze en de omschrijving uit het concept gaan mee naar de server
+    expect(snel).toContain('name="breakMinutes" value={String(pauze)}');
+    expect(snel).toContain('name="description" value={omschrijving ?? sjabloon?.description ?? ""}');
+    const pagina = lees("app/werkgever/diensten/nieuw/page.tsx");
+    expect(pagina).toContain("leesConcept={!alleenFlexwerk}");
+    expect(lees("components/app/NewShiftForm.tsx")).toContain("useKlusConcept({ aan: !editing && leesConcept, wis: true })");
+  });
+
+  it("de hook leest eerst deze browser en anders de server, en wist alleen met wis", () => {
+    const hook = lees("components/werkgever/useKlusConcept.ts");
+    expect(hook).toContain("localStorage.getItem(CONCEPT_KEY)");
+    expect(hook).toContain("if (raw && wis) localStorage.removeItem(CONCEPT_KEY)");
+    expect(hook).toContain('fetch("/api/werkgever/klus-concept"');
+    // de melding op het startscherm leest alleen, ook in de startmodus van een nieuw bedrijf
+    expect(lees("components/app/KlusConceptNudge.tsx")).toContain("useKlusConcept()");
+    expect(lees("app/werkgever/page.tsx")).not.toContain("{!startModus && <KlusConceptNudge />}");
   });
 });
 

@@ -1788,6 +1788,7 @@ export const en: Dict = {
     ingeplandMeer: "{n} workers are already scheduled.",
     ingeplandNa: "They get a message about your change, and a new time must not clash with their other jobs.",
     vanWebsite: "We have already filled in the job you put together on the website. Choose your branch and check the details before you place it.",
+    vanWebsiteSnel: "Your job from the website is ready. Check the details and place it; use Back to change something.",
     eigenTemplates: "Your templates",
     eigenTemplatesHint: "(manage them at /werkgever/templates)",
     locatie: "Location",

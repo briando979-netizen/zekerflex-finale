@@ -13,7 +13,8 @@ import { extraDayOptions } from "@/lib/shifts/extra-days";
 import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
 import { FairPayMeter } from "@/components/app/FairPayMeter";
-import { CONCEPT_KEY, parseConcept, toShiftFormValues } from "@/lib/klusconcept/concept";
+import { toShiftFormValues } from "@/lib/klusconcept/concept";
+import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -73,6 +74,7 @@ export function NewShiftForm({
   beeld = { logoUrl: null, useLogo: false, canChange: false },
   edit,
   kostenplaatsen = [],
+  leesConcept = true,
 }: {
   branches: { id: string; name: string; city: string }[];
   templates: ShiftTemplate[];
@@ -84,6 +86,8 @@ export function NewShiftForm({
   beeld?: { logoUrl: string | null; useLogo: boolean; canChange: boolean };
   /** set: edit this klus instead of placing a new one */
   edit?: ShiftEdit;
+  /** false: another form on the page takes the klus drafted on /klus-plaatsen (SnelPlaatsen), so this one starts empty */
+  leesConcept?: boolean;
 }) {
   const router = useRouter();
   const { locale, t: dict } = useI18n();
@@ -136,46 +140,22 @@ export function NewShiftForm({
   const [ownTemplates, setOwnTemplates] = useState<OwnTemplate[]>([]);
   const [fromWebsite, setFromWebsite] = useState(false);
 
-  // A klus drafted on /klus-plaatsen before sign-up: fill it in once, then forget it.
-  // Never over an existing klus that is being edited.
+  // A klus drafted on /klus-plaatsen before sign-up (this browser, or the copy kept at sign-up): fill it in once.
+  // Never over an existing klus that is being edited, and not when "Snel een klus plaatsen" above takes it (leesConcept).
   const editing = Boolean(edit);
+  const concept = useKlusConcept({ aan: !editing && leesConcept, wis: true });
   useEffect(() => {
-    if (editing) return;
-    let on = true;
-    const vulIn = (raw: string | null) => {
-      const concept = parseConcept(raw, Date.now(), amsterdamDayKey(new Date()));
-      if (!concept || !on) return false;
-      const v = toShiftFormValues(concept);
-      setTitle(v.title);
-      setDescription(v.description);
-      setRateEuro(v.rateEuro);
-      setBreakMin(v.breakMin);
-      setPositions(v.positions);
-      setStartsAt(v.startsAt);
-      setEndsAt(v.endsAt);
-      setFromWebsite(true);
-      return true;
-    };
-    let raw: string | null = null;
-    try {
-      raw = localStorage.getItem(CONCEPT_KEY);
-      if (raw) localStorage.removeItem(CONCEPT_KEY);
-    } catch {
-      /* opslag geblokkeerd: dan alleen de server */
-    }
-    if (vulIn(raw)) return;
-    // Niets in deze browser: het concept dat bij het aanmelden is meegegeven (bevestigingsmail op een ander
-    // apparaat geopend). De server wist het zodra de klus is geplaatst (createShiftAction).
-    fetch("/api/werkgever/klus-concept", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: { concept?: unknown } | null) => {
-        if (data?.concept) vulIn(JSON.stringify(data.concept));
-      })
-      .catch(() => undefined);
-    return () => {
-      on = false;
-    };
-  }, [editing]);
+    if (!concept) return;
+    const v = toShiftFormValues(concept);
+    setTitle(v.title);
+    setDescription(v.description);
+    setRateEuro(v.rateEuro);
+    setBreakMin(v.breakMin);
+    setPositions(v.positions);
+    setStartsAt(v.startsAt);
+    setEndsAt(v.endsAt);
+    setFromWebsite(true);
+  }, [concept]);
 
   useEffect(() => {
     fetch("/api/werkgever/templates", { cache: "no-store" })

@@ -71,6 +71,8 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
         pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}
         beeld={{ ...beeld, canChange: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") }}
         kostenplaatsen={kostenplaatsen}
+        // het concept van /klus-plaatsen gaat naar het formulier dat open staat: met de vlag is dat "Snel een klus plaatsen"
+        leesConcept={!alleenFlexwerk}
       />
     </div>
   );

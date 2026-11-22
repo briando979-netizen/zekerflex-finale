@@ -1812,6 +1812,8 @@ export const nl = {
     ingeplandMeer: "Er zijn al {n} krachten ingepland.",
     ingeplandNa: "Zij krijgen een bericht over je wijziging, en een nieuwe tijd mag niet botsen met hun andere klussen.",
     vanWebsite: "We hebben de klus die je op de website samenstelde al ingevuld. Kies je vestiging en controleer de gegevens voordat je hem uitzet.",
+    // "Snel een klus plaatsen" met het concept van /klus-plaatsen (22 nov 2026)
+    vanWebsiteSnel: "Je klus van de website staat klaar. Controleer de gegevens en plaats hem; met Terug pas je iets aan.",
     eigenTemplates: "Jouw templates",
     eigenTemplatesHint: "(beheer je op /werkgever/templates)",
     locatie: "Locatie",
