@@ -13,6 +13,9 @@ import { applyToShift } from "@/lib/matching/apply";
 import { kanalenBeschikbaar, stuurSms, stuurWhatsApp } from "@/lib/spoed/kanalen";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
 import { testklusMeldfilter } from "@/lib/shifts/testklus-db";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
+import { eigenTestGebruikerIds } from "@/lib/admin/eigen-test-zicht";
 import { zonderNummers } from "@/lib/telephony/log-nummer";
 import {
   MAX_ONTVANGERS,
@@ -137,14 +140,20 @@ export async function startSpoedoproep(input: StartInput): Promise<StartUitkomst
   // een spoedoproep voor een testklus (push, sms, WhatsApp) alleen naar interne accounts (lib/shifts/testklus-db.ts)
   const testklus = await testklusMeldfilter();
   const kenmerk = { title: shift.title, tenantId: input.tenantId, bedrijf: shift.branch.tenant.name, createdAt: shift.createdAt };
+  // een klus van een eigen-testbedrijf (lib/admin/eigen-test-regel.ts): sms en WhatsApp kosten echt geld, dus alleen naar
+  // eigen-test-werkers, niet ook naar de interne accounts; de melding over een testklus blijft dan achterwege
+  const eigenTest = await leesEigenTest();
+  const eigenTestBedrijf = isEigenTestBedrijf(eigenTest, input.tenantId);
+  const alleenEigenTest = eigenTestBedrijf ? new Set(await eigenTestGebruikerIds(eigenTest)) : null;
   const gekozen: typeof kandidaatRij = [];
   for (const k of kandidaatRij) {
     if (gekozen.length >= MAX_ONTVANGERS) break;
+    if (alleenEigenTest && !alleenEigenTest.has(k.userId)) continue;
     if (!(await testklus.mag(kenmerk, k.userId))) continue;
     if (await isMatchEligibleWorker(k, shift.viaUitzendbureau)) gekozen.push(k);
   }
   if (!gekozen.length) {
-    if (testklus.isTest(kenmerk)) throw AppError.precondition("Dit is een testklus: een spoedoproep gaat dan alleen naar interne accounts, en die zijn er niet in deze straal.");
+    if (!eigenTestBedrijf && testklus.isTest(kenmerk)) throw AppError.precondition("Dit is een testklus: een spoedoproep gaat dan alleen naar interne accounts, en die zijn er niet in deze straal.");
     throw AppError.precondition(alBereikt.size ? "Iedereen in deze straal is al bereikt. Probeer een grotere straal." : "Geen geschikte krachten gevonden in deze straal. Probeer een grotere straal.");
   }
 

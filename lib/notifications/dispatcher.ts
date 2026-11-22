@@ -19,6 +19,7 @@ import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
@@ -228,8 +229,10 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
     // die regel of uit de roosterplanner (lib/shifts/testklus-db.ts). Wie eruit
     // valt, houdt een stil voorstel (SCORED): geen push, geen mail.
     let golf = candidates;
-    const eigenTestKlus = isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
-    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
+    const eigenTest = await leesEigenTest();
+    const eigenTestKlus = isEigenTestKlus(eigenTest, { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
+    // een klus van een eigen-testbedrijf, ook van vóór de markering, gaat alleen naar interne en eigen-test-accounts
+    if (isEigenTestBedrijf(eigenTest, shift.branch.tenantId) || isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
       const intern = new Set((await testklusOntvangers(shift.branch.tenantId)).map((o) => o.freelancerId));
       golf = candidates.filter((c) => intern.has(c.freelancerId));
     }
