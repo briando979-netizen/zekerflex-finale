@@ -1,4 +1,4 @@
 {
   "extends": "next/core-web-vitals",
-  "ignorePatterns": ["public/paskamer/ml/**", "public/paskamer/3d/**", "deploy/talkaro/public/vendor/**"]
+  "ignorePatterns": ["public/paskamer/ml/**", "public/paskamer/3d/**"]
 }

@@ -106,7 +106,7 @@ for i in 1 2 3; do
     # forgejo: de eigen Git-server (spiegel van GitHub, deploy/forgejo)
     # ollama hoort erbij: alleen zo maakt een nieuwe mem_limit of omgeving de container opnieuw aan (18 nov: 5632m → 6656m);
     # was hij voor het bouwen gestopt, dan start hij hier weer (de trap `ollama_terug` doet dan niets meer)
-    sudo $C up -d app backup coturn freeradius headscale vpn-uitgang metabase outline crowdsec whisper forgejo ollama
+    sudo $C up -d app backup coturn headscale vpn-uitgang metabase outline crowdsec whisper forgejo ollama
     # de WhatsApp-brug (deploy/whatsapp-brug, eigen compose-bestand): alleen als hij is ingericht (sleutel in
     # .env.production); bouwen is gecacht en een mislukte build laat de oude draaien
     if sudo grep -q '^WHATSAPP_BRUG_TOKEN=' .env.production 2>/dev/null; then
@@ -114,10 +114,6 @@ for i in 1 2 3; do
     fi
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
-    # FlikFlak (deploy/flikflak): eigen klein image, gecacht; een mislukte build laat de oude draaien
-    sudo $C build -q flikflak > /dev/null 2>&1 && sudo $C up -d flikflak || echo "flikflak: image bouwen mislukt, de oude blijft"
-    # Talkaro (deploy/talkaro): eigen klein image, gecacht; een mislukte build laat de oude draaien
-    sudo $C build -q talkaro > /dev/null 2>&1 && sudo $C up -d talkaro || echo "talkaro: image bouwen mislukt, de oude blijft"
     # de routeplanner (deploy/route): pas als zijn tegels gebouwd zijn (haal-route.sh); zonder
     # tegels zou hij blijven herstarten. Mislukt het, dan rekent de app de reistijd zelf uit.
     if [ -s route-data/actief/valhalla_tiles.tar ]; then
@@ -140,15 +136,6 @@ for i in 1 2 3; do
       BOUWER_HASH="$(cat deploy/bouwer/werker/*.mjs | tr -d '\r' | sha256sum)"
       if [ "$BOUWER_HASH" != "$(cat .zf-bouwer.hash 2>/dev/null)" ]; then
         sudo $C restart bouwer && echo "$BOUWER_HASH" > .zf-bouwer.hash
-      fi
-    fi
-    # De Android-bouwer (rijschool-apps, deploy/android-bouwer): zelfde aanpak, maar
-    # alleen als hij geïnstalleerd is (de image bouwen duurt lang; dat doet installeer.sh).
-    if sudo docker image inspect zekerflex-android-bouwer:latest > /dev/null 2>&1; then
-      sudo $C up -d --no-build android-bouwer
-      ANDROID_HASH="$(cat deploy/android-bouwer/*.mjs | tr -d '\r' | sha256sum)"
-      if [ "$ANDROID_HASH" != "$(cat .zf-android-bouwer.hash 2>/dev/null)" ]; then
-        sudo $C restart android-bouwer && echo "$ANDROID_HASH" > .zf-android-bouwer.hash
       fi
     fi
     # De live-zetter (deploy/bouwer/zf-live.py) laadt nieuwe code pas bij een herstart. Na een

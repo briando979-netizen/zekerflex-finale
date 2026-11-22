@@ -1,31 +1,18 @@
 # ZekerFlex Verbinding: de servers achter wifi en VPN
 
-De pakketten (lib/netwerk) draaien op twee containers in `docker-compose.vps.yml`.
-Beide gebruiken alleen vrije software en de eigen server; er gaat niets naar een
+De pakketten (lib/netwerk) draaien op containers in `docker-compose.vps.yml`.
+Ze gebruiken alleen vrije software en de eigen server; er gaat niets naar een
 dienst van een ander.
 
-## Wifi op de werkvloer: `freeradius`
+## Wifi op de werkvloer: weg
 
-- Beeld `freeradius/freeradius-server:3.2.10-alpine`, poort **1812/udp** open in ufw.
-- De configuratie staat in `freeradius/` en wordt over de standaardbestanden
-  heen gezet (zie de volumes in compose). Niets staat vast in de container:
-  - `clients.conf`: elk IP mag een verzoek sturen; welk geheim erbij hoort
-    vraagt `zf-clients` aan de app (`GET /api/netwerk/radius/client?ip=`).
-  - `zf-rest`: de twee koppelingen met de app, met `NETWERK_RADIUS_TOKEN` als
-    wachtwoord in Basic-auth (rlm_rest 3 kent geen eigen koppen).
-  - `default` / `inner-tunnel`: EAP (PEAP met MSCHAPv2) naar binnen; daar vraagt
-    `zf_toegang` de app (`POST /api/netwerk/radius/authorize`) of deze persoon
-    nu mag en krijgt zijn wifi-wachtwoord (`control:Cleartext-Password`) en
-    `reply:Session-Timeout` terug, zodat de wifi vanzelf stopt na de dienst.
-  - `eap`: het echte Let's Encrypt-certificaat van vps.zekerflex.com, gekopieerd
-    van Caddy bij elke start (`entrypoint.sh`). Telefoons herkennen de server
-    dus zonder eigen certificaat (domein: vps.zekerflex.com).
-- Klanten zetten in hun wifi-apparatuur: WPA2/WPA3-Enterprise, RADIUS-server
-  `vps.zekerflex.com`, poort 1812, het geheim uit Werkgever → Wifi en VPN → vestiging.
-  Hun vaste IP-adres hoort daar bij de vestiging; zonder dat IP negeert de server hen.
-- Proef vanuit de container (PAP, zonder EAP): zet in de app een vestiging met
-  IP `127.0.0.1` op een testbedrijf en draai
-  `docker exec zekerflex-freeradius-1 sh -c 'PATH=/opt/bin:$PATH radtest <e-mail> <wifi-wachtwoord> 127.0.0.1 0 <geheim>'`.
+De wifi-server (`freeradius`, poort 1812/udp, `deploy/netwerk/freeradius/` en de
+routes `/api/netwerk/radius/*`) is op 22 november 2026 weggehaald: het product is
+bij de opruiming van die dag verdwenen en de server ging van 16 naar 12 GB. Het
+pakket wifi staat in de code nog als definitie (bestaande standen en Stripe-
+abonnementen blijven leesbaar) maar is niet meer te leveren: wie zich aanmeldt
+komt alleen op de lijst. Terugzetten kan uit git (commit vóór `diensten-weg-22nov`).
+De poort 1812/udp in ufw hoeft niet meer open: `sudo ufw delete allow 1812/udp`.
 
 ## Veilige werkplek (VPN): `headscale`
 

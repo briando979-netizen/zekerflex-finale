@@ -11,7 +11,6 @@ import { createLead } from "@/lib/sales/leads";
 import { MODULE_DEFS, isModule, isVpnVariant, maandbedragCent, type ModuleSleutel, type ModuleStand, type NetwerkStand, type VpnVariant } from "@/lib/netwerk/modules";
 import { netwerkStand, standMetAbonnement, zetModuleStand } from "@/lib/netwerk/store";
 import { vpnGekoppeld } from "@/lib/netwerk/headscale";
-import { wifiServerKlaar } from "@/lib/netwerk/token";
 
 // ---------------------------------------------------------------------------
 // Een pakket aanzetten, betalen en opzeggen.
@@ -25,7 +24,8 @@ import { wifiServerKlaar } from "@/lib/netwerk/token";
 
 /** Kan dit pakket nu echt geleverd worden (de server erachter draait)? */
 export function moduleLeverbaar(sleutel: ModuleSleutel): boolean {
-  if (sleutel === "wifi") return wifiServerKlaar();
+  // wifi: de wifi-server (FreeRADIUS) is op 22 nov 2026 weggehaald; wie zich aanmeldt komt alleen op de lijst
+  if (sleutel === "wifi") return false;
   if (sleutel === "vpn") return vpnGekoppeld();
   return false; // 5g: altijd op aanvraag
 }

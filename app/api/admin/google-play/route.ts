@@ -4,7 +4,6 @@ import { withAdminAccess } from "@/lib/auth/handlers";
 import { toErrorBody } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { bewaarServiceAccount, leesSleutelbestand, serviceAccountInfo, tokenVoor, verwijderServiceAccount } from "@/lib/play/account";
-import { bouwerIngesteld } from "@/lib/rijschool/app/bouwer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +32,7 @@ async function stand() {
       },
     }),
   ]);
-  return { serviceAccount: sa, bouwer: bouwerIngesteld(), apps };
+  return { serviceAccount: sa, apps };
 }
 
 // GET: het serviceaccount (alleen het e-mailadres) en alle rijschool-apps.

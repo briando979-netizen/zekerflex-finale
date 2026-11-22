@@ -3,6 +3,9 @@
 // ZekerFlex-omgeving. Alles draait op de eigen server met vrije software
 // (FreeRADIUS voor de wifi, Headscale/WireGuard voor de VPN, Open5GS voor een
 // eigen 5G-netwerk), dus zonder maandelijkse licentiekosten bij een ander.
+// De wifi-server (FreeRADIUS) is op 22 nov 2026 weggehaald: het pakket wifi is niet
+// meer te leveren (moduleLeverbaar in lib/netwerk/abonnement.ts) en bestaande
+// standen en abonnementen blijven gewoon leesbaar.
 // Puur bestand (geen prisma, kv of env): ook de schermen in de browser lezen
 // hieruit. De prijzen komen uit het prijsvoorstel van de eigenaar (5 nov 2026).
 // ---------------------------------------------------------------------------
@@ -202,6 +205,3 @@ export function leesbareCode(bytes: Uint8Array, groepen = 4, perGroep = 4): stri
   for (let g = 0; g < groepen; g++) uit.push(tekens.slice(g * perGroep, (g + 1) * perGroep).join(""));
   return uit.join("-");
 }
-
-/** De RADIUS-server zoals de klant hem in zijn wifi-apparatuur zet. */
-export const RADIUS_POORT = 1812;

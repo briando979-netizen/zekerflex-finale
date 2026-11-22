@@ -38,11 +38,6 @@ const schema = z.object({
   CRON_SECRET: z.string().min(16).optional(),
   INTERNAL_CRON_TOKEN: z.string().min(16).optional(),
 
-  // Beheerwachtwoord van Talkaro (deploy/talkaro, talkaro.zekerflex.com). Staat in
-  // .env.production (gemaakt door deploy/scripts/env-aanvullen.sh). De app gebruikt
-  // het nergens zelf; het wordt alleen op /admin/talkaro getoond aan een
-  // platformbeheerder, zodat de eigenaar de meldingen van Talkaro kan bekijken.
-  TALKARO_ADMIN_TOKEN: z.string().optional(),
   // de vaste .test-werker van de nachtelijke rondgang (lib/ops/rondgang-werker.ts); het wachtwoord maakt
   // deploy/scripts/env-aanvullen.sh. Zonder wachtwoord slaat de rondgang de werkerpagina's over.
   RONDGANG_WERKER_EMAIL: z.string().email().optional(),
@@ -282,12 +277,9 @@ const schema = z.object({
   // PEM-privésleutel; mag op één regel met \n in .env.production staan.
   TRANSIP_PRIVATE_KEY: z.string().optional(),
 
-  // Verbinding (lib/netwerk): wifi via een eigen RADIUS-server en VPN via Headscale,
-  // allebei in een container op de eigen server. Zonder sleutel staat de dienst uit
-  // (klanten kunnen zich dan alleen op de lijst zetten, er wordt niets betaald).
-  NETWERK_RADIUS_TOKEN: z.string().min(16).optional(),
-  // het adres dat klanten in hun wifi-apparatuur zetten (UDP 1812)
-  NETWERK_RADIUS_HOST: z.string().default("vps.zekerflex.com"),
+  // Verbinding (lib/netwerk): de VPN via Headscale, in een container op de eigen server.
+  // Zonder sleutel staat de dienst uit (klanten kunnen zich dan alleen op de lijst zetten,
+  // er wordt niets betaald). De wifi-server (RADIUS) is op 22 nov 2026 weggehaald.
   // HEADSCALE_URL is het openbare adres voor de Tailscale-apps (vpn.zekerflex.com);
   // de app zelf praat intern met de container.
   HEADSCALE_URL: z.string().url().optional(),

@@ -19,12 +19,11 @@ function groep(reden: string, hosts: string[]): Record<string, string> {
 /** Hosts die bewust niet in diensten.ts staan, per host met de reden. */
 const BASISLIJN: Record<string, string> = {
   ...groep("eigen domein of een eigen dienst in ons netwerk (geen derde partij)", [
-    "zekerflex.com", "localhost", "app:3000", "bouwer:4100", "android-bouwer:4300", "scraper:4300", "headscale:8080",
+    "zekerflex.com", "localhost", "app:3000", "bouwer:4100", "scraper:4300", "headscale:8080",
     "crowdsec:8080", "whatsapp-brug:3900", "ollama:11434", "git.37-97-226-24.sslip.io",
   ]),
   ...groep("voorbeeldnaam in een tekst of formulier (jouwdomein, jouwbedrijf), geen aanroep", [
     "code.jouwdomein.nl", "term.jouwdomein.nl", "jouwbedrijf.nl", "schwarzwald.stackbase.nl", "smileyapp.zekerflex.com", "schwarzwald.zekerflex.com",
-    "flikflak.zekerflex.com", "talkaro.zekerflex.com",
   ]),
   ...groep("standaard of naamruimte (XML, SVG, JSON-LD, sitemap), geen aanroep", [
     "schema.org", "www.w3.org", "www.sitemaps.org", "graphml.graphdrawing.org", "www.topografix.com", "www.auditfiles.nl",

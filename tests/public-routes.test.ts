@@ -33,8 +33,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/demo/abc123/ics",
     "/api/afspraak",
     "/api/werken-bij",
-    "/api/netwerk/radius/authorize",
-    "/api/netwerk/radius/client",
     "/api/kennis/whitepaper/omzetbelasting",
     "/api/mail/afmelden",
     "/api/mail/voorkeuren",
@@ -122,6 +120,9 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/werkgever/netwerk",
     "/api/netwerk",
     "/api/netwerk/iets-anders",
+    // de wifi-server (RADIUS) is weg (22 nov 2026): zijn oude adressen staan niet meer open
+    "/api/netwerk/radius/authorize",
+    "/api/netwerk/radius/client",
     "/api/indexnow-key/extra", // exact match only
     "/api/rijschool/beheer", // the driving-school admin stays behind the ZekerFlex login
     "/api/horeca/beheer", // the horeca admin stays behind the ZekerFlex login

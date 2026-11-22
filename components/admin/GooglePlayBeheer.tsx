@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { Empty, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 
 // Admin → Google Play: het ene serviceaccount waarmee ZekerFlex de apps van
-// rijscholen in hún Google Play-account beheert, de Android-bouwer, en een
-// overzicht van alle rijschool-apps. De sleutel gaat erin, nooit eruit.
+// rijscholen in hún Google Play-account beheert, en een overzicht van alle
+// rijschool-apps. De sleutel gaat erin, nooit eruit. (De Android-bouwer die de
+// apps bouwde is op 22 nov 2026 weggehaald.)
 
 interface Stand {
   serviceAccount: { email: string; projectId: string | null; ingesteldOp: string; door: string } | null;
-  bouwer: boolean;
   apps: {
     pakketnaam: string;
     appNaam: string;
@@ -120,19 +120,6 @@ export function GooglePlayBeheer() {
           </button>
         </Panel>
 
-        <Panel title="Android-bouwer" subtitle="De container op de server die de apps bouwt.">
-          {stand === null ? null : stand.bouwer ? (
-            <Notice tone="ok">Staat aan. Rijscholen kunnen hun app laten bouwen.</Notice>
-          ) : (
-            <div className="space-y-2 text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>
-              <Notice tone="warn">Staat nog niet aan.</Notice>
-              <p>Eenmalig op de server, vanuit de projectmap (duurt de eerste keer 10 tot 20 minuten):</p>
-              <code className="block rounded-lg px-3 py-2 font-mono text-xs" style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
-                sudo bash deploy/android-bouwer/installeer.sh --app
-              </code>
-            </div>
-          )}
-        </Panel>
       </div>
 
       <Panel title="Apps van rijscholen" subtitle="Bijgewerkt bij elke actie in het beheer van de rijschool." flush>
