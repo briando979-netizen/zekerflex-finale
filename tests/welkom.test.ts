@@ -70,7 +70,7 @@ describe("welkomstteksten in vijf talen", () => {
         expect(s.alt.trim()).not.toBe("");
       }
       for (const v of [
-        d.lang, d.carousel, d.prev, d.next, d.note, d.create, d.login, d.back,
+        d.lang, d.carousel, d.prev, d.next, d.create, d.login, d.back,
         d.loginHero.title, d.loginHero.subtitle, d.registerHero.title, d.registerHero.subtitle,
       ]) {
         expect(v.trim()).not.toBe("");

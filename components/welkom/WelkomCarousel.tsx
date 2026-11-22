@@ -218,7 +218,6 @@ export function WelkomCarousel({
           <div role="tabpanel" aria-live="polite" className="mt-3 min-h-[8.5rem] text-center">
             <h1 className="text-balance font-display text-2xl font-bold leading-tight text-ink">{slide?.title}</h1>
             <p className="mx-auto mt-2 max-w-xs text-pretty text-[15px] leading-relaxed text-neutralx-600">{slide?.text}</p>
-            {laatste && <p className="mx-auto mt-2 max-w-xs text-xs leading-snug text-neutralx-500">{texts.note}</p>}
           </div>
 
           <div className="mt-4 space-y-3">
