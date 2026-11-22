@@ -8,6 +8,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { ruimVerlopenReactiesOp } from "@/lib/offers/expire";
 import { ruimPushMarkeringenOp } from "@/lib/notifications/push-eenmalig";
 import { plekVoorWerker } from "@/lib/shifts/place-label";
+import { incheckenVereist } from "@/lib/checkin/vereist";
 
 // ---------------------------------------------------------------------------
 // Push notifications for werknemers (app + web). Each one is sent at most
@@ -45,7 +46,7 @@ interface Row {
   id: string;
   acceptedAt: Date;
   freelancer: { userId: string };
-  shift: { id: string; title: string; startsAt: Date; branch: { name: string; tenant: { name: string } } };
+  shift: { id: string; title: string; startsAt: Date; branch: { name: string; tenantId: string; tenant: { name: string } } };
   /** alleen bij de herinneringen: de "check in"-melding opent de incheckpagina van dit urenbriefje */
   timesheet?: { id: string } | null;
 }
@@ -72,7 +73,7 @@ const whenFor = (locale: Locale, d: Date) => (locale === "nl" ? `${dayFmt.format
 async function selectedPushes(now: Date): Promise<number> {
   const rows: Row[] = await prisma.shiftAssignment.findMany({
     where: { cancelledAt: null, acceptedAt: { gte: new Date(now.getTime() - 6 * H) }, shift: { startsAt: { gt: now } } },
-    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenant: { select: { name: true } } } } } } },
+    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenantId: true, tenant: { select: { name: true } } } } } } },
     take: 500,
   });
   let n = 0;
@@ -103,7 +104,7 @@ async function reminderPushes(now: Date): Promise<number> {
       cancelledAt: null,
       shift: { status: { notIn: ["CANCELLED", "COMPLETED", "DRAFT"] }, startsAt: { gt: new Date(now.getTime() - 30 * 60_000), lt: new Date(now.getTime() + 25 * H) } },
     },
-    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenant: { select: { name: true } } } } } }, timesheet: { select: { id: true } } },
+    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenantId: true, tenant: { select: { name: true } } } } } }, timesheet: { select: { id: true } } },
     take: 2000,
   });
   let n = 0;
@@ -114,6 +115,8 @@ async function reminderPushes(now: Date): Promise<number> {
     if (!due) continue;
     // skip "day" when the assignment was made less than 12h ago — they just got "uitgekozen"
     if (due.kind === "day" && now.getTime() - r.acceptedAt.getTime() < 12 * H) continue;
+    // "Vergeet niet in te checken" past niet bij een bedrijf dat inchecken uit heeft staan (lib/checkin/vereist.ts)
+    if (due.kind === "start" && !(await incheckenVereist(r.shift.branch.tenantId))) continue;
     if (!(await claim(due.kind, r.id))) continue;
     // bij de start meteen naar inchecken (eigen pagina), anders naar de klus
     const url = due.kind === "start" && r.timesheet ? `/dashboard/inchecken/${r.timesheet.id}` : shiftUrl(r.shift.id);

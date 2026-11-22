@@ -8,6 +8,8 @@ import { BulkApproveButton } from "@/components/werkgever/BulkApproveButton";
 import { schoneUren } from "@/lib/timesheets/bulk-goedkeuren";
 import { ProposeCorrectionButton } from "@/components/app/ProposeCorrectionButton";
 import { fraudForTimesheets } from "@/lib/fraud/timesheet";
+import { incheckenVereistVoor } from "@/lib/checkin/vereist";
+import { zonderInchecken } from "@/lib/checkin/vereist-kern";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
@@ -37,7 +39,7 @@ export default async function UrenGoedkeurenPage() {
       freelancerId: true,
       extraCostsCents: true,
       extraCostsNote: true,
-      branch: { select: { name: true } },
+      branch: { select: { name: true, tenantId: true } },
       freelancer: { select: { user: { select: { fullName: true } } } },
       dispute: { select: { origin: true } },
       gpsEvents: {
@@ -49,6 +51,11 @@ export default async function UrenGoedkeurenPage() {
   });
 
   const fraud = await fraudForTimesheets(timesheets);
+  // Bedrijven die inchecken uit hebben (lib/checkin/vereist.ts): hun uren zijn zonder inchecken ingediend en jouw goedkeuring is
+  // het bewijs; automatisch goedkeuren werkt daar niet, dus geen schakelaar maar een uitleg.
+  const incheckVereist = await incheckenVereistVoor([...scope.tenantIds.slice(0, 1), ...timesheets.map((t) => t.branch.tenantId)]);
+  const eersteBedrijf = scope.tenantIds[0];
+  const autoUitgezet = eersteBedrijf ? incheckVereist.get(eersteBedrijf) === false : false;
   const flaggedCount = [...fraud.values()].filter((f) => f.some((x) => x.severity !== "info")).length;
 
   const lineTotal = (t: (typeof timesheets)[number]) =>
@@ -68,7 +75,11 @@ export default async function UrenGoedkeurenPage() {
       <SamenTabs groep="uren" actief="uren" />
       <PageHeader title={h.title} subtitle={h.subtitle} />
 
-      <AutoApproveToggle />
+      {autoUitgezet ? (
+        <p className="mb-6 rounded-2xl border border-hair bg-white px-5 py-4 text-sm text-neutralx-600">{h.geenAutoGoedkeuren}</p>
+      ) : (
+        <AutoApproveToggle />
+      )}
 
       {/* de vier tellers alleen als er iets te tellen valt (ingediende uren of een open dispuut);
           een nieuw bedrijf ziet anders vier vakken met nullen boven "Niets te doen" */}
@@ -123,6 +134,12 @@ export default async function UrenGoedkeurenPage() {
                       {h.extraCosts} {moneyExact(t.extraCostsCents)} — {t.extraCostsNote}
                     </p>
                   ) : null}
+                  {zonderInchecken(incheckVereist.get(t.branch.tenantId) ?? true, t.gpsEvents.some((e) => e.type === "CHECK_IN")) && (
+                    <p className="mt-1 flex items-start gap-1.5 text-xs text-neutralx-600">
+                      <span aria-hidden>ℹ️</span>
+                      {h.zonderInchecken}
+                    </p>
+                  )}
                   {(fraud.get(t.id) ?? [])
                     .filter((f) => f.severity !== "info")
                     .map((f) => (

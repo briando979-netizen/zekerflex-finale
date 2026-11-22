@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
+import { incheckenVereistVoor } from "@/lib/checkin/vereist";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,8 @@ const fold = (l: string) => (l.length <= 75 ? l : l.match(/.{1,74}/g)!.join("\r\
 export interface FeedAssignment {
   id: string;
   cancelledAt: Date | null;
+  /** het bedrijf vraagt geen inchecken (lib/checkin/vereist.ts): dan geen "check op tijd in" in de agenda */
+  zonderInchecken?: boolean;
   shift: {
     id: string;
     title: string;
@@ -152,7 +155,7 @@ export function feedIcs(assignments: FeedAssignment[], siteUrl: string, lang: Lo
       tx.intro(b.tenant.name),
       s.breakMinutes > 0 ? tx.pause(s.breakMinutes) : null,
       s.dresscode ? tx.dress(s.dresscode) : null,
-      cancelled ? tx.cancelledLine : tx.checkIn,
+      cancelled ? tx.cancelledLine : a.zonderInchecken ? null : tx.checkIn,
       `${siteUrl}/dashboard/klussen/${s.id}`,
     ]
       .filter((l): l is string => l !== null)
@@ -200,7 +203,7 @@ export async function workerCalendarIcs(userId: string, siteUrl: string, now = n
               breakMinutes: true,
               dresscode: true,
               updatedAt: true,
-              branch: { select: { name: true, addressLine: true, postalCode: true, city: true, tenant: { select: { name: true } } } },
+              branch: { select: { name: true, addressLine: true, postalCode: true, city: true, tenantId: true, tenant: { select: { name: true } } } },
             },
           },
         },
@@ -208,5 +211,8 @@ export async function workerCalendarIcs(userId: string, siteUrl: string, now = n
         take: 1000,
       })
     : [];
-  return feedIcs(assignments, siteUrl, await feedLanguage(userId));
+  // bedrijven die inchecken uit hebben: daar past "check op tijd in" niet in de agenda (lib/checkin/vereist.ts)
+  const vereist = await incheckenVereistVoor(assignments.map((a) => a.shift.branch.tenantId));
+  const metKeuze = assignments.map((a) => ({ ...a, zonderInchecken: vereist.get(a.shift.branch.tenantId) === false }));
+  return feedIcs(metKeuze, siteUrl, await feedLanguage(userId));
 }

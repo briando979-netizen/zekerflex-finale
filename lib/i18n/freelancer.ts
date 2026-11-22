@@ -913,6 +913,9 @@ const nl = {
     statusDraft: "Concept",
     statusSubmitted: "Ingediend",
     statusDisputed: "Betwist",
+    // bedrijf zonder inchecken (lib/checkin/vereist.ts): wat er met je uren gebeurt
+    zonderIngediend: "Je uren zijn zonder inchecken ingediend. Het bedrijf keurt ze goed.",
+    zonderGoedgekeurd: "Je uren zijn zonder inchecken ingediend en door het bedrijf goedgekeurd.",
   },
   checkinPage: {
     title: "Inchecken",
@@ -938,6 +941,8 @@ const nl = {
     stillIn: "Je bent nog ingecheckt. Check eerst uit, of vul hieronder zelf je eindtijd in.",
     toCheckin: "Naar inchecken",
     toPage: "Klusgegevens en uitchecken",
+    // bij een bedrijf dat inchecken uit heeft staan (lib/checkin/vereist.ts): in plaats van een incheck-knop
+    geenInchecken: "Dit bedrijf vraagt geen inchecken: dien na afloop je uren in",
   },
   work: {
     title: "Mijn klussen",
@@ -2792,6 +2797,8 @@ const en: FreelancerDict = {
     statusDraft: "Draft",
     statusSubmitted: "Submitted",
     statusDisputed: "Disputed",
+    zonderIngediend: "Your hours were submitted without check-in. The company approves them.",
+    zonderGoedgekeurd: "Your hours were submitted without check-in and approved by the company.",
   },
   checkinPage: {
     title: "Check in",
@@ -2817,6 +2824,7 @@ const en: FreelancerDict = {
     stillIn: "You're still checked in. Check out first, or fill in your end time yourself below.",
     toCheckin: "Go to check-in",
     toPage: "Job details and check-out",
+    geenInchecken: "This company does not ask you to check in: submit your hours when the job is over",
   },
   work: {
     title: "My jobs",
@@ -4664,6 +4672,8 @@ const pl: FreelancerDict = {
     statusDraft: "Szkic",
     statusSubmitted: "Wysłane",
     statusDisputed: "Sporne",
+    zonderIngediend: "Twoje godziny zostały przesłane bez zameldowania. Firma je zatwierdza.",
+    zonderGoedgekeurd: "Twoje godziny zostały przesłane bez zameldowania i zatwierdzone przez firmę.",
   },
   checkinPage: {
     title: "Zameldowanie",
@@ -4689,6 +4699,7 @@ const pl: FreelancerDict = {
     stillIn: "Nadal jesteś zameldowany. Najpierw się wymelduj albo wpisz niżej godzinę zakończenia.",
     toCheckin: "Do zameldowania",
     toPage: "Szczegóły zlecenia i wymeldowanie",
+    geenInchecken: "Ta firma nie wymaga zameldowania: po zakończeniu zlecenia prześlij swoje godziny",
   },
   work: {
     title: "Moje zlecenia",
@@ -6536,6 +6547,8 @@ const ro: FreelancerDict = {
     statusDraft: "Ciornă",
     statusSubmitted: "Trimis",
     statusDisputed: "Contestat",
+    zonderIngediend: "Orele tale au fost trimise fără check-in. Compania le aprobă.",
+    zonderGoedgekeurd: "Orele tale au fost trimise fără check-in și aprobate de companie.",
   },
   checkinPage: {
     title: "Check-in",
@@ -6561,6 +6574,7 @@ const ro: FreelancerDict = {
     stillIn: "Ești încă înregistrat la locație. Fă mai întâi check-out sau completează mai jos ora de final.",
     toCheckin: "La check-in",
     toPage: "Detaliile jobului și check-out",
+    geenInchecken: "Această companie nu cere check-in: după terminarea lucrării, trimite-ți orele",
   },
   work: {
     title: "Joburile mele",
@@ -8408,6 +8422,8 @@ const uk: FreelancerDict = {
     statusDraft: "Чернетка",
     statusSubmitted: "Надіслано",
     statusDisputed: "Оскаржено",
+    zonderIngediend: "Твої години подано без відмітки на початку. Компанія їх схвалює.",
+    zonderGoedgekeurd: "Твої години подано без відмітки на початку й схвалено компанією.",
   },
   checkinPage: {
     title: "Реєстрація прибуття",
@@ -8433,6 +8449,7 @@ const uk: FreelancerDict = {
     stillIn: "Ви ще не зареєстрували відбуття. Спершу зареєструйте відбуття або вкажіть нижче час завершення.",
     toCheckin: "До реєстрації прибуття",
     toPage: "Деталі роботи та відбуття",
+    geenInchecken: "Ця компанія не вимагає відмічатися на початку: після завершення роботи подай свої години",
   },
   work: {
     title: "Мої роботи",
