@@ -104,26 +104,15 @@ describe("de letters van een naam", () => {
 });
 
 describe("prijs, aanbod, voorbeelden en lettertypes", () => {
-  it("de prijs komt uit dezelfde bron als de advertentie; de pagina's verzinnen geen eigen bedrag", () => {
+  // de pagina /logo-maker en zijn schermen (components/marketing/logo) zijn op 22 nov 2026 weggehaald; de beelden blijven
+  // voor Beheer (/api/logo-maker), dus de prijs en de varianten blijven gecontroleerd
+  it("de prijs komt uit dezelfde bron als de advertentie", () => {
     expect(prijsTekst(STANDAARD_PRIJZEN, "logo")).toBe("\u{20AC} 49 excl. btw");
     expect(AANBOD.find((a) => a.slug === "logo-maker")).toMatchObject({ pijler: "online", pagina: "/logo-maker", status: "beschikbaar", prijs: "\u{20AC} 49 excl. btw, je ziet eerst het voorbeeld" });
-    for (const pad of [["app", "(marketing)", "logo-maker", "page.tsx"], ["components", "marketing", "logo", "LogoResultaat.tsx"], ["components", "marketing", "logo", "LogoFormulier.tsx"]]) {
-      const bron = readFileSync(join(ROOT, ...pad), "utf8").replace(/\/\/.*$/gm, "");
-      expect(bron, pad.join("/")).not.toMatch(/\u{20AC}\s?\d/u);
-    }
   });
 
-  it("de pagina belooft geen vectorbestand, geen uniek logo en geen merkbescherming", () => {
-    const pagina = readFileSync(join(ROOT, "app", "(marketing)", "logo-maker", "page.tsx"), "utf8");
-    expect(pagina).toContain("BOIP");
-    expect(pagina).toContain("Dat beloven we niet");
-    expect(pagina).not.toMatch(/https?:\/\/[^"'\s]*boip/i);
+  it("de varianten van een logo", () => {
     expect(Object.keys(VARIANTEN)).toEqual(["kleur-wit", "kleur", "wit", "zwart", "icoon"]);
-  });
-
-  it("het logo is overal 'het', niet 'hem'", () => {
-    for (const pad of [["app", "(marketing)", "logo-maker", "page.tsx"], ["components", "marketing", "logo", "LogoResultaat.tsx"], ["components", "marketing", "logo", "LogoFormulier.tsx"]]) expect(readFileSync(join(ROOT, ...pad), "utf8"), pad.join("/")).not.toMatch(/\bhem\b/);
-    expect(readFileSync(join(ROOT, "app", "(marketing)", "logo-maker", "page.tsx"), "utf8")).toContain("Wil je het hebben: {prijs}.");
   });
 
   it("zorg is een hart en geen kruis, de winkel een pui zonder stip, en er is een teken voor de bakker", () => {

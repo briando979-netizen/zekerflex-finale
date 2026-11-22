@@ -161,7 +161,6 @@ export function HeroStage({
 const SNEL = [
   { label: "Klus plaatsen", href: "/klus-plaatsen" },
   { label: "Prijzen", href: "/prijzen" },
-  { label: "Website-check", href: "/website-check" },
   { label: "Shop", href: "/shop" },
 ];
 

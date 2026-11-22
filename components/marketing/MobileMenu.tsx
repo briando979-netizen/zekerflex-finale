@@ -5,8 +5,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   DOELGROEP_PAGINA,
   SNELLE_ACTIES,
-  ALLES_ONLINE,
-  VOORBEELDSITES,
   eigenLinks,
   isExternal,
   KOP_KNOPPEN,
@@ -189,20 +187,6 @@ export function MobileMenu({
                                     </Link>
                                   </li>
                                 ))}
-                                {k.sleutel === "online" && !alleenFlexwerk && (
-                                  <>
-                                    <li>
-                                      <Link href={VOORBEELDSITES.href} className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">
-                                        {VOORBEELDSITES.label}
-                                      </Link>
-                                    </li>
-                                    <li>
-                                      <Link href={ALLES_ONLINE.href} className="block rounded-lg py-1.5 text-sm font-semibold text-brand-mint hover:text-white">
-                                        {ALLES_ONLINE.label}
-                                      </Link>
-                                    </li>
-                                  </>
-                                )}
                               </ul>
                             </div>
                           ))}

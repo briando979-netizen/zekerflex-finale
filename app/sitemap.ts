@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { RUBRIEK_SLUGS, VERKOPEN_PAD, VERKOPEN_START_PAD, rubriekPad } from "@/lib/shop/partnerplatform";
 import { LEREN_PAD } from "@/lib/leren/klussen-krijgen";
 import { LEREN_BEDRIJF_PAD } from "@/lib/leren/personeel-krijgen";
 import { SITE } from "@/lib/seo";
@@ -11,7 +10,6 @@ import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { FUNCTIES, functiePad } from "@/lib/seo-functies";
 import { publicOpenShifts } from "@/lib/public-shifts";
-import { SPINOFF_PRODUCTS } from "@/lib/products";
 import { eigenPaginas } from "@/lib/marketing/aanbod";
 import { aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
 import { paginaLijst } from "@/lib/ontwerp/paginas-store";
@@ -71,10 +69,6 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/starten-als-uitzendkracht", 0.8, "monthly"),
     entry("/nog-geen-18", 0.4, "monthly"),
     entry("/voor-bedrijven", 0.9, "monthly"),
-    // de eigen apps (spelletjes, Talkaro, FlikFlak, webshop) als aparte categorie (lib/marketing/apps.ts)
-    entry("/apps-en-spelletjes", 0.7, "monthly"),
-    // alle losse online tools op één pagina (lib/marketing/online-tools.ts)
-    entry("/online", 0.8, "monthly"),
 
     // Open klussen (Google for Jobs) + per-city landing pages
     entry("/klussen", 0.9, "hourly"),
@@ -99,7 +93,6 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     ...(await publicOpenShifts({ take: 500 }).catch(() => [])).map((s) => entry(`/klussen/${s.id}`, 0.6, "daily", s.createdAt)),
     entry("/prijzen", 0.8, "monthly"),
     entry("/tarieven-overzicht", 0.7, "monthly"),
-    entry("/abonnementen", 0.7, "monthly"),
 
     // Het hele aanbod (lib/marketing/aanbod.ts) + de producten zonder eigen pagina elders
     entry("/aanbod", 0.9, "weekly"),
@@ -120,32 +113,16 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
         ...Object.keys(p.liveVertalingen ?? {}).map((t) => entry(`/p/${p.slug}/${t}`, 0.5, "weekly", p.gepubliceerd)),
       ]),
 
-    // Producten (ontbundeld) + los aanbod voor bureaus
-    entry("/producten", 0.8, "weekly"),
-    ...SPINOFF_PRODUCTS.map((p) => entry(`/producten/${p.slug}`, 0.7, "weekly")),
+    // Los aanbod voor bureaus
     entry("/voor-bureaus", 0.7, "monthly"),
     entry("/intercedenten", 0.7, "monthly"),
     entry("/sales-partner", 0.6, "monthly"),
-    // het Partnerplatform: verkopen in de ZekerFlex-shop (lib/shop/partnerplatform.ts), 18 nov 2026
-    entry(VERKOPEN_PAD, 0.7, "monthly"),
     // de gids "Zo krijg je klussen via een platform" (lib/leren/klussen-krijgen.ts), 18 nov 2026
     entry(LEREN_PAD, 0.7, "monthly"),
     entry(LEREN_BEDRIJF_PAD, 0.7, "monthly"),
-    entry(VERKOPEN_START_PAD, 0.7, "monthly"),
-    ...RUBRIEK_SLUGS.map((s) => entry(rubriekPad(s), 0.5, "monthly")),
 
     entry("/app", 0.6, "monthly"),
-    // de apps per doelgroep (lib/apps/catalogus.ts), 15 nov 2026
-    entry("/apps", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),
-    entry("/website-check", 0.7, "monthly"),
-    entry("/advertentie-op-maat", 0.7, "monthly"),
-    entry("/logo-maker", 0.7, "monthly"),
-    entry("/starters", 0.8, "monthly"),
-    entry("/website-maken", 0.8, "monthly"),
-    entry("/rijschool-software", 0.8, "monthly"),
-    entry("/domeinnaam", 0.8, "monthly"),
-    entry("/review-check", 0.7, "monthly"),
     entry("/rekentools", 0.7, "monthly"),
     entry("/rekentools/zzp-uurtarief-berekenen", 0.8, "monthly"),
     entry("/rekentools/kosten-uitzendkracht-berekenen", 0.8, "monthly"),

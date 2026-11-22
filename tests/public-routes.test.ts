@@ -21,7 +21,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/internal/boekhouding/bonnen-mail", // cron: bonnetjes uit de Postvak (eigen token via checkInternalToken)
     "/api/internal/boekhouding/nachtronde", // cron: nachtelijke boekhoudronde (eigen token via checkInternalToken)
     "/api/partner-lead", // openbaar aanvraagformulier (bezoeker zonder account)
-    "/api/website-aanvraag", // openbaar wensenformulier /website-maken
     "/api/uitzendbureau", // openbaar contactformulier /voor-bureaus
     "/api/sales-partner", // openbaar aanmeldformulier
     "/api/health",
@@ -86,7 +85,6 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/logo-maker/0123456789abcdef0123456789abcdef/beeld", // het voorbeeld met watermerk (het id is de sleutel)
     "/api/logo-maker/0123456789abcdef0123456789abcdef/aanvraag", // "Deze wil ik"
     "/api/logo-maker/voorbeeld/bakkerij", // voorbeeldlogo op de landingspagina
-    "/api/starters", // openbaar aanvraagformulier op /starters
     "/api/deal/0123456789abcdef", // tailored offer after a free scan (unguessable id)
     "/api/domeinen/zoek", // is a domain name still free (public RDAP)
     "/api/domeinen/aanvraag", // request a domain / transfer
@@ -162,6 +160,11 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     // offertes en checklists zijn weg (22 nov 2026): hun oude links staan niet meer open
     "/api/offerte-link/aB3dE6gH9jK2mN5pQ8sT1vW4yZ7cF0hJ",
     "/api/checklist/abcdefghijklmnopqrstuvwxyz012345",
+    // website-check, starters en het wensenformulier van /website-maken zijn weg (22 nov 2026)
+    "/api/website-check",
+    "/api/website-check/lead",
+    "/api/starters",
+    "/api/website-aanvraag",
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

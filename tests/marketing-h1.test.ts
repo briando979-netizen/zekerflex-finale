@@ -19,7 +19,7 @@ function paginas(dir: string): string[] {
 }
 
 // Onderdelen die zelf de <h1> van de pagina maken.
-const MET_EIGEN_H1 = ["<SectorHub", "<SectorCity", "<SectorWorkerHub", "<SectorWorkerCity", "<UitzendJobBoard", "<HeroStage", "<LegalPage", "<WebsiteCheck", "<ZakelijkSecties"];
+const MET_EIGEN_H1 = ["<SectorHub", "<SectorCity", "<SectorWorkerHub", "<SectorWorkerCity", "<UitzendJobBoard", "<HeroStage", "<LegalPage", "<ZakelijkSecties"];
 
 describe("openbare pagina's met SectionHead hebben een h1", () => {
   it("elke pagina met SectionHead heeft kop=\"h1\", een eigen <h1> of een onderdeel dat er een maakt", () => {
@@ -39,7 +39,6 @@ describe("openbare pagina's met SectionHead hebben een h1", () => {
     "app/(marketing)/personeel-inhuren/page.tsx",
     "app/(marketing)/personeel-inhuren/[stad]/page.tsx",
     "app/(marketing)/klussen/page.tsx",
-    "app/(marketing)/review-check/page.tsx",
   ])("%s: precies één kop=\"h1\"", (f) => {
     expect(readFileSync(join(ROOT, f), "utf8").match(/kop="h1"/g) ?? []).toHaveLength(1);
   });

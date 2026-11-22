@@ -42,11 +42,9 @@ const PUBLIC_PREFIXES = [
   // echt passen op de eigen foto (lib/shop/pasdienst.ts) — toestemming verplicht, IP-begrensd, dagplafond in euro's, niets bewaard
   "/api/betaal", // invoice pay link (QR on the PDF): HMAC-signed token + IP rate limit (lib/billing/pay-link.ts)
   "/api/client-error", // crash-boundary rapporteert client-side fouten (kan ook uitgelogd gebeuren); IP rate-limited
-  "/api/website-check", // gratis website-check + aanvraagformulier; IP- en dagbegrenzing, alleen openbare adressen (lib/website-check/fetch.ts)
   "/api/review-scan", // gratis review-scan (Google Places) + aanvraagformulier; IP- en dagbegrenzing, rapport op niet te raden id (lib/review-scan/run.ts)
   "/api/advertentie", // advertentie op maat (/advertentie-op-maat): maken, de beelden en "Deze wil ik". Het niet te raden id (128 bit) is de sleutel; de beeldroute geeft vóór vrijgave alleen een klein beeld met ingebakken watermerk (lib/advertentie/regels.ts beeldBesluit), IP-begrensd met 429. Vrijgeven en beheren blijft achter de login (/api/admin/advertentie-op-maat)
   "/api/logo-maker", // logo maker (/logo-maker): maken, de beelden en "Deze wil ik", zelfde opzet als /api/advertentie. Het niet te raden id (128 bit) is de sleutel; de beeldroute geeft vóór vrijgave alleen een klein beeld met ingebakken watermerk (lib/logo/regels.ts logoBesluit), IP-begrensd met 429. Vrijgeven en beheren blijft achter de login (/api/admin/advertentie-op-maat)
-  "/api/starters", // aanvraagformulier op /starters: gevalideerd, IP- en adresbegrensd (429), verborgen lokveld; maakt een lead in de sales-pijplijn (lib/sales/leads.ts)
   "/api/deal", // voorstel op maat na een gratis scan: "bekeken" en "akkoord"; het niet te raden id is de sleutel, IP-begrensd (lib/scans/deal.ts)
   "/api/rekentools", // "stuur mij de uitkomst" op de openbare rekentools: IP-begrensd, verborgen anti-botveld, toestemming verplicht; rekent zelf opnieuw (lib/rekentools/uitkomst.ts)
   "/api/klus-plaatsen", // /klus-plaatsen: de openbare voorpagina van een bedrijf lezen om de klus in te vullen; IP- en dagbegrenzing, alleen openbare adressen, niets bewaard (app/api/klus-plaatsen/website); /via telt alleen een maandtotaal van de tip van een werker (geen persoon, geen adres)
@@ -73,7 +71,6 @@ const PUBLIC_PREFIXES = [
   "/api/boeken", // de boekpagina van een bedrijf (kapper, salon, praktijk …): vrije tijden lezen en een afspraak boeken; per boekadres een eigen pagina, IP-begrensd, verborgen botveld en toestemming verplicht; alleen wat een klant nodig heeft, nooit de afspraken of klanten van het bedrijf (lib/afspraken). Het beheer (/api/werkgever/afspraken en /api/werkgever/klanten) blijft achter de login
   "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts)
   "/api/partner-lead", // aanvraagformulier voor partnerpakketten op de openbare pagina's (lib/products.ts): gevalideerd, IP-begrensd, maakt een lead; 14 nov 2026 gaf dit een 401 voor bezoekers zonder account
-  "/api/website-aanvraag", // wensenformulier op /website-maken: gevalideerd, IP-begrensd, maakt een lead (19 nov 2026)
   "/api/uitzendbureau", // contactformulier op /voor-bureaus: gevalideerd, IP-begrensd, maakt een lead; zelfde gat als /api/partner-lead
   "/api/sales-partner", // aanmeldformulier op /sales-partner: gevalideerd, IP-begrensd, maakt een lead; zelfde gat als /api/partner-lead
 ] as const;

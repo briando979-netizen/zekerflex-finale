@@ -182,9 +182,9 @@ describe("een verhuisd domein met bestaande mail (da, 16 nov)", () => {
 });
 
 describe("nergens meer 'binnenkort'", () => {
-  it("het aanbod Zakelijke e-mail is beschikbaar, en /domeinnaam en het mailscherm zeggen geen binnenkort meer", () => {
+  // /domeinnaam is op 22 nov 2026 weggehaald
+  it("het aanbod Zakelijke e-mail is beschikbaar, en het mailscherm zegt geen binnenkort meer", () => {
     expect(AANBOD.find((a) => a.slug === "zakelijke-mail")?.status).toBe("beschikbaar");
-    expect(lees("app/(marketing)/domeinnaam/page.tsx")).not.toMatch(/binnenkort/i);
     expect(lees("components/app/ZfMailSignup.tsx")).not.toContain("ownDomainSoon");
     expect(lees("lib/i18n/dictionaries.ts")).not.toContain("ownDomainSoon");
   });

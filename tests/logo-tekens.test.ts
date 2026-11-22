@@ -116,7 +116,8 @@ describe("de tekens (lib/logo/tekens)", () => {
     const lek = schermen.map((b) => bereikt(b)).filter(Boolean);
     expect(lek).toEqual([]);
     // en de bestanden die het scherm wél laadt, noemen de verboden bestanden niet
-    for (const p of [["lib", "logo", "regels.ts"], ["lib", "advertentie", "regels.ts"], ["components", "marketing", "studio", "Mockups.tsx"]]) expect(importsVan(join(ROOT, ...p)).filter((i) => verboden.has(i)), p.join("/")).toEqual([]);
+    // (components/marketing/studio/Mockups.tsx is op 22 nov 2026 weggehaald)
+    for (const p of [["lib", "logo", "regels.ts"], ["lib", "advertentie", "regels.ts"]]) expect(importsVan(join(ROOT, ...p)).filter((i) => verboden.has(i)), p.join("/")).toEqual([]);
   });
 });
 

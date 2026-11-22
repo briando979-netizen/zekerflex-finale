@@ -19,14 +19,7 @@ describe("verzendknoppen staan aan; de melding zegt wat ontbreekt", () => {
     expect(s).toMatch(/pwSterkGenoeg = pwChecking \|\|/);
   });
 
-  it("website-check: het adres en het contactformulier", () => {
-    const s = lees("components/marketing/WebsiteCheck.tsx");
-    expect(s).not.toMatch(/disabled=\{busy \|\| !url\.trim\(\)\}/);
-    expect(s).not.toMatch(/disabled=\{busy \|\| !form\.name/);
-    expect(s).toContain('meldOntbreekt("website-check", "url")');
-    expect(s).toContain('meldOntbreekt("website-check-lead"');
-  });
-
+  // de website-check (components/marketing/WebsiteCheck.tsx) is op 22 nov 2026 weggehaald
   it("uitzendbureau-aanvraag, rekentool-uitkomst en btw-check", () => {
     expect(lees("components/marketing/UitzendbureauContactForm.tsx")).not.toMatch(/disabled=\{busy \|\| !form\.contactName/);
     expect(lees("components/marketing/UitzendbureauContactForm.tsx")).toContain('meldOntbreekt("uitzendbureau"');

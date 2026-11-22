@@ -33,8 +33,7 @@ describe("paginavideo's", () => {
     const paginas: [string, string][] = [
       // 21 nov 2026: voor-bedrijven, prijzen en horeca tonen hun video niet meer op de pagina, maar in de videokamer /uitleg/videos
       ["app/(marketing)/uitzendbureau/page.tsx", "uitzendbureau"],
-      ["app/(marketing)/rijschool-software/page.tsx", "rijschool-software"],
-      // /website-maken toont zijn video niet meer (19 nov 2026): de pagina is een aanvraag geworden, de video legt nog het zelf bouwen uit
+      // /rijschool-software en /website-maken zijn op 22 nov 2026 weggehaald
     ];
     for (const [bestand, id] of paginas) {
       expect(readFileSync(path.join(root, bestand), "utf8"), bestand).toContain(`<PaginaVideoBlok id="${id}" />`);

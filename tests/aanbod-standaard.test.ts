@@ -41,9 +41,9 @@ describe("de standaardopmaak", () => {
 });
 
 describe("doorsturen", () => {
-  it("/aanbod/rijschool gaat naar de uitgebreide rijschoolpagina, ook in het menu", () => {
+  it("/aanbod/rijschool gaat naar de rijschoolpagina (die sinds 22 nov 2026 doorstuurt); de voettekst linkt er niet meer naar", () => {
     expect(AANBOD.find((a) => a.slug === "rijschool")?.pagina).toBe("/rijschool-software");
-    expect(lees("lib/ontwerp/menu.ts")).toContain('{ href: "/rijschool-software", label: "Rijschoolsoftware" }');
+    expect(lees("lib/ontwerp/menu.ts")).not.toContain('"/rijschool-software"');
     // 15 nov: dit gaf live een 404, want aanbodVan() kent rijschool niet (eigen pagina) en notFound() kwam eerst
     expect(aanbodDoorsturen("rijschool")).toBe("/rijschool-software");
     expect(aanbodVan("rijschool")).toBeUndefined();

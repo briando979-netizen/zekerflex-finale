@@ -111,15 +111,7 @@ export const VASTE_PAGINAS = {
       { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om contact op te nemen." },
     ],
   },
-  abonnementen: {
-    naam: "Abonnementen",
-    pad: "/abonnementen",
-    secties: [
-      { id: "pakketten", naam: "Pakketten", uitleg: "De abonnementen met hun prijzen en modules." },
-      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden over de abonnementen." },
-      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
-    ],
-  },
+  // /abonnementen is op 22 nov 2026 weggehaald (geen flexwerk); een bewaarde indeling ervan wordt genegeerd
   // het startscherm van de werkgevers-app (personeel); de marges staan in lib/werkgever/start-marges.ts
   "werkgever-start": {
     naam: "Startscherm werkgevers-app",

@@ -225,9 +225,10 @@ describe("de prijs: één bron", () => {
     expect(route).toContain("AppError.validation(PRIJS_FOUT");
   });
 
-  it("het aanbod noemt dezelfde prijs en de pagina's verzinnen geen eigen bedrag", () => {
+  // de pagina /advertentie-op-maat en zijn schermen zijn op 22 nov 2026 weggehaald; de melding blijft (Beheer)
+  it("het aanbod noemt dezelfde prijs en de melding verzint geen eigen bedrag", () => {
     expect(AANBOD.find((a) => a.slug === "advertentie-op-maat")).toMatchObject({ pijler: "online", pagina: "/advertentie-op-maat", status: "beschikbaar", prijs: "Vanaf \u{20AC} 29 excl. btw, je ziet eerst het voorbeeld" });
-    for (const pad of [["app", "(marketing)", "advertentie-op-maat", "page.tsx"], ["components", "marketing", "advertentie", "AdvertentieResultaat.tsx"], ["components", "marketing", "advertentie", "AdvertentieFormulier.tsx"], ["lib", "advertentie", "melding.ts"]]) {
+    for (const pad of [["lib", "advertentie", "melding.ts"]]) {
       const bron = readFileSync(join(ROOT, ...pad), "utf8").replace(/\/\/.*$/gm, "");
       expect(bron, pad.join("/")).not.toMatch(/\u{20AC}\s?\d/u);
     }
@@ -496,21 +497,9 @@ describe("snel en zonder kapotte beelden", () => {
     }
   });
 
-  it("de schermen proberen een mislukt beeld opnieuw en tonen daarna een tegel met een knop", () => {
-    const beeld = readFileSync(join(ROOT, "components", "marketing", "studio", "VoorbeeldBeeld.tsx"), "utf8");
-    expect(beeld).toContain("onError={fout}");
-    expect(beeld).toContain("Voorbeeld laden lukt even niet.");
-    expect(beeld).toContain("Probeer opnieuw");
-    expect(beeld).toContain("_p=${poging}");
-    for (const p of [["components", "marketing", "logo", "LogoResultaat.tsx"], ["components", "marketing", "advertentie", "AdvertentieResultaat.tsx"], ["components", "marketing", "studio", "Mockups.tsx"]]) {
-      const bron = readFileSync(join(ROOT, ...p), "utf8");
-      expect(bron, p.join("/")).toContain("<VoorbeeldBeeld");
-      // de schetsen laden niet lui: in een veegbare rij of een gedraaid kaartje laadt een lui beeld soms nooit
-      if (p[2] === "studio") expect(bron, p.join("/")).not.toContain('loading="lazy"');
-    }
-    // de extra poging in het adres komt niet in de sleutel van het geheugen: die bestaat alleen uit id, nummer en ondergrond
+  // de schermen van de bezoeker (VoorbeeldBeeld, Mockups, de resultaatpagina's) zijn op 22 nov 2026 weggehaald
+  it("de extra poging in het adres komt niet in de sleutel van het geheugen", () => {
+    // die bestaat alleen uit id, nummer en ondergrond
     expect(readFileSync(join(ROOT, "app", "api", "logo-maker", "[id]", "beeld", "route.ts"), "utf8")).not.toContain('searchParams.get("_p")');
-    // de schets van het vierkante beeld vraagt hetzelfde adres op als het raster
-    expect(readFileSync(join(ROOT, "components", "marketing", "advertentie", "AdvertentieResultaat.tsx"), "utf8")).toContain("<AdMockups vierkant={beeld(id, ontwerp ?? 1)}");
   });
 });

@@ -9,10 +9,10 @@ import {
   DOELGROEP_PAGINA,
   NAV,
   SNELLE_ACTIES,
-  VOORBEELDSITES,
   isExternal,
   startHref,
 } from "@/lib/marketing/site-nav";
+import { doorgestuurdePaden, padVan } from "./hulp/doorgestuurd";
 
 const ROOT = join(__dirname, "..");
 
@@ -44,20 +44,21 @@ const alleLinks = (): string[] => {
   }
   for (const lijst of Object.values(SNELLE_ACTIES)) for (const s of lijst) links.push(s.href);
   for (const d of Object.values(DOELGROEP_PAGINA)) links.push(d.href);
-  links.push(VOORBEELDSITES.href, startHref("werknemers"), startHref("bedrijven"));
+  links.push(startHref("werknemers"), startHref("bedrijven"));
   return links;
 };
 
 describe("menu van de openbare site (lib/marketing/site-nav.ts)", () => {
-  it("elke interne link wijst naar een bestaande pagina", () => {
+  it("elke interne link wijst naar een bestaande pagina, of naar een weggehaalde pagina die doorstuurt", async () => {
+    // de pijlers online en branche (met de vlag verborgen) linken naar pagina's die op 22 nov 2026 weg zijn en doorsturen
+    const doorgestuurd = await doorgestuurdePaden();
     for (const href of alleLinks()) {
       if (isExternal(href)) {
-        // naar buiten mag alleen mail/telefoon, of een eigen app op een eigen subdomein die echt live is
-        // (Apps & spelletjes, lib/marketing/apps.ts: talkaro en flikflak)
-        expect(href, href).toMatch(/^mailto:info@zekerflex\.com$|^tel:\+31|^https:\/\/(talkaro|flikflak)\.zekerflex\.com$/);
+        // naar buiten mag alleen mail/telefoon (Apps & spelletjes met talkaro en flikflak is op 22 nov 2026 uit het menu)
+        expect(href, href).toMatch(/^mailto:info@zekerflex\.com$|^tel:\+31/);
         continue;
       }
-      expect(paginaBestaat(href), href).toBe(true);
+      expect(paginaBestaat(href) || doorgestuurd.has(padVan(href)), href).toBe(true);
     }
   });
 

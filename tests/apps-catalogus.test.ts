@@ -70,12 +70,12 @@ describe("het manifest en het icoon", () => {
     }
   });
 
-  it("de installeerpagina gebruikt het manifest van de app zelf; /app verwijst niet meer naar /apps", () => {
-    const pagina = readFileSync(path.join(ROOT, "app/(marketing)/apps/[id]/page.tsx"), "utf8");
-    expect(pagina).toContain("manifest: `/apps/${a.id}/manifest.webmanifest`");
-    expect(pagina).toContain("<InstallAppButton />");
+  // 22 nov 2026: de installeerpagina's /apps en /apps/<id> zijn weg (ze stuurden al door naar /app). Het manifest en het
+  // icoon blijven, voor wie een app al op zijn telefoon of computer heeft staan.
+  it("/app verwijst niet meer naar /apps; het manifest en het icoon van een geïnstalleerde app blijven", () => {
     // 21 nov 2026 (eigenaar: "haal dit weg"): de regel "Liever een eigen app voor je bedrijf … Bekijk alle apps" staat niet meer op /app
     expect(readFileSync(path.join(ROOT, "app/(marketing)/app/page.tsx"), "utf8")).not.toContain('href="/apps"');
+    expect(existsSync(path.join(ROOT, "app/(marketing)/apps/[id]/page.tsx"))).toBe(false);
     expect(existsSync(path.join(ROOT, "app/(marketing)/apps/[id]/manifest.webmanifest/route.ts"))).toBe(true);
     expect(existsSync(path.join(ROOT, "app/(marketing)/apps/[id]/icoon.png/route.ts"))).toBe(true);
   });

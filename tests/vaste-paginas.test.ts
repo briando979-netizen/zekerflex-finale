@@ -27,7 +27,6 @@ const OUD: Record<VastePaginaId, string[]> = {
   beveiliging: ["cijfers", "maatregelen", "logboek", "melden", "slot"],
   contact: ["email", "direct", "google"],
   "voor-bureaus": ["pakketten", "waarom", "faq", "slot"],
-  abonnementen: ["pakketten", "faq", "slot"],
   "werkgever-start": ["cijfers", "volgers", "beoordelingen", "werk", "berichten", "facturen"],
   "werkruimte-start": ["cijfers", "onderdelen", "concept", "extra", "personeel"],
 };
@@ -89,7 +88,7 @@ describe("de opslag", () => {
     expect(await getPaginaIndeling("voor-freelancers")).toBeNull();
     await setPaginaIndeling("voor-freelancers", { volgorde: OUD["voor-freelancers"], verborgen: ["stappen"] });
     expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["voor-bedrijven", "voor-freelancers"]);
-    expect(PAGINAS).toHaveLength(11);
+    expect(PAGINAS).toHaveLength(10);
     expect(await setPaginaIndeling("voor-bedrijven", standaardPaginaIndeling("voor-bedrijven"))).toBeNull();
     expect((await getPaginaIndeling("voor-freelancers"))?.verborgen).toEqual(["stappen"]);
     await resetPaginaIndeling("voor-freelancers");

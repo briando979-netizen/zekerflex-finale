@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AANBOD, aanbodHref, aanbodVan, eigenPaginas, PIJLERS, prijsTekst, WERK_ZOEKEN } from "@/lib/marketing/aanbod";
+import { doorgestuurdePaden, padVan } from "./hulp/doorgestuurd";
 
 const ROOT = join(__dirname, "..");
 // een openbare pagina in app/(marketing) of app/<map>
@@ -22,11 +23,14 @@ describe("aanbod (lib/marketing/aanbod.ts)", () => {
     for (const s of slugs) expect(s).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   });
 
-  it("elke link wijst naar een bestaande pagina", () => {
+  it("elke link wijst naar een bestaande pagina, of naar een weggehaalde pagina die doorstuurt", async () => {
+    // de pijlers online en branche linken naar pagina's die op 22 nov 2026 weg zijn; die sturen door (next.config.mjs)
+    const doorgestuurd = await doorgestuurdePaden();
+    const ok = (href: string) => paginaBestaat(href) || doorgestuurd.has(padVan(href));
     for (const a of AANBOD) {
-      if (a.pagina) expect(paginaBestaat(a.pagina), `${a.naam} → ${a.pagina}`).toBe(true);
-      expect(paginaBestaat(a.start.href), `${a.naam} start → ${a.start.href}`).toBe(true);
-      if (a.voorbeelden) expect(paginaBestaat(a.voorbeelden.href), `${a.naam} voorbeelden → ${a.voorbeelden.href}`).toBe(true);
+      if (a.pagina) expect(ok(a.pagina), `${a.naam} → ${a.pagina}`).toBe(true);
+      expect(ok(a.start.href), `${a.naam} start → ${a.start.href}`).toBe(true);
+      if (a.voorbeelden) expect(ok(a.voorbeelden.href), `${a.naam} voorbeelden → ${a.voorbeelden.href}`).toBe(true);
     }
     // website en webshop: naar de sites die we echt maakten en het wensenformulier (19 nov 2026: geen oude voorbeeldsites meer)
     for (const slug of ["website", "webshop"]) expect(aanbodVan(slug)?.voorbeelden?.href, slug).toMatch(/^\/website-maken#(voorbeelden|aanvraag)$/);

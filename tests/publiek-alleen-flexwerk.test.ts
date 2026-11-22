@@ -27,7 +27,7 @@ import {
   zichtbarePijlers,
 } from "@/lib/marketing/flexwerk-only";
 import { CONTENT_REGISTRY, lijstRegels } from "@/lib/content/store";
-import { AANBOD_KOLOMMEN, ALLES_ONLINE, NAV, SNELLE_ACTIES, VOORBEELDSITES, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
+import { AANBOD_KOLOMMEN, NAV, SNELLE_ACTIES, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
 import { PIJLERS } from "@/lib/marketing/aanbod";
 import { PLANNING_SAMEN, SAMENVOEGINGEN, WERKRUIMTES, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
 import { PLANNING_TABS } from "@/lib/werkgever/planning-tabs";
@@ -116,10 +116,10 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
 });
 
 describe("het hoofdmenu met de vlag aan", () => {
-  it("zonder vlag is het menu ongewijzigd (shop en apps blijven)", () => {
+  it("zonder vlag is het menu ongewijzigd (shop blijft; apps is sinds 22 nov weg)", () => {
     const keys = zichtbareNav(NAV, false).map((n) => n.key);
     expect(keys).toContain("shop");
-    expect(keys).toContain("apps");
+    expect(keys).not.toContain("apps");
     expect(zichtbareNav(NAV, false)).toBe(NAV);
   });
 
@@ -136,12 +136,6 @@ describe("het hoofdmenu met de vlag aan", () => {
   it("de Aanbod-uitklap toont zonder vlag vier pijlers, met de vlag aan alleen personeel en geld", () => {
     expect(zichtbareAanbodKolommen(false).map((k) => k.sleutel)).toEqual(AANBOD_KOLOMMEN.map((k) => k.sleutel));
     expect(zichtbareAanbodKolommen(true).map((k) => k.sleutel)).toEqual(["personeel", "geld"]);
-  });
-
-  it("de losse Online-links (VOORBEELDSITES, ALLES_ONLINE) zijn niet-flexwerk en vallen dus weg in menu en voettekst", () => {
-    // VOORBEELDSITES → /website-maken#voorbeelden, ALLES_ONLINE → /online
-    expect(isNietFlexwerkPad(VOORBEELDSITES.href)).toBe(true);
-    expect(isNietFlexwerkPad(ALLES_ONLINE.href)).toBe(true);
   });
 
   it("de snelle acties in het mobiele menu laten met de vlag aan de verborgen klussen-links (lijst, kaart) weg", () => {
@@ -173,7 +167,7 @@ describe("het hoofdmenu met de vlag aan", () => {
 describe("de nachtelijke rondgang met de vlag aan", () => {
   it("zonder vlag staan de niet-flexwerk-pagina's gewoon in de rondgang", () => {
     const routes = openbareRoutes(undefined, false);
-    expect(routes).toContain("/online");
+    expect(routes).toContain("/developers");
     expect(routes).toContain("/shop");
     expect(routes).toContain("/klussen");
     expect(routes).toContain("/aanbod");
@@ -192,12 +186,12 @@ describe("de nachtelijke rondgang met de vlag aan", () => {
 describe("noindex op een verborgen pagina", () => {
   it("zonder vlag krijgt een verborgen pagina geen robots-metadata", async () => {
     h.vlagAan = false;
-    expect(await robotsVerborgen("/online")).toEqual({});
+    expect(await robotsVerborgen("/developers")).toEqual({});
   });
 
   it("met de vlag aan komt een verborgen pagina op noindex (links volgen mag)", async () => {
     h.vlagAan = true;
-    expect(await robotsVerborgen("/online")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/developers")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/shop")).toEqual({ robots: { index: false, follow: true } });
     // /verkopen (webshop-verkooppartner) ook op noindex
     expect(await robotsVerborgen("/verkopen")).toEqual({ robots: { index: false, follow: true } });
@@ -317,9 +311,8 @@ describe("de bedrijfskant met de vlag aan", () => {
     // één woord voor hetzelfde: "klus", niet "dienst", in de teksten van de werkgeversapp
     const nl = readFileSync("lib/i18n/dictionaries.ts", "utf8");
     for (const oud of ['invShift: "Dienst', 'typeShift: "Dienst', 'sourceShift: "Dienst"', 'uitzetten: "Dienst', 'statDiensten: "diensten"']) expect(nl).not.toContain(oud);
-    // de proefversie /flexwerk gaat met de vlag op noindex, /nieuwe-home stond al op noindex
+    // de proefversie /flexwerk gaat met de vlag op noindex (/nieuwe-home is op 22 nov 2026 weggehaald)
     expect(readFileSync("app/(marketing)/flexwerk/page.tsx", "utf8")).toContain('robotsVerborgen("/flexwerk")');
-    expect(readFileSync("app/(marketing)/nieuwe-home/page.tsx", "utf8")).toContain("robots: { index: false");
   });
 
   it("de abonnementspakketten verdwijnen met de vlag aan (prijs per gewerkt uur); de uitbreidingen blijven", () => {
@@ -363,7 +356,7 @@ describe("de sitemap met de vlag aan", () => {
   it("zonder vlag staan de niet-flexwerk-pagina's in de sitemap", async () => {
     h.vlagAan = false;
     const urls = (await bouwSitemap()).map((r) => r.url);
-    expect(urls.some((u) => u.endsWith("/online"))).toBe(true);
+    expect(urls.some((u) => u.endsWith("/developers"))).toBe(true);
     expect(urls.some((u) => u.endsWith("/shop"))).toBe(true);
   });
 

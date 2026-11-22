@@ -13,7 +13,7 @@ const DYNAMISCH = new Set(APP_PAGES.filter((p) => p.dynamic).map((p) => p.route)
 describe("de rondgang dekt de pagina's van vannacht", () => {
   it("de vaste pagina's staan erin", () => {
     const r = openbareRoutes();
-    for (const p of ["/bedrijven", "/demo", "/klus-plaatsen", "/register", "/website-check", "/uitzendbureau", "/personeel-inhuren", "/freelance-werk"]) expect(r, p).toContain(p);
+    for (const p of ["/bedrijven", "/demo", "/klus-plaatsen", "/register", "/uitzendbureau", "/personeel-inhuren", "/freelance-werk"]) expect(r, p).toContain(p);
     expect(EXTRA_ADRESSEN).toContain("/register?type=bedrijf");
   });
 

@@ -1,5 +1,4 @@
 import { AANBOD, aanbodHref, PIJLERS, type PijlerSleutel } from "@/lib/marketing/aanbod";
-import { APPS } from "@/lib/marketing/apps";
 import { NIET_FLEXWERK_NAV_KEYS, zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
 import { SECTORS, type Sector } from "@/lib/seo-sectors";
 
@@ -135,16 +134,12 @@ const BRANCHES_WN: MenuItem[] = [
 ];
 const BRANCHES_BV: MenuItem[] = SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.slug}` }));
 
-// "Apps & spelletjes": de knoppen "Ga naar …" uit lib/marketing/apps.ts
-const APPS_MENU: MenuItem[] = APPS.map((a) => ({ title: a.knop, desc: a.tekst, href: a.href }));
-
+// 22 nov 2026: "Apps & spelletjes" en de pagina /online zijn weg (geen flexwerk), dus ook hun menu-items
 const AANBOD_MENU: MenuVariant = {
   eyebrow: "Alles onder één dak",
   cta: { label: "Het hele aanbod", href: "/aanbod" },
   items: [
     ...PIJLERS.map((p) => ({ title: p.naam, desc: p.kort, href: `/aanbod#${p.sleutel}` })),
-    // alle losse online tools (website, webshop, logo, domein, mail, checks) op één pagina (lib/marketing/online-tools.ts)
-    { title: "Alles voor je bedrijf online", desc: "Website, webshop, logo, domein, mail en gratis checks op één pagina.", href: "/online" },
     { title: "Ik zoek werk", desc: "Als flexwerker, uitzendkracht of zzp'er. Meedoen is gratis.", href: "/voor-freelancers" },
   ],
 };
@@ -259,20 +254,6 @@ export const NAV: NavEntry[] = [
     },
   },
   {
-    // De eigen apps van ZekerFlex als aparte categorie, los van de voorbeelden op
-    // /website-maken (lib/marketing/apps.ts): direct "Ga naar …".
-    // (/apps zelf is de pagina met de ZekerFlex-apps per doelgroep; dit is een andere categorie)
-    key: "apps",
-    href: "/apps-en-spelletjes",
-    label: "Apps & spelletjes",
-    match: "/apps-en-spelletjes",
-    overzicht: "Alle apps en spelletjes",
-    menu: {
-      werknemers: { eyebrow: "Even iets anders", cta: { label: "Alles bekijken", href: "/apps-en-spelletjes" }, items: APPS_MENU },
-      bedrijven: { eyebrow: "Onze eigen apps", cta: { label: "Alles bekijken", href: "/apps-en-spelletjes" }, items: APPS_MENU },
-    },
-  },
-  {
     key: "over",
     href: "/over-ons",
     label: "Over ons",
@@ -326,11 +307,6 @@ export const AANBOD_KOLOMMEN: MegaKolom[] = PIJLERS.map((p) => ({
   })),
 }));
 
-/** Extra ingang onder "Online & klanten": de sites die we echt hebben gemaakt (19 nov 2026: de oude voorbeeldsites per branche tonen we niet meer). */
-export const VOORBEELDSITES = { label: "Websites die we maakten", href: "/website-maken#voorbeelden" };
-/** Onder dezelfde kolom: alle losse online tools op één pagina (/online, lib/marketing/online-tools.ts). De brede uitklap tekent AANBOD_KOLOMMEN, niet AANBOD_MENU.items, dus de link staat hier. */
-export const ALLES_ONLINE = { label: "Alles voor je bedrijf online", href: "/online" };
-
 /**
  * Snelle acties bovenaan het mobiele menu: wat iemand het vaakst komt doen,
  * afhankelijk van de gekozen doelgroep. Elk een bestaande pagina.
@@ -376,7 +352,7 @@ export function zichtbareNav(nav: NavEntry[], alleenFlexwerk: boolean): NavEntry
 /**
  * De aanbod-kolommen voor de brede uitklap: met de vlag aan alleen de
  * flexwerk-pijlers (personeel, geld); de pijlers "online" en "branche" vallen
- * weg (en daarmee ook de losse links VOORBEELDSITES/ALLES_ONLINE onder "online").
+ * weg.
  */
 export function zichtbareAanbodKolommen(alleenFlexwerk: boolean): MegaKolom[] {
   return zichtbarePijlers(AANBOD_KOLOMMEN, alleenFlexwerk);

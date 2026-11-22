@@ -70,11 +70,8 @@ describe("geen beloftes die niet kloppen", () => {
 });
 
 describe("geen interne notities of Engelse vaktaal voor klanten", () => {
-  it("/producten en /producten/<slug> tonen geen verkoopcyclus, tijd tot omzet of hergebruikte code", () => {
-    for (const p of ["app/(marketing)/producten/page.tsx", "app/(marketing)/producten/[slug]/page.tsx"]) {
-      const s = lees(p);
-      expect(s, p).not.toMatch(/Verkoopcyclus|Verkoopcomplexiteit|Tijd tot eerste omzet|Hergebruikt uit het platform|Snelste omzet|timeToMrr|salesComplexity|\.reused/);
-    }
+  // de pagina's /producten en /producten/<slug> zijn op 22 nov 2026 weggehaald; de productlijst zelf blijft gecontroleerd
+  it("de productlijst toont geen interne notities of Engelse vaktaal", () => {
     const zichtbaar = ALL_PRODUCTS.flatMap((p) => [p.kicker, p.tagline, p.concept, p.audience, p.priceLabel, ...p.why, ...p.features]).join(" ");
     expect(zichtbaar).not.toMatch(/self-hosted|as a service|One-command|sourcen|verkoopcyclus|domeinlogica|plug-in|SaaS/i);
     expect(Object.values(DEPLOYMENT_LABEL).join(" ")).not.toMatch(/SaaS|Self-hosted|as a service/);

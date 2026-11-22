@@ -28,7 +28,9 @@ describe("de routelijst van de rondgang is actueel", () => {
     expect(echt.filter((r) => !inLijst.has(r))).toEqual([]);
   });
 
-  it("de nieuwe pagina /website-maken wordt meegenomen in de ronde", () => {
-    expect(openbareRoutes()).toContain("/website-maken");
+  it("een nieuwe pagina wordt meegenomen in de ronde, een weggehaalde niet", () => {
+    expect(openbareRoutes()).toContain("/werken-als");
+    // /website-maken is op 22 nov 2026 weggehaald
+    expect(openbareRoutes()).not.toContain("/website-maken");
   });
 });

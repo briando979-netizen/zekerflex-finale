@@ -18,7 +18,7 @@ export async function alleenFlexwerkAan(): Promise<boolean> {
  * Robots-metadata voor een pagina die achter de vlag verborgen is: als de vlag
  * aan is en dit een niet-flexwerk-pad is, uit Google (wel links blijven volgen).
  * Anders leeg, zodat de pagina onveranderd blijft. Spreid dit in de metadata van
- * de pagina: `{ ...basis, ...(await robotsVerborgen("/online")) }`.
+ * de pagina: `{ ...basis, ...(await robotsVerborgen("/developers")) }`.
  */
 export async function robotsVerborgen(pad: string): Promise<Pick<Metadata, "robots">> {
   if (!isNietFlexwerkPad(pad)) return {};
