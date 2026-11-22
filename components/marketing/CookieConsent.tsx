@@ -9,11 +9,12 @@ const COOKIE_NAME = "zf_cookie_consent";
 
 // The first thing a new visitor sees — in their chosen language (zf_locale cookie).
 const COPY = {
-  nl: { label: "Cookiemelding", body: "We gebruiken alleen functionele cookies — nodig om in te loggen en je voorkeuren te onthouden. Geen advertentie- of trackingcookies.", policy: "Lees het volledige cookiebeleid", details: "Er is niets uit te zetten: we plaatsen geen cookies waarvoor toestemming nodig is. De enige cookies zijn je sessie, je taal-/weergavevoorkeur en deze cookiekeuze zelf. Wel meten we anoniem en zonder cookies hoe lang pagina's bekeken worden, zodat we de site kunnen verbeteren — zonder persoonsgegevens en zonder externe partijen.", accept: "Accepteren", settings: "Instellingen", close: "Sluiten" },
-  en: { label: "Cookie notice", body: "We only use functional cookies — needed to log in and remember your preferences. No advertising or tracking cookies.", policy: "Read the full cookie policy", details: "There is nothing to switch off: we set no cookies that require consent. The only cookies are your session, your language/display preference and this cookie choice itself. We do measure anonymously, without cookies, how long pages are viewed to improve the site — no personal data, no third parties.", accept: "Accept", settings: "Settings", close: "Close" },
-  pl: { label: "Informacja o plikach cookie", body: "Używamy wyłącznie funkcjonalnych plików cookie — potrzebnych do logowania i zapamiętania ustawień. Żadnych reklamowych ani śledzących.", policy: "Przeczytaj pełną politykę cookies", details: "Nie ma nic do wyłączenia: nie używamy plików cookie wymagających zgody. Jedyne pliki cookie to Twoja sesja, preferencja języka/wyglądu i ten wybór.", accept: "Akceptuję", settings: "Ustawienia", close: "Zamknij" },
-  ro: { label: "Notificare despre cookie-uri", body: "Folosim doar cookie-uri funcționale — necesare pentru conectare și pentru a-ți reține preferințele. Fără cookie-uri de publicitate sau urmărire.", policy: "Citește politica completă de cookie-uri", details: "Nu e nimic de dezactivat: nu folosim cookie-uri care necesită consimțământ. Singurele cookie-uri sunt sesiunea, preferința de limbă/afișare și această alegere.", accept: "Accept", settings: "Setări", close: "Închide" },
-  uk: { label: "Повідомлення про cookie", body: "Ми використовуємо лише функціональні cookie — потрібні для входу та збереження налаштувань. Жодних рекламних чи відстежувальних.", policy: "Прочитати повну політику cookie", details: "Тут нічого вимикати: ми не встановлюємо cookie, що потребують згоди. Єдині cookie — твоя сесія, мова/вигляд і цей вибір.", accept: "Прийняти", settings: "Налаштування", close: "Закрити" },
+  // kort + beleidKort: de smalle balk op de telefoon (22 nov 2026, gebruikersonderzoek punt 13)
+  nl: { label: "Cookiemelding", kort: "Alleen functionele cookies, geen tracking.", beleidKort: "Cookiebeleid", body: "We gebruiken alleen functionele cookies — nodig om in te loggen en je voorkeuren te onthouden. Geen advertentie- of trackingcookies.", policy: "Lees het volledige cookiebeleid", details: "Er is niets uit te zetten: we plaatsen geen cookies waarvoor toestemming nodig is. De enige cookies zijn je sessie, je taal-/weergavevoorkeur en deze cookiekeuze zelf. Wel meten we anoniem en zonder cookies hoe lang pagina's bekeken worden, zodat we de site kunnen verbeteren — zonder persoonsgegevens en zonder externe partijen.", accept: "Accepteren", settings: "Instellingen", close: "Sluiten" },
+  en: { label: "Cookie notice", kort: "Functional cookies only, no tracking.", beleidKort: "Cookie policy", body: "We only use functional cookies — needed to log in and remember your preferences. No advertising or tracking cookies.", policy: "Read the full cookie policy", details: "There is nothing to switch off: we set no cookies that require consent. The only cookies are your session, your language/display preference and this cookie choice itself. We do measure anonymously, without cookies, how long pages are viewed to improve the site — no personal data, no third parties.", accept: "Accept", settings: "Settings", close: "Close" },
+  pl: { label: "Informacja o plikach cookie", kort: "Tylko funkcjonalne pliki cookie, bez śledzenia.", beleidKort: "Polityka cookies", body: "Używamy wyłącznie funkcjonalnych plików cookie — potrzebnych do logowania i zapamiętania ustawień. Żadnych reklamowych ani śledzących.", policy: "Przeczytaj pełną politykę cookies", details: "Nie ma nic do wyłączenia: nie używamy plików cookie wymagających zgody. Jedyne pliki cookie to Twoja sesja, preferencja języka/wyglądu i ten wybór.", accept: "Akceptuję", settings: "Ustawienia", close: "Zamknij" },
+  ro: { label: "Notificare despre cookie-uri", kort: "Doar cookie-uri funcționale, fără urmărire.", beleidKort: "Politica cookie", body: "Folosim doar cookie-uri funcționale — necesare pentru conectare și pentru a-ți reține preferințele. Fără cookie-uri de publicitate sau urmărire.", policy: "Citește politica completă de cookie-uri", details: "Nu e nimic de dezactivat: nu folosim cookie-uri care necesită consimțământ. Singurele cookie-uri sunt sesiunea, preferința de limbă/afișare și această alegere.", accept: "Accept", settings: "Setări", close: "Închide" },
+  uk: { label: "Повідомлення про cookie", kort: "Лише функціональні cookie, без стеження.", beleidKort: "Політика cookie", body: "Ми використовуємо лише функціональні cookie — потрібні для входу та збереження налаштувань. Жодних рекламних чи відстежувальних.", policy: "Прочитати повну політику cookie", details: "Тут нічого вимикати: ми не встановлюємо cookie, що потребують згоди. Єдині cookie — твоя сесія, мова/вигляд і цей вибір.", accept: "Прийняти", settings: "Налаштування", close: "Закрити" },
 } as const;
 type CopyLocale = keyof typeof COPY;
 
@@ -105,8 +106,31 @@ export function CookieConsent() {
     {!opOs && <div aria-hidden data-cookie-ruimte style={{ height: ruimte }} />}
     {/* De laag is schermbreed, de kaart niet: klikken naast de kaart gaan door naar wat eronder ligt
         (zoals de chatknop rechtsonder); alleen de kaart zelf vangt ze op. */}
-    <div ref={laag} data-cookie-laag className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 sm:px-6">
-      <div role="region" aria-label={c.label} className="pointer-events-auto mx-auto max-w-2xl rounded-2xl border border-hair bg-white p-5 shadow-lift">
+    {/* Telefoon (onder 640 px): een smalle balk onderaan met één regel en Accepteren (22 nov 2026, gebruikersonderzoek punt
+        13: de kaart bedekte een derde van het eerste scherm). Vanaf 640 px, en zodra iemand de instellingen opent, precies
+        de kaart van daarvoor. */}
+    <div ref={laag} data-cookie-laag className={`pointer-events-none fixed inset-x-0 bottom-0 z-[90] ${showDetails ? "px-4 pb-4" : "px-0 pb-0 sm:pb-4"} sm:px-6`}>
+      <div
+        role="region"
+        aria-label={c.label}
+        className={`pointer-events-auto mx-auto max-w-2xl bg-white shadow-lift ${
+          showDetails ? "rounded-2xl border border-hair p-5" : "border-t border-hair px-4 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 sm:rounded-2xl sm:border sm:p-5"
+        }`}
+      >
+        {!showDetails && (
+          <div data-cookie-balk className="flex items-center gap-3 sm:hidden">
+            <p className="min-w-0 flex-1 text-xs leading-snug text-ink">
+              {c.kort}{" "}
+              <Link href="/cookiebeleid" className="font-semibold underline">
+                {c.beleidKort}
+              </Link>
+            </p>
+            <button type="button" onClick={dismiss} className="btn-primary flex-none px-4 py-2 text-xs">
+              {c.accept}
+            </button>
+          </div>
+        )}
+        <div className={showDetails ? "" : "hidden sm:block"}>
         <p className="text-sm leading-relaxed text-ink">
           {c.body}{" "}
           <Link href="/cookiebeleid" className="font-semibold underline">
@@ -138,6 +162,7 @@ export function CookieConsent() {
           >
             {c.close} ✕
           </button>
+        </div>
         </div>
       </div>
     </div>

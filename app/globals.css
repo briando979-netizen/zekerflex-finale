@@ -1116,3 +1116,6 @@ body {
 
 /* 21 nov 2026: het mobiele menu open = de cookiebalk even weg (hij lag over de knop Inloggen onderin het menu) */
 html[data-menu-open] [data-cookie-laag] { display: none; }
+/* 22 nov 2026 (gebruikersonderzoek punt 13): de bezoekerstip open = de chatknop van de site even weg (ze lagen over elkaar).
+   Alleen de dichte knop ("Chat openen"); een open chat blijft staan. */
+html[data-tip-open] button[aria-label="Chat openen"] { visibility: hidden; }

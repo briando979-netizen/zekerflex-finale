@@ -18,6 +18,8 @@ import { COPY, copyKeyVoor, type Kind } from "@/lib/marketing/bezoekerstip";
 // ---------------------------------------------------------------------------
 
 const DONE_KEY = "zf_nudge_done";
+/** Smaller dan dit is een telefoon: daar geen tip (zelfde grens als sm in Tailwind). */
+const TELEFOON = "(max-width: 639px)";
 
 // /bedrijven erbij: /voor-bedrijven is daarin samengevoegd (22 nov 2026) en stuurt door
 const COMPANY = /^\/(bedrijven|voor-bedrijven|prijzen|personeel-inhuren|demo)(\/|$)/;
@@ -39,8 +41,21 @@ export function VisitorNudge({ echteKlussen = false }: { echteKlussen?: boolean 
   const armedAt = useRef(Date.now());
   const visibleMs = useRef(0);
 
+  // zolang de tip open is, wijkt de chatknop (app/globals.css: html[data-tip-open]); anders lagen ze over elkaar (22 nov 2026)
+  useEffect(() => {
+    if (!kind) return;
+    const html = document.documentElement;
+    html.dataset.tipOpen = "1";
+    return () => {
+      delete html.dataset.tipOpen;
+    };
+  }, [kind]);
+
   useEffect(() => {
     let stopped = false;
+    // Niet op de telefoon (22 nov 2026, gebruikersonderzoek punt 13): daar bedekte de tip een kwart van het scherm en de
+    // chatknop. De knoppen op de pagina zelf zijn daar al groot genoeg.
+    if (window.matchMedia?.(TELEFOON).matches) return;
     try {
       if (sessionStorage.getItem(DONE_KEY)) return;
     } catch {
