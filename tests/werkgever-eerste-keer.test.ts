@@ -3,11 +3,28 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
+import { REGELS_OPGEHEVEN_PRODUCTEN, RETENTION_RULES } from "@/lib/privacy/retention";
 
 // De eerste keer in de werkgeversapp (22 nov 2026, gebruikersonderzoek B11/B14/B27): minder poorten vóór de eerste klus.
 // De verificatieplicht (lib/company/verified.ts) blijft; alleen dubbele vragen en schermen gaan weg.
 
 const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
+
+describe("kleine fouten (punt 15)", () => {
+  it("aanmelden als bedrijf zegt niet 'Gratis voor werkers.'", () => {
+    expect(lees("app/register/page.tsx")).toContain('...(defaultType === "bedrijf" ? { subtitle: t.subtitle } : {}),');
+  });
+
+  it("account verwijderen van een bedrijf noemt geen rijlessen, horecareserveringen of klantsites meer", () => {
+    for (const k of REGELS_OPGEHEVEN_PRODUCTEN) expect(RETENTION_RULES.some((r) => r.key === k), k).toBe(true);
+    const genoemd = RETENTION_RULES.filter((r) => !REGELS_OPGEHEVEN_PRODUCTEN.includes(r.key)).map((r) => r.label).join(" ");
+    expect(genoemd).not.toMatch(/rijles|rijschool|horeca|klantsite/i);
+    expect(lees("app/werkgever/account/verwijderen/page.tsx")).toContain("<ErasureScopeInfo verberg={REGELS_OPGEHEVEN_PRODUCTEN}");
+    const info = lees("components/privacy/ErasureScopeInfo.tsx");
+    expect(info).toContain("erasableNow().filter((r) => !verberg.includes(r.key))");
+    expect(info).toContain("r.blocksErasure && !verberg.includes(r.key)");
+  });
+});
 
 describe("rustiger werkgeversschermen (punt 14)", () => {
   it("de opbouwfase-melding staat alleen op het startscherm, niet meer in de layout", () => {

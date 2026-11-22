@@ -15,9 +15,10 @@ const klein = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 // the two never drift from the real retention schedule in lib/privacy/retention.ts.
 // 16 nov 2026: de omschrijvingen per soort komen in de taal van de app mee (wisOnderdelen/wisGronden); zonder die teksten de
 // Nederlandse uit lib/privacy/retention.ts.
-export function ErasureScopeInfo({ texts = NL }: { texts?: ErasureTeksten }) {
-  const cleared = erasableNow();
-  const retained = RETENTION_RULES.filter((r) => r.blocksErasure);
+// `verberg`: sleutels die dit scherm niet noemt (de verwijderpagina van een bedrijf: producten die weg zijn).
+export function ErasureScopeInfo({ texts = NL, verberg = [] }: { texts?: ErasureTeksten; verberg?: readonly string[] }) {
+  const cleared = erasableNow().filter((r) => !verberg.includes(r.key));
+  const retained = RETENTION_RULES.filter((r) => r.blocksErasure && !verberg.includes(r.key));
 
   return (
     <div className="space-y-4 text-sm">

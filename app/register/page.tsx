@@ -59,6 +59,8 @@ export default async function RegisterPage(
       locale={locale}
       mobile={{
         ...WELKOM_DICTS[locale].registerHero,
+        // "Gratis voor werkers." hoort niet boven de aanmelding van een bedrijf (22 nov 2026): dan de gewone ondertitel
+        ...(defaultType === "bedrijf" ? { subtitle: t.subtitle } : {}),
         // de productpagina's zijn Nederlands, hun aanmelding dus ook
         ...(product ? { title: product.titel, subtitle: product.uitleg } : {}),
         back: WELKOM_DICTS[locale].back,

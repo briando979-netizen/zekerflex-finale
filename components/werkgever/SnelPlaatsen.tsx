@@ -10,7 +10,7 @@ import { conceptCost, conceptHours, naarSnelFormulier } from "@/lib/klusconcept/
 import { euroCents, euroWhole } from "@/lib/rekentools/invoer";
 import { useT } from "@/components/i18n/I18nProvider";
 import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
-import { pauzeKeuzes, type SnelTeksten } from "@/components/werkgever/snel-teksten";
+import { pauzeKeuzes, snelSamenvatting, type SnelTeksten } from "@/components/werkgever/snel-teksten";
 
 // Klus plaatsen in drie stappen (20 nov 2026, eigenaar: "wat, wanneer, tarief; de rest standaard ingevuld"). Dezelfde
 // server-actie en dezelfde regels als het uitgebreide formulier (components/app/NewShiftForm.tsx): één vestiging, één
@@ -300,7 +300,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
             </>
           )}
           <p className="rounded-xl bg-paper-soft p-3 text-sm text-neutralx-700">
-            {vul(t.samenvatting, { titel, datum, van, tot, n: personen, tarief: tarief.replace(".", ",") })}
+            {snelSamenvatting(t, { titel, datum, van, tot, personen, pauze, tarief }, locale)}
           </p>
           {/* wat de klus kost, vlak boven "Plaats de klus" (zoals /klus-plaatsen) */}
           {tijdOk && tariefCent > 0 && (

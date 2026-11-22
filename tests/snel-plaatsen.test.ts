@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { conceptCost } from "@/lib/klusconcept/concept";
 import { euroCents, euroWhole } from "@/lib/rekentools/invoer";
-import { pauzeKeuzes, SNEL_EN, SNEL_NL } from "@/components/werkgever/snel-teksten";
+import { pauzeKeuzes, SNEL_EN, SNEL_NL, snelSamenvatting } from "@/components/werkgever/snel-teksten";
 
 // "Snel een klus plaatsen" in de werkgeversapp (components/werkgever/SnelPlaatsen.tsx). 22 nov 2026, gebruikersonderzoek
 // B06 tegen B25: zonder account zag een bedrijf op /klus-plaatsen "Totaal excl. btw € 154", vlak voor "Plaats de klus" in de
@@ -21,6 +21,25 @@ describe("de teksten", () => {
   it("de pauzes zijn die van /klus-plaatsen; een afwijkende pauze uit een concept komt erbij", () => {
     expect(pauzeKeuzes(30)).toEqual([0, 15, 30, 45, 60]);
     expect(pauzeKeuzes(20)).toEqual([0, 15, 20, 30, 45, 60]);
+  });
+});
+
+// B25: "Bediening / horeca op 2026-11-24 van 10:00 tot 16:00, 1 persoon/personen, € 17 per uur."
+describe("de samenvatting", () => {
+  const klus = { titel: "Bediening / horeca", datum: "2026-11-24", van: "10:00", tot: "16:00", personen: 1, pauze: 0, tarief: "17" };
+
+  it("schrijft de datum uit en kiest enkel- of meervoud", () => {
+    expect(snelSamenvatting(SNEL_NL, klus)).toBe("Bediening / horeca op dinsdag 24 november van 10:00 tot 16:00, 1 persoon, € 17 per uur.");
+    expect(snelSamenvatting(SNEL_NL, { ...klus, personen: 3, pauze: 30, tot: "17:00", tarief: "17.50" })).toBe(
+      "Bediening / horeca op dinsdag 24 november van 10:00 tot 17:00 (30 minuten pauze), 3 personen, € 17,50 per uur.",
+    );
+    expect(snelSamenvatting(SNEL_EN, klus, "en")).toBe("Bediening / horeca on Tuesday 24 November from 10:00 until 16:00, 1 person, € 17 per hour.");
+  });
+
+  it("geen schuine streep meer voor enkel- en meervoud, en het scherm gebruikt de samenvatting", () => {
+    expect(SNEL_NL.samenvatting).not.toContain("/");
+    expect(SNEL_EN.samenvatting).not.toContain("(s)");
+    expect(lees("components/werkgever/SnelPlaatsen.tsx")).toContain("snelSamenvatting(t, { titel, datum, van, tot, personen, pauze, tarief }, locale)");
   });
 });
 
