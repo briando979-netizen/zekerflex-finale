@@ -5,7 +5,7 @@ import type { Locale } from "@/lib/i18n/config";
 // login/registreren-weergave, in de vijf talen van de werkerkant. Puur: geen
 // imports behalve het type, dus veilig in server- én clientcode.
 // Alleen wat waar is: gratis voor werkers, zelf kiezen, klussen in meerdere
-// branches, uren en uitbetaling via ZekerFlex, en nog in opbouw (testklussen).
+// branches, uren en uitbetaling via ZekerFlex. (22 nov 2026: de regel "nog in opbouw, testklussen" onder de laatste slide is weg.)
 // ---------------------------------------------------------------------------
 
 export interface WelkomSlideTekst {
@@ -23,7 +23,6 @@ export interface WelkomDict {
   prev: string;
   next: string;
   slides: [WelkomSlideTekst, WelkomSlideTekst, WelkomSlideTekst];
-  note: string;
   create: string;
   login: string;
   back: string;
@@ -54,7 +53,6 @@ const nl: WelkomDict = {
       alt: "Bezorger kijkt op zijn telefoon",
     },
   ],
-  note: "ZekerFlex is nog in opbouw: de klussen die je nu ziet zijn testklussen.",
   create: "Account aanmaken",
   login: "Inloggen",
   back: "Terug",
@@ -85,7 +83,6 @@ const en: WelkomDict = {
       alt: "Courier checking his phone",
     },
   ],
-  note: "ZekerFlex is still being built: the jobs you see now are test jobs.",
   create: "Create account",
   login: "Log in",
   back: "Back",
@@ -116,7 +113,6 @@ const pl: WelkomDict = {
       alt: "Kurier sprawdza telefon",
     },
   ],
-  note: "ZekerFlex jest jeszcze w budowie: zlecenia, które teraz widzisz, to zlecenia testowe.",
   create: "Utwórz konto",
   login: "Zaloguj się",
   back: "Wstecz",
@@ -147,7 +143,6 @@ const ro: WelkomDict = {
       alt: "Curier care se uită pe telefon",
     },
   ],
-  note: "ZekerFlex este încă în construcție: lucrările pe care le vezi acum sunt lucrări de test.",
   create: "Creează cont",
   login: "Autentificare",
   back: "Înapoi",
@@ -178,7 +173,6 @@ const uk: WelkomDict = {
       alt: "Кур'єр дивиться в телефон",
     },
   ],
-  note: "ZekerFlex ще створюється: підробітки, які ти бачиш зараз, є тестовими.",
   create: "Створити акаунт",
   login: "Увійти",
   back: "Назад",
