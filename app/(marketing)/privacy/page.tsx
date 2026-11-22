@@ -12,8 +12,8 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacybeleid"
-      updated="1 mei 2026"
-      intro="In dit privacybeleid leggen we uit welke gegevens Zekerflex, Inc. ('ZekerFlex') verzamelt als je onze website of app gebruikt of je inschrijft, waarom we die nodig hebben, met wie we ze delen en hoe lang we ze bewaren. We volgen de AVG. Door onze diensten te gebruiken ga je akkoord met dit beleid. Dit beleid kan wijzigen; deze versie geldt sinds 1 mei 2026."
+      updated="22 november 2026"
+      intro="In dit privacybeleid leggen we uit welke gegevens Zekerflex, Inc. ('ZekerFlex') verzamelt als je onze website of app gebruikt of je inschrijft, waarom we die nodig hebben, met wie we ze delen en hoe lang we ze bewaren. We volgen de AVG. Door onze diensten te gebruiken ga je akkoord met dit beleid. Dit beleid kan wijzigen; deze versie geldt sinds 22 november 2026 (toen kwam de community erbij)."
       note={
         <>
           Vragen of een verzoek over je gegevens? Mail{" "}
@@ -67,6 +67,18 @@ export default function PrivacyPage() {
       <LegalSection
         heading="Nieuwsbrief"
         body="Je kunt je aanmelden voor onze nieuwsbrief. We verwerken daarvoor je e-mailadres op basis van jouw toestemming (dubbele opt-in). Je meldt je op elk moment af via de link onderaan elke nieuwsbrief."
+      />
+      <LegalSection
+        heading="De community"
+        body="Op zekerflex.com/community kun je met je account een onderwerp starten, reageren en foto's delen. Wat je daar plaatst, is openbaar: iedereen kan het lezen, ook zonder account, en zoekmachines kunnen het vinden. We verwerken dit omdat je er zelf voor kiest iets te plaatsen, als uitvoering van de gebruiksovereenkomst. Dit is wat we tonen en hoe het werkt:"
+        list={[
+          "Openbaar zijn je berichten, je voornaam met de eerste letter van je achternaam, je profielfoto (als je die hebt), of je werker of bedrijf bent, en de foto's die je bij een bericht zet. Nooit je volledige achternaam, e-mailadres of telefoonnummer.",
+          "Uit elke foto halen we de locatie en andere verborgen gegevens (zoals EXIF) voordat hij online komt.",
+          "Je eigen bericht verwijder je zelf met de knop Verwijderen onder dat bericht. De tekst en de foto's zijn dan weg; er staat alleen nog dat het bericht is verwijderd.",
+          "Verwijder je je account, dan gaan je berichten mee. Je reacties worden weggehaald (tekst en foto's). Een onderwerp van jou zonder reacties van anderen wordt weggehaald. Een onderwerp waarop anderen reageerden, blijft met alleen de titel staan, zodat hun antwoorden niet in de lucht hangen: jouw tekst en foto's gaan weg en als schrijver staat er 'Verwijderd account'. Je naam verdwijnt ook uit de knop Handig en uit meldingen die je deed.",
+          "Iedereen kan een bericht melden, ook zonder account, met een reden en eventueel een korte toelichting. Meld je met een account, dan bewaren we dat de melding van jouw account kwam; zonder account bewaren we alleen een onherleidbare code van je IP-adres, om misbruik te beperken. De schrijver ziet niet wie meldde. Meldingen bekijkt het ZekerFlex-team; na meldingen van drie verschillende mensen is een bericht verborgen tot wij het hebben bekeken. Meer in de huisregels op zekerflex.com/community/regels.",
+          "Je berichten in de community zitten in je gegevensexport.",
+        ]}
       />
       <LegalSection
         heading="Diensten verbeteren"

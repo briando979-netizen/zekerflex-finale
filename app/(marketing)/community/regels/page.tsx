@@ -63,9 +63,9 @@ export default function CommunityRegelsPage() {
               list={[
                 "Elke melding komt direct bij het ZekerFlex-team binnen.",
                 "Melden drie verschillende mensen hetzelfde bericht, dan verdwijnt het vanzelf tot wij het hebben bekeken.",
-                "We bekijken meldingen zo snel mogelijk, meestal binnen twee werkdagen. Dan laten we het bericht staan, verbergen we het of verwijderen we het.",
+                "We bekijken meldingen zo snel mogelijk, meestal binnen een paar werkdagen. Dan laten we het bericht staan, verbergen we het of verwijderen we het.",
                 "Verbergen of verwijderen we een bericht, dan ziet de schrijver bij dat bericht waarom.",
-                "Wie de regels steeds overtreedt, kan na een waarschuwing worden uitgesloten van de community. Lezen kan dan nog wel.",
+                "Wie de regels overtreedt, kan worden uitgesloten van de community: na een waarschuwing, of meteen bij iets ernstigs (zoals oplichting, bedreiging of illegale inhoud). Lezen kan dan nog wel.",
               ]}
             />
             <LegalSection

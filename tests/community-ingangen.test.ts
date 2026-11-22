@@ -60,6 +60,11 @@ describe("de community is overal te vinden", () => {
     expect(ERASABLE_KV_PREFIXES).toContain("community-uitsluiting:");
     expect(lees("lib/privacy/anonymize.ts")).toContain("m.wisCommunityVan(userId)");
     expect(lees("lib/privacy/export.ts")).toContain("m.exportCommunityVan(userId)");
+    // en het privacybeleid zegt wat openbaar is, hoe je zelf verwijdert, wat er bij het opheffen van je account gebeurt en hoe melden werkt
+    const privacy = lees("app/(marketing)/privacy/page.tsx");
+    for (const stuk of ['heading="De community"', "eerste letter van je achternaam", "knop Verwijderen", "'Verwijderd account'", "Iedereen kan een bericht melden"]) {
+      expect(privacy, stuk).toContain(stuk);
+    }
   });
 
   it("JSON-LD alleen via ldJson, nooit JSON.stringify in een script", () => {
