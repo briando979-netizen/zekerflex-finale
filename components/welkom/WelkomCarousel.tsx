@@ -148,7 +148,8 @@ export function WelkomCarousel({
                 fill
                 sizes="(min-width: 1024px) 560px, (min-width: 448px) 448px, 100vw"
                 priority={i === 0}
-                className="object-cover"
+                // 22 nov 2026: iets hoger uitgesneden (gezichten), en de foto in beeld zoomt langzaam in; uit bij "minder beweging"
+                className={`object-cover object-[50%_25%] transition-transform duration-[9000ms] ease-out motion-reduce:transition-none ${i === index ? "scale-[1.06]" : "scale-100"}`}
               />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink/55 to-transparent" />
             </div>
