@@ -388,7 +388,8 @@ export function KlusConcept({
             {people} {people === 1 ? "persoon" : "mensen"} · {uurNl(cost.hours)} uur per persoon
           </p>
 
-          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          {/* de chatknop rechtsonder valt niet over de bedragen (lib/marketing/chatknop-vrij.ts, 22 nov 2026) */}
+          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm" data-chatknop-vrij="">
             <dt className="text-neutralx-600">Loon kracht{people > 1 ? "en" : ""}</dt>
             <dd className="num text-right font-semibold text-ink">{euroCents(cost.grossTotalCents)}</dd>
             <dt className="text-neutralx-600">Platformkosten ({uurNl(cost.totalHours)} uur)</dt>
