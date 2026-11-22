@@ -1,37 +1,41 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { KOP_KNOPPEN, kantVanPad } from "@/lib/marketing/site-nav";
+import { CTA_BV, CTA_WN, HOOFDKNOP, KOP_KNOPPEN, SNELLE_ACTIES, kantVanPad } from "@/lib/marketing/site-nav";
 
-// De knoppen rechtsboven op de site (21 nov 2026, eigenaar: "die login knopje bedoelde ik, bij werknemers moet daar staan ga naar
-// de app"). Werkers: Ga naar de app + Start vandaag (account aanmaken); bedrijven: Inloggen + Start vandaag (aanmelden).
+// De knoppen rechtsboven op de site. 22 nov 2026 (gebruikersonderzoek punt 8): "Inloggen" ging bij werkers naar het
+// introscherm in plaats van het inlogscherm, en werkers zagen 6 knopteksten, bedrijven 7. Nu: Inloggen altijd naar /login, en
+// per kant één hoofdknop met één tekst (werker: "Maak gratis je profiel", bedrijf: "Plaats een klus").
 
-const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8");
+const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8").split("\r\n").join("\n");
 
 describe("knoppen in de kopbalk per kant", () => {
-  it("werkers: Ga naar de app; Start vandaag en Inloggen via de welkomstcarrousel, zoals in de app", () => {
+  it("werkers: Inloggen naar /login en Maak gratis je profiel naar /register", () => {
     const w = KOP_KNOPPEN.werknemers;
-    expect(w.eerste).toEqual({ label: "Ga naar de app", href: "/app" });
-    // 21 nov 2026 (middag): wie via de site een account maakte, moet kunnen inloggen: op de telefoon Inloggen naast het menu
-    // 22 nov 2026: via dezelfde ingang als de app (welkomstcarrousel voor wie hem nog niet zag, anders meteen inloggen)
-    expect(w.mobiel).toEqual({ label: "Inloggen", href: "/start?voor=werker" });
-    expect(w.inloggen).toEqual({ label: "Inloggen", href: "/start?voor=werker" });
-    expect(lees("app/start/page.tsx")).toContain('voor === "werker"');
-    expect(lees("components/marketing/SiteHeader.tsx")).toContain("knoppen.inloggen &&");
-    expect(lees("components/marketing/MobileMenu.tsx")).toContain("KOP_KNOPPEN[doel].inloggen &&");
-    expect(lees("components/marketing/AppDownload.tsx")).toContain("Al een account?");
-    expect(w.tweede).toEqual({ label: "Start vandaag", href: "/welkom" });
+    expect(w.eerste).toEqual({ label: "Inloggen", href: "/login" });
+    expect(w.mobiel).toEqual({ label: "Inloggen", href: "/login" });
+    expect(w.tweede).toEqual({ label: "Maak gratis je profiel", href: "/register" });
   });
 
-  it("bedrijven: inloggen en start vandaag (aanmelden als bedrijf)", () => {
+  it("bedrijven: Inloggen naar /login en Plaats een klus naar /klus-plaatsen", () => {
     const b = KOP_KNOPPEN.bedrijven;
     expect(b.eerste).toEqual({ label: "Inloggen", href: "/login" });
-    expect(b.tweede.label).toBe("Start vandaag");
-    expect(b.tweede.href).toContain("type=bedrijf");
-    expect(b.mobiel.href).toBe("/login");
+    expect(b.mobiel).toEqual({ label: "Inloggen", href: "/login" });
+    expect(b.tweede).toEqual({ label: "Plaats een klus", href: "/klus-plaatsen" });
   });
 
-  it("elke bedrijvenpagina telt als bedrijven (Inloggen via het web), werkerspagina's als werkers", () => {
+  it("één hoofdknoptekst per kant, ook in de uitklapmenu's; Download de app één keer in het mobiele menu", () => {
+    expect(HOOFDKNOP.werknemers).toBe(CTA_WN);
+    expect(HOOFDKNOP.bedrijven).toBe(CTA_BV);
+    const menu = lees("components/marketing/MobileMenu.tsx");
+    expect(menu).not.toContain('href="/app"');
+    expect(menu).not.toContain("DOELGROEP_PAGINA");
+    expect(SNELLE_ACTIES.werknemers.filter((s) => s.href === "/app")).toHaveLength(1);
+    expect(SNELLE_ACTIES.bedrijven.some((s) => s.href === "/tarieven-overzicht")).toBe(false);
+    for (const lijst of Object.values(SNELLE_ACTIES)) expect(lijst.some((s) => s.label === "Ga naar de app")).toBe(false);
+  });
+
+  it("elke bedrijvenpagina telt als bedrijven, werkerspagina's als werkers", () => {
     for (const pad of ["/bedrijven", "/voor-bedrijven", "/partners/uitzend", "/uitzendpartner/voorwaarden", "/prijzen", "/personeel-inhuren/groningen", "/klus-plaatsen", "/vragen", "/vragen/wat-kost-een-flexwerker-per-uur"]) {
       expect(kantVanPad(pad), pad).toBe("bedrijven");
     }
@@ -45,11 +49,13 @@ describe("knoppen in de kopbalk per kant", () => {
       const bron = lees(f);
       expect(bron, f).toContain("KOP_KNOPPEN");
       expect(bron, f).not.toContain('href="/login"');
+      expect(bron, f).not.toContain(".inloggen");
     }
   });
 
   it("op /app kan een werker ook inloggen of een account aanmaken in de browser", () => {
     const bron = lees("components/marketing/AppDownload.tsx");
+    expect(bron).toContain("Al een account?");
     expect(bron).toContain('href="/login"');
     expect(bron).toContain('href="/register"');
     expect(lees("app/(marketing)/app/page.tsx")).toContain("<AppDownload standalone />");

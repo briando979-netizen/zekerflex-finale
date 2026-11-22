@@ -32,8 +32,9 @@ export interface NavEntry {
   menu?: Record<Audience, MenuVariant>;
 }
 
-export const CTA_WN = { label: "Account aanmaken", href: "/register" };
-export const CTA_BV = { label: "Organisatie aanmelden", href: "/register?type=bedrijf" };
+// de hoofdknop per doelgroep, overal dezelfde tekst (22 nov 2026, gebruikersonderzoek punt 8; zie HOOFDKNOP hieronder)
+export const CTA_WN = { label: "Maak gratis je profiel", href: "/register" };
+export const CTA_BV = { label: "Plaats een klus", href: "/klus-plaatsen" };
 
 /**
  * Bij welke kant een pagina hoort (21 nov 2026, eigenaar: "bij bedrijven moet inloggen via het web blijven"). Op een
@@ -74,28 +75,19 @@ export interface KopKnop {
 }
 
 /**
- * De twee knoppen rechtsboven in de kopbalk, per kant (21 nov 2026, eigenaar: "die login knopje bedoelde ik, bij werknemers moet
- * daar staan ga naar de app"). Bij werkers wordt Inloggen "Ga naar de app" (/app: installeren, en daar ook inloggen of een account
- * aanmaken in de browser); Start vandaag blijft account aanmaken. Bedrijven loggen in of melden zich aan. `mobiel` is de korte
- * knop naast de menuknop.
+ * De twee knoppen rechtsboven in de kopbalk, per kant: Inloggen en de hoofdknop. `mobiel` is de korte knop naast de menuknop
+ * op de telefoon (Inloggen: wie via de site een account maakte, moet het inloggen meteen vinden, 21 nov 2026).
  */
-// 21 nov 2026 (eigenaar, middag: "via de web inlog kwamen heel veel mensen en maakten een account … fix dat"): wie via de site
-// een account maakte, vond op de telefoon het inloggen niet meer. Bij werkers staat daarom ook Inloggen: op de telefoon als knop
-// naast het menu, in het menu boven de andere twee, en op de computer als link naast Ga naar de app.
-export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; mobiel: KopKnop; inloggen?: KopKnop }> = {
-  // 22 nov 2026 (eigenaar): werkers komen in de browser binnen zoals in de app: eerst de welkomstcarrousel, dan aanmaken of
-  // inloggen. /start?voor=werker stuurt een ingelogde werker meteen door en toont de carrousel maar één keer.
-  werknemers: {
-    eerste: { label: "Ga naar de app", href: "/app" },
-    tweede: { label: "Start vandaag", href: "/welkom" },
-    mobiel: { label: "Inloggen", href: "/start?voor=werker" },
-    inloggen: { label: "Inloggen", href: "/start?voor=werker" },
-  },
-  bedrijven: {
-    eerste: { label: "Inloggen", href: "/login" },
-    tweede: { label: "Start vandaag", href: CTA_BV.href },
-    mobiel: { label: "Inloggen", href: "/login" },
-  },
+// 22 nov 2026 (gebruikersonderzoek punt 8): "Inloggen" ging bij werkers naar het introscherm /welkom in plaats van naar het
+// inlogscherm, en werkers zagen 6 verschillende knopteksten. Nu per kant hetzelfde: Inloggen gaat altijd naar /login, en er
+// is één hoofdknop met één tekst (werker: "Maak gratis je profiel" naar /register, bedrijf: "Plaats een klus" naar
+// /klus-plaatsen). "Ga naar de app" is weg: "Download de app" staat één keer in het menu (de tegel).
+export const HOOFDKNOP: Record<Audience, KopKnop> = { werknemers: CTA_WN, bedrijven: CTA_BV };
+const INLOGGEN: KopKnop = { label: "Inloggen", href: "/login" };
+
+export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; mobiel: KopKnop }> = {
+  werknemers: { eerste: INLOGGEN, tweede: HOOFDKNOP.werknemers, mobiel: INLOGGEN },
+  bedrijven: { eerste: INLOGGEN, tweede: HOOFDKNOP.bedrijven, mobiel: INLOGGEN },
 };
 
 const OVER_ITEMS: MenuItem[] = [
@@ -185,8 +177,9 @@ export const NAV: NavEntry[] = [
         eyebrow: "Zo werkt ZekerFlex voor bedrijven",
         cta: CTA_BV,
         items: [
-          { title: "Voor bedrijven", desc: "Zet een dienst uit — ZekerFlex matcht direct de beste kandidaten.", href: "/voor-bedrijven" },
-          { title: "Matching & toewijzing", desc: "Automatisch per vestiging, gewogen op reistijd en betrouwbaarheid.", href: "/voor-bedrijven#matching" },
+          // 22 nov 2026: /voor-bedrijven is samengevoegd in /bedrijven (de bedrijvenkant), en geen belofte van "direct de beste
+          // kandidaten" meer (gebruikersonderzoek punt 2). "Matching & toewijzing" wees naar een anker op de oude pagina: weg.
+          { title: "Voor bedrijven", desc: "Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert.", href: "/bedrijven" },
           // 21 nov 2026 (eigenaar): "GPS check-in & urengoedkeuring" en "Facturatie & Wet DBA-monitor" uit het menu
           { title: "Helpcentrum voor opdrachtgevers", desc: "Account, PO-nummers, diensten plaatsen en uren goedkeuren — stap voor stap.", href: "/kennis/werkgevers" },
           // 21 nov 2026: uitzendbureaus zetten hun klussen op ZekerFlex en blijven zelf werkgever (lib/uitzend/partners-kern.ts)
@@ -309,18 +302,18 @@ export const SNELLE_ACTIES: Record<Audience, SnelleActie[]> = {
     { label: "Download de app", sub: "Diensten en uren", href: "/app", icoon: "app" },
   ],
   bedrijven: [
-    { label: "Klus plaatsen", sub: "Zonder account, zie de kosten", href: "/klus-plaatsen", icoon: "plus" },
+    { label: "Plaats een klus", sub: "Zonder account, zie de kosten", href: "/klus-plaatsen", icoon: "plus" },
     { label: "Personeel inhuren", sub: "Per stad en branche", href: "/personeel-inhuren", icoon: "team" },
-    { label: "Tarievenoverzicht", sub: "Richttarief per functie", href: "/tarieven-overzicht", icoon: "loon" },
+    // 22 nov 2026 (gebruikersonderzoek, KAN WEG): het Tarievenoverzicht stond hier én onder Kennis (waar de eigenaar het op
+    // 21 nov zette); hier nu de overzichtspagina, die eerst een losse link "Alles voor bedrijven →" onder de tegels was
+    { label: "Alles voor bedrijven", sub: "Hoe het werkt, wat het kost", href: "/bedrijven", icoon: "web" },
     { label: "Vraag een demo aan", sub: "30 minuten, vrijblijvend", href: "/demo", icoon: "demo" },
   ],
 };
 
-/** Overzichtspagina per doelgroep (link onder de snelle acties). */
-export const DOELGROEP_PAGINA: Record<Audience, { label: string; href: string }> = {
-  werknemers: { label: "Alles voor werknemers", href: "/voor-freelancers" },
-  bedrijven: { label: "Alles voor bedrijven", href: "/voor-bedrijven" },
-};
+// De losse link "Alles voor werknemers →" / "Alles voor bedrijven →" onder de tegels (DOELGROEP_PAGINA) is weg (22 nov 2026,
+// gebruikersonderzoek, KAN WEG): bij werkers ging hij naar dezelfde pagina als de tegel "Starten als freelancer", bij bedrijven
+// is hij een tegel geworden.
 
 /**
  * Met de vlag `publiek-alleen-flexwerk` aan vallen de niet-flexwerk-knoppen
@@ -340,7 +333,7 @@ export function zichtbareAanbodKolommen(alleenFlexwerk: boolean): MegaKolom[] {
   return zichtbarePijlers(AANBOD_KOLOMMEN, alleenFlexwerk);
 }
 
-/** Start-knop: werknemers naar een account, bedrijven naar de organisatie-aanmelding. */
+/** Start-knop: werknemers naar een account, bedrijven naar een klus plaatsen (zonder account, met de kosten). */
 export const startHref = (a: Audience): string => (a === "bedrijven" ? CTA_BV.href : CTA_WN.href);
 
 export const isExternal = (href: string): boolean => /^(mailto:|tel:|https?:)/.test(href);

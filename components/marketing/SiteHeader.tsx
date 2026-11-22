@@ -231,13 +231,8 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           </Link>
         </div>
 
-        {/* per kant (KOP_KNOPPEN): werkers naar de app, bedrijven inloggen of aanmelden — zoals YoungOnes */}
+        {/* per kant (KOP_KNOPPEN): Inloggen (altijd /login) en de ene hoofdknop van die kant (22 nov 2026) */}
         <div className="ml-auto hidden items-center gap-2 lg:ml-0 lg:flex xl:gap-3">
-          {knoppen.inloggen && (
-            <Link href={knoppen.inloggen.href} className="whitespace-nowrap px-2 py-2 text-[13px] font-semibold text-white/85 transition hover:text-white xl:text-sm">
-              {knoppen.inloggen.label}
-            </Link>
-          )}
           <Link
             href={knoppen.eerste.href}
             className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-[13px] font-bold text-ink transition hover:bg-white/90 xl:px-4 xl:text-sm"

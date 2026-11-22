@@ -42,7 +42,8 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
       { href: "/leren/klussen-krijgen", label: "Leren: zo krijg je klussen" },
       // 21 nov: "Werken via uitzendbureau" weg (eigenaar: geen aparte pagina; uitzendklussen staan in de app)
       { href: "/uitzendpartner", label: "Voor uitzendbureaus" },
-      { href: "/voor-bedrijven", label: "Voor bedrijven" },
+      // 22 nov 2026: /voor-bedrijven is samengevoegd in /bedrijven
+      { href: "/bedrijven", label: "Voor bedrijven" },
       { href: "/leren/personeel-krijgen", label: "Leren: zo krijg je goede mensen" },
       { href: "/voor-bureaus", label: "Voor bureaus (white-label)" },
       { href: "/sales-partner", label: "Word sales-partner (commissie)" },
