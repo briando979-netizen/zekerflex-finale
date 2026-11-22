@@ -18,6 +18,7 @@ import { inAndroidApp } from "@/lib/app-mode-server";
 import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
+import { netteHandleidingenUrl } from "@/lib/kennisbank/nette-url";
 import { locatieTeksten } from "@/lib/locatie/teksten";
 import { hulpTeksten } from "@/lib/hulp/teksten";
 import { SUPPORT_CHAT } from "@/lib/hulp/hulpjes";
@@ -100,6 +101,7 @@ export default async function AccountPage() {
   // Een geplande (toekomstige) klus: het overzicht haalt die al op (lib/dashboard/freelancer.ts, kpis.upcoming).
   const heeftGeplandeKlus = overview.kpis.upcoming > 0;
 
+  const handleidingen = kennisbankIngesteld() ? netteHandleidingenUrl(`${outlinePubliekeUrl()}/`) : null;
   // De eerste rijen staan elk in een eigen kaart (zo staat het in die app), de rest in groepen.
   const BOVEN_ALLES: Item[] = [
     // "Ik heb een vraag": de chat met ZekerFlex (bij YoungOnes opent dit de service)
@@ -119,9 +121,9 @@ export default async function AccountPage() {
       { label: ft.introductie.menu, href: "/dashboard/introduceren" },
     ],
     [
+      // één rij naar Mijn gegevens (22 nov 2026, gebruikersonderzoek: Persoonlijke gegevens, Adresgegevens, Werkervaring en
+      // E-mailadres wijzigen gingen alle vier naar dezelfde pagina)
       { label: t.personal, href: "/dashboard/profiel" },
-      { label: t.address, href: "/dashboard/profiel" },
-      { label: t.experience, href: "/dashboard/profiel" },
       ...(isUitzend
         ? [
             { label: t.kindBsn, href: "/dashboard/fiscaal" },
@@ -157,7 +159,6 @@ export default async function AccountPage() {
       { label: lt.voertuig, href: "/dashboard/voertuig" },
     ],
     [
-      { label: t.email, href: "/dashboard/profiel" },
       { label: t.password, href: "/wachtwoord-vergeten" },
       // tweestapsverificatie is weg (21 nov 2026, eigenaar; lib/auth/tweestap-aan.ts): een passkey is de extra beveiliging
       { label: t.passkey, href: "/dashboard/account/passkeys" },
@@ -169,8 +170,9 @@ export default async function AccountPage() {
       // het hulpcentrum voor werkers (lib/hulp/teksten.ts), in de taal van de werker; dezelfde plek als het vraagteken in de kopbalk
       { label: hulpTeksten(locale).titel, href: "/dashboard/hulp" },
       { label: t.kb, href: "/kennis" },
-      // de handleidingen (Outline, lib/kennisbank): inloggen gaat met het ZekerFlex-account
-      ...(kennisbankIngesteld() ? [{ label: t.manuals, href: `${outlinePubliekeUrl()}/`, external: true }] : []),
+      // de handleidingen (Outline, lib/kennisbank): inloggen gaat met het ZekerFlex-account. Alleen met een nette naam, niet op
+      // het kale serveradres (sslip.io; 22 nov 2026, lib/kennisbank/nette-url.ts)
+      ...(handleidingen ? [{ label: t.manuals, href: handleidingen, external: true }] : []),
       // 22 nov 2026: de community op de site zelf (lib/community), niet meer de nieuwsbrief
       { label: t.community, href: "/community" },
     ],

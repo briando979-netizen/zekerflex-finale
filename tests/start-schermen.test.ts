@@ -118,4 +118,13 @@ describe("één keer vragen, één voortgang (22 nov 2026, gebruikersonderzoek p
     expect(f).toContain('setStap(woonKlaar && !requireKvk && stappen.includes("id") ? "id" : "woon");');
     expect(lees("app/dashboard/verificatie/page.tsx")).toContain("woonKlaar={woonKlaar}");
   });
+
+  it("de knop Digitale ID-wallet staat alleen bij de ID-check, buiten het formulier (hij heeft een eigen <form>)", () => {
+    const pagina = lees("app/dashboard/verificatie/page.tsx");
+    expect(pagina).toContain("wallet={walletAan ? <WalletVerifyButton requireKvk={!isUitzend} /> : null}");
+    expect(pagina.match(/<WalletVerifyButton/g)).toHaveLength(1);
+    const f = lees("components/app/OnboardingForm.tsx");
+    const knop = f.indexOf('{stap === "id" && wallet ?');
+    expect(knop).toBeGreaterThan(f.indexOf("</form>"));
+  });
 });

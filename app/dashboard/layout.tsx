@@ -31,6 +31,7 @@ import { avatarUrlFor } from "@/lib/profile/card";
 import { hulpTeksten } from "@/lib/hulp/teksten";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
+import { netteHandleidingenUrl } from "@/lib/kennisbank/nette-url";
 import { getTabVolgorde } from "@/lib/werker/tab-volgorde-store";
 
 export const dynamic = "force-dynamic";
@@ -85,7 +86,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         canSwitchToEmployer={hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN")}
         // het vraagteken: alleen de teksten in de taal van de werker gaan mee (lib/hulp/teksten.ts)
         hulp={hulpTeksten(locale)}
-        handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
+        // alleen met een nette naam, niet op het kale serveradres (lib/kennisbank/nette-url.ts, 22 nov 2026)
+        handleidingen={kennisbankIngesteld() ? netteHandleidingenUrl(`${outlinePubliekeUrl()}/`) : null}
         // de volgorde van de balk uit de Site-ontwerper (Menu); een storing geeft de standaard
         tabVolgorde={await getTabVolgorde().catch(() => null)}
       >

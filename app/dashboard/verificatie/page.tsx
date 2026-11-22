@@ -298,6 +298,8 @@ export default async function VerificatiePage() {
           inBehandeling={inBehandeling}
           tochOpnieuw={pt.attempt.tochOpnieuw}
           kanSluiten={poort?.klaar ?? true}
+          // de wallet-knop alleen in de ID-stap (22 nov 2026: hij stond al onder "Wie ben jij?")
+          wallet={walletAan ? <WalletVerifyButton requireKvk={!isUitzend} /> : null}
           bsnBekend={Boolean(fiscal.bsnHash)}
         // de eerste stap die na de ID-scan nog open staat (de ID zelf telt dan als ingestuurd)
         naId={poort ? poortStapVan({ ...poort, identiteitIngestuurd: true }) : null}
@@ -331,12 +333,6 @@ export default async function VerificatiePage() {
             ) : null
           }
         />
-      )}
-
-      {walletAan && (
-        <div className="mt-4">
-          <WalletVerifyButton requireKvk={!isUitzend} />
-        </div>
       )}
 
       {/* wat pas nodig is voor de eerste uitbetaling, apart onder de stappen (13 nov 2026, voorstel d4): de bank, het

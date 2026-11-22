@@ -53,6 +53,7 @@ export function OnboardingForm({
   woonKlaar = false,
   kanSluiten = true,
   laatstePoging = null,
+  wallet = null,
   bsnBekend = false,
   naId = null,
   inBehandeling = false,
@@ -70,6 +71,8 @@ export function OnboardingForm({
   kanSluiten?: boolean;
   /** de vorige ID-poging (uitslag en redenen), getoond in de ID-stap */
   laatstePoging?: ReactNode;
+  /** de knop "Digitale ID-wallet" (vlag kyc-wallet), alleen in de ID-stap */
+  wallet?: ReactNode;
   /** het BSN is al bekend: de uitzendnoot noemt het dan niet meer */
   bsnBekend?: boolean;
   /** de volgende open stap van de poort na de ID-scan (voor het eindscherm van de scan) */
@@ -642,6 +645,9 @@ export function OnboardingForm({
             <p className="text-xs leading-relaxed text-neutralx-400">{t.uploadNote}</p>
           </div>
         </form>
+        {/* de digitale ID-wallet hoort bij de ID-check, niet bij "Wie ben jij?" (22 nov 2026, gebruikersonderzoek); buiten
+            het formulier, want hij heeft een eigen <form> */}
+        {stap === "id" && wallet ? <div className="mt-5">{wallet}</div> : null}
         {scanOpen && <IdScan t={t} naam={naamNu} route={route} wijze={wijze} overzicht={overzicht} naId={naId} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
       </div>
     </section>
