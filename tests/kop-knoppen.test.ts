@@ -9,16 +9,18 @@ import { KOP_KNOPPEN, kantVanPad } from "@/lib/marketing/site-nav";
 const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8");
 
 describe("knoppen in de kopbalk per kant", () => {
-  it("werkers: in plaats van Inloggen staat er Ga naar de app; Start vandaag blijft account aanmaken", () => {
+  it("werkers: Ga naar de app; Start vandaag en Inloggen via de welkomstcarrousel, zoals in de app", () => {
     const w = KOP_KNOPPEN.werknemers;
     expect(w.eerste).toEqual({ label: "Ga naar de app", href: "/app" });
     // 21 nov 2026 (middag): wie via de site een account maakte, moet kunnen inloggen: op de telefoon Inloggen naast het menu
-    expect(w.mobiel).toEqual({ label: "Inloggen", href: "/login" });
-    expect(w.inloggen).toEqual({ label: "Inloggen", href: "/login" });
+    // 22 nov 2026: via dezelfde ingang als de app (welkomstcarrousel voor wie hem nog niet zag, anders meteen inloggen)
+    expect(w.mobiel).toEqual({ label: "Inloggen", href: "/start?voor=werker" });
+    expect(w.inloggen).toEqual({ label: "Inloggen", href: "/start?voor=werker" });
+    expect(lees("app/start/page.tsx")).toContain('voor === "werker"');
     expect(lees("components/marketing/SiteHeader.tsx")).toContain("knoppen.inloggen &&");
     expect(lees("components/marketing/MobileMenu.tsx")).toContain("KOP_KNOPPEN[doel].inloggen &&");
     expect(lees("components/marketing/AppDownload.tsx")).toContain("Al een account?");
-    expect(w.tweede).toEqual({ label: "Start vandaag", href: "/register" });
+    expect(w.tweede).toEqual({ label: "Start vandaag", href: "/welkom" });
   });
 
   it("bedrijven: inloggen en start vandaag (aanmelden als bedrijf)", () => {

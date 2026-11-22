@@ -7,8 +7,9 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 import { RegisterBewaard } from "@/components/auth/RegisterBewaard";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
-import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
+import { inIosApp } from "@/lib/app-mode-server";
 import { WELKOM_DICTS } from "@/lib/i18n/welkom";
+import { welkomTerug } from "@/lib/welkom/terug";
 import { AANMELDEN_PER_DASHBOARD, dashboardUitParam } from "@/lib/auth/aanmelden-dashboard";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
@@ -61,7 +62,7 @@ export default async function RegisterPage(
         // de productpagina's zijn Nederlands, hun aanmelding dus ook
         ...(product ? { title: product.titel, subtitle: product.uitleg } : {}),
         back: WELKOM_DICTS[locale].back,
-        backHref: (await inAndroidApp()) ? "/welkom" : "/",
+        backHref: await welkomTerug(),
       }}
       title={product?.titel ?? t.title}
       subtitle={product?.uitleg ?? t.subtitle}
