@@ -1,7 +1,7 @@
 import { logger } from "@/lib/logger";
 import { recordCronRun } from "@/lib/metrics";
 import { alertOwner } from "@/lib/ops/alert";
-import { BRONNEN, BRON_IDS, type BronId, type Meting } from "@/lib/bronnen/catalogus";
+import { BRONNEN, BRON_IDS, isNietIngesteld, type BronId, type Meting } from "@/lib/bronnen/catalogus";
 import { haalBron } from "@/lib/bronnen/haal";
 import { alleLaatste, bewaarMeting, laatsteMeting, reeksVan } from "@/lib/bronnen/store";
 
@@ -21,10 +21,22 @@ export function aanDeBeurt(id: BronId, laatste: Meting | null, now = Date.now())
   return Number.isNaN(op) || now - op >= uur * 3_600_000 - 5 * 60_000;
 }
 
+/**
+ * Moet de eigenaar dit horen? Een mislukking wel (de site zelf meteen, de rest na drie keer op rij). Een bron die bewust
+ * overgeslagen is (ok) of waar een sleutel ontbreekt ("Nog niet ingesteld", dat staat in Te doen) is geen storing: daar
+ * kreeg de eigenaar na drie uur "lukt niet meer" voor een KVK-controle die gewoon geen tegoed had (22 nov 2026).
+ */
+export function meldingVoor(id: BronId, m: Pick<Meting, "ok" | "tekst" | "waarden">, fouten: number): "meteen" | "later" | null {
+  if (m.ok || isNietIngesteld(m)) return null;
+  if (id === "schermen" && m.waarden.leeg !== undefined) return "meteen"; // de site zelf is niet in orde: niet wachten
+  return fouten >= 3 ? "later" : null;
+}
+
 async function naMeting(id: BronId, m: Meting, fouten: number): Promise<void> {
   if (!m.ok) {
-    const meteen = id === "schermen" && m.waarden.leeg !== undefined; // de site zelf is niet in orde: niet wachten
-    if (meteen || fouten >= 3) {
+    const melding = meldingVoor(id, m, fouten);
+    const meteen = melding === "meteen";
+    if (melding) {
       await alertOwner({
         key: `bron:${id}`,
         title: meteen ? "Pagina's van de site tonen geen inhoud" : `Bron "${BRONNEN[id].naam}" lukt niet meer`,

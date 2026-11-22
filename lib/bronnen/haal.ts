@@ -9,6 +9,7 @@ import { leesKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 import {
   BRONNEN,
   lege,
+  overgeslagen,
   leesBekendmakingen,
   leesMinimumloon,
   leesPompprijzen,
@@ -78,8 +79,9 @@ async function kvk(): Promise<Omit<Meting, "op" | "duurMs">> {
   const bedrijven = await prisma.tenant.findMany({ where: { kvkNumber: { not: null } }, select: { id: true, name: true, kvkNumber: true }, orderBy: { createdAt: "asc" }, take: 300 });
   // elk bedrijf kost een token (na de cache van 30 dagen): alleen met een bekend tegoed ruim boven de reserve voor de controles
   // van werkers en werkgevers (13 nov 2026: het gratis tegoed was op; lib/kvk/tegoed.ts)
+  // een overgeslagen controle is geen mislukte (zonder tegoed, of met een onbekend tegoed, gebeurt hier niets): overgeslagen()
   if (!achtergrondMag(await leesKvkTegoed(), bedrijven.length)) {
-    return { ...lege("Overgeslagen: het KVK-tegoed is voor de controles van werkers en werkgevers (te weinig over, zie Admin → Alles gratis)."), tekst: "Overgeslagen" };
+    return overgeslagen("het KVK-tegoed is voor de controles van werkers en werkgevers (te weinig over, zie Admin → Alles gratis).");
   }
   const regels: Meting["regels"] = [];
   let actief = 0;

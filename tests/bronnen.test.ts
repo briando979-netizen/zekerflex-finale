@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BRONNEN, BRON_IDS, LEEG_VANAF, leesBekendmakingen, leesMinimumloon, leesPompprijzen, metingBekendmakingen, metingMinimumloon, metingPompprijzen, metingSchermen } from "@/lib/bronnen/catalogus";
-import { aanDeBeurt } from "@/lib/bronnen/tick";
+import { BRONNEN, BRON_IDS, LEEG_VANAF, isNietIngesteld, isOvergeslagen, lege, leesBekendmakingen, leesMinimumloon, leesPompprijzen, metingBekendmakingen, metingMinimumloon, metingPompprijzen, metingSchermen, overgeslagen, type Meting } from "@/lib/bronnen/catalogus";
+import { aanDeBeurt, meldingVoor } from "@/lib/bronnen/tick";
 
 // Intl zet een vaste spatie tussen € en het bedrag; voor de vergelijking maken we er een gewone van
 const plat = (s: string) => s.replace(/[  ]/g, " ");
@@ -99,5 +99,41 @@ describe("bronnen: planner", () => {
     expect(aanDeBeurt("brandstof", meting("2026-11-04T05:30:00Z"), NU)).toBe(true);
     expect(aanDeBeurt("minimumloon", meting("2026-11-01T06:00:00Z"), NU)).toBe(false);
     expect(aanDeBeurt("minimumloon", meting("2026-11-04T06:30:00Z", false), NU)).toBe(true);
+  });
+});
+
+// 22 nov 2026: het KVKBase-tegoed is op en de eigenaar controleert KVK-nummers zelf (lib/kvk/handmatig.ts). De wekelijkse
+// KVK-controle van bedrijven telde "overgeslagen" als "mislukt": elk uur opnieuw, na drie uur een melding "lukt niet meer".
+describe("bronnen: overgeslagen is geen mislukking", () => {
+  const als = (m: Omit<Meting, "op" | "duurMs">, op = "2026-11-22T06:00:00Z"): Meting => ({ ...m, op, duurMs: 1 });
+  const NU = Date.parse("2026-11-22T12:00:00Z");
+
+  it("een overgeslagen meting is ok, herkenbaar, en zonder fout", () => {
+    const m = als(overgeslagen("het KVK-tegoed is voor de controles van werkers en werkgevers."));
+    expect(m).toMatchObject({ ok: true, fout: "", waarden: { overgeslagen: 1 } });
+    expect(m.tekst).toMatch(/^Overgeslagen: /);
+    expect(isOvergeslagen(m)).toBe(true);
+    expect(isOvergeslagen(als(lege("stuk")))).toBe(false);
+    expect(isOvergeslagen(als({ ok: true, waarden: { benzine: 2.3 }, tekst: "x", regels: [], fout: "" }))).toBe(false);
+  });
+
+  it("een overgeslagen bron wacht zijn gewone ritme af, in plaats van elk uur opnieuw te proberen", () => {
+    expect(BRONNEN.kvk.elkeUur).toBe(24 * 7);
+    expect(aanDeBeurt("kvk", als(overgeslagen("geen tegoed")), NU)).toBe(false);
+    // een echte mislukking wordt na een uur nog eens geprobeerd
+    expect(aanDeBeurt("kvk", als(lege("stuk")), NU)).toBe(true);
+  });
+
+  it("de eigenaar hoort niets over een overgeslagen bron of een bron zonder sleutel, wel over een echte mislukking", () => {
+    const stuk = als(lege("KVKBase antwoordde met status 500"));
+    expect(meldingVoor("kvk", als(overgeslagen("geen tegoed")), 9)).toBeNull();
+    expect(meldingVoor("kvk", als({ ...lege("Wacht op een KVKBase-sleutel."), tekst: "Nog niet ingesteld" }), 9)).toBeNull();
+    expect(isNietIngesteld(als({ ...lege("x"), tekst: "Nog niet ingesteld" }))).toBe(true);
+    expect(isNietIngesteld(stuk)).toBe(false);
+    expect(meldingVoor("kvk", stuk, 2)).toBeNull();
+    expect(meldingVoor("kvk", stuk, 3)).toBe("later");
+    // de site zelf met een leeg scherm: meteen
+    expect(meldingVoor("schermen", als({ ...lege("leeg"), waarden: { leeg: 1 } }), 1)).toBe("meteen");
+    expect(meldingVoor("kvk", als({ ok: true, waarden: {}, tekst: "In orde", regels: [], fout: "" }), 0)).toBeNull();
   });
 });
