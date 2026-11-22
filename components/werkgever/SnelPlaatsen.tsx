@@ -6,14 +6,18 @@ import { FairPayMeter } from "@/components/app/FairPayMeter";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
 import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
-import { naarSnelFormulier } from "@/lib/klusconcept/concept";
+import { conceptCost, conceptHours, naarSnelFormulier } from "@/lib/klusconcept/concept";
+import { euroCents, euroWhole } from "@/lib/rekentools/invoer";
 import { useT } from "@/components/i18n/I18nProvider";
 import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
+import { pauzeKeuzes, type SnelTeksten } from "@/components/werkgever/snel-teksten";
 
 // Klus plaatsen in drie stappen (20 nov 2026, eigenaar: "wat, wanneer, tarief; de rest standaard ingevuld"). Dezelfde
 // server-actie en dezelfde regels als het uitgebreide formulier (components/app/NewShiftForm.tsx): één vestiging, één
 // dag, één persoon tenzij je meer kiest, geen pauze, geen sjabloontekst behalve als je een sjabloon kiest. Wie meer wil
 // (meerdere dagen, eenmalige locatie, pools, dresscode) opent eronder het uitgebreide formulier.
+// 22 nov 2026 (gebruikersonderzoek B25): bij "Plaats de klus" dezelfde kostenregel als /klus-plaatsen (loon + platform =
+// totaal excl. btw, conceptCost) en een pauzekeuze; de teksten staan in components/werkgever/snel-teksten.ts.
 
 export interface SnelSjabloon {
   key: string;
@@ -22,78 +26,6 @@ export interface SnelSjabloon {
   description: string;
   dresscode?: string | undefined;
 }
-
-export interface SnelTeksten {
-  kop: string;
-  stap1: string;
-  stap2: string;
-  stap3: string;
-  titel: string;
-  titelHint: string;
-  sjabloon: string;
-  datum: string;
-  van: string;
-  tot: string;
-  personen: string;
-  tarief: string;
-  tariefHint: string;
-  annuleer: string;
-  vestiging: string;
-  terug: string;
-  volgende: string;
-  plaats: string;
-  bezig: string;
-  samenvatting: string;
-  fout: string;
-}
-
-export const SNEL_NL: SnelTeksten = {
-  kop: "Snel een klus plaatsen",
-  stap1: "Wat",
-  stap2: "Wanneer",
-  stap3: "Tarief",
-  titel: "Wat moet er gebeuren?",
-  titelHint: "Bijvoorbeeld: Bediening terras, Orderpicker, Verkeersregelaar",
-  sjabloon: "Of kies een voorbeeld",
-  datum: "Datum",
-  van: "Van",
-  tot: "Tot",
-  personen: "Aantal mensen",
-  tarief: "Uurtarief voor de werker (€)",
-  tariefHint: "Minimaal € {min}. Daarbovenop komt de platformvergoeding per gewerkt uur.",
-  annuleer: "Kosteloos afzeggen tot",
-  vestiging: "Locatie",
-  terug: "Terug",
-  volgende: "Volgende",
-  plaats: "Plaats de klus",
-  bezig: "Even geduld…",
-  samenvatting: "{titel} op {datum} van {van} tot {tot}, {n} persoon/personen, € {tarief} per uur.",
-  fout: "Vul de eindtijd ná de begintijd in.",
-};
-
-export const SNEL_EN: SnelTeksten = {
-  kop: "Place a job in three steps",
-  stap1: "What",
-  stap2: "When",
-  stap3: "Rate",
-  titel: "What needs to be done?",
-  titelHint: "For example: Terrace service, Order picker, Traffic controller",
-  sjabloon: "Or pick an example",
-  datum: "Date",
-  van: "From",
-  tot: "Until",
-  personen: "Number of people",
-  tarief: "Hourly rate for the worker (€)",
-  tariefHint: "At least € {min}. The platform fee per worked hour comes on top.",
-  annuleer: "Free cancellation until",
-  vestiging: "Location",
-  terug: "Back",
-  volgende: "Next",
-  plaats: "Place the job",
-  bezig: "One moment…",
-  samenvatting: "{titel} on {datum} from {van} until {tot}, {n} person(s), € {tarief} per hour.",
-  fout: "The end time must be after the start time.",
-};
 
 const vul = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ""));
 
@@ -164,9 +96,13 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
     // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen als het concept binnenkomt
   }, [concept]);
 
-  const tijdOk = datum !== "" && van !== "" && tot !== "" && tot > van;
+  // de pauze mag niet de hele klus beslaan: er moet gewerkte tijd overblijven
+  const tijdOk = datum !== "" && van !== "" && tot !== "" && tot > van && conceptHours({ start: van, end: tot, breakMinutes: pauze }) > 0;
   const tariefCent = Math.round((Number(tarief.replace(",", ".")) || 0) * 100);
   const tariefOk = tariefCent >= minRateCents;
+  // wat de klus kost, met hetzelfde rekenhulpje als /klus-plaatsen (de staffel komt uit lib/pricing/tiers.ts)
+  const kosten = conceptCost({ start: van, end: tot, breakMinutes: pauze, positions: personen, rateCents: tariefCent });
+  const urenTekst = (u: number) => u.toLocaleString(locale === "nl" ? "nl-NL" : "en-GB", { maximumFractionDigits: 2 });
 
   useEffect(() => {
     if (stap !== 3 || titel.trim().length < 2 || !datum || !van || tariefCent <= 0) return;
@@ -291,6 +227,14 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
             {t.tot}
             <input type="time" value={tot} onChange={(e) => setTot(e.target.value)} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal" required />
           </label>
+          <label className="block text-sm font-semibold text-ink">
+            {t.pauze}
+            <select value={pauze} onChange={(e) => setPauze(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal">
+              {pauzeKeuzes(pauze).map((m) => (
+                <option key={m} value={m}>{m === 0 ? t.geenPauze : vul(t.minuten, { m })}</option>
+              ))}
+            </select>
+          </label>
         </div>
       )}
 
@@ -358,6 +302,20 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
           <p className="rounded-xl bg-paper-soft p-3 text-sm text-neutralx-700">
             {vul(t.samenvatting, { titel, datum, van, tot, n: personen, tarief: tarief.replace(".", ",") })}
           </p>
+          {/* wat de klus kost, vlak boven "Plaats de klus" (zoals /klus-plaatsen) */}
+          {tijdOk && tariefCent > 0 && (
+            <div className="rounded-xl border border-hair p-3 text-sm">
+              <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5">
+                <dt className="text-neutralx-600">{personen === 1 ? t.kostenLoon : t.kostenLoonMeer}</dt>
+                <dd className="num text-right font-semibold text-ink">{euroCents(kosten.grossTotalCents)}</dd>
+                <dt className="text-neutralx-600">{vul(t.kostenPlatform, { u: urenTekst(kosten.totalHours) })}</dt>
+                <dd className="num text-right font-semibold text-ink">{euroCents(kosten.feeTotalCents)}</dd>
+                <dt className="border-t border-hair pt-1.5 font-semibold text-ink">{t.kostenTotaal}</dt>
+                <dd className="num border-t border-hair pt-1.5 text-right font-display text-lg font-bold text-ink">{euroWhole(kosten.totalCents)}</dd>
+              </dl>
+              <p className="mt-2 text-xs text-neutralx-500">{t.kostenUitleg}</p>
+            </div>
+          )}
         </div>
       )}
 
