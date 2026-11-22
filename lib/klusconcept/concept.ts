@@ -94,6 +94,39 @@ export function toShiftFormValues(c: KlusConcept): {
   };
 }
 
+/** De velden van "Snel een klus plaatsen" (components/werkgever/SnelPlaatsen.tsx), ingevuld uit een concept. */
+export interface SnelInvulling {
+  titel: string;
+  omschrijving: string;
+  /** YYYY-MM-DD */
+  datum: string;
+  /** HH:MM, altijd twee cijfers voor het uur (een tijdveld wil "09:00", niet "9:00") */
+  van: string;
+  tot: string;
+  personen: number;
+  pauze: number;
+  /** euro's als tekst, zoals het tariefveld hem bewaart; nooit onder het minimum */
+  tarief: string;
+  /** waar het formulier opent: alles ingevuld = meteen de laatste stap met de kosten; een nachtdienst kan het snelle formulier niet aan */
+  stap: 2 | 3;
+}
+
+/** Een concept van /klus-plaatsen → de velden van het snelle formulier (22 nov 2026: dat bleef leeg na het aanmelden). */
+export function naarSnelFormulier(c: KlusConcept, minRateCents: number): SnelInvulling {
+  const tweeCijfers = (hhmm: string) => (hhmm.length === 4 ? `0${hhmm}` : hhmm);
+  return {
+    titel: c.title,
+    omschrijving: c.description,
+    datum: c.date,
+    van: tweeCijfers(c.start),
+    tot: tweeCijfers(c.end),
+    personen: Math.max(1, Math.min(50, Math.round(c.positions) || 1)),
+    pauze: Math.max(0, Math.min(240, Math.round(c.breakMinutes) || 0)),
+    tarief: (Math.max(c.rateCents, minRateCents) / 100).toFixed(2),
+    stap: toMinutes(c.end) > toMinutes(c.start) ? 3 : 2,
+  };
+}
+
 /** A stored draft, or null when it's missing, broken, too old or already in the past. */
 export function parseConcept(raw: string | null, now = Date.now(), today = ""): KlusConcept | null {
   if (!raw) return null;

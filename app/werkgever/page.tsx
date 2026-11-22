@@ -309,7 +309,8 @@ export default async function WerkgeverStartPage() {
     <>
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       {!startModus && !alleenFlexwerk && <EmployerDashboardHero />}
-      {!startModus && <KlusConceptNudge />}
+      {/* ook in de startmodus: een nieuw bedrijf met een klus van /klus-plaatsen zet die meteen uit (22 nov 2026) */}
+      <KlusConceptNudge />
       {!companyVerified && !startModus && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
           <p className="font-semibold text-ink">{inControle ? ws.controleTitel : ws.nietGeverifieerd}</p>

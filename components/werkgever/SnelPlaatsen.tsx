@@ -6,7 +6,9 @@ import { FairPayMeter } from "@/components/app/FairPayMeter";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
 import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
+import { naarSnelFormulier } from "@/lib/klusconcept/concept";
 import { useT } from "@/components/i18n/I18nProvider";
+import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 
 // Klus plaatsen in drie stappen (20 nov 2026, eigenaar: "wat, wanneer, tarief; de rest standaard ingevuld"). Dezelfde
 // server-actie en dezelfde regels als het uitgebreide formulier (components/app/NewShiftForm.tsx): één vestiging, één
@@ -134,8 +136,33 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
   const minEuro = Math.ceil(minRateCents / 100);
   const [tarief, setTarief] = useState(voorinvulling ? (Math.max(minRateCents, voorinvulling.tariefCents) / 100).toFixed(2) : String(minEuro));
   const [branchId, setBranchId] = useState(voorinvulling?.branchId && branches.some((b) => b.id === voorinvulling.branchId) ? voorinvulling.branchId : (branches[0]?.id ?? ""));
+  // eigen omschrijving (een gedupliceerde klus of het concept van de website); null = die van het gekozen voorbeeld
+  const [omschrijving, setOmschrijving] = useState<string | null>(voorinvulling?.omschrijving ?? null);
+  // standaard geen pauze; het concept van de website kan er een meebrengen (die telt niet als gewerkte tijd)
+  const [pauze, setPauze] = useState(0);
+  const [vanWebsite, setVanWebsite] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [state, formAction] = useFormState<NewShiftState, FormData>(createShiftAction, { error: null });
+
+  // De klus die het bedrijf vóór het aanmelden op /klus-plaatsen samenstelde (deze browser of de server): één keer
+  // invullen en meteen de laatste stap tonen. Niet bij "Klus dupliceren": dan is de gekozen klus het vertrekpunt.
+  const concept = useKlusConcept({ aan: !voorinvulling, wis: true });
+  useEffect(() => {
+    if (!concept) return;
+    const v = naarSnelFormulier(concept, minRateCents);
+    setTitel(v.titel);
+    setSjabloon(sjablonen.find((s) => s.label === v.titel) ?? null);
+    setOmschrijving(v.omschrijving);
+    setDatum(v.datum);
+    setVan(v.van);
+    setTot(v.tot);
+    setPersonen(v.personen);
+    setPauze(v.pauze);
+    setTarief(v.tarief);
+    setVanWebsite(true);
+    setStap(v.stap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen als het concept binnenkomt
+  }, [concept]);
 
   const tijdOk = datum !== "" && van !== "" && tot !== "" && tot > van;
   const tariefCent = Math.round((Number(tarief.replace(",", ".")) || 0) * 100);
@@ -179,6 +206,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
 
   const kies = (s: SnelSjabloon) => {
     setSjabloon(s);
+    setOmschrijving(null);
     setTitel(s.label);
     setTarief(String(Math.max(minEuro, Math.ceil(s.hourlyRateCents / 100))));
   };
@@ -205,16 +233,21 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
           </li>
         ))}
       </ol>
+      {vanWebsite && (
+        <p role="status" className="mt-4 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-700">
+          {n.vanWebsiteSnel}
+        </p>
+      )}
 
       {/* alles wat de server nodig heeft, altijd mee (ook als een stap verborgen is) */}
       <input type="hidden" name="branchId" value={branchId} />
       <input type="hidden" name="templateKey" value={sjabloon?.key ?? ""} />
       <input type="hidden" name="title" value={titel} />
-      <input type="hidden" name="description" value={sjabloon?.description ?? voorinvulling?.omschrijving ?? ""} />
+      <input type="hidden" name="description" value={omschrijving ?? sjabloon?.description ?? ""} />
       <input type="hidden" name="dresscode" value={sjabloon?.dresscode ?? voorinvulling?.dresscode ?? ""} />
       <input type="hidden" name="startsAt" value={datum && van ? `${datum}T${van}` : ""} />
       <input type="hidden" name="endsAt" value={datum && tot ? `${datum}T${tot}` : ""} />
-      <input type="hidden" name="breakMinutes" value="0" />
+      <input type="hidden" name="breakMinutes" value={String(pauze)} />
       <input type="hidden" name="hourlyRateCents" value={String(tariefCent)} />
       <input type="hidden" name="positions" value={String(personen)} />
       <input type="hidden" name="annuleerUren" value={annuleerUren} />
