@@ -68,7 +68,6 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/partners/uitzend", 0.6, "monthly"),
     entry("/starten-als-uitzendkracht", 0.8, "monthly"),
     entry("/nog-geen-18", 0.4, "monthly"),
-    entry("/voor-bedrijven", 0.9, "monthly"),
 
     // Open klussen (Google for Jobs) + per-city landing pages
     entry("/klussen", 0.9, "hourly"),

@@ -68,7 +68,7 @@ export async function maakPaginaMetAi(onderwerp: string): Promise<PaginaInhoud> 
           '{"titel": string, "omschrijving": string (max 155 tekens, voor Google), "blokken": [blok, ...]} met 4 tot 7 blokken. Een blok heeft "soort" en "achtergrond" ("licht","zacht","donker","merk") en per soort: ' +
           'hero {bovenregel, kop, tekst, knop:{tekst,link}, knop2:{tekst,link}, uitlijning:"links"|"midden"}; tekst {kop, tekst (alinea\'s gescheiden door een lege regel)}; ' +
           "kolommen {kop, items:[{kop,tekst}] (3)}; faq {kop, items:[{vraag,antwoord}] (3-5)}; citaat {tekst, naam} (alleen als het duidelijk een voorbeeld is); oproep {kop, tekst, knop:{tekst,link}}. " +
-          "Links alleen naar bestaande paden: /register, /klus-plaatsen, /prijzen, /contact, /voor-bedrijven, /voor-freelancers, /aanbod. Begin met een hero op donker en eindig met een oproep op merk.",
+          "Links alleen naar bestaande paden: /register, /klus-plaatsen, /prijzen, /contact, /bedrijven, /voor-freelancers, /aanbod. Begin met een hero op donker en eindig met een oproep op merk.",
       },
       { role: "user", content: `Onderwerp van de pagina: ${onderwerp.slice(0, 600)}` },
     ],

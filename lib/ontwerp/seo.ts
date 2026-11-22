@@ -32,13 +32,6 @@ export const SEO_STANDAARD = {
       "Plaats een klus en flexwerkers, zzp'ers en uitzendkrachten in de buurt reageren. Je betaalt € 3,50 per gewerkt uur, zonder abonnement of opstartkosten.",
     absoluut: false,
   },
-  "/voor-bedrijven": {
-    naam: "Voor bedrijven",
-    titel: "Flexkrachten & zzp'ers inhuren",
-    omschrijving:
-      "Huur zzp'ers en flexkrachten in wanneer je ze nodig hebt, met GPS-inchecken en Wet DBA-bewaking. € 3,50 per gewerkt uur, geen abonnement.",
-    absoluut: false,
-  },
   "/voor-freelancers": {
     naam: "Voor freelancers",
     titel: "Flexwerk & zzp-opdrachten vinden",

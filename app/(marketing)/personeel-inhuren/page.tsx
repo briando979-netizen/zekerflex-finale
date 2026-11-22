@@ -77,7 +77,7 @@ export default function PersoneelInhurenPage() {
           <Link href={klusUrl()} className="btn-primary">
             Gratis klus plaatsen
           </Link>
-          <Link href="/voor-bedrijven" className="btn-ghost">
+          <Link href="/bedrijven" className="btn-ghost">
             Hoe het werkt
           </Link>
         </div>

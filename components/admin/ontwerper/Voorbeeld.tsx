@@ -22,7 +22,6 @@ export type Apparaat = keyof typeof APPARATEN;
 export const PAGINAS: { pad: string; label: string }[] = [
   { pad: "/", label: "Homepage (werkzoekenden)" },
   { pad: "/bedrijven", label: "Homepage voor bedrijven" },
-  { pad: "/voor-bedrijven", label: "Voor bedrijven" },
   { pad: "/voor-freelancers", label: "Voor freelancers" },
   { pad: "/klus-plaatsen", label: "Klus plaatsen" },
   { pad: "/prijzen", label: "Prijzen" },

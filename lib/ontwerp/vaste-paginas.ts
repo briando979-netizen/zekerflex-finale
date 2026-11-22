@@ -3,7 +3,7 @@
 // onderdelen onder de kop: verslepen en verbergen in de Site-ontwerper (tabblad Pagina's, "Vaste pagina's indelen").
 // Puur bestand: de regels hier, de opslag in lib/ontwerp/vaste-paginas-store.ts. De kop van een pagina staat altijd bovenaan.
 // Zonder eigen indeling is een pagina precies zoals hij was: dezelfde onderdelen, in dezelfde volgorde.
-// Een pagina toevoegen = hier een regel erbij en in de pagina zelf de onderdelen in een tabel zetten (zie /voor-bedrijven).
+// Een pagina toevoegen = hier een regel erbij en in de pagina zelf de onderdelen in een tabel zetten (zie /voor-freelancers).
 // ---------------------------------------------------------------------------
 
 export interface VasteSectie {
@@ -20,18 +20,9 @@ export interface VastePagina {
   secties: readonly VasteSectie[];
 }
 
+// /voor-bedrijven is op 22 nov 2026 samengevoegd met /bedrijven (die deel je in via het tabblad Homepage); een bewaarde
+// indeling ervoor telt niet meer.
 export const VASTE_PAGINAS = {
-  "voor-bedrijven": {
-    naam: "Voor bedrijven",
-    pad: "/voor-bedrijven",
-    secties: [
-      { id: "systeem", naam: "Het systeem", uitleg: "De kaarten met wat ZekerFlex voor een bedrijf regelt." },
-      { id: "cijfers", naam: "Kosten in cijfers", uitleg: "De donkere band met € 3,50 per uur en € 0 opstartkosten." },
-      { id: "rekentools", naam: "Rekentools", uitleg: "De kaarten met links naar de rekentools, en daaronder personeel per branche en per stad." },
-      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden voor bedrijven." },
-      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
-    ],
-  },
   "voor-freelancers": {
     naam: "Voor freelancers",
     pad: "/voor-freelancers",

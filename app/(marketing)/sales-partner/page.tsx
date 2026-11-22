@@ -110,7 +110,7 @@ export default function SalesPartnerPage() {
         body="Meld je aan als sales-partner, of bekijk eerst hoe ZekerFlex werkt voor de bedrijven die je binnenhaalt."
         primaryHref="#aanmelden"
         primaryLabel="Aanmelden"
-        secondaryHref="/voor-bedrijven"
+        secondaryHref="/bedrijven"
         secondaryLabel="Hoe het werkt voor bedrijven"
       />
     </>

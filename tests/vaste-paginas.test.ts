@@ -17,8 +17,8 @@ import { getPaginaIndeling, getPaginaIndelingen, resetPaginaIndeling, setPaginaI
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 const PAGINAS = Object.keys(VASTE_PAGINAS) as VastePaginaId[];
+// /voor-bedrijven is op 22 nov 2026 samengevoegd met /bedrijven (tabblad Homepage); de voorbeelden hieronder gebruiken /prijzen
 const OUD: Record<VastePaginaId, string[]> = {
-  "voor-bedrijven": ["systeem", "cijfers", "rekentools", "faq", "slot"],
   // 21 nov 2026: nieuwe opbouw (kenmerken, stappen met telefoon, functies, branches, overtuigd), zonder video's
   "voor-freelancers": ["kenmerken", "stappen", "voordelen", "branches", "overtuigd", "faq", "slot"],
   prijzen: ["tarieven", "faq", "slot"], // 21 nov 2026: het API-blok is weg
@@ -58,9 +58,9 @@ describe("de standaard is de oude pagina", () => {
 
 describe("een eigen indeling", () => {
   it("verslepen en verbergen", () => {
-    const i = normalizePaginaIndeling("voor-bedrijven", { volgorde: ["faq", "systeem", "cijfers", "rekentools", "slot"], verborgen: ["cijfers"] });
-    expect(zichtbareSecties("voor-bedrijven", i)).toEqual(["faq", "systeem", "rekentools", "slot"]);
-    expect(isStandaardPaginaIndeling("voor-bedrijven", i)).toBe(false);
+    const i = normalizePaginaIndeling("prijzen", { volgorde: ["faq", "tarieven", "slot"], verborgen: ["slot"] });
+    expect(zichtbareSecties("prijzen", i)).toEqual(["faq", "tarieven"]);
+    expect(isStandaardPaginaIndeling("prijzen", i)).toBe(false);
   });
 
   it("onbekende en dubbele onderdelen vallen weg; wat ontbreekt komt achteraan", () => {
@@ -69,26 +69,28 @@ describe("een eigen indeling", () => {
   });
 
   it("onleesbare invoer geeft de standaard", () => {
-    for (const raw of [null, undefined, "x", 3, [], { volgorde: "x", verborgen: 4 }]) expect(normalizePaginaIndeling("voor-bedrijven", raw)).toEqual(standaardPaginaIndeling("voor-bedrijven"));
+    for (const raw of [null, undefined, "x", 3, [], { volgorde: "x", verborgen: 4 }]) expect(normalizePaginaIndeling("prijzen", raw)).toEqual(standaardPaginaIndeling("prijzen"));
   });
 
   it("alleen de bekende pagina's tellen, geen sleutel uit het prototype", () => {
-    expect(isVastePagina("voor-bedrijven")).toBe(true);
+    expect(isVastePagina("prijzen")).toBe(true);
+    // samengevoegd met /bedrijven (22 nov 2026): een bewaarde indeling ervoor telt niet meer
+    expect(isVastePagina("voor-bedrijven")).toBe(false);
     for (const v of ["constructor", "toString", "klussen", "", null, 3]) expect(isVastePagina(v)).toBe(false);
   });
 });
 
 describe("de opslag", () => {
   it("geen eigen versie = null; bewaren en teruglezen per pagina; gelijk aan de standaard wist hem", async () => {
-    expect(await getPaginaIndeling("voor-bedrijven")).toBeNull();
-    const eigen = await setPaginaIndeling("voor-bedrijven", { volgorde: ["faq", ...OUD["voor-bedrijven"]], verborgen: ["cijfers"] });
+    expect(await getPaginaIndeling("prijzen")).toBeNull();
+    const eigen = await setPaginaIndeling("prijzen", { volgorde: ["faq", ...OUD.prijzen], verborgen: ["slot"] });
     expect(eigen?.volgorde[0]).toBe("faq");
     // de andere pagina blijft de standaard
     expect(await getPaginaIndeling("voor-freelancers")).toBeNull();
     await setPaginaIndeling("voor-freelancers", { volgorde: OUD["voor-freelancers"], verborgen: ["stappen"] });
-    expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["voor-bedrijven", "voor-freelancers"]);
-    expect(PAGINAS).toHaveLength(9);
-    expect(await setPaginaIndeling("voor-bedrijven", standaardPaginaIndeling("voor-bedrijven"))).toBeNull();
+    expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["prijzen", "voor-freelancers"]);
+    expect(PAGINAS).toHaveLength(8);
+    expect(await setPaginaIndeling("prijzen", standaardPaginaIndeling("prijzen"))).toBeNull();
     expect((await getPaginaIndeling("voor-freelancers"))?.verborgen).toEqual(["stappen"]);
     await resetPaginaIndeling("voor-freelancers");
     // niets eigen meer = de sleutel weg
@@ -96,9 +98,9 @@ describe("de opslag", () => {
   });
 
   it("rommel in de opslag breekt de pagina niet", async () => {
-    kv.set("ontwerp:vaste-paginas", { constructor: { volgorde: ["x"] }, "voor-bedrijven": "kapot", onbekend: 3 });
-    expect(await getPaginaIndeling("voor-bedrijven")).toEqual(standaardPaginaIndeling("voor-bedrijven"));
-    expect(zichtbareSecties("voor-bedrijven", await getPaginaIndeling("voor-bedrijven"))).toEqual(OUD["voor-bedrijven"]);
+    kv.set("ontwerp:vaste-paginas", { constructor: { volgorde: ["x"] }, prijzen: "kapot", onbekend: 3 });
+    expect(await getPaginaIndeling("prijzen")).toEqual(standaardPaginaIndeling("prijzen"));
+    expect(zichtbareSecties("prijzen", await getPaginaIndeling("prijzen"))).toEqual(OUD.prijzen);
   });
 });
 

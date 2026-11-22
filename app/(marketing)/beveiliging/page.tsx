@@ -223,7 +223,7 @@ export default async function BeveiligingPagina() {
       <CtaBand
         title="Zo veilig werkt jouw bedrijf met ZekerFlex"
         body="Je klussen, uren en de gegevens van je flexwerkers staan op dezelfde server, achter dezelfde bescherming, zonder scripts van derden."
-        primaryHref="/voor-bedrijven"
+        primaryHref="/bedrijven"
         primaryLabel="Personeel inhuren"
         secondaryHref="/kennis/werkgevers"
         secondaryLabel="Helpcentrum voor opdrachtgevers"

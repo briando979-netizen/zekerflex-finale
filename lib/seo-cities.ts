@@ -58,7 +58,7 @@ export function cityBySlug(slug: string): City | undefined {
 }
 
 /** De steden waar in Google het meest op gezocht wordt, meeste eerst (Search Console, 28 dagen tot 22 nov 2026). Voor de
- *  links "per stad" op de voorpagina, /voor-freelancers en /voor-bedrijven; op de site staat alleen de volgorde, geen cijfer. */
+ *  links "per stad" op de voorpagina, /voor-freelancers en /bedrijven; op de site staat alleen de volgorde, geen cijfer. */
 export const TOP_STEDEN = [
   "eindhoven",
   "enschede",

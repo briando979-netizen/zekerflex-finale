@@ -69,7 +69,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
           __html: ldJson([
-            breadcrumbJsonLd([["Home", "/"], ["Voor bedrijven", "/voor-bedrijven"], [`Personeel inhuren ${c.name}`, `/personeel-inhuren/${c.slug}`]]),
+            breadcrumbJsonLd([["Home", "/"], ["Voor bedrijven", "/bedrijven"], [`Personeel inhuren ${c.name}`, `/personeel-inhuren/${c.slug}`]]),
             {
               "@context": "https://schema.org",
               "@type": "Service",

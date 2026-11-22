@@ -129,7 +129,7 @@ export const AANBOD: AanbodItem[] = [
     voorWie: "Bedrijven die op piekmomenten extra handen nodig hebben",
     prijs: "€ 3,50 per gewerkt uur, lager bij meer uren",
     status: "beschikbaar",
-    pagina: "/voor-bedrijven",
+    pagina: "/bedrijven",
     start: AANMELDEN,
   },
   {

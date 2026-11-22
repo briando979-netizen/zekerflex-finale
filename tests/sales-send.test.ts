@@ -128,7 +128,7 @@ describe("sales-mail versturen: een concept uit de vaste campagnetekst", () => {
     const mail = sendMail.mock.calls[0]![0] as { html: string; text: string; kind: string };
     expect(mail.kind).toBe("sales-outreach");
     expect(mail.html).toContain('/register?type=bedrijf">Maak gratis een account</a>');
-    expect(mail.html).not.toContain("/voor-bedrijven");
+    expect(mail.html).not.toContain("Bekijk ZekerFlex voor bedrijven");
     expect(mail.text).toContain("Maak gratis een account: ");
     expect(leadData()).toMatchObject({ status: "SENT", sequenceStep: campagne.stepDelaysDays.length, nextActionAt: null });
   });
@@ -139,7 +139,9 @@ describe("sales-mail versturen: een concept uit de vaste campagnetekst", () => {
     sendMail.mockResolvedValue({ id: "m6", delivered: true, transport: "smtp" });
     await sendOutreachMail("o1", "manual");
     const mail = sendMail.mock.calls[0]![0] as { html: string };
-    expect(mail.html).toContain('/voor-bedrijven">Bekijk ZekerFlex voor bedrijven</a>');
+    // sinds 22 nov 2026 naar /bedrijven (/voor-bedrijven is daarin opgegaan en stuurt door)
+    expect(mail.html).toContain('/bedrijven">Bekijk ZekerFlex voor bedrijven</a>');
+    expect(mail.html).not.toContain("/voor-bedrijven");
     expect(leesCampagneTekst).not.toHaveBeenCalled();
     expect(leadData()).toMatchObject({ sequenceStep: 1 });
   });

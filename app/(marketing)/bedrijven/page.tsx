@@ -19,6 +19,7 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
 import { BedrijvenVoordeur } from "@/components/marketing/BedrijvenVoordeur";
 import { BedrijfsVragen } from "@/components/marketing/VraagLanding";
+import { PerBrancheEnStad } from "@/components/marketing/PerBrancheEnStad";
 import { env } from "@/lib/env";
 import { serviceJsonLd, SITE } from "@/lib/seo";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
@@ -192,7 +193,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
         body={t("emp.body")}
         points={lijstRegels(t("emp.points"))}
         pointsKey="emp.points"
-        href="/voor-bedrijven"
+        href="/klus-plaatsen"
         cta={t("emp.cta")}
         ctaKey="emp.cta"
         photo={<Photo name="employer" fallback={<SceneApprove />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
@@ -285,6 +286,37 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
               </figcaption>
             </figure>
           </Reveal>
+        </div>
+      </section>
+
+      ),
+      // 22 nov 2026: overgenomen van /voor-bedrijven (dat hierin is opgegaan): de rekentools en personeel per branche en stad
+      rekentools: (
+      <section className="relative bg-paper">
+        <div className="shell-4k py-8 md:py-10 lg:py-12">
+          <Reveal>
+            <p className="eyebrow" data-cms-key="tools.eyebrow">{t("tools.eyebrow")}</p>
+            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="tools.title">
+              {t("tools.title")}
+            </h2>
+            <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600" data-cms-key="tools.intro">
+              {t("tools.intro")}
+            </p>
+          </Reveal>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {TOOLS.map((tool) => (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="card group flex flex-col p-7 transition-shadow hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
+              >
+                <span className="font-display text-xl font-semibold text-ink">{tool.title}</span>
+                <span className="mt-2 flex-1 text-[0.975rem] leading-relaxed text-neutralx-600">{tool.body}</span>
+                <span className="mt-5 text-sm font-semibold text-brand-600 group-hover:underline">{tool.knop} →</span>
+              </Link>
+            ))}
+          </div>
+          <PerBrancheEnStad voor="bedrijven" />
         </div>
       </section>
 
@@ -442,6 +474,28 @@ function ShowcaseSplit({
 // De teksten van de stappen, functies en zekerheden staan in het tekstregister
 // (lib/content/store.ts: how.s1 …, feat.f1 …, comp.c1 …); hier alleen wat vast blijft.
 
+// De rekentools (van /voor-bedrijven, 22 nov 2026), met het tarievenoverzicht dat daar in de kop stond.
+const TOOLS = [
+  {
+    href: "/rekentools/kosten-uitzendkracht-berekenen",
+    title: "Wat kost een flexkracht?",
+    body: "Zet een uitzendbureau naast een zzp'er via ZekerFlex, met jouw uurloon en het aantal uren.",
+    knop: "Naar de rekentool",
+  },
+  {
+    href: "/rekentools/wet-dba-check",
+    title: "Wet DBA-check",
+    body: "Tien vragen over hoe je met een zzp'er samenwerkt. Je ziet meteen waar het op loondienst lijkt.",
+    knop: "Naar de rekentool",
+  },
+  {
+    href: "/tarieven-overzicht",
+    title: "Wat kost een functie per uur?",
+    body: "Per functie een richttarief per uur, en hoe de platformkosten dalen als je meer uren laat werken.",
+    knop: "Bekijk tarieven",
+  },
+];
+
 const FEATURES = [
   { k: "feat.f1", icon: <IconTarget /> },
   { k: "feat.f2", icon: <IconBolt /> },
@@ -457,7 +511,10 @@ const FAQ_BASIS = [
   { q: "Wat kost personeel via ZekerFlex?", a: "Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is. Bij meer uren daalt de platformfee volgens een vaste staffel. Voor personeel is er geen abonnement en zijn er geen opstartkosten." },
   { q: "Hoe plaats ik een klus?", a: "Via Klus plaatsen stel je zonder account een klus samen: functie, plaats, tijden, aantal mensen en tarief. Je ziet meteen wat het kost. Bevalt het, dan zet je de klus met een gratis account online en zoekt ZekerFlex passende, geverifieerde mensen in de buurt." },
   { q: "Werk ik met zzp'ers of met uitzendkrachten?", a: "Allebei kan. Zzp'ers werken met hun eigen KVK-inschrijving, die we controleren tegen het Handelsregister. Uitzendkrachten werken via een aangesloten uitzendbureau: dat bureau is hun werkgever en regelt het contract, het loon en de verloning volgens zijn cao." },
+  // 22 nov 2026: de twee vragen van /voor-bedrijven die hier nog niet stonden (die pagina is hierin opgegaan)
+  { q: "Hoe snel kan ik iemand hebben?", a: "Zodra je klus online staat, zien geverifieerde werkers in de buurt hem en kunnen ze reageren. Je ziet de reacties binnenkomen; hoe snel je iemand hebt, hangt af van wie er beschikbaar is." },
   { q: "Moet ik zelf facturen maken?", a: "Nee. Zodra je de uren hebt goedgekeurd, maakt ZekerFlex de facturen automatisch aan, met de juiste btw-behandeling." },
+  { q: "Kan ik meerdere vestigingen beheren?", a: "Ja. Je zet al je locaties in één account, geeft een collega per locatie toegang en houdt zelf het overzicht over alles." },
   { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Zulke hulpmiddelen geven geen garantie over de arbeidsrelatie: de Belastingdienst kijkt ook naar hoe er in de praktijk wordt gewerkt." },
   { q: "Is mijn data veilig?", a: "Voor diensten zoals betalingen, e-mail en verificatie gebruiken we gespecialiseerde aanbieders. Gevoelige gegevens worden waar nodig versleuteld opgeslagen; belangrijke handelingen komen in een auditspoor." },
 ];

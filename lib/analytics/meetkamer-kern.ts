@@ -193,7 +193,7 @@ export const SECTIES: Sectie[] = [
   { id: "werker", naam: "Werker-app", paden: ["/dashboard"] },
   { id: "werkgever", naam: "Werkgevers-app", paden: ["/werkgever", "/studio"] },
   { id: "klussen", naam: "Klussen & vacatures", paden: ["/klussen", "/open-diensten", "/freelance-werk", "/personeel-inhuren", "/klus-plaatsen"] },
-  { id: "marketing", naam: "Marketing-pagina's", paden: ["/aanbod", "/prijzen", "/bedrijven", "/voor-freelancers", "/voor-bedrijven", "/uitzendbureau", "/flexwerk", "/over-ons", "/kennis", "/nieuws", "/contact", "/demo", "/app", "/apps", "/producten", "/rekentools", "/developers"] },
+  { id: "marketing", naam: "Marketing-pagina's", paden: ["/aanbod", "/prijzen", "/bedrijven", "/voor-freelancers", "/uitzendbureau", "/flexwerk", "/over-ons", "/kennis", "/nieuws", "/contact", "/demo", "/app", "/apps", "/producten", "/rekentools", "/developers"] },
   { id: "online", naam: "Online tools (verborgen)", paden: ["/online", "/website-maken", "/logo-maker", "/advertentie-op-maat", "/domeinnaam", "/starters", "/website-check", "/review-check", "/rijschool-software", "/apps-en-spelletjes", "/website-check"] },
   { id: "shop", naam: "Webshop (verborgen)", paden: ["/shop", "/verkopen"] },
   { id: "beheer", naam: "Beheer", paden: ["/admin"] },

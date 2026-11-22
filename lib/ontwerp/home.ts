@@ -21,7 +21,9 @@ export const HOME_SECTIES = [
   { id: "functies", naam: "Functies", uitleg: "Zes kaarten: matching, uitbetaling, DBA …" },
   { id: "zekerheid", naam: "Zekerheid en regels", uitleg: "Overeenkomst, KVK, KYC, auditspoor" },
   { id: "citaat", naam: "Citaat", uitleg: "Een uitspraak in groot formaat" },
-  { id: "vragen", naam: "Veelgestelde vragen", uitleg: "De zes vragen met antwoord" },
+  // 22 nov 2026: overgenomen van /voor-bedrijven, dat in deze pagina is opgegaan (een bewaarde indeling krijgt hem achteraan)
+  { id: "rekentools", naam: "Rekentools", uitleg: "De gratis rekentools voor werkgevers, met daaronder personeel per branche en per stad" },
+  { id: "vragen", naam: "Veelgestelde vragen", uitleg: "De vragen van bedrijven met antwoord" },
   { id: "oproep", naam: "Slotoproep", uitleg: "Klus plaatsen of prijzen bekijken" },
 ] as const;
 

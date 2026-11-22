@@ -53,7 +53,6 @@ describe("geen beloftes die niet kloppen", () => {
       /direct passende|matcht direct|rangschikt direct|direct bij de beste|nodigt automatisch de beste|beste match wordt direct|in golven|instantly (matches|ranks)|automatically invites the best/i;
     for (const p of [
       "app/(marketing)/bedrijven/page.tsx",
-      "app/(marketing)/voor-bedrijven/page.tsx",
       "lib/marketing/aanbod.ts",
       "lib/i18n/dictionaries.ts",
       "lib/i18n/dictionary-en.ts",
@@ -84,7 +83,7 @@ describe("geen interne notities of Engelse vaktaal voor klanten", () => {
 
   // 22 nov 2026 (gebruikersonderzoek, B02b-03): "gegeofenced", "matchscore", "in golven", "aggregeren" op de bedrijfspagina's
   it("de bedrijvenpagina en de standaardteksten uit het tekstregister gebruiken geen vaktermen", () => {
-    const VAK = /gegeofenced|geofenc|matchscore|aggreg|in golven|vakmatch|badge-niveau|reverse billing/i;
+    const VAK = /gegeofenced|geofenc|matchscore|aggreg|in golven|vakmatch|badge-niveau|reverse billing|compliance/i;
     expect(lees("app/(marketing)/bedrijven/page.tsx")).not.toMatch(VAK);
     const standaard = [...lees("lib/content/store.ts").matchAll(/default: "([^"]*)"/g)].map((m) => m[1]).join("\n");
     expect(standaard.length).toBeGreaterThan(1000);

@@ -5,7 +5,7 @@ import { SECTORS } from "@/lib/seo-sectors";
 
 // Interne links naar de branche- en stadspagina's (22 nov 2026, doel "bovenaan in Google"). Die pagina's kregen alleen
 // links van elkaar en van hun eigen overzicht; Google vond ze dus weinig belangrijk. Nu linken de voorpagina's, /voor-
-// freelancers, /voor-bedrijven en de stadspagina's ernaar, en de branchekaarten op de voorpagina gaan niet meer naar
+// freelancers, /bedrijven (waar /voor-bedrijven sinds 22 nov in opging) en de stadspagina's ernaar, en de branchekaarten op de voorpagina gaan niet meer naar
 // /klussen (met de vlag publiek-alleen-flexwerk op noindex).
 
 const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
@@ -23,9 +23,9 @@ describe("interne links naar de branche- en stadspagina's", () => {
     expect(src).toContain("`/personeel-inhuren/${slug}`");
   });
 
-  it("/voor-freelancers en /voor-bedrijven linken per stad (en bedrijven ook per branche)", () => {
+  it("/voor-freelancers en /bedrijven linken per stad (en bedrijven ook per branche)", () => {
     expect(lees("app/(marketing)/voor-freelancers/page.tsx")).toContain('<PerBrancheEnStad voor="werkers" branches={false} />');
-    expect(lees("app/(marketing)/voor-bedrijven/page.tsx")).toContain('<PerBrancheEnStad voor="bedrijven" />');
+    expect(lees("app/(marketing)/bedrijven/page.tsx")).toContain('<PerBrancheEnStad voor="bedrijven" />');
   });
 
   it("de stadspagina's linken naar de branches in dezelfde stad, en de branchepagina's naar elkaar", () => {

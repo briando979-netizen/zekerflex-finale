@@ -15,7 +15,7 @@ export const RECENT_DAGEN = 3;
 
 /** De belangrijkste openbare pagina's: die gaan elke dag mee. */
 export const VASTE_PADEN: readonly string[] = [
-  "/", "/voor-bedrijven", "/voor-freelancers", "/prijzen", "/klussen",
+  "/", "/bedrijven", "/voor-freelancers", "/prijzen", "/klussen",
   "/starten-als-uitzendkracht", "/kennis", "/over-ons", "/app",
   "/rekentools", "/rekentools/zzp-uurtarief-berekenen", "/rekentools/kosten-uitzendkracht-berekenen", "/rekentools/wet-dba-check",
   "/bijbaan", "/werken-als",

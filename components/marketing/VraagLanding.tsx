@@ -20,10 +20,10 @@ import {
 
 // /vragen en /vragen/<vraag> (22 nov 2026): korte antwoorden voor bedrijven (lib/seo-vragen.ts). Zelfde opbouw als een
 // kennisartikel (app/(marketing)/kennis/[slug]/page.tsx): donkere kop met de vraag als h1 en meteen het antwoord, dan de
-// uitleg, de bronnen en de vragen. Plus het blok met links voor /voor-bedrijven, /bedrijven en de branchehubs. Servercomponenten.
+// uitleg, de bronnen en de vragen. Plus het blok met links voor /bedrijven en de branchehubs. Servercomponenten.
 
 const KLUS = { href: "/klus-plaatsen", label: "Gratis klus plaatsen" };
-const BEDRIJVEN = { href: "/voor-bedrijven", label: "Zo werkt het voor bedrijven" };
+const BEDRIJVEN = { href: "/bedrijven", label: "Zo werkt het voor bedrijven" };
 
 function Knoppen() {
   return (
@@ -228,7 +228,7 @@ export function VragenHub() {
   );
 }
 
-// ---- het blok op /voor-bedrijven, /bedrijven en de branchehubs ------------------
+// ---- het blok op /bedrijven en de branchehubs ------------------
 /** "Veelgestelde vragen voor bedrijven": een link per vraag (die van de branche eerst) en naar het overzicht. */
 export function BedrijfsVragen({ branche, kop = "h3", className = "mt-10" }: { branche?: string; kop?: "h2" | "h3"; className?: string }) {
   const Kop = kop;

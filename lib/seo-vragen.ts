@@ -21,7 +21,7 @@ import type { Link, Vraag } from "@/lib/seo-stad";
 
 export const VRAGEN_PAD = "/vragen";
 export const VRAGEN_KOP = "Vragen van bedrijven over personeel inhuren";
-/** De kop van het blok met links op /voor-bedrijven, /bedrijven en de branchehubs. */
+/** De kop van het blok met links op /bedrijven en de branchehubs. */
 export const BEDRIJFS_VRAGEN_KOP = "Veelgestelde vragen voor bedrijven";
 
 export interface VraagBron {

@@ -156,7 +156,7 @@ describe("de vragen van bedrijven (/vragen)", () => {
       expect(stuk, naam).toContain("<Knoppen />");
     }
     expect(bron).toContain('const KLUS = { href: "/klus-plaatsen"');
-    expect(bron).toContain('const BEDRIJVEN = { href: "/voor-bedrijven"');
+    expect(bron).toContain('const BEDRIJVEN = { href: "/bedrijven"');
   });
 
   it("de bedragen komen uit de catalogus en de staffel, niet overgetypt", () => {
@@ -191,8 +191,8 @@ describe("de vragen van bedrijven (/vragen)", () => {
     expect(BEDRIJFS_VRAGEN.find((v) => v.slug === "zzp-er-inhuren-via-platform-wet-dba")?.noot).toMatch(/geen juridisch of fiscaal advies/);
   });
 
-  it("het blok 'Veelgestelde vragen voor bedrijven' staat op /voor-bedrijven, /bedrijven, /personeel-inhuren en de branchehubs", () => {
-    for (const f of ["app/(marketing)/voor-bedrijven/page.tsx", "app/(marketing)/bedrijven/page.tsx", "app/(marketing)/personeel-inhuren/page.tsx"]) expect(lees(f), f).toContain("<BedrijfsVragen />");
+  it("het blok 'Veelgestelde vragen voor bedrijven' staat op /bedrijven, /personeel-inhuren en de branchehubs", () => {
+    for (const f of ["app/(marketing)/bedrijven/page.tsx", "app/(marketing)/personeel-inhuren/page.tsx"]) expect(lees(f), f).toContain("<BedrijfsVragen />");
     expect(lees("components/marketing/SectorLanding.tsx")).toContain("<BedrijfsVragen branche={s.key} />");
     expect(vragenVoor("schoonmaak")[0]?.slug).toBe("schoonmaakpersoneel-inhuren-zzp-of-uitzend");
     expect(vragenVoor("horeca")[0]?.slug).toBe("snel-horecapersoneel-inhuren-weekend");

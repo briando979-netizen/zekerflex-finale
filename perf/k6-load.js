@@ -32,7 +32,7 @@ export const options = {
   },
 };
 
-const PATHS = ["/", "/voor-bedrijven", "/voor-freelancers", "/status", "/api/status"];
+const PATHS = ["/", "/bedrijven", "/voor-freelancers", "/status", "/api/status"];
 
 export default function () {
   for (const path of PATHS) {
