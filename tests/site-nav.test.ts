@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { aanbodVan, AANBOD, PIJLERS } from "@/lib/marketing/aanbod";
 import { guideBySlug } from "@/lib/kennis/content";
+import { whitepaperBySlug } from "@/lib/kennis/whitepapers";
 import {
   AANBOD_KOLOMMEN,
   DOELGROEP_PAGINA,
@@ -15,7 +16,7 @@ import {
 
 const ROOT = join(__dirname, "..");
 
-// een pagina in app/(marketing), app/<map>, een /aanbod/<slug> uit de registry of een kennisartikel
+// een pagina in app/(marketing), app/<map>, een /aanbod/<slug> uit de registry, een kennisartikel of een whitepaper
 const paginaBestaat = (href: string): boolean => {
   const pad = href.split(/[?#]/)[0]!.replace(/^\//, "").replace(/\/$/, "");
   if (pad === "") return existsSync(join(ROOT, "app", "(marketing)", "page.tsx"));
@@ -23,6 +24,8 @@ const paginaBestaat = (href: string): boolean => {
   if (aanbod) return aanbodVan(aanbod[1]!) !== undefined;
   const kennis = /^kennis\/([a-z0-9-]+)$/.exec(pad);
   if (kennis && guideBySlug(kennis[1]!)) return true;
+  const whitepaper = /^kennis\/whitepapers\/([a-z0-9-]+)$/.exec(pad);
+  if (whitepaper) return whitepaperBySlug(whitepaper[1]!) !== undefined;
   return [join(ROOT, "app", "(marketing)", pad, "page.tsx"), join(ROOT, "app", pad, "page.tsx")].some((f) => existsSync(f));
 };
 

@@ -77,32 +77,30 @@ const nextConfig = {
       // de nieuwe uitleg /starten-als-uitzendkracht (werken via een uitzendbureau, in de app). Tijdelijk (307).
       { source: "/uitzendbureau", destination: "/starten-als-uitzendkracht", permanent: false },
       // 22 nov 2026 (eigenaar: "verwijder de shop en apps enzo, we zijn voor zzp, uitzend en flexwerk gegaan"): de oude
-      // productpagina's (apps, websites, logo, domein, checks, rijschool-software, partnerplatform, abonnementen, aanbod) zijn
-      // niet meer bereikbaar. Oude links gaan naar de flexwerkpagina voor bedrijven, de apps-pagina's naar de ZekerFlex-app.
-      // Tijdelijk (307), zodat het terug kan. Klantsites (/site, /site-domein), voorstellen en de dashboards blijven werken;
-      // de webshop stuurt al zelf door (app/shop/layout.tsx).
+      // verkooppagina's (apps en spelletjes, websites, rijschool-software, partnerplatform, producten en de aanbodpagina's van
+      // de pijlers online en branche) sturen door naar de flexwerkpagina voor bedrijven, de apps naar de ZekerFlex-app.
+      // Tijdelijk (307), zodat het terug kan. Bewust NIET omgeleid, want bestaande klanten, mails en dashboards gebruiken ze:
+      // /website-check en /review-check (rapporten), /logo-maker en /advertentie-op-maat (links in de vrijgavemail),
+      // /domeinnaam (bestellen en terugkeer), /abonnementen (Stripe-annuleeradres), /aanbod (overzicht) en de klantsites.
+      // Alleen exacte paden of paginapaden zonder punt: foto's in public/aanbod, public/voorbeeldsites en
+      // public/rijschool-software blijven gewoon laden. De webshop stuurt al zelf door (app/shop/layout.tsx).
       ...[
-        ["/producten", "/voor-bedrijven"],
         ["/apps", "/app"],
+        ["/apps/:id", "/app"],
         ["/apps-en-spelletjes", "/app"],
         ["/online", "/voor-bedrijven"],
         ["/website-maken", "/voor-bedrijven"],
-        ["/website-check", "/voor-bedrijven"],
-        ["/review-check", "/voor-bedrijven"],
-        ["/logo-maker", "/voor-bedrijven"],
-        ["/domeinnaam", "/voor-bedrijven"],
-        ["/advertentie-op-maat", "/voor-bedrijven"],
-        ["/starters", "/voor-bedrijven"],
         ["/rijschool-software", "/voor-bedrijven"],
         ["/verkopen", "/voor-bedrijven"],
+        ["/verkopen/:rest*", "/voor-bedrijven"],
+        ["/producten", "/voor-bedrijven"],
+        ["/producten/:slug", "/voor-bedrijven"],
+        ["/starters", "/voor-bedrijven"],
         ["/voorbeeldsites", "/voor-bedrijven"],
-        ["/abonnementen", "/voor-bedrijven"],
-        ["/aanbod", "/voor-bedrijven"],
         ["/nieuwe-home", "/"],
-      ].flatMap(([van, naar]) => [
-        { source: van, destination: naar, permanent: false },
-        { source: `${van}/:rest*`, destination: naar, permanent: false },
-      ]),
+        // de aanbodpagina's van de pijlers online en branche (lib/marketing/aanbod.ts); personeel en geld blijven
+        ...["website", "webshop", "domeinnaam", "website-check", "advertentie-op-maat", "logo-maker", "starters", "review-check", "google-reviews", "telefonie", "zakelijke-mail", "horeca", "rijschool"].map((s) => [`/aanbod/${s}`, "/voor-bedrijven"]),
+      ].map(([van, naar]) => ({ source: van, destination: naar, permanent: false })),
       // Browsers, pdf-viewers en de linkvoorvertoning van Apple vragen deze vaste adressen in de root, ook al staat het
       // pictogram in de pagina-kop (13 nov: 17× /favicon.ico en 7× een apple-touch-icon als 404 in 2 dagen)
       { source: "/favicon.ico", destination: "/icons/icon-192.png", permanent: true },

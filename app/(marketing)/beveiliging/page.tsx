@@ -221,12 +221,12 @@ export default async function BeveiligingPagina() {
     ),
     slot: (
       <CtaBand
-        title="Zo veilig is ook jouw website bij ZekerFlex"
-        body="Elke website die we voor een klant bouwen draait op dezelfde server, achter dezelfde bescherming, zonder scripts van derden."
-        primaryHref="/aanbod/website"
-        primaryLabel="Website laten maken"
-        secondaryHref="/aanbod"
-        secondaryLabel="Het hele aanbod"
+        title="Zo veilig werkt jouw bedrijf met ZekerFlex"
+        body="Je klussen, uren en de gegevens van je flexwerkers staan op dezelfde server, achter dezelfde bescherming, zonder scripts van derden."
+        primaryHref="/voor-bedrijven"
+        primaryLabel="Personeel inhuren"
+        secondaryHref="/kennis/werkgevers"
+        secondaryLabel="Helpcentrum voor opdrachtgevers"
       />
     ),
   };
