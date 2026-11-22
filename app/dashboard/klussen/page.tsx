@@ -15,7 +15,7 @@ import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
-import { alleenTestklussen } from "@/lib/shifts/testklus";
+import { alleenTestklussen, geenEchteInDeBuurt } from "@/lib/shifts/testklus";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { standaardFilter } from "@/lib/shifts/branche-keuze";
 import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
@@ -68,6 +68,8 @@ export default async function KlussenPage(
   };
   // Alleen testklussen (lib/shifts/testklus.ts)? Dan zeggen we eerlijk dat er nog geen echt werk is.
   const alleenTest = alleenTestklussen(m.shifts);
+  // wel klussen, maar geen echte binnen de reistijd van de werker: één eerlijke zin bovenaan de lijst
+  const geenEchtInBuurt = m.shifts.length > 0 && geenEchteInDeBuurt(m.shifts, m.prefs.maxTravelMinutes);
   // Een uitzendkracht (geen KVK) mag alleen op uitzendklussen van een uitzendbureau reageren (lib/fiscal/eligibility.ts). Dan
   // geen balk "reageren kan zodra dat rond is" (21 nov, op de telefoon gezien: op uitzendklussen kan hij al reageren), en het
   // filter staat op Uitzendklussen.
@@ -131,7 +133,17 @@ export default async function KlussenPage(
         </p>
       )}
 
-      {/* 21 nov (eigenaar): de melding "Nog geen echte klussen bij jou in de buurt" is weg; testklussen staan wel onderaan (echteKlussenEerst) */}
+      {/* 21 nov (eigenaar): de grote melding over testklussen is weg; testklussen staan onderaan (echteKlussenEerst). 22 nov
+          (gebruikersonderzoek punt 12): wel één eerlijke zin bovenaan de lijst als er geen echte klus in de buurt is. Een lege
+          lijst heeft zijn eigen uitleg (leeg hieronder). */}
+      {geenEchtInBuurt && (
+        <p className="mb-4 text-sm leading-snug text-neutralx-600" role="status">
+          {t.page.geenEchtInBuurt}{" "}
+          <Link href="/dashboard/account" className="font-semibold text-brand-600 underline underline-offset-2">
+            {t.eersteIndruk.meldingen.knop}
+          </Link>
+        </p>
+      )}
 
       {/* ook zonder klussen staat de filterbalk met het zoekveld er (YoungOnes; het vergrootglas in de balk springt naar #zoeken).
           Het lege vak heeft één actie: naar de meldingen. De knop zelf staat sinds 21 nov op Account (daar kent hij zijn stand op dit apparaat). */}

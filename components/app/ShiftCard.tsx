@@ -74,7 +74,8 @@ export function ShiftCard({
   const cat = shiftCategory(shift.title, shift.skill);
   const c = t.card;
   const score = shift.match ? Math.round(shift.match.score * 100) : null;
-  const special = score !== null && score >= 78;
+  // "Speciaal voor jou" nooit op een testklus: daar zit geen werk achter (22 nov 2026, gebruikersonderzoek punt 12)
+  const special = !shift.testklus && score !== null && score >= 78;
   const ribbonBg =
     ribbon?.tone === "amber"
       ? "rgba(180,83,9,.92)"
