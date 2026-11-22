@@ -150,6 +150,8 @@ const APP_ALLOWED = [
   "/nieuwsbrief", "/status",
   // de webshop en de paskamer zijn weg (22 nov 2026)
   "/kennis", "/offline",
+  // de community op de site zelf (22 nov 2026, lib/community): "Join de community" in de werker-app en het hulpcentrum
+  "/community",
   // inchecken op locatie: de korte link op de NFC-sticker en het scherm bij de ingang (lib/incheck)
   "/i", "/terminal",
   // "verder op je telefoon": de QR-code van de ID-scan opent deze pagina, ook als de app op de telefoon staat

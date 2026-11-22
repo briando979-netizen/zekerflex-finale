@@ -78,6 +78,9 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/toegang/kenteken", // the barrier box asks whether a plate may enter (own token per branch)
     "/api/toegang/opdrachten", // the barrier box polls for manual open commands
     "/api/printen/agent", // the print agent fetches the label queue (own token per company)
+    "/api/community/foto/oabc123def4/fabc123def4567.webp", // a photo of a visible community post
+    "/api/community/avatar/oabc123def4/o", // the profile photo next to a visible community post
+    "/api/community/melden", // the report button (DSA), also without an account, IP-limited
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -158,6 +161,14 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/advertentie/0123456789abcdef0123456789abcdef/beeld",
     "/api/logo-maker",
     "/api/installatie/abc123def456.sleutel",
+    // de community: schrijven alleen met een account (22 nov 2026)
+    "/api/community/onderwerpen",
+    "/api/community/onderwerpen/oabc123def4/reacties",
+    "/api/community/onderwerpen/oabc123def4/handig",
+    "/api/community/upload",
+    "/api/community/fotos", // lijkt op /api/community/foto, maar is het niet
+    "/api/communities", // de eigen groepen (lib/communities) blijven achter de login
+    "/api/admin/community",
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

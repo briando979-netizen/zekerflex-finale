@@ -16,6 +16,9 @@ export type ErrorCode =
   | "ALLEEN_BEHEERDER"
   | "ECHT_ONVERANDERLIJK"
   | "BETALEN_UIT"
+  | "COMMUNITY_UITGESLOTEN"
+  | "COMMUNITY_DICHT"
+  | "COMMUNITY_WACHT"
   | "UPSTREAM_UNAVAILABLE"
   | "INTERNAL";
 
@@ -89,6 +92,18 @@ export class AppError extends Error {
   /** 423: het Stripe-account ontvangt even geen betalingen (lib/billing/stripe-betalen.ts); geen 403: CrowdSec. */
   static betalenUit(message = "Betalen kan op dit moment even niet. Probeer het later opnieuw of neem contact op.") {
     return new AppError("BETALEN_UIT", message, 423);
+  }
+  /** 423: beheer heeft dit account uitgesloten van de community (lib/community); geen 403: CrowdSec. */
+  static communityUitgesloten(message: string) {
+    return new AppError("COMMUNITY_UITGESLOTEN", message, 423);
+  }
+  /** 423: nieuwe berichten in de community staan tijdelijk dicht (Beheer → Community); geen 403: CrowdSec. */
+  static communityDicht(message: string) {
+    return new AppError("COMMUNITY_DICHT", message, 423);
+  }
+  /** 423: nog even wachten voor je in de community kunt posten (account te nieuw, e-mail niet bevestigd); geen 403: CrowdSec. */
+  static communityWacht(message: string) {
+    return new AppError("COMMUNITY_WACHT", message, 423);
   }
   static upstream(message: string) {
     return new AppError("UPSTREAM_UNAVAILABLE", message, 503);

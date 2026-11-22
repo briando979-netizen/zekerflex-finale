@@ -112,11 +112,11 @@ export function AppVereist({ werkgever = false }: { werkgever?: boolean }) {
           <p className="mt-1">{t.alTekst}</p>
         </div>
 
-        <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="mt-4 block rounded-xl bg-[#1C1F26] p-4 text-sm leading-relaxed text-white/80">
+        <Link href={COMMUNITY_URL} className="mt-4 block rounded-xl bg-[#1C1F26] p-4 text-sm leading-relaxed text-white/80">
           <span className="block font-display font-extrabold uppercase text-white">{t.communityKop}</span>
           <span className="mt-1 block">{t.communityTekst}</span>
           <span className="mt-2 block font-semibold text-[#14D9C9] underline underline-offset-4">{t.communityKnop} ›</span>
-        </a>
+        </Link>
 
         <div className="mt-auto flex flex-wrap gap-x-5 gap-y-2 pt-10 text-sm">
           {werkgever && (

@@ -4,6 +4,7 @@ import { LEREN_BEDRIJF_PAD } from "@/lib/leren/personeel-krijgen";
 import { SITE } from "@/lib/seo";
 import { GUIDES, POSTS } from "@/lib/kennis/content";
 import { geplaatsteBerichten } from "@/lib/nieuws/store";
+import { sitemapOnderwerpen } from "@/lib/community/store";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
@@ -103,6 +104,11 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
       const beelden = aanbodBeelden(a).map((b) => `${SITE.url}${b.pad}`);
       return { ...entry(`/aanbod/${a.slug}`, 0.7, "monthly"), ...(beelden.length ? { images: beelden } : {}) };
     }),
+    // De community (22 nov 2026, lib/community): het overzicht, de huisregels en elk zichtbaar onderwerp met minstens één
+    // reactie (een onderwerp zonder reacties is nog noindex)
+    entry("/community", 0.6, "daily"),
+    entry("/community/regels", 0.3, "yearly"),
+    ...(await sitemapOnderwerpen().catch(() => [])).map((o) => entry(o.pad, 0.5, "weekly", o.laatsteOp)),
     // De nieuwsroom: de lijst en elk geplaatst bericht (lib/nieuws)
     entry("/nieuws", 0.7, "daily"),
     ...(await geplaatsteBerichten()).map((b) => entry(`/nieuws/${b.slug}`, 0.5, "monthly", b.geplaatst ?? b.gemaakt)),

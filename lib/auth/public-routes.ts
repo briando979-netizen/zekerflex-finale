@@ -56,6 +56,12 @@ const PUBLIC_PREFIXES = [
   "/api/partner-lead", // aanvraagformulier voor partnerpakketten op de openbare pagina's (lib/products.ts): gevalideerd, IP-begrensd, maakt een lead; 14 nov 2026 gaf dit een 401 voor bezoekers zonder account
   "/api/uitzendbureau", // contactformulier op /voor-bureaus: gevalideerd, IP-begrensd, maakt een lead; zelfde gat als /api/partner-lead
   "/api/sales-partner", // aanmeldformulier op /sales-partner: gevalideerd, IP-begrensd, maakt een lead; zelfde gat als /api/partner-lead
+  // de community (22 nov 2026, lib/community): alleen lezen en melden zonder account. Een foto of profielfoto alleen bij een
+  // zichtbaar bericht (een verborgen bericht alleen voor schrijver en beheer); melden is IP-begrensd en bewaart alleen een hash.
+  // Schrijven (/api/community/onderwerpen, /api/community/upload) blijft achter de login.
+  "/api/community/foto",
+  "/api/community/avatar",
+  "/api/community/melden",
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>([

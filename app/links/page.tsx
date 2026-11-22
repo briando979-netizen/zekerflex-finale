@@ -23,7 +23,7 @@ const KNOPPEN: { label: string; onder: string; href: string; hoofd?: boolean; ex
   { label: "Aanmelden als werker", onder: "Gratis, klussen bij jou in de buurt", href: "/welkom", hoofd: true },
   { label: "Personeel nodig? Plaats je klus", onder: "Eerste maand gratis", href: "/voor-bedrijven" },
   { label: "Download de app", onder: "Android en iPhone", href: "/app" },
-  { label: "Praat mee in de ZekerFlex community", onder: "Nieuws, vragen en ideeën", href: COMMUNITY_URL, extern: true },
+  { label: "Praat mee in de ZekerFlex community", onder: "Vragen, ervaringen en tips", href: COMMUNITY_URL },
   { label: "Naar de website", onder: "zekerflex.com", href: "/" },
 ];
 

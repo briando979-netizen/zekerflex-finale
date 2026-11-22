@@ -109,6 +109,10 @@ export const ERASABLE_KV_PREFIXES = [
   // de bedrijven die iemand voorstelde via "Introduceer een bedrijf" (lib/introducties/kv.ts, introducties:<userId>); de lead
   // zelf is een sales-lead en volgt de regels van sales (onderdrukken, verwijderen)
   "introducties:",
+  // de community (22 nov 2026, lib/community/store.ts): daggrens, losse foto's en eigen berichten, en een uitsluiting door
+  // beheer. De berichten zelf staan onder het onderwerp; die wist en toont lib/community/avg.ts (anonymize.ts, export.ts)
+  "community-gebruiker:",
+  "community-uitsluiting:",
 ] as const;
 
 /**

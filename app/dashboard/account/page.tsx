@@ -171,7 +171,8 @@ export default async function AccountPage() {
       { label: t.kb, href: "/kennis" },
       // de handleidingen (Outline, lib/kennisbank): inloggen gaat met het ZekerFlex-account
       ...(kennisbankIngesteld() ? [{ label: t.manuals, href: `${outlinePubliekeUrl()}/`, external: true }] : []),
-      { label: t.community, href: "/nieuwsbrief" },
+      // 22 nov 2026: de community op de site zelf (lib/community), niet meer de nieuwsbrief
+      { label: t.community, href: "/community" },
     ],
   ];
   // met de vlag aan vallen de niet-flexwerk-diensten uit het menu (de pagina's zelf blijven bereikbaar)
