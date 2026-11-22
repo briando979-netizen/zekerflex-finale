@@ -88,7 +88,8 @@ describe("aanzetten", () => {
     expect(r.checkoutUrl).toBe("https://stripe.test/cs_1");
     expect(r.stand.modules.wifi).toMatchObject({ status: "wacht-op-betaling", stripeSessionId: "cs_1", aantal: 3 });
     expect(checkout).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", module: "wifi", aantal: 3, unitAmountCents: 4900, stripeCustomerId: "cus_1" }));
-    expect((checkout.mock.calls[0]?.[0] as { successUrl: string }).successUrl).toContain("/werkgever/netwerk?pakket=wifi&betaald=1");
+    expect((checkout.mock.calls[0]?.[0] as { successUrl: string }).successUrl).toContain("/werkgever?pakket=wifi&betaald=1");
+    expect((checkout.mock.calls[0]?.[0] as { cancelUrl: string }).cancelUrl).toContain("/werkgever?pakket=wifi&geannuleerd=1");
 
     const sessie = { metadata: { netwerkTenantId: "t1", netwerkModule: "wifi", netwerkAantal: "3" }, subscription: "sub_1" } as unknown as Stripe.Checkout.Session;
     await activeerNetwerkModule(sessie);
