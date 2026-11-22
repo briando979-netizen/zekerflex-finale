@@ -317,7 +317,7 @@ export default async function WerkgeverStartPage() {
   return (
     <>
       {/* alleen hier, niet meer op elke werkgeverspagina (22 nov 2026, gebruikersonderzoek punt 14: hij duwde alles een half scherm omlaag) */}
-      <OpbouwfaseBalk soort="werkgever" />
+      <OpbouwfaseBalk />
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       {!startModus && !alleenFlexwerk && <EmployerDashboardHero />}
       {/* ook in de startmodus: een nieuw bedrijf met een klus van /klus-plaatsen zet die meteen uit (22 nov 2026) */}
@@ -339,7 +339,7 @@ export default async function WerkgeverStartPage() {
           </p>
         </div>
       )}
-      {showWizard && <OnboardingOnderhoudBalk soort="werkgever" />}
+      {showWizard && <OnboardingOnderhoudBalk />}
       {/* na de wizard: wat er nog open staat (bv. nog geen eerste klus); verdwijnt vanzelf */}
       {!showWizard && canOnboard && !startModus && (
         <OnboardingProgress

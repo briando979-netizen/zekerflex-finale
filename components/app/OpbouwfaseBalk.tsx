@@ -1,8 +1,8 @@
 import { featureEnabled } from "@/lib/flags";
-import { getFreelancerDict } from "@/lib/i18n/server";
 import { OpbouwfaseMelding } from "@/components/app/OpbouwfaseMelding";
 
-// Werkgevers zien Nederlands (hun omgeving is niet vijftalig).
+// Werkgevers zien Nederlands (hun omgeving is niet vijftalig). Bij werkers bestaat de balk niet meer (10 nov, eigenaar); hun
+// teksten in lib/i18n/freelancer.ts zijn op 22 nov 2026 weggehaald.
 const WERKGEVER = {
   titel: "ZekerFlex is nog in de opbouwfase",
   tekst:
@@ -14,11 +14,10 @@ const WERKGEVER = {
 /**
  * Balk bovenaan het startscherm van /werkgever (sinds 22 nov 2026 niet meer op elke
  * werkgeverspagina; bij werkers staat hij sinds 10 nov niet) zolang ZekerFlex nog niet officieel
- * live is: testklussen, gegevens veilig, ideeën welkom (/opbouwfase). Uit te
+ * live is: testklussen, gegevens veilig, ideeën welkom (/opbouwfase, sinds 22 nov 2026 een omleiding naar de voorpagina). Uit te
  * zetten zonder uitrol met de flag "opbouwfase-melding" (Admin → Systeem).
  */
-export async function OpbouwfaseBalk({ soort }: { soort: "werker" | "werkgever" }) {
+export async function OpbouwfaseBalk() {
   if (!(await featureEnabled("opbouwfase-melding"))) return null;
-  const t = soort === "werker" ? (await getFreelancerDict()).opbouw : WERKGEVER;
-  return <OpbouwfaseMelding {...t} />;
+  return <OpbouwfaseMelding {...WERKGEVER} />;
 }

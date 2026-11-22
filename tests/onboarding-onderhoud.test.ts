@@ -15,11 +15,12 @@ describe("melding: we verbeteren de aanmelding", () => {
     expect(flag?.description).toMatch(/Zet uit/);
   });
 
-  it("heeft een titel en tekst in alle vijf de talen van de werker-app", () => {
+  // 22 nov 2026: de werker-teksten (opbouw en onderhoud in lib/i18n/freelancer.ts) zijn weggehaald; de balken bestaan alleen
+  // nog voor werkgevers
+  it("de werker-app heeft er geen teksten meer voor", () => {
     for (const taal of ["nl", "en", "pl", "ro", "uk"] as const) {
-      const t = FREELANCER_DICTS[taal].onderhoud;
-      expect(t.titel.length, taal).toBeGreaterThan(5);
-      expect(t.tekst.length, taal).toBeGreaterThan(200);
+      expect(FREELANCER_DICTS[taal], taal).not.toHaveProperty("onderhoud");
+      expect(FREELANCER_DICTS[taal], taal).not.toHaveProperty("opbouw");
     }
   });
 
@@ -32,15 +33,6 @@ describe("melding: we verbeteren de aanmelding", () => {
       });
     const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
     expect(bestanden("app/dashboard").filter((f) => lees(f).includes("OnboardingOnderhoudBalk"))).toEqual([]);
-    expect(lees("app/werkgever/page.tsx")).toMatch(/<OnboardingOnderhoudBalk soort="werkgever"/);
-  });
-
-  it("de Nederlandse tekst zegt wat de eigenaar wilde: wachten, bericht, testklussen, online begin volgend jaar", () => {
-    const tekst = FREELANCER_DICTS.nl.onderhoud.tekst;
-    expect(tekst).toMatch(/haperen/);
-    expect(tekst).toMatch(/Wacht dan even/);
-    expect(tekst).toMatch(/krijgt een bericht/);
-    expect(tekst).toMatch(/testklussen/);
-    expect(tekst).toMatch(/Begin volgend jaar/);
+    expect(lees("app/werkgever/page.tsx")).toContain("<OnboardingOnderhoudBalk />");
   });
 });

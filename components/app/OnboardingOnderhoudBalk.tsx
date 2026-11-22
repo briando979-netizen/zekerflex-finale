@@ -1,5 +1,4 @@
 import { featureEnabled } from "@/lib/flags";
-import { getFreelancerDict } from "@/lib/i18n/server";
 
 // Werkgevers zien Nederlands (hun omgeving is niet vijftalig).
 const WERKGEVER = {
@@ -11,17 +10,16 @@ const WERKGEVER = {
 
 /**
  * Melding boven de start van werkgevers zolang de onboarding wordt verbeterd (bij werkers weg sinds
- * 10 nov, eigenaar: de werker-app heeft het hulpcentrum achter het vraagteken). Geen
- * blokkade: wie wil, kan doorgaan. Uit te zetten zonder uitrol met de flag "onboarding-onderhoud"
- * (Admin → Systeem), zodra het weer soepel werkt.
+ * 10 nov, eigenaar: de werker-app heeft het hulpcentrum achter het vraagteken; hun teksten in lib/i18n/freelancer.ts zijn op
+ * 22 nov 2026 weggehaald). Geen blokkade: wie wil, kan doorgaan. Uit te zetten zonder uitrol met de flag
+ * "onboarding-onderhoud" (Admin → Systeem), zodra het weer soepel werkt.
  */
-export async function OnboardingOnderhoudBalk({ soort }: { soort: "werker" | "werkgever" }) {
+export async function OnboardingOnderhoudBalk() {
   if (!(await featureEnabled("onboarding-onderhoud"))) return null;
-  const t = soort === "werker" ? (await getFreelancerDict()).onderhoud : WERKGEVER;
   return (
     <div role="status" className="mb-5 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
-      <p className="font-semibold text-ink">{t.titel}</p>
-      <p className="mt-1">{t.tekst}</p>
+      <p className="font-semibold text-ink">{WERKGEVER.titel}</p>
+      <p className="mt-1">{WERKGEVER.tekst}</p>
     </div>
   );
 }

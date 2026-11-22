@@ -29,7 +29,7 @@ describe("kleine fouten (punt 15)", () => {
 describe("rustiger werkgeversschermen (punt 14)", () => {
   it("de opbouwfase-melding staat alleen op het startscherm, niet meer in de layout", () => {
     expect(lees("app/werkgever/layout.tsx")).not.toContain("<OpbouwfaseBalk");
-    expect(lees("app/werkgever/page.tsx")).toContain('<OpbouwfaseBalk soort="werkgever" />');
+    expect(lees("app/werkgever/page.tsx")).toContain("<OpbouwfaseBalk />");
   });
 
   it("de stappen staan één keer op het startscherm: geen tweede lijst, geen stippenrij en geen dubbele kop", () => {
