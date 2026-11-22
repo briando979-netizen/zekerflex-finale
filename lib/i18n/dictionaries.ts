@@ -513,6 +513,8 @@ export const nl = {
     back: "Terug",
     // een bedrijf zonder vestiging: gewone taal en rechtstreeks naar de plek waar het adres erbij komt (20 nov 2026)
     noBranches: "We hebben eerst het adres van je bedrijf nodig. Daarmee vinden we werkers bij jou in de buurt.",
+    // 22 nov 2026: het adres meteen hier, in één scherm (components/werkgever/EersteVestiging.tsx)
+    waarKop: "Waar is het werk?",
     addAddress: "Adres toevoegen",
     askAdmin: "Alleen de beheerder van je bedrijf kan het adres toevoegen. Vraag of hij of zij dat doet; daarna kun je hier een klus uitzetten.",
   },
@@ -1799,6 +1801,25 @@ export const nl = {
     toevoegen: "Dashboard toevoegen",
     bezig: "bezig…",
     voet: "Je bedrijfsgegevens gaan mee; je vult alleen in wat dat dashboard nog nodig heeft.",
+  },
+  // een vaste werklocatie toevoegen (components/werkgever/VestigingFormulier.tsx: Locaties en Klus uitzetten). 22 nov 2026:
+  // elk veld een eigen label; postcode en plaats vult de adreszoeker zelf in
+  vestigingForm: {
+    naam: "Naam van deze locatie",
+    naamHint: "Bijvoorbeeld de plaats of de wijk. Zo herken je hem bij je klussen.",
+    adres: "Adres",
+    adresZoek: "Straat en huisnummer",
+    adresHint: "Kies je adres uit de lijst; postcode en plaats vullen we dan zelf in.",
+    postcode: "Postcode",
+    plaats: "Plaats",
+    kostenplaats: "Kostenplaats",
+    optioneel: "(optioneel)",
+    opslaan: "Opslaan",
+    bezig: "Bezig…",
+    annuleren: "Annuleren",
+    kiesAdres: "Kies een adres uit de lijst.",
+    vulAlles: "Vul de naam, de postcode en de plaats in.",
+    mislukt: "Opslaan lukte niet. Probeer het opnieuw.",
   },
   newShiftForm: {
     opslaanMislukt: "Opslaan lukte niet. Probeer het opnieuw.",

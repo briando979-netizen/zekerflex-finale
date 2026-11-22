@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
+import { VestigingFormulier } from "@/components/werkgever/VestigingFormulier";
+import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 
 interface BranchRow {
   id: string;
@@ -19,13 +20,8 @@ interface BranchRow {
 export function BranchesBoard({ canManage }: { canManage: boolean }) {
   const [branches, setBranches] = useState<BranchRow[] | null>(null);
   const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState<PickedAddress | null>(null);
-  const [postalCode, setPostalCode] = useState("");
-  const [city, setCity] = useState("");
-  const [costCenter, setCostCenter] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  // de plaats van een klus die al klaarstaat (/klus-plaatsen) alvast in het formulier, zolang er nog geen locatie is
+  const concept = useKlusConcept({ aan: branches !== null && branches.length === 0 });
 
   async function refresh() {
     const res = await fetch("/api/werkgever/branches", { cache: "no-store" });
@@ -35,48 +31,6 @@ export function BranchesBoard({ canManage }: { canManage: boolean }) {
   useEffect(() => {
     void refresh();
   }, []);
-
-  function resetForm() {
-    setName("");
-    setAddress(null);
-    setPostalCode("");
-    setCity("");
-    setCostCenter("");
-    setAdding(false);
-    setErr(null);
-  }
-
-  async function create() {
-    if (!address) {
-      setErr("Kies een adres uit de suggesties.");
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await fetch("/api/werkgever/branches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          addressLine: address.label,
-          postalCode,
-          city,
-          latitude: address.lat,
-          longitude: address.lng,
-          costCenter: costCenter || undefined,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error?.message ?? "Toevoegen mislukt");
-      resetForm();
-      await refresh();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function remove(id: string) {
     if (!window.confirm("Deze vestiging verwijderen?")) return;
@@ -137,49 +91,17 @@ export function BranchesBoard({ canManage }: { canManage: boolean }) {
             </button>
           ) : (
             <div className="rounded-xl border border-hair p-4">
-              <div className="space-y-3">
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Naam (bijv. 'Rotterdam centrum')"
-                  className="field-input w-full"
-                />
-                <AddressAutocomplete value={address} onPick={setAddress} placeholder="Zoek adres…" />
-                <div className="flex gap-3">
-                  <input
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    placeholder="Postcode"
-                    className="field-input w-32"
-                  />
-                  <input
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Plaats"
-                    className="field-input flex-1"
-                  />
-                </div>
-                <input
-                  value={costCenter}
-                  onChange={(e) => setCostCenter(e.target.value)}
-                  placeholder="Kostenplaats (optioneel)"
-                  className="field-input w-full"
-                />
-                {err && <p role="alert" className="text-sm text-crit">{err}</p>}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={create}
-                    disabled={busy || !name || !address || !postalCode || !city}
-                    className="btn-primary text-sm disabled:opacity-50"
-                  >
-                    {busy ? "Bezig…" : "Opslaan"}
-                  </button>
-                  <button type="button" onClick={resetForm} className="btn-ghost text-sm">
-                    Annuleren
-                  </button>
-                </div>
-              </div>
+              {/* elk veld een label, postcode en plaats vult de adreszoeker zelf in (22 nov 2026) */}
+              <VestigingFormulier
+                key={concept?.city ?? ""}
+                beginPlaats={branches?.length === 0 ? (concept?.city ?? "") : ""}
+                metKostenplaats
+                onOpgeslagen={async () => {
+                  setAdding(false);
+                  await refresh();
+                }}
+                onAnnuleer={() => setAdding(false)}
+              />
             </div>
           )}
         </>

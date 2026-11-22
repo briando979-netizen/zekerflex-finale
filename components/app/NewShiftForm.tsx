@@ -358,7 +358,17 @@ export function NewShiftForm({
             <div className="mt-2 space-y-3">
               <label className="block">
                 <span className="field-label">{n.adres}</span>
-                <AddressAutocomplete value={adHocAddress} onPick={setAdHocAddress} placeholder={n.zoekAdres} />
+                {/* postcode en plaats komen uit het gekozen adres (PDOK); aanpassen kan daaronder */}
+                <AddressAutocomplete
+                  value={adHocAddress}
+                  onPick={(a) => {
+                    setAdHocAddress(a);
+                    if (a.postcode) setAdHocPostalCode(a.postcode);
+                    if (a.plaats) setAdHocCity(a.plaats);
+                  }}
+                  onWijzig={() => setAdHocAddress(null)}
+                  placeholder={n.zoekAdres}
+                />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">

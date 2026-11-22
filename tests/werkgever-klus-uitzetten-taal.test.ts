@@ -5,7 +5,7 @@ import { nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
 
 // Gewone taal op "Klus uitzetten", de klussenlijst en Favorieten (20 nov 2026):
-// - een bedrijf zonder vestiging leest dat we het adres nodig hebben en gaat rechtstreeks naar Locaties (geen "onboarding");
+// - een bedrijf zonder vestiging leest dat we het adres nodig hebben (geen "onboarding") en vult het sinds 22 nov meteen daar in;
 // - boven "Klussen" staat geen los vakwoord meer ("Bezetting");
 // - een pool heet in het Nederlands een groep; het Engels blijft "pool";
 // - de knop heet overal "Klus uitzetten".
@@ -23,14 +23,21 @@ describe("klus uitzetten zonder vestiging", () => {
     expect(en.newShift.addAddress.length).toBeGreaterThan(3);
   });
 
-  it("de knop gaat naar Locaties, waar een beheerder een adres toevoegt", () => {
+  // 22 nov 2026 (gebruikersonderzoek B14–B19): niet meer via Locaties en terug, maar het adres meteen hier in één scherm
+  it("een beheerder vult het adres meteen op Klus uitzetten in", () => {
     const src = lees("app/werkgever/diensten/nieuw/page.tsx");
-    expect(src).toContain('href="/werkgever/locaties"');
+    expect(src).toContain("<EersteVestiging />");
     expect(src).not.toContain('href="/werkgever"');
-    expect(src).toContain("n.addAddress");
-    // wie geen beheerder is kan daar niets toevoegen: die krijgt uitleg in plaats van een knop die doodloopt
+    // wie geen beheerder is kan daar niets toevoegen: die krijgt uitleg in plaats van een formulier dat geweigerd wordt
     expect(src).toContain("n.askAdmin");
-    expect(src).toMatch(/hasRole\(principal, "HQ_ADMIN", "PLATFORM_ADMIN"\)\s*\?/);
+    expect(src).toMatch(/hasRole\(principal, "HQ_ADMIN", "PLATFORM_ADMIN"\)\s*\?\s*\(\s*<EersteVestiging \/>/);
+    const eerste = lees("components/werkgever/EersteVestiging.tsx");
+    expect(eerste).toContain("{t.waarKop}");
+    expect(eerste).toContain("{t.noBranches}");
+    // na het opslaan laadt de pagina opnieuw: dan staat het klusformulier er
+    expect(eerste).toContain("router.refresh()");
+    expect(nl.newShift.waarKop).toBe("Waar is het werk?");
+    expect(en.newShift.waarKop.length).toBeGreaterThan(3);
   });
 
   it("Locaties laat een beheerder echt een vestiging toevoegen", () => {
