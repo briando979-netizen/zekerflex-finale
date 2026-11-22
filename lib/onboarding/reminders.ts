@@ -12,6 +12,8 @@ import { werkerMist } from "@/lib/onboarding/herinnering-mist";
 import { HERINNERING_TEKSTEN, werkerHerinnering } from "@/lib/onboarding/herinnering-teksten";
 import { userLocale } from "@/lib/i18n/worker-locale";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestAccount } from "@/lib/admin/eigen-test-kern";
 
 // ---------------------------------------------------------------------------
 // Reminders for accounts that were created but never finished.
@@ -174,11 +176,14 @@ export async function runOnboardingReminders(now = new Date()): Promise<{ checke
     take: 500,
   });
 
+  // de privé-accounts van de eigenaar (lib/admin/eigen-test-regel.ts) krijgen geen herinneringen
+  const eigenTest = await leesEigenTest();
   let sent = 0;
   for (const u of users) {
     try {
       const roles = u.memberships.map((m) => m.role);
       if (roles.some((r) => r === "PLATFORM_ADMIN" || r === "SALES")) continue;
+      if (isEigenTestAccount(eigenTest, { userId: u.id, tenantIds: u.memberships.map((m) => m.tenantId) })) continue;
       const due = dueStage(Math.floor((now.getTime() - u.createdAt.getTime()) / DAY));
       const state = (await kvGet<HerinneringState>(stateKey(u.id))) ?? { stage: 0 };
       if (due <= state.stage) continue;
