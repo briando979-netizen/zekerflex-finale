@@ -76,6 +76,33 @@ const nextConfig = {
       // 21 nov: de oude pagina over ZekerFlex als uitzender is weg (eigenaar: "haal dit per direct weg"); oude links gaan naar
       // de nieuwe uitleg /starten-als-uitzendkracht (werken via een uitzendbureau, in de app). Tijdelijk (307).
       { source: "/uitzendbureau", destination: "/starten-als-uitzendkracht", permanent: false },
+      // 22 nov 2026 (eigenaar: "verwijder de shop en apps enzo, we zijn voor zzp, uitzend en flexwerk gegaan"): de oude
+      // productpagina's (apps, websites, logo, domein, checks, rijschool-software, partnerplatform, abonnementen, aanbod) zijn
+      // niet meer bereikbaar. Oude links gaan naar de flexwerkpagina voor bedrijven, de apps-pagina's naar de ZekerFlex-app.
+      // Tijdelijk (307), zodat het terug kan. Klantsites (/site, /site-domein), voorstellen en de dashboards blijven werken;
+      // de webshop stuurt al zelf door (app/shop/layout.tsx).
+      ...[
+        ["/producten", "/voor-bedrijven"],
+        ["/apps", "/app"],
+        ["/apps-en-spelletjes", "/app"],
+        ["/online", "/voor-bedrijven"],
+        ["/website-maken", "/voor-bedrijven"],
+        ["/website-check", "/voor-bedrijven"],
+        ["/review-check", "/voor-bedrijven"],
+        ["/logo-maker", "/voor-bedrijven"],
+        ["/domeinnaam", "/voor-bedrijven"],
+        ["/advertentie-op-maat", "/voor-bedrijven"],
+        ["/starters", "/voor-bedrijven"],
+        ["/rijschool-software", "/voor-bedrijven"],
+        ["/verkopen", "/voor-bedrijven"],
+        ["/voorbeeldsites", "/voor-bedrijven"],
+        ["/abonnementen", "/voor-bedrijven"],
+        ["/aanbod", "/voor-bedrijven"],
+        ["/nieuwe-home", "/"],
+      ].flatMap(([van, naar]) => [
+        { source: van, destination: naar, permanent: false },
+        { source: `${van}/:rest*`, destination: naar, permanent: false },
+      ]),
       // Browsers, pdf-viewers en de linkvoorvertoning van Apple vragen deze vaste adressen in de root, ook al staat het
       // pictogram in de pagina-kop (13 nov: 17× /favicon.ico en 7× een apple-touch-icon als 404 in 2 dagen)
       { source: "/favicon.ico", destination: "/icons/icon-192.png", permanent: true },

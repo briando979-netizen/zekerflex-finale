@@ -168,11 +168,12 @@ export const NAV: NavEntry[] = [
         eyebrow: "Zo werkt ZekerFlex",
         cta: CTA_WN,
         items: [
-          { title: "Vind werk", desc: "Diensten die matchen op je vak, je reistijd en je beschikbaarheid.", href: "/voor-freelancers#matching" },
+          { title: "Vind werk", desc: "Diensten die matchen op je vak, je reistijd en je beschikbaarheid.", href: "/freelance-werk" },
           { title: "Starten als freelancer", desc: "Van aanmelding tot je eerste dienst — alles geregeld behalve het werk zelf.", href: "/voor-freelancers" },
           // 21 nov (eigenaar: "YoungOnes heeft dat bij workers onder Hoe het werkt, zet die ook bij ZekerFlex neer")
           { title: "Starten als uitzendkracht", desc: "Werken zonder KVK, op contract bij een uitzendbureau.", href: "/starten-als-uitzendkracht" },
-          { title: "Verzekeren", desc: "Welke verzekering je als zzp'er of flexwerker zelf regelt.", href: "/voor-freelancers#verzekering" },
+          // 22 nov 2026 (eigenaar: "dooie klik"): /voor-freelancers heeft geen #verzekering; de uitleg staat in de whitepaper
+          { title: "Verzekeren", desc: "Welke verzekering je als zzp'er of flexwerker zelf regelt.", href: "/kennis/whitepapers/verzekering" },
         ],
       },
       bedrijven: {
@@ -348,7 +349,7 @@ export const SNELLE_ACTIES: Record<Audience, SnelleActie[]> = {
   bedrijven: [
     { label: "Klus plaatsen", sub: "Zonder account, zie de kosten", href: "/klus-plaatsen", icoon: "plus" },
     { label: "Personeel inhuren", sub: "Per stad en branche", href: "/personeel-inhuren", icoon: "team" },
-    { label: "Website laten maken", sub: "Op je eigen domein", href: "/aanbod/website", icoon: "web" },
+    { label: "Tarievenoverzicht", sub: "Richttarief per functie", href: "/tarieven-overzicht", icoon: "loon" },
     { label: "Vraag een demo aan", sub: "30 minuten, vrijblijvend", href: "/demo", icoon: "demo" },
   ],
 };
