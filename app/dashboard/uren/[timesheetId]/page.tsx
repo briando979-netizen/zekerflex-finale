@@ -14,6 +14,8 @@ import { PageHeader, Panel, dateTime, moneyExact } from "@/components/app/ui";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { urenIndienenOpen } from "@/lib/timesheets/indienen";
 import { UITCHECK_NA_MS } from "@/lib/timesheets/offline";
+import { incheckenVereist } from "@/lib/checkin/vereist";
+import { zonderInchecken, zonderIncheckenStand } from "@/lib/checkin/vereist-kern";
 
 export const dynamic = "force-dynamic";
 
@@ -43,12 +45,19 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
       assignment: { select: { shiftId: true, shift: { select: SHIFT_SELECT } } },
       branch: { select: { name: true, tenant: { select: { id: true, name: true } } } },
       dispute: { select: { id: true, status: true, raisedById: true, claimedMinutes: true, proposedMinutes: true, reason: true } },
+      // is er echt ingecheckt? (actualStart zegt dat niet meer zodra de uren zijn ingediend)
+      gpsEvents: { where: { type: "CHECK_IN" }, select: { id: true }, take: 1 },
     },
   });
   if (!timesheet) notFound();
-  // Tijdens de klus is er alleen inchecken (eigen pagina); de uren pas na afloop (lib/timesheets/indienen.ts).
+  // Dit bedrijf vraagt geen inchecken en er is ook niet ingecheckt (lib/checkin/vereist.ts): "dien na afloop je uren in"
+  const zonderCheckin = zonderInchecken(await incheckenVereist(timesheet.branch.tenant.id), timesheet.gpsEvents.length > 0);
+  // Tijdens de klus is er alleen inchecken (eigen pagina); de uren pas na afloop (lib/timesheets/indienen.ts). Zonder inchecken:
+  // de klus zelf, waar staat wat de werker doet.
   const nu = Date.now();
-  if (timesheet.status === "DRAFT" && !urenIndienenOpen(timesheet, nu)) redirect(`/dashboard/inchecken/${timesheet.id}`);
+  if (timesheet.status === "DRAFT" && !urenIndienenOpen(timesheet, nu)) {
+    redirect(zonderCheckin ? `/dashboard/klussen/${timesheet.assignment.shiftId}` : `/dashboard/inchecken/${timesheet.id}`);
+  }
   const nogIngecheckt =
     timesheet.status === "DRAFT" && timesheet.actualStart && !timesheet.actualEnd && nu <= timesheet.scheduledEnd.getTime() + UITCHECK_NA_MS;
 
@@ -72,6 +81,9 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
     ? { lat: profile.homeLatitude, lng: profile.homeLongitude }
     : null;
   const cardShift = timesheet.assignment?.shift ? toShift(timesheet.assignment.shift, home) : null;
+  const zonderTekst = zonderCheckin
+    ? { open: ft.checkinPage.geenInchecken, ingediend: H.zonderIngediend, goedgekeurd: H.zonderGoedgekeurd }[zonderIncheckenStand(timesheet.status)]
+    : null;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -99,6 +111,12 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
       )}
       <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
+          {/* geen inchecken bij dit bedrijf: wat er met je uren gebeurt (nog in te dienen, ingediend, door het bedrijf goedgekeurd) */}
+          {zonderTekst && (
+            <p role="status" className="card p-5 text-sm font-semibold text-ink">
+              {zonderTekst}
+            </p>
+          )}
           {nogIngecheckt && (
             <div className="card space-y-3 p-5">
               <p className="text-sm text-warn">{ft.checkinPage.stillIn}</p>
@@ -117,14 +135,16 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
                 value={`${dateTime(timesheet.scheduledStart)} – ${dateTime(timesheet.scheduledEnd)}`}
               />
               <Row label={H.rate} value={`${moneyExact(timesheet.hourlyRateCents)} ${ft.ts.gross}`} />
-              <Row
-                label={H.gpsHours}
-                value={
-                  timesheet.actualStart && timesheet.actualEnd
-                    ? `${dateTime(timesheet.actualStart)} – ${dateTime(timesheet.actualEnd)}`
-                    : H.notYet
-                }
-              />
+              {!zonderCheckin && (
+                <Row
+                  label={H.gpsHours}
+                  value={
+                    timesheet.actualStart && timesheet.actualEnd
+                      ? `${dateTime(timesheet.actualStart)} – ${dateTime(timesheet.actualEnd)}`
+                      : H.notYet
+                  }
+                />
+              )}
               <Row
                 label={H.status}
                 value={timesheet.status === "DRAFT" ? H.toSubmit : timesheet.status}

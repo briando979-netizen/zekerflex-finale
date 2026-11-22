@@ -83,6 +83,18 @@ describe("uren-auto-goedkeuren (consent)", () => {
     expect(approveTimesheet).toHaveBeenCalledWith({ timesheetId: "t1", principal: boss });
   });
 
+  it("never approves the hours of a company that turned check-in off, even with auto-approve on (its own approval is the proof)", async () => {
+    await setTenantAutopilot("ten1", { autoApproveHours: true, byUserId: "boss", since: NOW.toISOString() });
+    kv["incheck:instelling:ten1"] = { vereist: false, sinds: NOW.toISOString() };
+    principalForUser.mockResolvedValue(boss);
+    db.timesheet.findMany.mockResolvedValue([ts()]);
+    const r = await action("uren-auto-goedkeuren").run(NOW);
+    expect(r.count).toBe(0);
+    expect(r.details).toEqual([expect.stringContaining("inchecken staat uit")]);
+    expect(approveTimesheet).not.toHaveBeenCalled();
+    expect(db.timesheet.findMany).not.toHaveBeenCalled();
+  });
+
   it("leaves deviating, over-billed or flagged hours for a human", async () => {
     await setTenantAutopilot("ten1", { autoApproveHours: true, byUserId: "boss", since: NOW.toISOString() });
     principalForUser.mockResolvedValue(boss);

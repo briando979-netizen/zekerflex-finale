@@ -64,6 +64,20 @@ describe("werknemer pushes", () => {
     expect(sent.length).toBe(count);
   });
 
+  it("skips 'vergeet niet in te checken' at the start for a company that turned check-in off (lib/checkin/vereist.ts), but not the other reminders", async () => {
+    const zonder = (id: string, startsInMs: number) => {
+      const r = row(id, startsInMs, 3 * 24 * H);
+      return { ...r, shift: { ...r.shift, branch: { ...r.shift.branch, tenantId: "tnt-zonder" } } };
+    };
+    kv.set("incheck:instelling:tnt-zonder", { vereist: false, sinds: now.toISOString() });
+    assignments = [zonder("zstart", -10 * 60_000), zonder("zsoon", 1.5 * H), row("start", -10 * 60_000, 3 * 24 * H)];
+    await sweepWorkerPushes(now);
+    const titles = sent.map((s) => `${s.userIds[0]}:${s.title}`);
+    expect(titles).toContain("u-zsoon:⏰ Over 2 uur begint je klus");
+    expect(titles).toContain("u-start:▶️ Je klus begint nu"); // een bedrijf zonder keuze: inchecken blijft nodig
+    expect(titles.some((t) => t.startsWith("u-zstart:"))).toBe(false);
+  });
+
   it("sends 'uitgekozen' for a fresh assignment and skips the 'morgen' reminder right after it", async () => {
     assignments = [row("new", 20 * H, 10 * 60_000)];
     await sweepWorkerPushes(now);

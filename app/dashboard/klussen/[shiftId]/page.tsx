@@ -38,6 +38,8 @@ import { uurloonOpbouw } from "@/lib/payroll/uurloon-opbouw";
 import { amsterdamWeek, findOverlappingShift, MAX_WEEK_HOURS, restViolation, weekHoursWith } from "@/lib/shifts/worker-overlap";
 import { afzegDeadline } from "@/lib/shifts/annuleertermijn";
 import { KLUS_TYPE_EMOJI } from "@/lib/shifts/klus-type";
+import { incheckenVereist } from "@/lib/checkin/vereist";
+import { AGENDA_ZONDER_INCHECKEN, zonderInchecken } from "@/lib/checkin/vereist-kern";
 
 export const dynamic = "force-dynamic";
 
@@ -263,6 +265,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               select: {
                 id: true,
                 status: true,
+                actualStart: true,
                 billableMinutes: true,
                 hourlyRateCents: true,
                 submittedAt: true,
@@ -300,6 +303,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const showWorkedFigures = Boolean(
     ts && ["SUBMITTED", "APPROVED", "PAID", "DISPUTED"].includes(ts.status),
   );
+  // Dit bedrijf vraagt geen inchecken (lib/checkin/vereist.ts) en je bent ook niet ingecheckt: in plaats van "check op tijd in"
+  // staat er wat je wel doet, en dat de uren na afloop ingediend worden. Alleen voor wie echt is uitgekozen, tot de klus voorbij is.
+  const geenInchecken =
+    Boolean(worked && !worked.cancelledAt && ts && !shiftEnded) &&
+    zonderInchecken(await incheckenVereist(s.clientTenantId), Boolean(ts?.status === "DRAFT" && ts.actualStart));
 
   const sp = amsterdamParts(start);
   const dateLabel = `${WD[sp.weekday]} ${sp.day} ${MON[sp.month - 1]}.`;
@@ -317,7 +325,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
       (s.skill ? `Functie: ${s.skill}\n` : "") +
       (s.breakMinutes > 0 ? `Pauze: ${s.breakMinutes} minuten\n` : "Geen pauze\n") +
       `Adres: ${s.address}, ${s.postalCode ?? ""} ${s.city}\n\n` +
-      `Bevestig je komst in de app en check op tijd in op locatie.`,
+      (geenInchecken ? AGENDA_ZONDER_INCHECKEN : `Bevestig je komst in de app en check op tijd in op locatie.`),
   };
 
   return (
@@ -377,6 +385,14 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               📄 {s.agreement ? D.viewAgreement : D.viewDraftAgreement}
             </a>
           )}
+        </div>
+      )}
+
+      {geenInchecken && (
+        <div className="mx-auto max-w-2xl border-b border-hair px-4 py-4">
+          <p role="status" className="text-sm font-semibold text-ink">
+            {ft.checkinPage.geenInchecken}
+          </p>
         </div>
       )}
 

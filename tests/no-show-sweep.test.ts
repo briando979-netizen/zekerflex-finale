@@ -12,6 +12,11 @@ const m = vi.hoisted(() => ({
   audit: vi.fn(),
 }));
 
+// bedrijven die inchecken uit hebben (lib/checkin/vereist.ts): rijen "incheck:instelling:<bedrijf>" in de opslag
+const kvh = vi.hoisted(() => ({ rijen: new Map<string, unknown>() }));
+vi.mock("@/lib/storage/kv", () => ({
+  kvListEntries: async (p: string) => [...kvh.rijen].filter(([k]) => k.startsWith(p)).map(([key, value]) => ({ key, value })),
+}));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shiftAssignment: { findMany: (a: unknown) => m.findMany(a) },
@@ -33,6 +38,7 @@ const NU = new Date("2026-11-12T18:00:00+01:00");
 beforeEach(() => {
   for (const f of Object.values(m)) f.mockReset();
   m.findMany.mockResolvedValue([{ id: "a1" }, { id: "a2" }]);
+  kvh.rijen.clear();
 });
 
 describe("welke toewijzingen als no-show gelden", () => {
@@ -46,6 +52,23 @@ describe("welke toewijzingen als no-show gelden", () => {
     const w = noShowKandidaatWaar(NU) as { cancelledAt: null; OR: unknown[] };
     expect(w.cancelledAt).toBeNull();
     expect(w.OR).toEqual([{ timesheet: null }, { timesheet: { actualStart: null, status: "DRAFT" } }]);
+  });
+});
+
+describe("bedrijven die inchecken uit hebben", () => {
+  it("tellen nooit mee: zonder check-in is bij hen niemand 'niet opgekomen'", async () => {
+    kvh.rijen.set("incheck:instelling:tZonder", { vereist: false, sinds: "2026-11-22T09:00:00.000Z" });
+    kvh.rijen.set("incheck:instelling:tGewoon", { vereist: true }); // rommel/standaard: telt gewoon mee
+    const w = noShowKandidaatWaar(NU, ["tZonder"]) as { shift: { branch?: unknown; startsAt: unknown } };
+    expect(w.shift.branch).toEqual({ tenantId: { notIn: ["tZonder"] } });
+    expect(w.shift.startsAt).toEqual((noShowKandidaatWaar(NU) as { shift: { startsAt: unknown } }).shift.startsAt);
+    await sweepNoShows({ droog: true, now: NU });
+    expect(m.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: noShowKandidaatWaar(NU, ["tZonder"]) }));
+  });
+
+  it("zonder zulke bedrijven verandert de zoekvraag niet", () => {
+    expect((noShowKandidaatWaar(NU) as { shift: object }).shift).not.toHaveProperty("branch");
+    expect((noShowKandidaatWaar(NU, []) as { shift: object }).shift).not.toHaveProperty("branch");
   });
 });
 

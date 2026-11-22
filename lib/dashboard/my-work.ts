@@ -11,6 +11,7 @@ import { reserveReactieIds } from "@/lib/reservebank/store";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus, type EigenTest } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { incheckenVereistVoor } from "@/lib/checkin/vereist";
 
 // ---------------------------------------------------------------------------
 // "Mijn klussen" — the freelancer's own engagements in three buckets:
@@ -62,6 +63,11 @@ export interface MyWorkItem {
   rejectedKind: "counter" | "notChosen" | "expired" | null;
   /** employer cancelled this after you were assigned → you may file a 50% claim */
   cancelledByEmployer: boolean;
+  /**
+   * Het bedrijf vraagt geen inchecken (lib/checkin/vereist.ts) en je hebt ook niet ingecheckt: toon dan geen incheck-knop maar
+   * "dien na afloop je uren in". Alleen bij een toewijzing; anders false.
+   */
+  zonderInchecken: boolean;
 }
 
 export interface MyWork {
@@ -179,7 +185,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       cancelledAt: true,
       cancelReason: true,
       shift: { select: SHIFT_SELECT },
-      timesheet: { select: { id: true, status: true } },
+      timesheet: { select: { id: true, status: true, actualStart: true } },
     },
     orderBy: { shift: { startsAt: "desc" } },
     take: 60,
@@ -299,6 +305,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       offerStatusLabel: reserve ? "Reserve, nog niet ingepland" : (OFFER_LABEL[status] ?? status),
       rejectedKind,
       cancelledByEmployer: false,
+      zonderInchecken: false,
     };
     // Each item lands in exactly the one bucket that matches its own status —
     // an "active" (accepted) item belongs under Uitgekozen, never Pending.
@@ -312,6 +319,8 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   // A klus is "Uitgekozen" until it is over (also while it's under way). Once
   // over, while its hours are still a draft it lives only on "Uren invullen";
   // after the hours are handed in it moves to "Gearchiveerd".
+  // Bedrijven die inchecken uit hebben (lib/checkin/vereist.ts): daar geen incheck-knop op de kaart.
+  const incheckVereist = await incheckenVereistVoor(assignments.map((x) => x.shift.branch.tenant.id));
   for (const a of assignments) {
     const shift = toShift(a.shift as ShiftRow, home, eigenTest);
     const over = a.shift.endsAt.getTime() < now;
@@ -344,6 +353,8 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       cancelledByEmployer: Boolean(
         a.cancelledAt && (a.cancelReason ?? "").toLowerCase().includes("opdrachtgever"),
       ),
+      // al ingecheckt (een concept met begintijd): dan blijft de knop, om uit te checken
+      zonderInchecken: incheckVereist.get(a.shift.branch.tenant.id) === false && !(a.timesheet?.status === "DRAFT" && a.timesheet.actualStart),
     };
     if (item.status === "active" || item.status === "replacement") active.push(item);
     else if (item.status === "hours") hours.push(item);
@@ -382,6 +393,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       offerStatusLabel: "Aanbod ontvangen",
       rejectedKind: null,
       cancelledByEmployer: false,
+      zonderInchecken: false,
     });
   }
 
@@ -429,6 +441,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       offerStatusLabel: null,
       rejectedKind: "notChosen",
       cancelledByEmployer: false,
+      zonderInchecken: false,
     });
   }
 

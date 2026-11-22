@@ -25,6 +25,8 @@ export const nl = {
     titel: "Inchecken met een QR-code",
     uitleg: "Je krachten checken in door bij aankomst de QR-code van de vestiging met hun telefoon te scannen. Zet per vestiging de QR-code aan, print de poster en hang hem bij de ingang. Elke check-in staat meteen in het urenbriefje.",
     knop: "Naar je vestigingen en de QR-poster",
+    // inchecken staat uit voor het bedrijf (lib/checkin/vereist.ts)
+    staatUit: "Inchecken staat uit voor je bedrijf. Je werkers hoeven niet in te checken en je hoeft geen QR-poster op te hangen. Ze dienen na afloop hun uren in en jij keurt die zelf goed.",
   },
   nav: {
     start: "Jouw start",
@@ -712,6 +714,9 @@ export const nl = {
     signalBody:
       "(locatie bij het inchecken, onmogelijke tijden, pauze of dubbele uren). Controleer voor je goedkeurt — bij een ⛔ blokkeert ZekerFlex de goedkeuring en volgt handmatige controle door het platform.",
     extraCosts: "Extra kosten:",
+    // bedrijf zonder inchecken (lib/checkin/vereist.ts): jouw goedkeuring is het bewijs, en automatisch goedkeuren werkt niet
+    zonderInchecken: "Zonder inchecken ingediend: jouw goedkeuring is het bewijs van deze uren.",
+    geenAutoGoedkeuren: "Inchecken staat uit voor je bedrijf. Je keurt daarom elke urenregel zelf goed: uren worden nooit automatisch goedgekeurd.",
   },
   company: {
     title: "Bedrijfsprofiel",
@@ -733,6 +738,17 @@ export const nl = {
     maxUrenOpgeslagen: "Opgeslagen: hoogstens {n} uur per werker per 12 maanden.",
     maxUrenGeenOpgeslagen: "Opgeslagen: geen grens.",
     maxUrenMislukt: "Opslaan lukte niet. Probeer het opnieuw.",
+    // inchecken door je werkers, per bedrijf aan of uit (lib/checkin/vereist.ts)
+    incheckTitel: "Inchecken op locatie",
+    incheckUitleg: "Kies of je werkers moeten inchecken als ze bij jou werken. Dit geldt voor al je klussen en je kunt het altijd weer wijzigen.",
+    incheckJa: "Ja, mijn werkers checken in op locatie",
+    incheckJaUitleg: "Met GPS of de QR-code van de vestiging. Zo zijn de uren onderbouwd met bewijs van aanwezigheid.",
+    incheckNee: "Nee, inchecken hoeft niet",
+    incheckNeeUitleg: "Je werkers dienen na afloop hun uren in. Jouw goedkeuring is dan het bewijs: je keurt elke urenregel zelf goed, en uren worden nooit automatisch goedgekeurd.",
+    incheckBevestigUit: "Inchecken uitzetten? Je werkers hoeven dan niet meer in te checken. Je keurt daarna elke urenregel zelf goed en automatisch goedkeuren werkt niet meer voor jouw bedrijf.",
+    incheckOpgeslagenAan: "Opgeslagen: je werkers checken in op locatie.",
+    incheckOpgeslagenUit: "Opgeslagen: je werkers hoeven niet in te checken.",
+    incheckMislukt: "Opslaan lukte niet. Probeer het opnieuw.",
     mailIntro:
       "Kies welke optionele e-mail je ontvangt. Belangrijke e-mail (facturen, compliance, juridische kennisgevingen) krijg je altijd.",
     noOrgTitle: "Geen organisatie",

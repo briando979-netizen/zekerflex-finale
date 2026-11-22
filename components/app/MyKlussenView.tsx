@@ -228,7 +228,7 @@ export function MyKlussenView({
               {...(tab === "active" && item.shift.busy ? { ribbon: { label: w.doubleBooked, tone: "crit" as const } } : {})}
               footerOverride={
                 tab === "pending" ? null : tab === "active" ? (
-                  <ActiveFooter item={item} w={w} />
+                  <ActiveFooter item={item} w={w} geenInchecken={ft.checkinPage.geenInchecken} />
                 ) : (
                   <div className="space-y-3">
                     <HistoryFooter item={item} onHide={hideItem} w={w} />
@@ -277,16 +277,16 @@ export function MyKlussenView({
 
 /** De regel onder een uitgekozen klus: "Dit is jouw klus! 🎉" met een pijl, zoals bij YoungOnes; ervoor eventueel
  *  "De opdrachtgever heeft aanvullende informatie voor je achtergelaten" (de tekst zelf staat op de kluspagina). */
-function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
+function ActiveFooter({ item, w, geenInchecken }: { item: MyWorkItem; w: W; geenInchecken: string }) {
   return (
     <div className="space-y-2">
       {item.shift.extraInfo && <p className="text-xs text-neutralx-500">{w.extraInfoLeft}</p>}
-      <ActiveAction item={item} w={w} />
+      <ActiveAction item={item} w={w} geenInchecken={geenInchecken} />
     </div>
   );
 }
 
-function ActiveAction({ item, w }: { item: MyWorkItem; w: W }) {
+function ActiveAction({ item, w, geenInchecken }: { item: MyWorkItem; w: W; geenInchecken: string }) {
   const startMs = new Date(item.shift.startsAt).getTime();
   const endMs = new Date(item.shift.endsAt).getTime();
 
@@ -308,6 +308,15 @@ function ActiveAction({ item, w }: { item: MyWorkItem; w: W }) {
 
   // Op de dag van de klus: inchecken/uitchecken heeft voorrang (eigen pagina; uren pas na afloop).
   if (item.timesheetId && Date.now() >= startMs - 60 * 60_000 && Date.now() <= endMs) {
+    // Dit bedrijf vraagt geen inchecken (lib/checkin/vereist.ts): geen knop, wel wat de werker wel moet doen
+    if (item.zonderInchecken) {
+      return (
+        <Link href={`/dashboard/klussen/${item.shift.id}`} className="flex items-center justify-between gap-3 text-sm font-semibold text-neutralx-700">
+          <span>{geenInchecken}</span>
+          <span aria-hidden>→</span>
+        </Link>
+      );
+    }
     return (
       <Link href={`/dashboard/inchecken/${item.timesheetId}`} className="btn-primary flex w-full items-center justify-between">
         <span>{w.checkInOut}</span>

@@ -73,6 +73,15 @@ describe("feedIcs", () => {
     expect(pl).toContain("DESCRIPTION:Za 2 godziny zaczyna się Twoja zmiana u De Brug BV");
   });
 
+  it("laat 'check op tijd in' weg bij een bedrijf dat inchecken uit heeft staan (lib/checkin/vereist.ts)", () => {
+    expect(unfold(feedIcs([assignment()], "https://x"))).toContain("Check op tijd in op locatie.");
+    const zonder = unfold(feedIcs([assignment({ zonderInchecken: true })], "https://x"));
+    expect(zonder).not.toContain("Check op tijd in");
+    expect(zonder).toContain("Je dienst via ZekerFlex bij De Brug BV.");
+    expect(zonder).toContain("https://x/dashboard/klussen/sh1");
+    expect(unfold(feedIcs([assignment({ zonderInchecken: true })], "https://x", "en"))).not.toContain("Check in on site");
+  });
+
   it("vouwt lange regels en eindigt met CRLF", () => {
     const ics = feedIcs([assignment({}, { title: "x".repeat(200) })], "https://x");
     for (const line of ics.split("\r\n")) expect(line.length).toBeLessThanOrEqual(75);
