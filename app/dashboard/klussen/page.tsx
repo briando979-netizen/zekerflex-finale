@@ -21,6 +21,8 @@ import { standaardFilter } from "@/lib/shifts/branche-keuze";
 import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
+import { inEigenApp } from "@/lib/app-mode-server";
+import { AppVoorstelKaart } from "@/components/app/AppVoorstelKaart";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +56,8 @@ export default async function KlussenPage(
   // daarna: wat er nog nodig is om te reageren (ID goedgekeurd, BSN, overeenkomst, KVK/btw, rekeningnummer), als één lijst
   // met dezelfde regels als de controle bij reageren (lib/onboarding/klaar-voor-klus.ts). Eén kaart tegelijk (15 nov, eigenaar)
   const nogVoorKlus = !onboardingOpen && !m.canApply ? await nogVoorEersteKlusVan(principal.userId).catch(() => []) : [];
+  // het voorstel om de app te installeren: na de startstappen tot en met de ID-check, en alleen in een gewone browser
+  const toonAppVoorstel = poort?.identiteitIngestuurd === true && !(await inEigenApp());
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,
@@ -118,6 +122,9 @@ export default async function KlussenPage(
           </Link>
         </p>
       )}
+      {/* "eerst browser, dan app" (22 nov 2026, eigenaar): pas na de ID-check, en niet in de app zelf, een wegklikbaar voorstel
+          om de app te installeren (de kaart verbergt zich ook in een geïnstalleerde web-app) */}
+      {toonAppVoorstel && <AppVoorstelKaart />}
       {m.newSinceLastVisit > 0 && (
         <p className="mb-4">
           <StatusPill tone="ok">{t.page.newCount(m.newSinceLastVisit)}</StatusPill>

@@ -12,7 +12,8 @@ import { birthdayToday } from "@/lib/seasons/settings";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { clientDict, getLocale } from "@/lib/i18n/server";
 import { inAndroidApp, inEigenApp, inIosApp } from "@/lib/app-mode-server";
-import { werkerOmgevingToegestaan } from "@/lib/app-vereist";
+import { ALLEEN_APP_VLAG, werkerOmgevingToegestaan } from "@/lib/app-vereist";
+import { featureEnabled } from "@/lib/flags";
 import { AppVereist } from "@/components/app/AppVereist";
 import { IosAppProvider } from "@/components/app/useInIosApp";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
@@ -43,9 +44,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // zonder eigen keuze donker, zoals de app van YoungOnes (20 nov, eigenaar); de themaknop in de kopbalk blijft
   const theme = await getTheme("dark");
   const locale = await getLocale();
-  // sinds 21 nov (eigenaar, zoals YoungOnes): de werker-omgeving alleen in de app (Android/iPhone/geïnstalleerde web-app);
-  // in een gewone browser het scherm "Installeer de app". Beheerders mogen altijd kijken (lib/app-vereist.ts).
-  const toegestaan = werkerOmgevingToegestaan({ inApp: await inEigenApp(), pwaCookie: false, beheerder: hasRole(principal, "PLATFORM_ADMIN") });
+  // 21 nov (eigenaar, zoals YoungOnes): de werker-omgeving alleen in de app; 22 nov (eigenaar: "eerst browser, dan app") staat
+  // dat achter de vlag ALLEEN_APP_VLAG, standaard uit. Met de vlag aan ziet een gewone browser het scherm "Installeer de app";
+  // beheerders mogen altijd kijken (lib/app-vereist.ts). Een storing van de vlaggen: de standaard (browser mag).
+  const alleenApp = await featureEnabled(ALLEEN_APP_VLAG, { userId: principal.userId });
+  const toegestaan = werkerOmgevingToegestaan({ alleenApp, inApp: await inEigenApp(), pwaCookie: false, beheerder: hasRole(principal, "PLATFORM_ADMIN") });
   if (!toegestaan) {
     return (
       <I18nProvider locale={locale} t={clientDict(locale)}>
