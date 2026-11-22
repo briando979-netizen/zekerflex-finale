@@ -180,6 +180,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/voorwaarden/snelle-uitbetaling", 0.3, "yearly"),
     entry("/cookiebeleid", 0.3, "yearly"),
     entry("/copyright", 0.3, "yearly"),
+    // ??n canonieke inlogpagina (22 nov 2026): Google zag 45 varianten met ?callbackUrl als dubbel
+    entry("/login", 0.3, "yearly"),
     entry("/toegankelijkheid", 0.3, "yearly"),
     entry("/verwerkersovereenkomst", 0.3, "yearly"),
 

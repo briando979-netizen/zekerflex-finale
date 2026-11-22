@@ -17,7 +17,7 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
 
   it("zonder eigen versie precies de metadata van vóór de ontwerper", async () => {
     // 15 nov 2026: op Google-lengte (titel ≤ 60, omschrijving ≤ 155 tekens; tests/seo-tekst.test.ts)
-    const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland";
+    const TITLE = "ZekerFlex — flexwerk, bijbaan en freelance klussen";
     // sinds 11 nov 2026 is de homepagina voor werkzoekenden; de omschrijving noemt geen bedrijfsprijs meer (die staat bij /bedrijven)
     const DESCRIPTION =
       "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.";
@@ -31,7 +31,7 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
     });
     // de vorige homepagina, nu voor bedrijven
     const bv = await seoMetadata("/bedrijven");
-    expect(bv.title).toBe("Flexkrachten, zzp'ers en uitzendkrachten voor je bedrijf");
+    expect(bv.title).toBe("Personeel inhuren: flexkrachten en zzp'ers per klus");
     expect(bv.description).toContain("€ 3,50 per gewerkt uur");
   });
 

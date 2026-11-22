@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { AppDownload } from "@/components/marketing/AppDownload";
 
 export const metadata: Metadata = {
-  title: "Download de app",
+  // 22 nov 2026 (SEO-audit): op "flexwerk app" en "app voor bijbaan" scoort nog geen enkel flexplatform
+  title: "Flexwerk-app: je bijbaan en klussen op je telefoon",
   description:
-    "Installeer ZekerFlex als app op je telefoon (iOS en Android): reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen.",
+    "De ZekerFlex-app voor flexwerk en je bijbaan: reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen. Voor iPhone en Android.",
   alternates: { canonical: "/app" },
 };
 
@@ -14,7 +15,7 @@ export default function AppPage() {
       <div className="shell pt-16 md:pt-20">
         <p className="eyebrow text-brand-mint">De ZekerFlex-app</p>
         <h1 className="mt-3 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">
-          Alles wat je nodig hebt, op je telefoon
+          De flexwerk-app voor je bijbaan en klussen
         </h1>
       </div>
       <AppDownload standalone />

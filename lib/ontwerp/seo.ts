@@ -17,7 +17,8 @@ export const SEO_ACHTERVOEGSEL = " · ZekerFlex";
 export const SEO_STANDAARD = {
   "/": {
     naam: "Homepage (werkzoekenden)",
-    titel: "ZekerFlex — freelance werk & klussen in heel Nederland",
+    // 22 nov 2026 (SEO-audit): "bijbaan" en "flexwerk" zijn de zoekwoorden met de meeste vertoningen, gelijk aan de Play-titel
+    titel: "ZekerFlex — flexwerk, bijbaan en freelance klussen",
     omschrijving:
       "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.",
     absoluut: true,
@@ -25,7 +26,8 @@ export const SEO_STANDAARD = {
   "/bedrijven": {
     naam: "Homepage voor bedrijven",
     // 21 nov 2026: alleen flexwerk in Google (eigenaar zag "website" en "software" in de zoekresultaten)
-    titel: "Flexkrachten, zzp'ers en uitzendkrachten voor je bedrijf",
+    // 22 nov 2026 (SEO-audit): "personeel inhuren" is het niet-merkzoekwoord met de meeste vertoningen (positie 31)
+    titel: "Personeel inhuren: flexkrachten en zzp'ers per klus",
     omschrijving:
       "Plaats een klus en flexwerkers, zzp'ers en uitzendkrachten in de buurt reageren. Je betaalt € 3,50 per gewerkt uur, zonder abonnement of opstartkosten.",
     absoluut: false,
