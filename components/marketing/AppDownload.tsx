@@ -159,6 +159,8 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             </div>
             {standalone ? (
               <>
+                {/* ook op /app zelf de korte regel; de uitleg per toestel staat eronder */}
+                <p className="mt-3 text-xs text-white/65">{installRegel({ appStore, alleenApp })}</p>
                 {!appStore && <IphoneNotice />}
                 <AndroidNotice />
               </>

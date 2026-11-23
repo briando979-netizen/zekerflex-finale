@@ -40,8 +40,8 @@ describe("de korte installatieregel", () => {
 describe("AppDownload (voorpagina, /flexwerk en /app)", () => {
   const bron = lees("components/marketing/AppDownload.tsx");
 
-  it("gebruikt de korte regel en een link naar de uitleg op /app", () => {
-    expect(bron).toContain("installRegel({ appStore, alleenApp })");
+  it("gebruikt de korte regel (ook op /app zelf) en een link naar de uitleg op /app", () => {
+    expect(bron.split("installRegel({ appStore, alleenApp })")).toHaveLength(3);
     expect(bron).toMatch(/<Link href="\/app"[^>]*>\s*zo werkt het\s*<\/Link>/);
   });
 
