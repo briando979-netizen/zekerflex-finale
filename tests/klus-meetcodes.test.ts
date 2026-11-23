@@ -30,9 +30,13 @@ describe("eersteFocus: één keer per veld per sessie, alleen geldige codes", ()
 describe("het formulier en de beacon", () => {
   it("KlusConcept heeft de codes op de velden, de knop en de kaart", () => {
     const s = bron("components/marketing/KlusConcept.tsx");
-    for (const code of ["klus-website", "klus-functie", "klus-plaats", "klus-datum", "klus-tijd", "klus-plaatsknop"]) {
+    for (const code of ["klus-website", "klus-plaats", "klus-datum", "klus-tijd", "klus-plaatsknop"]) {
       expect(s, code).toContain(`data-track="${code}"`);
     }
+    // de functie kies je sinds 23 nov 2026 alleen nog in de kiezer (geen tweede keuzelijst): de code hangt aan elke functie in de kiezer
+    expect(s).toContain('meetcode="klus-functie"');
+    expect(bron("components/app/SjabloonGalerij.tsx")).toContain('{...(meetcode ? { "data-track": meetcode } : {})}');
+    expect(isTrackCode("klus-functie")).toBe(true);
     expect(s).toContain('data-track-ctx="stap=klus-concept"');
   });
   it("de beacon telt een focus met eersteFocus en telt een klik in een veld niet dubbel", () => {

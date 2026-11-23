@@ -36,6 +36,8 @@ export function SjabloonGalerij({
   kop,
   teksten = SJABLOON_NL,
   onEigen,
+  verplicht = false,
+  meetcode,
 }: {
   sjablonen: readonly GalerijSjabloon[];
   /** de key van het gekozen sjabloon, of "" */
@@ -47,6 +49,10 @@ export function SjabloonGalerij({
   teksten?: SjabloonTeksten;
   /** "Of vul het zelf in": de pagina brengt de bezoeker naar het veld voor een eigen titel */
   onEigen?: () => void;
+  /** dit is de functiekeuze van de pagina (er is geen ander veld voor): dan staat er geen "(optioneel)" achter de kop */
+  verplicht?: boolean;
+  /** een meetcode (data-track, lib/analytics/label-privacy.ts) op elke functie, voor de pagina die de keuze meet */
+  meetcode?: string;
 }) {
   const id = useId();
   const [branche, setBranche] = useState<ShiftCategoryKey | "alle">("alle");
@@ -73,7 +79,7 @@ export function SjabloonGalerij({
     <div className="min-w-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="field-label">
-          {kop ?? teksten.kop} <span className="font-normal text-neutralx-500">{teksten.optioneel}</span>
+          {kop ?? teksten.kop} {!verplicht && <span className="font-normal text-neutralx-500">{teksten.optioneel}</span>}
         </p>
         <p aria-live="polite" className="text-xs text-neutralx-600">
           {status}
@@ -136,6 +142,7 @@ export function SjabloonGalerij({
                 <button
                   type="button"
                   aria-pressed={actief}
+                  {...(meetcode ? { "data-track": meetcode } : {})}
                   onClick={() => onKies(t.key)}
                   className={`flex min-h-[3.5rem] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-paper-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-500 ${
                     actief ? "bg-brand-50" : ""

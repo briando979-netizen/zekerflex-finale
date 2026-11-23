@@ -14,7 +14,7 @@ import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools
 import { KlusKaart } from "@/components/marketing/KlusKaart";
 import { KlusSimulatie } from "@/components/marketing/KlusSimulatie";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
-import { SHIFT_CATEGORIES, shiftCategory, type ShiftCategoryKey } from "@/lib/shifts/category";
+import type { ShiftCategoryKey } from "@/lib/shifts/category";
 
 export interface ConceptTemplate {
   key: string;
@@ -118,15 +118,6 @@ export function KlusConcept({
   const [reading, setReading] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
   const [found, setFound] = useState<WebsiteKlus | null>(null);
-  // the function list grouped per branch, in the order of the branch filter
-  const groepen = useMemo(
-    () =>
-      SHIFT_CATEGORIES.map((c) => ({ key: c.key, label: c.label, items: templates.filter((t) => (t.branche ?? shiftCategory(t.label, null).key) === c.key) })).filter(
-        (g) => g.items.length > 0,
-      ),
-    [templates],
-  );
-
   // geopend via de tip van een werker: één keer tellen
   useEffect(() => {
     telVia("bezoek");
@@ -307,24 +298,11 @@ export function KlusConcept({
                 gekozen={tpl === ANDERS ? "" : tpl}
                 onKies={(key) => pickTemplate(key)}
                 kop="Kies een functie"
+                verplicht
+                meetcode="klus-functie"
                 onEigen={() => setTpl(ANDERS)}
               />
             </div>
-            <label className="block sm:col-span-2">
-              <span className="block text-sm font-medium text-ink">Functie</span>
-              <select data-track="klus-functie" value={tpl} onChange={(e) => pickTemplate(e.target.value)} className={`mt-1.5 ${field}`}>
-                {groepen.map((g) => (
-                  <optgroup key={g.key} label={g.label}>
-                    {g.items.map((t) => (
-                      <option key={t.key} value={t.key}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-                <option value={ANDERS}>Iets anders…</option>
-              </select>
-            </label>
             {tpl === ANDERS ? (
               <label className="block sm:col-span-2">
                 <span className="block text-sm font-medium text-ink">Naam van de klus</span>

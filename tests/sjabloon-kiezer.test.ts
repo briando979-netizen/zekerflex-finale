@@ -208,4 +208,38 @@ describe("het scherm (bron-controle)", () => {
     expect(form).toContain("onEigen={() => titelRef.current?.focus()}");
     expect(lees("components/marketing/KlusConcept.tsx")).toContain("onEigen={() => setTpl(ANDERS)}");
   });
+
+  // 23 nov 2026 (schermcontrole van de live site): onder de kiezer op /klus-plaatsen stond nog een gewone keuzelijst "Functie" voor
+  // dezelfde keuze, en de kiezer heette "(optioneel)" terwijl Vakkenvuller al was voorgekozen. Nu is de kiezer de functiekeuze.
+  it("/klus-plaatsen heeft één bediening voor de functie: de kiezer, zonder (optioneel) en zonder tweede keuzelijst", () => {
+    const concept = lees("components/marketing/KlusConcept.tsx");
+    expect(concept).toContain("<SjabloonGalerij");
+    expect(concept).toMatch(/kop="Kies een functie"\s+verplicht\s/);
+    expect(concept).not.toMatch(/<select data-track="klus-functie"/);
+    expect(concept).not.toContain("<optgroup");
+    expect(concept).not.toContain("Iets anders");
+    expect(concept).not.toContain("groepen.map");
+    // de voorgekozen functie en "Of vul het zelf in" werken zoals voorheen
+    expect(concept).toContain("gekozen={tpl === ANDERS ? \"\" : tpl}");
+    expect(concept).toContain("onKies={(key) => pickTemplate(key)}");
+    expect(concept).toContain("{tpl === ANDERS ? (");
+  });
+
+  it("de kiezer laat (optioneel) weg als hij de functiekeuze van de pagina is, en houdt het in de wizard van de werkgever", () => {
+    expect(galerij).toContain("{!verplicht && <span");
+    expect(galerij).toContain("verplicht = false");
+    const form = lees("components/app/NewShiftForm.tsx");
+    expect(form).toContain("<SjabloonGalerij");
+    expect(form).not.toContain("verplicht");
+  });
+
+  it("het bewaarde concept en de server-opslag blijven werken: de functie komt nog steeds uit de gekozen sjabloon of de eigen naam", () => {
+    const concept = lees("components/marketing/KlusConcept.tsx");
+    expect(concept).toContain('const title = tpl === ANDERS ? eigen.trim() : (templates.find((t) => t.key === tpl)?.label ?? "");');
+    expect(concept).toContain("localStorage.setItem(CONCEPT_KEY, JSON.stringify(concept));");
+    expect(concept).toMatch(/const concept: Concept = \{\s*v: 1,\s*title,/);
+    // de functie begint voorgekozen (via ?functie= of de eerste) en een andere functie neemt tarief, pauze en omschrijving mee
+    expect(concept).toContain("const first = templates.find((t) => t.key === initial.templateKey) ?? templates[0];");
+    expect(concept).toContain("setBreakMinutes(t.breakMinutes);");
+  });
 });
