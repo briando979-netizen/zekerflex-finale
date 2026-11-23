@@ -15,9 +15,12 @@ import type { NavItem } from "@/components/app/AppShell";
 import { useT, setLocale } from "@/components/i18n/I18nProvider";
 import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { fmt } from "@/lib/i18n/dictionaries";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { ThemeToggle, ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
+import { THEMA_EN, THEMA_NL } from "@/lib/account/teksten";
 import { naamInitialen } from "@/lib/naam/initialen";
+import { perSectie, splitsMenu } from "@/lib/werkgever/menu-groepen";
+import { SCHIL_INHOUD, SCHIL_KOPBALK, SCHIL_RASTER_IN, SCHIL_RASTER_UIT, SCHIL_ZIJBALK_IN, SCHIL_ZIJBALK_UIT } from "@/components/werkgever/bouwstenen";
 
 // ---------------------------------------------------------------------------
 // Employer workspace shell — its own chrome (org name + rating in the topbar,
@@ -25,25 +28,41 @@ import { naamInitialen } from "@/lib/naam/initialen";
 // left untouched.
 //
 // 23 nov 2026 (eigenaar: het dashboard moet er net zo uitzien en zo zijn ingedeeld als dat van YoungOnes, in onze eigen
-// huisstijl): een smalle donkere zijbalk met alleen pictogrammen, die uitklapt naar pictogrammen met namen; een dunne witte
-// kopbalk; een lichte, effen achtergrond; de inhoud in één gecentreerde kolom met een vaste breedte. Op een laptop staat de
-// zijbalk standaard ingeklapt (de keuze wordt onthouden); op een telefoon is het een lade achter de menuknop, altijd met namen.
+// huisstijl): een smalle donkere zijbalk met alleen pictogrammen, die uitklapt naar pictogrammen met namen; een witte
+// kopbalk; een lichte, effen achtergrond. Op een laptop staat de zijbalk standaard ingeklapt (de keuze wordt onthouden); op
+// een telefoon is het een lade achter de menuknop, altijd met namen.
+// Ronde 2 (zelfde dag, na het meten naast de referentie): de zijbalk is 94 px ingeklapt en 221 px uitgeklapt, de kopbalk
+// 78 px hoog met een zachte schaduw in plaats van een rand, en de inhoud staat links uitgelijnd op 32 px van de zijbalk met
+// een maximale breedte van 1192 px (de maten staan in components/werkgever/bouwstenen.ts). De zijbalk heeft twee groepen:
+// de hoofdregels met Instellingen erachter, en een rustiger tweede groep (lib/werkgever/menu-groepen.ts). Uitloggen staat
+// alleen nog in het gebruikersmenu rechtsboven.
 // De zijbalk is in het lichte én het donkere thema donker (eigen kleuren: ink en het diepe groen), dus daar staan geen
 // klassen die het thema omkleurt. De kaarten en knoppen van de werkgeversapp krijgen hun vorm via data-app="werkgever"
 // (app/globals.css). Het menu zelf (welke regels, in welke volgorde) komt nog altijd van menuVoor().
 // ---------------------------------------------------------------------------
 
-/** een regel in de zijbalk: minstens 44 px hoog; de naam is op een laptop alleen voor een schermlezer als de zijbalk is ingeklapt */
-const railRij = "group relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors";
+/**
+ * een regel in de zijbalk: 48 px hoog, 12 px van de rand, het pictogram op een vaste plek (23 px van links) zodat het niet
+ * verspringt bij in- en uitklappen. `relative`: de naam is op een laptop alleen voor een schermlezer als de zijbalk is ingeklapt.
+ */
+const railRij = "group relative mx-3 flex min-h-12 items-center gap-2 rounded-md pl-[23px] pr-3 text-sm transition-colors";
+/** een regel in de tweede groep: iets lager (nog altijd 44 px om te tikken) en met een kleiner pictogram */
+const railRijRustig = "group relative mx-3 flex min-h-11 items-center gap-2 rounded-md pl-[23px] pr-3 text-[13px] transition-colors";
+/** het vak van een pictogram: altijd 24 px breed; het pictogram zelf is 24 px (hoofdregel) of 20 px (tweede groep) */
+const railIcoon = "relative grid h-6 w-6 flex-shrink-0 place-items-center [&>svg]:h-6 [&>svg]:w-6";
+const railIcoonRustig = "relative grid h-6 w-6 flex-shrink-0 place-items-center [&>svg]:h-5 [&>svg]:w-5";
 
 /** een regel in het gebruikersmenu rechtsboven: minstens 44 px hoog om te tikken */
 const menuRij = "flex min-h-11 items-center rounded-lg px-3 text-sm text-ink hover:bg-paper-soft";
+
+/** een vierkante knop in de kopbalk */
+const kopKnop = "grid h-11 w-11 flex-shrink-0 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600";
 
 function Stars({ value }: { value: number }) {
   return (
     <span className="inline-flex" aria-hidden>
       {[1, 2, 3, 4, 5].map((n) => (
-        <svg key={n} width="13" height="13" viewBox="0 0 24 24" className={n <= Math.round(value) ? "text-amber-400" : "text-neutralx-300"}>
+        <svg key={n} width="16" height="16" viewBox="0 0 24 24" className={n <= Math.round(value) ? "text-amber-400" : "text-neutralx-300"}>
           <path
             fill="currentColor"
             d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"
@@ -51,6 +70,47 @@ function Stars({ value }: { value: number }) {
         </svg>
       ))}
     </span>
+  );
+}
+
+/** Eén regel van de zijbalk. Een losse component (niet binnen de schil gedefinieerd), zodat hij bij elke weergave dezelfde blijft. */
+function RailLink({
+  item,
+  active,
+  collapsed,
+  rustig = false,
+  stip = false,
+  stipTekst,
+  onKies,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  /** de tweede groep: kleiner en lichter */
+  rustig?: boolean;
+  /** een kleine stip op het pictogram (amber = wacht op jou) */
+  stip?: boolean;
+  /** wat de stip betekent, voor een schermlezer */
+  stipTekst?: string | undefined;
+  onKies: () => void;
+}) {
+  const rust = rustig ? "text-white/65 hover:bg-white/10 hover:text-white" : "text-white/85 hover:bg-white/15 hover:text-white";
+  return (
+    <Link
+      href={item.href}
+      onClick={onKies}
+      title={collapsed ? item.label : undefined}
+      aria-current={active ? "page" : undefined}
+      className={`${rustig ? railRijRustig : railRij} ${active ? "bg-white/15 text-white" : rust}`}
+    >
+      <span className={rustig ? railIcoonRustig : railIcoon}>
+        {item.icon}
+        {stip && <span aria-hidden className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-warn" />}
+      </span>
+      <span className={collapsed ? "lg:sr-only" : ""}>{item.label}</span>
+      {stip && stipTekst ? <span className="sr-only"> ({stipTekst})</span> : null}
+      {item.badge ? <span className={collapsed ? "ml-auto lg:absolute lg:right-1 lg:top-1 lg:ml-0" : "ml-auto"}>{item.badge}</span> : null}
+    </Link>
   );
 }
 
@@ -85,6 +145,7 @@ export function EmployerShell({
   locale: Locale;
   theme: Theme;
   orgName: string;
+  /** de beoordelingen van het bedrijf; null = wij hebben die gegevens niet (dan geen sterren) */
   rating: { average: number; count: number } | null;
   userName: string;
   userMeta: string;
@@ -144,36 +205,34 @@ export function EmployerShell({
     return pathname === href || (href !== "/werkgever" && pathname.startsWith(href + "/")) ||
       (href === "/werkgever" && pathname === "/werkgever");
   };
-  const current = nav.find((n) => isActive(n.href));
+  const sluitLade = () => setOpen(false);
 
-  const groups: { section: string | null; items: NavItem[] }[] = [];
-  for (const item of nav) {
-    const key = item.section ?? null;
-    const last = groups[groups.length - 1];
-    if (last && last.section === key) last.items.push(item);
-    else groups.push({ section: key, items: [item] });
-  }
+  // de hoofdregels (met Instellingen erachter) en de rustiger tweede groep; er valt niets weg (lib/werkgever/menu-groepen.ts)
+  const { hoofd, rest } = splitsMenu(nav);
+  const restGroepen = perSectie(rest);
+  const instellingen: NavItem = { href: settingsHref, label: t.shell.settings, icon: <SettingsGlyph /> };
 
   return (
     <div
       data-theme={theme}
       data-app="werkgever"
       className={`app-scope min-h-screen bg-paper-soft lg:grid ${
-        // minmax(0,1fr): anders groeit de inhoudskolom mee met een lange rij tabbladen (horeca, rijschool)
+        // minmax(0,1fr): anders groeit de inhoudskolom mee met een lange rij tabbladen
         // en wordt de hele pagina breder dan het scherm
-        collapsed ? "lg:grid-cols-[72px_minmax(0,1fr)]" : "lg:grid-cols-[256px_minmax(0,1fr)]"
+        collapsed ? SCHIL_RASTER_IN : SCHIL_RASTER_UIT
       }`}
     >
       {/* Sidebar: donker in beide thema's. Op een telefoon een lade (altijd met namen), op een laptop blijft hij in beeld staan. */}
       <aside
         id="employer-sidebar"
-        className={`fixed inset-y-0 left-0 z-40 flex w-[272px] transform flex-col bg-gradient-to-b from-ink via-brand-700 to-ink text-white transition-all duration-300 ease-spring lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
-          collapsed ? "lg:w-[72px]" : "lg:w-[256px]"
+        className={`fixed inset-y-0 left-0 z-40 flex w-[272px] transform flex-col bg-gradient-to-b from-ink via-brand-700 to-ink text-white transition-all duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          collapsed ? SCHIL_ZIJBALK_IN : SCHIL_ZIJBALK_UIT
         } ${open ? "translate-x-0 shadow-e3" : "-translate-x-full"}`}
       >
-        <div className={`flex h-16 flex-shrink-0 items-center gap-2.5 px-5 ${collapsed ? "lg:justify-center lg:px-2" : ""}`}>
-          <LogoGlyph size={28} tone="light" />
-          <p className={`font-display text-sm font-bold text-white ${collapsed ? "lg:hidden" : ""}`}>ZekerFlex</p>
+        {/* het logo staat op dezelfde plek, ingeklapt en uitgeklapt (31 px van links = het midden van 94 px) */}
+        <div className="flex h-16 flex-shrink-0 items-center gap-2.5 pl-[31px] pr-3 lg:h-[78px]">
+          <LogoGlyph size={32} tone="light" />
+          <p className={`font-display text-base font-bold text-white ${collapsed ? "lg:hidden" : ""}`}>ZekerFlex</p>
         </div>
 
         {/* in- en uitklappen (alleen op een laptop): ingeklapt blijven de pictogrammen staan, met de naam als tooltip */}
@@ -184,104 +243,67 @@ export function EmployerShell({
           aria-controls="employer-sidebar"
           aria-label={collapsed ? t.shell.expand : t.shell.collapse}
           title={collapsed ? t.shell.expand : undefined}
-          className={`mx-3 hidden min-h-11 flex-shrink-0 items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white lg:flex ${
-            collapsed ? "justify-center px-0" : ""
-          }`}
+          className="mx-3 hidden min-h-12 flex-shrink-0 items-center gap-2 rounded-md pl-[23px] pr-3 text-sm text-white/85 transition-colors hover:bg-white/15 hover:text-white lg:flex"
         >
-          <span className={`grid h-9 w-9 flex-shrink-0 place-items-center transition-transform ${collapsed ? "" : "rotate-180"}`} aria-hidden>
+          <span className={`grid h-6 w-6 flex-shrink-0 place-items-center transition-transform ${collapsed ? "" : "rotate-180"}`} aria-hidden>
             <RailToggleGlyph />
           </span>
           {!collapsed && t.shell.collapse}
         </button>
         <div className="mx-3 mt-2 flex-shrink-0 border-t border-white/20" aria-hidden />
 
-        <nav aria-label="Hoofdnavigatie" className="flex-1 space-y-3 overflow-y-auto p-3">
-          {groups.map((g, gi) => (
-            <div key={gi} className="space-y-1">
+        <nav aria-label="Hoofdnavigatie" className="flex-1 overflow-y-auto py-4">
+          {/* de hoofdregels, met Instellingen als laatste (eigenaar, 23 nov 2026: zoals bij YoungOnes). De stip (amber = wacht op jou)
+              verdwijnt zodra het bedrijfsprofiel af is. */}
+          <div className="space-y-2">
+            {hoofd.map((n) => (
+              <RailLink key={n.href} item={n} active={isActive(n.href)} collapsed={collapsed} onKies={sluitLade} />
+            ))}
+            <RailLink
+              item={instellingen}
+              active={isActive(settingsHref)}
+              collapsed={collapsed}
+              stip={profielOnvolledig}
+              stipTekst={t.shell.profileIncomplete}
+              onKies={sluitLade}
+            />
+          </div>
+
+          {/* de tweede groep: rustiger (kleiner, lichter), met een kopje per blok als de zijbalk is uitgeklapt */}
+          {rest.length > 0 && <div className="mx-3 my-4 border-t border-white/20" aria-hidden />}
+          {restGroepen.map((g, gi) => (
+            <div key={gi} className="space-y-0.5">
               {g.section && (
-                <p className={`px-3 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-white/60 ${collapsed ? "lg:hidden" : ""}`}>
+                <p className={`px-[35px] pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/60 ${collapsed ? "lg:hidden" : ""}`}>
                   {g.section}
                 </p>
               )}
               {g.section && collapsed && gi > 0 && <div className="mx-3 my-2 hidden border-t border-white/20 lg:block" />}
-              {g.items.map((n) => {
-                const active = isActive(n.href);
-                return (
-                  <Link
-                    key={n.href}
-                    href={n.href}
-                    onClick={() => setOpen(false)}
-                    title={collapsed ? n.label : undefined}
-                    aria-current={active ? "page" : undefined}
-                    className={`${railRij} ${collapsed ? "lg:justify-center lg:px-0" : ""} ${
-                      active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    {active && <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-brand-mint" />}
-                    <span className="grid h-9 w-9 flex-shrink-0 place-items-center">{n.icon}</span>
-                    <span className={collapsed ? "lg:sr-only" : ""}>{n.label}</span>
-                    {n.badge ? <span className={collapsed ? "ml-auto lg:absolute lg:right-1 lg:top-1 lg:ml-0" : "ml-auto"}>{n.badge}</span> : null}
-                  </Link>
-                );
-              })}
+              {g.items.map((n) => (
+                <RailLink key={n.href} item={n} active={isActive(n.href)} collapsed={collapsed} rustig onKies={sluitLade} />
+              ))}
             </div>
           ))}
         </nav>
 
-        <div className="flex-shrink-0 border-t border-white/20 p-3">
-          {/* ZekerFlex OS: elk scherm als app op één bureaublad (de naam is in elke taal gelijk) */}
-          {/* Een gewone link (geen <Link>): /os moet als eigen document laden, anders houdt de pagina de CSP van dit scherm (geen frame-src 'self') en blijft elk app-venster leeg. target=_top: vanuit een OS-venster zelf geen OS in de OS. */}
-          {toonOs && (
-          // eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig voor de CSP van /os
-          <a
-            href="/os"
-            target="_top"
-            onClick={() => setOpen(false)}
-            title={collapsed ? "ZekerFlex OS" : undefined}
-            className={`${railRij} text-brand-mint hover:bg-white/10 ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
-          >
-            <span className="grid h-9 w-9 flex-shrink-0 place-items-center">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                <rect x="1" y="1" width="6" height="6" rx="1.5" />
-                <rect x="9" y="1" width="6" height="6" rx="1.5" />
-                <rect x="1" y="9" width="6" height="6" rx="1.5" />
-                <rect x="9" y="9" width="6" height="6" rx="1.5" />
-              </svg>
-            </span>
-            <span className={collapsed ? "lg:sr-only" : ""}>ZekerFlex OS</span>
-          </a>
-          )}
-          {/* Instellingen staat er voor elk bedrijf (eigenaar, 23 nov 2026: zoals bij YoungOnes), onderaan de zijbalk als laatste ingang.
-              De stip (amber = wacht op jou) verdwijnt zodra het bedrijfsprofiel af is. `relative`: de sr-only tekst blijft in deze regel. */}
-          <Link
-            href={settingsHref}
-            onClick={() => setOpen(false)}
-            title={collapsed ? t.shell.settings : undefined}
-            aria-current={isActive(settingsHref) ? "page" : undefined}
-            className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors min-h-11 ${
-              collapsed ? "lg:justify-center lg:px-0" : ""
-            } ${isActive(settingsHref) ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
-          >
-            {isActive(settingsHref) && <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-brand-mint" />}
-            <span className="relative grid h-9 w-9 flex-shrink-0 place-items-center">
-              <SettingsGlyph />
-              {profielOnvolledig && <span aria-hidden className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-warn" />}
-            </span>
-            <span className={collapsed ? "lg:sr-only" : ""}>{t.shell.settings}</span>
-            {profielOnvolledig && <span className="sr-only"> ({t.shell.profileIncomplete})</span>}
-          </Link>
-          <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
-            <button
-              title={collapsed ? t.shell.logout : undefined}
-              className={`${railRij} w-full text-left text-white/70 hover:bg-white/10 hover:text-white ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
-            >
-              <span className="grid h-9 w-9 flex-shrink-0 place-items-center">
-                <LogoutGlyph />
+        {/* ZekerFlex OS: elk scherm als app op één bureaublad (de naam is in elke taal gelijk) */}
+        {/* Een gewone link (geen <Link>): /os moet als eigen document laden, anders houdt de pagina de CSP van dit scherm (geen frame-src 'self') en blijft elk app-venster leeg. target=_top: vanuit een OS-venster zelf geen OS in de OS. */}
+        {toonOs && (
+          <div className="flex-shrink-0 border-t border-white/20 py-3">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig voor de CSP van /os */}
+            <a href="/os" target="_top" onClick={sluitLade} title={collapsed ? "ZekerFlex OS" : undefined} className={`${railRijRustig} text-brand-mint hover:bg-white/10`}>
+              <span className={railIcoonRustig}>
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                  <rect x="1" y="1" width="6" height="6" rx="1.5" />
+                  <rect x="9" y="1" width="6" height="6" rx="1.5" />
+                  <rect x="1" y="9" width="6" height="6" rx="1.5" />
+                  <rect x="9" y="9" width="6" height="6" rx="1.5" />
+                </svg>
               </span>
-              <span className={collapsed ? "lg:sr-only" : ""}>{t.shell.logout}</span>
-            </button>
-          </form>
-        </div>
+              <span className={collapsed ? "lg:sr-only" : ""}>ZekerFlex OS</span>
+            </a>
+          </div>
+        )}
       </aside>
 
       {open && (
@@ -290,47 +312,51 @@ export function EmployerShell({
 
       {/* Main */}
       <div className="flex min-h-screen min-w-0 flex-col bg-paper-soft">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-hair bg-white px-4 lg:px-8">
+        {/* de kopbalk: wit, 78 px hoog op een laptop, met een zachte schaduw in plaats van een rand (.wg-kop in app/globals.css) */}
+        <header className={`wg-kop sticky top-0 z-20 flex items-center gap-3 bg-white px-4 lg:px-8 ${SCHIL_KOPBALK}`}>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong lg:hidden"
+            className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-lg border border-hairstrong text-ink lg:hidden"
             aria-label={open ? "Sluit navigatiemenu" : "Open navigatiemenu"}
             aria-expanded={open}
             aria-controls="employer-sidebar"
           >
-            ☰
+            <MenuGlyph />
           </button>
 
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="truncate font-display text-sm font-bold text-ink">{orgName}</span>
-            {/* zonder beoordelingen geen vijf grijze sterren met "(0 …)": pas tonen vanaf de eerste */}
-            {rating && rating.count > 0 && (
+          {/* links: de bedrijfsnaam met de sterren en het aantal beoordelingen (de link gaat naar de beoordelingen van het bedrijf).
+              Op een telefoon vallen de sterren weg en krijgt de naam de ruimte, over twee regels als het moet. */}
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="line-clamp-2 min-w-0 break-words font-display text-sm font-bold leading-tight text-ink sm:line-clamp-1">{orgName}</span>
+            {/* zoals de referentie (ronde 2, 23 nov 2026): ook zonder beoordelingen staan de vijf lege sterren er, met "(0 beoordelingen)".
+                Zonder gegevens (geen bedrijf gekoppeld) staat er niets. */}
+            {rating && (
               <Link
                 href="/werkgever/reviews"
-                className="hidden items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-paper-soft sm:flex"
+                className="hidden min-h-11 flex-shrink-0 items-center gap-2 rounded-md px-1 hover:bg-paper-soft sm:flex"
                 title={t.shell.reviewsTitle}
               >
-                <Stars value={rating.average} />
-                <span className="text-xs text-brand-600 underline-offset-2 hover:underline">
-                  {fmt(rating.count === 1 ? t.shell.reviewsCountOne : t.shell.reviewsCount, {
-                    avg: rating.average.toFixed(1),
-                    n: rating.count,
-                  })}
+                <Stars value={rating.count > 0 ? rating.average : 0} />
+                <span className="text-xs font-semibold text-brand-600 underline-offset-2 hover:underline">
+                  {rating.count > 0
+                    ? `(${fmt(rating.count === 1 ? t.shell.reviewsCountOne : t.shell.reviewsCount, { avg: rating.average.toFixed(1), n: rating.count })})`
+                    : t.shell.reviewsZero}
                 </span>
               </Link>
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <label className="hidden items-center rounded-lg border border-hairstrong bg-white px-2 py-1.5 text-xs text-neutralx-600 sm:flex">
-              <span className="mr-1.5" aria-hidden>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {/* de taalkeuze: even hoog als de knoppen ernaast */}
+            <label className="hidden h-11 items-center rounded-lg border border-hairstrong bg-white pl-3 pr-2 text-sm text-neutralx-600 sm:flex">
+              <span className="mr-2" aria-hidden>
                 🌐
               </span>
               <select
                 value={locale}
                 onChange={(e) => setLocale(e.target.value as Locale)}
-                className="bg-transparent pr-1 outline-none"
+                className="h-full bg-transparent pr-1 outline-none"
                 aria-label={t.shell.language}
               >
                 {EMPLOYER_LOCALES.map((code) => (
@@ -341,32 +367,30 @@ export function EmployerShell({
               </select>
             </label>
 
-            <ThemeToggle
-              theme={theme}
-              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
-            />
+            {/* op een telefoon staan de weergave en de hulp niet in de kopbalk (de bedrijfsnaam heeft de ruimte nodig): de weergave
+                staat dan in het gebruikersmenu, het hulpcentrum in de lade */}
+            <ThemeToggle theme={theme} className={`${kopKnop} hidden sm:grid`} texts={locale === "en" ? THEMA_EN : THEMA_NL} />
 
-            {hulp ? (
-              <HulpCentrum t={hulp} soort="bedrijf" handleidingen={handleidingen} />
-            ) : (
-              <Link
-                href={helpHref}
-                className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
-                aria-label={t.shell.help}
-                title={t.shell.help}
-              >
-                ?
-              </Link>
-            )}
+            <div className="hidden sm:block">
+              {hulp ? (
+                <HulpCentrum t={hulp} soort="bedrijf" handleidingen={handleidingen} />
+              ) : (
+                <Link href={helpHref} className={kopKnop} aria-label={t.shell.help} title={t.shell.help}>
+                  ?
+                </Link>
+              )}
+            </div>
 
             {/* de bel van het bedrijf: alleen bedrijfsmeldingen, met tabbladen voor een bedrijf (Diensten, Uren & facturen) */}
             <NotificationsBell app="werkgever" texts={locale === "en" ? NOTIFICATIONS_BEDRIJF.en : NOTIFICATIONS_BEDRIJF.nl} />
             <PushSelfHeal />
 
-            <div ref={userMenuRef} className="relative">
+            <div ref={userMenuRef} className="relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setUserMenu((v) => !v)}
+                aria-expanded={userMenu}
+                aria-haspopup="menu"
                 className="flex min-h-11 items-center gap-2 rounded-lg border border-hairstrong bg-white px-2.5 py-1.5 text-sm font-medium text-ink"
               >
                 {avatarUrl ? (
@@ -401,6 +425,10 @@ export function EmployerShell({
                   <Link href="/" onClick={() => setUserMenu(false)} className={menuRij}>
                     {t.common.naarWebsite}
                   </Link>
+                  {/* alleen op een telefoon: de lichte of donkere weergave (op een laptop staat die knop in de kopbalk) */}
+                  <div className="overflow-hidden rounded-lg sm:hidden">
+                    <ThemeToggleRow theme={theme} texts={locale === "en" ? THEMA_EN : THEMA_NL} />
+                  </div>
                   <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
                     <button className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm text-crit hover:bg-crit/5">
                       {t.shell.logout}
@@ -412,9 +440,9 @@ export function EmployerShell({
           </div>
         </header>
 
-        <main id="main" tabIndex={-1} key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 outline-none lg:px-8 lg:py-10">
-          {/* één gecentreerde kolom met een vaste breedte, op elk scherm */}
-          <div className="mx-auto max-w-6xl">
+        <main id="main" tabIndex={-1} key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 outline-none lg:px-8 lg:py-12">
+          {/* de inhoud staat links uitgelijnd, op 32 px van de zijbalk, met een maximale breedte (geen gat meer links en rechts) */}
+          <div className={SCHIL_INHOUD}>
             {children}
           </div>
         </main>
@@ -428,8 +456,17 @@ export function EmployerShell({
 /** een streep met een pijl naar rechts (uitklappen); de knop draait hem om voor inklappen */
 function RailToggleGlyph() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M5 4v16M10 12h9m0 0-4-4m4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M5 4v16M10 12h9m0 0-4-4m4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** drie strepen: de menuknop op een telefoon */
+function MenuGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -444,14 +481,6 @@ function SettingsGlyph() {
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function LogoutGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M15 12H5m10 0-3-3m3 3-3 3M9 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

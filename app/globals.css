@@ -1144,3 +1144,35 @@ html[data-tip-open] button[aria-label="Chat openen"] { visibility: hidden; }
 .app-scope[data-app="werkgever"] .btn-mint { border-radius: 0.5rem; }
 .app-scope[data-app="werkgever"] .btn-primary:hover,
 .app-scope[data-app="werkgever"] .btn-mint:hover { transform: none; }
+
+/* ---- ronde 2 (23 nov 2026), na het meten naast de referentie. Alles van de werkgeversapp staat hier bij elkaar. ----
+   De neutrale vlakken: een koele, lichte pagina-achtergrond en zuiver witte kaarten in plaats van de warme papiertint. Het
+   groen en het mint blijven het accent. Alleen het lichte thema; het donkere thema heeft zijn eigen vlakken (hierboven). */
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) {
+  --wg-vlak: #F1F3F8;
+  --wg-rand: #E1E5EC;
+  --wg-rand-sterk: #CBD2DC;
+}
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]).bg-paper-soft,
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .bg-paper-soft,
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .hover\:bg-paper-soft:hover { background-color: var(--wg-vlak); }
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .border-hair,
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .divide-hair > *,
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .surface { border-color: var(--wg-rand); }
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .border-hairstrong { border-color: var(--wg-rand-sterk); }
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .bg-hair { background-color: var(--wg-rand); }
+/* de kopbalk: een zachte schaduw in plaats van een rand; in het donker is een schaduw niet te zien, daar een dunne lijn */
+.app-scope[data-app="werkgever"] .wg-kop { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+.app-scope[data-app="werkgever"][data-theme="dark"] .wg-kop { box-shadow: none; border-bottom: 1px solid var(--app-edge); }
+/* de paginatitel staat in de donkere merkkleur; in het donker wit (de algemene regel maakt text-brand-700 daar mint) */
+.app-scope[data-app="werkgever"][data-theme="dark"] .wg-titel { color: var(--app-fg) !important; }
+/* de achtergrond loopt door tot onderaan, ook als de pagina korter is dan het scherm of de browserbalk inschuift (op een
+   telefoon stond er in het donker een witte strook onder de pagina): de pagina zelf krijgt de kleur van de app */
+html:has(.app-scope[data-app="werkgever"]) body { background-color: #F1F3F8; }
+html:has(.app-scope[data-app="werkgever"][data-theme="dark"]) body { background-color: #0B0D11; }
+.app-scope[data-app="werkgever"] { min-height: 100vh; min-height: 100dvh; }
+/* een gekozen keuzevak (bijvoorbeeld "Ja, mijn werkers checken in"): donkergroen met witte tekst, in beide thema's (wit op het
+   diepe groen is ruim 9:1; de grijze uitleg op mintgroen haalde 3,2:1) */
+.app-scope[data-app="werkgever"] .wg-gekozen,
+.app-scope[data-app="werkgever"] .wg-gekozen * { color: #ffffff !important; }
+.app-scope[data-app="werkgever"] .wg-gekozen { background-color: rgb(var(--brand-700-rgb)) !important; border-color: rgb(var(--brand-700-rgb)) !important; }

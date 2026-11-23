@@ -20,10 +20,11 @@ describe("de ingang Instellingen in de zijbalk", () => {
     expect(shell).not.toContain("toonInstellingen");
     expect(layout).not.toContain("toonInstellingen");
     expect(shell).toContain('settingsHref = "/werkgever/instellingen"');
-    expect(shell).toContain("href={settingsHref}");
-    // de regel zelf staat niet meer achter een voorwaarde
-    expect(shell).toMatch(/<Link\s+href=\{settingsHref\}\s+onClick/);
-    expect(shell).not.toMatch(/&&\s*\(\s*<Link\s+href=\{settingsHref\}/);
+    // ronde 2 (23 nov 2026): Instellingen is de laatste van de hoofdregels in de zijbalk, een gewone regel zoals de andere
+    expect(shell).toContain("const instellingen: NavItem = { href: settingsHref, label: t.shell.settings, icon: <SettingsGlyph /> };");
+    // de regel zelf staat niet achter een voorwaarde
+    expect(shell).toMatch(/\n            <RailLink\n              item=\{instellingen\}/);
+    expect(shell).not.toMatch(/&&\s*\(?\s*<RailLink\s+item=\{instellingen\}/);
   });
 
   it("het menu zelf is niet aangeraakt: Bedrijfsprofiel en de rest blijven staan", () => {
@@ -36,10 +37,12 @@ describe("de ingang Instellingen in de zijbalk", () => {
 
   it("de stip komt van één regel en past de zijbalk niet aan als het profiel af is", () => {
     expect(shell).toContain("profielOnvolledig = false");
-    expect(shell).toContain("{profielOnvolledig && <span aria-hidden");
+    expect(shell).toContain("stip={profielOnvolledig}");
+    expect(shell).toContain("stipTekst={t.shell.profileIncomplete}");
+    expect(shell).toContain("{stip && <span aria-hidden");
     // een schermlezer hoort het ook, in een regel die `relative` is (anders ontsnapt de sr-only tekst, AGENTS.md)
-    expect(shell).toContain("{profielOnvolledig && <span className=\"sr-only\"> ({t.shell.profileIncomplete})</span>}");
-    expect(shell).toMatch(/className=\{`relative flex items-center gap-3 rounded-xl px-3 py-2\.5 text-sm font-medium transition/);
+    expect(shell).toContain("{stip && stipTekst ? <span className=\"sr-only\"> ({stipTekst})</span> : null}");
+    expect(shell).toMatch(/const railRij = "group relative /);
     expect(layout).toContain("profielOnvolledig={profielExtra !== null && hasRole(principal, \"HQ_ADMIN\", \"PLATFORM_ADMIN\") && bedrijfsprofielOnvolledig(profielExtra)}");
     // amber = wacht op jou (AGENTS.md: één kleur, één betekenis); een effen vlak heeft geen donkere regel nodig
     expect(shell).toContain("h-2.5 w-2.5 rounded-full bg-warn");

@@ -20,8 +20,22 @@ export const BLOK_KOP = "font-display text-lg font-bold leading-snug text-ink";
 /** De uitleg onder zo'n kop. */
 export const BLOK_UITLEG = "mt-1 text-sm leading-relaxed text-neutralx-600";
 
-/** De paginatitel: hoofdletters, één per pagina. Kleiner op een telefoon, zodat een lang woord op 390 px past. */
-export const KOP_TITEL = "break-words font-display text-xl font-extrabold uppercase leading-tight tracking-tight text-ink sm:text-2xl lg:text-[1.75rem]";
+// --- de schil (components/app/EmployerShell.tsx), op de maten die naast de referentie zijn gemeten (ronde 2, 23 nov 2026) ---
+/** De zijbalk is op een laptop 94 px breed als hij is ingeklapt en 221 px als hij is uitgeklapt; de inhoud krijgt de rest. */
+export const SCHIL_RASTER_IN = "lg:grid-cols-[94px_minmax(0,1fr)]";
+export const SCHIL_RASTER_UIT = "lg:grid-cols-[221px_minmax(0,1fr)]";
+export const SCHIL_ZIJBALK_IN = "lg:w-[94px]";
+export const SCHIL_ZIJBALK_UIT = "lg:w-[221px]";
+/** De kopbalk: 78 px hoog op een laptop, 64 px op een telefoon. */
+export const SCHIL_KOPBALK = "h-16 lg:h-[78px]";
+/** De inhoud: links uitgelijnd (geen `mx-auto`), hooguit 1192 px breed. */
+export const SCHIL_INHOUD = "max-w-[1192px]";
+
+/**
+ * De paginatitel: hoofdletters, één per pagina, in de donkere merkkleur. 22 px op een telefoon (een lang woord past op 390 px),
+ * 32 px op een laptop. `wg-titel`: in het donkere thema wit in plaats van mint (app/globals.css).
+ */
+export const KOP_TITEL = "wg-titel break-words font-display text-[1.375rem] font-extrabold uppercase leading-tight tracking-tight text-brand-700 sm:text-[1.625rem] lg:text-[2rem]";
 /** De link onder de titel ("Terug naar instellingen"): minstens 44 px hoog om te tikken. */
 export const KOP_TERUG = "mt-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline";
 
@@ -33,8 +47,14 @@ export const TABEL_CEL = "block break-words sm:table-cell sm:px-6 sm:py-4";
 /** Twee kolommen op een laptop (links kop en uitleg, rechts de velden), onder elkaar op een telefoon. */
 export const FORMULIER_RIJ = "grid gap-5 border-t border-hair py-8 first:border-t-0 first:pt-0 last:pb-0 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12";
 
-/** De knoppenrij onder een dialoog: op een telefoon onder elkaar met de hoofdknop bovenaan, op een laptop rechts naast elkaar. */
-export const DIALOOG_ACTIES = "flex flex-col-reverse gap-2 px-6 pb-6 pt-4 sm:flex-row sm:justify-end";
+/**
+ * De knoppenrij onder een dialoog. In de code staat Annuleren eerst en de hoofdknop als laatste; op een telefoon staan ze onder
+ * elkaar met de hoofdknop bovenaan, op een laptop links naast elkaar met de hoofdknop vóór Annuleren (rij omgekeerd, dus
+ * `justify-end` is hier de linkerkant).
+ */
+export const DIALOOG_ACTIES = "flex flex-col-reverse gap-2 px-6 pb-6 pt-5 sm:flex-row-reverse sm:justify-end sm:px-8";
+/** De breedte van het paneel van een dialoog op een laptop. */
+export const DIALOOG_BREEDTE = "max-w-[640px]";
 
 /** De baan en de knop van een schakelaar. Groen = aan (doen), grijs = uit. */
 export function schakelaarKlassen(aan: boolean): { baan: string; knop: string } {

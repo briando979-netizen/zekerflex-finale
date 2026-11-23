@@ -47,3 +47,11 @@ export const THEMA_NL = {
   zetDonkerAan: "Zet donkere weergave aan",
 };
 export type ThemaTeksten = typeof THEMA_NL;
+/** de werkgeversapp is tweetalig (NL/EN); de werker-app haalt deze teksten uit zijn eigen woordenlijst */
+export const THEMA_EN: ThemaTeksten = {
+  weergave: "Appearance",
+  licht: "Light",
+  donker: "Dark",
+  zetLichtAan: "Switch to light mode",
+  zetDonkerAan: "Switch to dark mode",
+};
