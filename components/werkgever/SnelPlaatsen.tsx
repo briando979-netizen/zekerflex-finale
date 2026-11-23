@@ -8,6 +8,7 @@ import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/
 import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { conceptCost, conceptHours, naarSnelFormulier } from "@/lib/klusconcept/concept";
 import { kostenBedragen } from "@/lib/klusconcept/kosten-tekst";
+import { geldTekst } from "@/lib/klusconcept/weergave";
 import { KostenLijst } from "@/components/app/KostenLijst";
 import { useT } from "@/components/i18n/I18nProvider";
 import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
@@ -142,7 +143,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
   const datumLabel = datum
     ? new Date(`${datum}T12:00:00`).toLocaleDateString(locale === "nl" ? "nl-NL" : "en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Amsterdam" })
     : "";
-  const tariefLabel = `€ ${locale === "nl" ? (tariefCent / 100).toFixed(2).replace(".", ",") : (tariefCent / 100).toFixed(2)}`;
+  const tariefLabel = geldTekst(tariefCent, locale);
 
   const kies = (s: SnelSjabloon) => {
     setSjabloon(s);

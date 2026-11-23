@@ -21,6 +21,7 @@ import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
 import { BrancheEtiket, KlusBeeldVlak } from "@/components/app/KlusBeeldVlak";
 import { KostenLijst } from "@/components/app/KostenLijst";
 import { kostenBedragen } from "@/lib/klusconcept/kosten-tekst";
+import { bedragTekst, centsUitTarief, geldTekst, tariefInvoer, tariefWeergave, urenTekst, type WeergaveTaal } from "@/lib/klusconcept/weergave";
 import { useAutoHoogte } from "@/components/app/useAutoHoogte";
 import { SJABLOON_EN, SJABLOON_NL } from "@/lib/shifts/sjabloon-kiezer-teksten";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
@@ -103,7 +104,8 @@ export function NewShiftForm({
   const { locale, t: dict } = useI18n();
   const n = dict.newShiftForm;
   const loc = locale === "nl" ? "nl-NL" : "en-GB";
-  const komma = (s: string) => (locale === "nl" ? s.replace(".", ",") : s);
+  // geld, uren en het tariefveld in de taal van de pagina (lib/klusconcept/weergave.ts): Nederlands komma, Engels punt
+  const taal: WeergaveTaal = locale === "en" ? "en" : "nl";
   const WD = n.weekdagen.split(",");
   const init = edit?.initial;
   const kopie = edit ? undefined : voorinvulling;
@@ -210,8 +212,8 @@ export function NewShiftForm({
 
   // live tarief-advies / vervullingskans (debounced) zodra titel, tijd en tarief er zijn
   useEffect(() => {
-    const rateCents = Math.round(parseFloat(rateEuro.replace(",", ".")) * 100);
-    if (title.trim().length < 2 || !startsAt || !Number.isFinite(rateCents) || rateCents <= 0) {
+    const rateCents = centsUitTarief(rateEuro);
+    if (title.trim().length < 2 || !startsAt || rateCents <= 0) {
       setForecast(null);
       return;
     }
@@ -315,7 +317,7 @@ export function NewShiftForm({
     naarStap2();
   }
 
-  const hourlyRateCents = Math.round(parseFloat(rateEuro || "0") * 100);
+  const hourlyRateCents = centsUitTarief(rateEuro);
   const cat = useMemo(() => shiftCategory(title || "Dienst", null), [title]);
 
   const hours = useMemo(() => {
@@ -334,12 +336,12 @@ export function NewShiftForm({
   const kostenTekst: SnelTeksten = locale === "en" ? SNEL_EN : SNEL_NL;
   const kostenZichtbaar = hours > 0 && hourlyRateCents > 0;
   // alle bedragen op de cent en het totaal is de som van loon en platformkosten (lib/klusconcept/kosten-tekst.ts, 23 nov 2026)
-  const bedragen = kostenBedragen(kosten, locale === "en" ? "en" : "nl");
+  const bedragen = kostenBedragen(kosten, taal);
   const kostenRegels = {
     teksten: kostenTekst,
     meer: (Number(positions) || 1) > 1 || totalDays > 1,
     loon: bedragen.loon,
-    uren: kosten.totalHours.toLocaleString(loc, { maximumFractionDigits: 2 }),
+    uren: urenTekst(kosten.totalHours, taal),
     platform: bedragen.platform,
     totaal: bedragen.totaal,
   };
@@ -682,24 +684,25 @@ export function NewShiftForm({
             </label>
             <label className="block sm:col-span-2">
               <span className="field-label">{n.uurtarief}</span>
+              {/* tekstveld met een decimaaltoetsenbord: de browser maakt van een getalveld een punt of komma naar zijn eigen taal; dit
+                  veld toont altijd de komma van het Nederlands of de punt van het Engels (lib/klusconcept/weergave.ts) */}
               <input
-                type="number"
-                step="0.10"
-                min={minRateEuro.toFixed(2)}
-                value={rateEuro}
-                onChange={(e) => setRateEuro(e.target.value)}
-                onBlur={(e) => {
-                  const v = parseFloat(e.target.value.replace(",", "."));
-                  if (Number.isFinite(v) && v < minRateEuro) setRateEuro(minRateEuro.toFixed(2));
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={tariefWeergave(rateEuro, taal)}
+                onChange={(e) => setRateEuro(tariefInvoer(e.target.value))}
+                onBlur={() => {
+                  if (rateEuro.trim() !== "" && hourlyRateCents < minRateCents) setRateEuro(minRateEuro.toFixed(2));
                 }}
                 className="field-input"
               />
               <span className="mt-1 block text-xs text-neutralx-400">
-                {fmt(n.minimumTekst, { min: komma(minRateEuro.toFixed(2)) })}
+                {fmt(n.minimumTekst, { min: bedragTekst(minRateCents, taal) })}
               </span>
               {hourlyRateCents > 0 && hourlyRateCents < minRateCents && (
                 <span className="mt-1 block text-xs font-medium text-crit">
-                  {fmt(n.minimumFout, { min: komma(minRateEuro.toFixed(2)) })}
+                  {fmt(n.minimumFout, { min: bedragTekst(minRateCents, taal) })}
                 </span>
               )}
             </label>
@@ -905,10 +908,10 @@ export function NewShiftForm({
               </div>
             )}
             <div className="space-y-2 p-4 text-sm">
-              <Row k={n.rijTarief} v={fmt(n.perUur, { bedrag: komma((hourlyRateCents / 100).toFixed(2)) })} />
-              <Row k={n.rijDuur} v={hours ? `${fmt(n.duurUren, { u: hours })}${Number(breakMin) ? fmt(n.duurPauze, { m: breakMin }) : ""}` : "—"} />
+              <Row k={n.rijTarief} v={fmt(n.perUur, { bedrag: bedragTekst(hourlyRateCents, taal) })} />
+              <Row k={n.rijDuur} v={hours ? `${fmt(n.duurUren, { u: urenTekst(hours, taal) })}${Number(breakMin) ? fmt(n.duurPauze, { m: breakMin }) : ""}` : "—"} />
               <Row k={n.rijPlekken} v={fmt(n.plekkenPerDag, { n: positions })} />
-              <Row k={n.rijBruto} v={grossPerSeat ? `€ ${(grossPerSeat / 100).toFixed(0)}` : "—"} highlight />
+              <Row k={n.rijBruto} v={grossPerSeat ? geldTekst(grossPerSeat, taal) : "—"} highlight />
               {!edit && (
                 <p className="pt-1 text-xs text-neutralx-500">
                   {fmt(n.voorbeeldAfzeg, { label: annuleerTermijnLabel(Number(annuleerUren), locale === "en" ? "en" : "nl") })}
