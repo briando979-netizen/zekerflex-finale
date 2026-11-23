@@ -518,6 +518,8 @@ export const nl = {
     title: "Klus uitzetten",
     eyebrow: "Nieuw",
     subtitle: "Kies een functie of vul het zelf in. Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert.",
+    // de korte weg (?snel=1) heeft de eerste zin niet: "Kies een functie of vul het zelf in" hoort bij de kiezer van het uitgebreide formulier
+    subtitleSnel: "Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert.",
     back: "Terug",
     // de korte weg blijft, maar het uitgebreide formulier is de standaard (22 nov 2026)
     snelLink: "Liever snel? Plaats een klus in 1 minuut",

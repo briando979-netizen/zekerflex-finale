@@ -98,7 +98,8 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
       <PageHeader
         title={n.title}
         eyebrow={n.eyebrow}
-        subtitle={n.subtitle}
+        // de korte weg (?snel=1) zonder "Kies een functie of vul het zelf in": dat hoort bij de kiezer van het uitgebreide formulier
+        subtitle={snelModus ? n.subtitleSnel : n.subtitle}
         action={
           <Link href="/werkgever/diensten" className="btn-ghost">
             {n.back}

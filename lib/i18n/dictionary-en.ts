@@ -500,6 +500,7 @@ export const en: Dict = {
     title: "Post a job",
     eyebrow: "New",
     subtitle: "Pick a role or fill it in yourself. Your job reaches verified workers nearby; you choose who you schedule.",
+    subtitleSnel: "Your job reaches verified workers nearby; you choose who you schedule.",
     back: "Back",
     snelLink: "In a hurry? Place a job in 1 minute",
     noBranches: "We first need the address of your company. We use it to find workers near you.",
