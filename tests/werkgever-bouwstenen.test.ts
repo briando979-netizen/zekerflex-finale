@@ -157,7 +157,7 @@ describe("de onderdelen", () => {
     expect(venster).toContain("items-end");
     expect(venster).toContain("lg:items-center");
     // de kop staat in de code na de inhoud: de focus gaat bij het openen naar het eerste veld, niet naar de sluitknop
-    expect(venster.indexOf("{children}")).toBeLessThan(venster.indexOf("order-first"));
+    expect(venster.indexOf("{children}")).toBeLessThan(venster.indexOf('className="order-first'));
     // het venster staat buiten de schil (Portal) en zet daarom zelf de vormen van de werkgeversapp aan
     expect(venster).toContain('data-app="werkgever" className="app-scope ');
     // de gewone sheet (werker-app) is niet veranderd
