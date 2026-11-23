@@ -22,15 +22,16 @@ export async function DemoBanner({ href, knop }: { href: string; knop: string })
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-brand-600 px-4 py-2 text-center text-sm text-white">
       <span className="font-medium">{DEMO_BANNER_TEKST}</span>
+      {/* op een telefoon minstens 44 px hoog (23 nov 2026: 24 en 16 px); vanaf 640 px de balk zoals hij was */}
       <Link
         href={href}
-        className="rounded-full bg-brand-mint px-3 py-1 text-xs font-bold text-ink transition hover:brightness-105"
+        className="inline-flex min-h-[44px] items-center rounded-full bg-brand-mint px-4 py-1 text-xs font-bold text-ink transition hover:brightness-105 sm:min-h-0 sm:px-3"
       >
         {knop}
       </Link>
       <Link
         href={VOORBEELD_UITGANG}
-        className="text-xs font-semibold text-white/90 underline underline-offset-2 hover:text-white"
+        className="inline-flex min-h-[44px] items-center px-2 text-xs font-semibold text-white/90 underline underline-offset-2 hover:text-white sm:min-h-0 sm:px-0"
       >
         {DEMO_BANNER_SLUITEN}
       </Link>
