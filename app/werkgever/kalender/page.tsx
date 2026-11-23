@@ -6,6 +6,7 @@ import { ColorLegend } from "@/components/app/ColorLegend";
 import { PlanningTabs } from "@/components/werkgever/PlanningTabs";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { samenTitel } from "@/lib/werkgever/samen-titel";
 import { amsterdamParts } from "@/lib/time/amsterdam";
 
 export const dynamic = "force-dynamic";
@@ -40,13 +41,15 @@ export default async function KalenderPage(
   const principal = await requirePrincipal();
   const t = await getDict();
   const localeTag = (await getLocale()) === "en" ? "en-GB" : "nl-NL";
+  // met de vlag heet de ingang in het menu "Planning" (Kalender is dan een tabblad eronder): de titel zegt hetzelfde
+  const titel = await samenTitel("planning", t.calendar.title);
   const { y, mo } = parseMonth(searchParams.m);
   const cal = await getEmployerCalendarMonth(principal, y, mo);
 
   return (
     <>
       <PaginaKop
-        title={t.calendar.title}
+        title={titel}
         eyebrow={t.calendar.eyebrow}
         subtitle={fmt(cal.total === 1 ? t.calendar.subtitleOne : t.calendar.subtitle, {
           n: cal.total,

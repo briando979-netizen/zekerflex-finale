@@ -78,6 +78,22 @@ export const SAMEN_GROEPEN: Record<SamenGroep, SamenGroepDef> = {
   },
 };
 
+/** De naam van elke samengevoegde ingang in het Engels (de werkgeversapp is tweetalig). */
+export const SAMEN_LABEL_EN: Record<SamenGroep, string> = {
+  planning: "Planning",
+  uren: "Hours",
+  werkers: "My workers",
+  regels: "Rules and agreements",
+  cijfers: "Figures",
+  chat: "Chat",
+};
+
+/**
+ * De naam van een samengevoegde ingang in de taal van de app. Het menu én de titel van de pagina gebruiken deze ene naam
+ * (ronde 2, 23 nov 2026: het menu zei "Planning" en "Mijn werkers" terwijl de pagina's "Kalender" en "Favorieten" heetten).
+ */
+export const samenLabel = (groep: SamenGroep, locale: string): string => (locale === "en" ? SAMEN_LABEL_EN[groep] : SAMEN_GROEPEN[groep].label);
+
 /** De samenvoegingen als lijst, in menu-volgorde: welke sleutel de leden vervangt. */
 export const SAMENVOEGINGEN: readonly { sleutel: MenuSleutel; leden: readonly MenuSleutel[] }[] = (Object.keys(SAMEN_GROEPEN) as SamenGroep[]).map((g) => ({
   sleutel: SAMEN_GROEPEN[g].sleutel,

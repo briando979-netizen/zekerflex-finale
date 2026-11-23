@@ -9,6 +9,7 @@ import { FreelancerRelationButton } from "@/components/app/FreelancerRelationBut
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
+import { samenTitel } from "@/lib/werkgever/samen-titel";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,8 @@ const BADGE: Record<string, string> = {
 export default async function FavorietenPage() {
   const t = await getDict();
   const f = t.favorites;
+  // met de vlag heet de ingang in het menu "Mijn werkers" (Favorieten is dan een tabblad eronder): de titel zegt hetzelfde
+  const titel = await samenTitel("werkers", f.title);
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
@@ -36,7 +39,7 @@ export default async function FavorietenPage() {
   return (
     <>
       <PaginaKop
-        title={f.title}
+        title={titel}
         eyebrow={f.eyebrow}
         subtitle={f.subtitle}
         action={

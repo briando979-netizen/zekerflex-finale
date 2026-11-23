@@ -14,6 +14,7 @@ import { zonderInchecken } from "@/lib/checkin/vereist-kern";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
+import { samenTitel } from "@/lib/werkgever/samen-titel";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,8 @@ export default async function UrenGoedkeurenPage() {
 
   return (
     <>
-      <PaginaKop title={h.title} subtitle={h.subtitle} />
+      {/* met de vlag heet de ingang in het menu "Uren" (Goedkeuren is dan een tabblad eronder): de titel zegt hetzelfde */}
+      <PaginaKop title={await samenTitel("uren", h.title)} subtitle={h.subtitle} />
       <SamenTabs groep="uren" actief="uren" />
 
       {autoUitgezet ? (

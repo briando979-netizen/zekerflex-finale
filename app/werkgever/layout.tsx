@@ -24,6 +24,7 @@ import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDo
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
+import { samenLabel } from "@/lib/werkgever/samen-tabs";
 import { getMenuVolgorde } from "@/lib/werkgever/menu-volgorde-store";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
@@ -83,16 +84,17 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     planner: { href: "/werkgever/planner", label: "Roosterplanner", icon: <ICalendar /> },
     agenda: { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
     // met de vlag publiek-alleen-flexwerk: samengevoegde ingangen met tabbladen op de pagina (lib/werkgever/samen-tabs.ts)
-    planning: { href: "/werkgever/kalender", label: "Planning", icon: <ICalendar /> },
-    werkers: { href: "/werkgever/favorieten", label: "Mijn werkers", icon: <IHeart /> },
-    regels: { href: "/werkgever/compliance", label: "Regels en overeenkomsten", icon: <IShield /> },
-    cijfers: { href: "/werkgever/rapportages", label: "Cijfers", icon: <IGrid /> },
+    // de naam is dezelfde als de titel van de pagina (samenLabel), in de taal van de app
+    planning: { href: "/werkgever/kalender", label: samenLabel("planning", locale), icon: <ICalendar /> },
+    werkers: { href: "/werkgever/favorieten", label: samenLabel("werkers", locale), icon: <IUsers /> },
+    regels: { href: "/werkgever/compliance", label: samenLabel("regels", locale), icon: <IShield /> },
+    cijfers: { href: "/werkgever/rapportages", label: samenLabel("cijfers", locale), icon: <IGrid /> },
     bank: { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> },
     favorieten: { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     berichten: { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
     geblokkeerd: { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
     // met de vlag aan heet het kortweg "Uren" (goedkeuren én inchecken zitten er als tabbladen onder)
-    uren: { href: "/werkgever/uren", label: alleenFlexwerk ? (locale === "en" ? "Hours" : "Uren") : t.nav.urenGoedkeuren, icon: <IClock /> },
+    uren: { href: "/werkgever/uren", label: alleenFlexwerk ? samenLabel("uren", locale) : t.nav.urenGoedkeuren, icon: <IClock /> },
     inchecken: { href: "/werkgever/inchecken", label: t.nav.inchecken, icon: <IPin /> },
     assistent: { href: "/werkgever/assistent", label: t.nav.assistent, icon: <IChat /> },
     facturen: { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc /> },
@@ -154,6 +156,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         // het vraagteken: het hulpcentrum voor bedrijven, alleen de teksten in de taal van de app gaan mee (lib/hulp/werkgever-teksten.ts)
         hulp={hulpTekstenWerkgever(locale)}
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
+        // de sterren naast de bedrijfsnaam staan er ook zonder beoordelingen (lege sterren); zonder bedrijf is rating null
         // "ZekerFlex OS" onderin de zijbalk: met de vlag aan alleen voor een platformbeheerder (een bedrijf dat personeel zoekt snapt het niet, 20 nov)
         toonOs={!alleenFlexwerk || hasRole(principal, "PLATFORM_ADMIN")}
         // "Instellingen" onderin de zijbalk staat er voor elk bedrijf, ook met de vlag aan (eigenaar, 23 nov 2026: zoals bij YoungOnes;
