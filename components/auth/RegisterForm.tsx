@@ -295,7 +295,7 @@ export function RegisterForm({
       )}
       {type === "bedrijf" && bedrijfGekozen && gratisMail && (
         <p role="status" className="mb-4 rounded-lg bg-warn/10 px-3 py-2.5 text-sm text-neutralx-700">
-          Met een gratis e-mailadres controleert ZekerFlex je bedrijf met de hand. Met je zakelijke adres gaat dat sneller.
+          Met een gratis e-mailadres controleert ZekerFlex je bedrijf met de hand zodra je iemand wilt inplannen. Met je zakelijke adres gaat dat sneller. Klussen uitzetten kan meteen.
         </p>
       )}
 
@@ -365,7 +365,7 @@ export function RegisterForm({
                 {BUITEN_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
               </optgroup>
             </select>
-            {!nederlands && <span className="mt-1 block text-xs text-neutralx-400">Na het aanmelden vul je het btw- of registratienummer van je bedrijf in. ZekerFlex controleert je bedrijf daarna.</span>}
+            {!nederlands && <span className="mt-1 block text-xs text-neutralx-400">Je zet meteen klussen uit. Het btw- of registratienummer van je bedrijf vragen we pas als je iemand wilt inplannen.</span>}
           </label>
         )}
 
