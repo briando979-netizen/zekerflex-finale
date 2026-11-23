@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { assertMayPlaceShift } from "@/lib/company/verified";
+import { eisBedrijfGecontroleerd } from "@/lib/company/verified";
 import { verstuurVoorstel } from "@/lib/planner/plan";
 import { planWeek } from "@/lib/planner/week";
 
@@ -23,8 +23,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const scope = await resolveEmployerScope(principal);
     const tenantId = scope.tenantIds[0];
     if (!tenantId) throw AppError.precondition("Geen organisatie gekoppeld aan je account");
-    // een nog niet geverifieerd bedrijf mag geen krachten inplannen (zelfde regel als bij een klus)
-    await assertMayPlaceShift(tenantId);
+    // een bedrijf dat nog niet is gecontroleerd mag geen krachten inplannen: 423 met een eigen code (lib/company/verified.ts)
+    await eisBedrijfGecontroleerd(tenantId);
     const parsed = schema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success || !planWeek(parsed.data.week)) throw AppError.validation("Onbekende week of keuze");
     const uit = await verstuurVoorstel({ tenantId, week: planWeek(parsed.data.week)!.sleutel, door: principal.userId, ...(parsed.data.keuze ? { keuze: parsed.data.keuze } : {}) });

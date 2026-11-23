@@ -27,10 +27,14 @@ import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 import { parseAmsterdamLocal } from "@/lib/time/amsterdam";
 import { haalVanReservebank, zetOpReservebank } from "@/lib/reservebank/store";
 import { reservebankOpen, reservebankToegang } from "@/lib/reservebank/kern";
+import { isTenantVerified } from "@/lib/company/verified";
+import { BEDRIJF_NOG_NIET_GECONTROLEERD, NOG_NIET_GECONTROLEERD_TEKST, bedrijfMagDoen } from "@/lib/company/gecontroleerd";
 
 export interface OfferResponse {
   ok: boolean;
   message: string;
+  /** een herkenbare reden als de actie niet mag, bv. BEDRIJF_NOG_NIET_GECONTROLEERD: het scherm toont dan "Nog een paar laatste checks" */
+  code?: string;
 }
 
 async function assertOwnsShift(shiftId: string) {
@@ -373,6 +377,12 @@ export async function respondToOfferAction(
       select: { id: true, title: true, hourlyRateCents: true, status: true, startsAt: true, endsAt: true, branch: { select: { tenantId: true } } },
     });
     if (!shift) throw AppError.forbidden("Je hebt geen toegang tot deze dienst.");
+
+    // Kiezen kan pas als het bedrijf is gecontroleerd (23 nov 2026): tot dan blijft de reactie gewoon openstaan en vraagt het scherm
+    // om de bedrijfsgegevens. Dit staat hier op de server, niet alleen in het scherm (lib/company/gecontroleerd.ts).
+    if (decision === "accepted" && !bedrijfMagDoen(await isTenantVerified(shift.branch.tenantId), "inplannen")) {
+      return { ok: false, code: BEDRIJF_NOG_NIET_GECONTROLEERD, message: NOG_NIET_GECONTROLEERD_TEKST };
+    }
 
     // Is de flexwerker intussen al ergens anders op dat moment ingepland? Dan
     // niets wijzigen (ook het tarief niet) en dat zonder de andere klant te noemen.

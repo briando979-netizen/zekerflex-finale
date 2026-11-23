@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
+import { eisBedrijfGecontroleerd } from "@/lib/company/verified";
 import { KANALEN, STRALEN_KM } from "@/lib/spoed/regels";
 import { spoedOverzicht, startSpoedoproep, stopSpoedoproep } from "@/lib/spoed/oproep";
 
@@ -50,6 +51,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const parsed = startSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw AppError.validation(parsed.error.issues[0]?.message ?? "Controleer de gegevens");
     const { tenantId, userId } = await dienstVan(request, parsed.data.shiftId);
+    // een spoedoproep nodigt werkers uit om meteen ingepland te zijn: pas na de controle van het bedrijf (423, lib/company/verified.ts)
+    await eisBedrijfGecontroleerd(tenantId);
     await enforceRateLimit({
       name: "spoedoproep",
       identifier: tenantId,
