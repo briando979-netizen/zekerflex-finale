@@ -1,11 +1,15 @@
 import { shiftCategory } from "@/lib/shifts/category";
 import { euroCents, euroWhole } from "@/lib/rekentools/invoer";
+import { KlusBeeldVlak } from "@/components/app/KlusBeeldVlak";
 
 // ---------------------------------------------------------------------------
 // The klus as a worker sees it in the app: the same look as
-// components/app/ShiftCard.tsx (photo of the category, rate badge, company —
-// place, title, when, "Freelance", pay line), without links or the save heart,
-// so /klus-plaatsen can show it without loading the worker app.
+// components/app/ShiftCard.tsx (rate badge, company — place, title, when,
+// "Freelance", pay line), without links or the save heart, so /klus-plaatsen can
+// show it without loading the worker app. Since 23 nov 2026 (owner: no photos
+// of people) the picture is a calm surface in the colour of the branch
+// (KlusBeeldVlak) instead of the photo of the category; the real card in the
+// worker app still has the photo.
 // ---------------------------------------------------------------------------
 
 const uurNl = (h: number) => h.toLocaleString("nl-NL", { maximumFractionDigits: 2 });
@@ -31,12 +35,8 @@ export function KlusKaart({
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-hair bg-white text-left shadow-card">
       <div className="relative aspect-[16/9] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={cat.photo} alt="" decoding="async" className="h-full w-full object-cover" />
-        <span className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
-        <span className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold text-white backdrop-blur" style={{ background: `${cat.accent}cc` }}>
-          {cat.label}
-        </span>
+        {/* geen foto van mensen in het voorbeeld (23 nov 2026, eigenaar): een rustig vlak met de brancheskleur */}
+        <KlusBeeldVlak accent={cat.accent} label={cat.label} />
         <span aria-hidden="true" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-sm text-neutralx-500 shadow-sm">
           ♡
         </span>

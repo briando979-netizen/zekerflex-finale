@@ -18,6 +18,8 @@ import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 import { SNEL_EN, SNEL_NL, type SnelTeksten } from "@/components/werkgever/snel-teksten";
 import type { SnelVoorinvulling } from "@/components/werkgever/SnelPlaatsen";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
+import { BrancheEtiket, KlusBeeldVlak } from "@/components/app/KlusBeeldVlak";
+import { useAutoHoogte } from "@/components/app/useAutoHoogte";
 import { SJABLOON_EN, SJABLOON_NL } from "@/lib/shifts/sjabloon-kiezer-teksten";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -117,6 +119,9 @@ export function NewShiftForm({
   const [tpl, setTpl] = useState("");
   // "Of vul het zelf in" onder de functiekiezer brengt je naar dit veld
   const titelRef = useRef<HTMLInputElement>(null);
+  // de tekstvakken van stap 1 groeien met hun tekst (useAutoHoogte), zodat een lange omschrijving of een voorbeeld niet wordt afgekapt
+  const omschrijvingRef = useRef<HTMLTextAreaElement>(null);
+  const kledingRef = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState(init?.title ?? kopie?.titel ?? "");
   const [description, setDescription] = useState(init?.description ?? kopie?.omschrijving ?? "");
   const [dresscode, setDresscode] = useState(init?.dresscode ?? kopie?.dresscode ?? "");
@@ -160,6 +165,8 @@ export function NewShiftForm({
   const stapGezien = useRef(false);
   const toon1 = !metStappen || stap === 1;
   const toon2 = !metStappen || stap === 2;
+  useAutoHoogte(omschrijvingRef, description, toon1);
+  useAutoHoogte(kledingRef, dresscode, toon1);
 
   // A klus drafted on /klus-plaatsen before sign-up (this browser, or the copy kept at sign-up): fill it in once.
   // Never over an existing klus that is being edited, and not when "Snel een klus plaatsen" takes it (leesConcept).
@@ -512,7 +519,7 @@ export function NewShiftForm({
                 {writing ? n.schrijven : description.trim() ? n.verbeter : n.schrijfVoorMij}
               </button>
             </div>
-            <textarea id="shift-description" name="description" rows={description.length > 160 ? 7 : 3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
+            <textarea ref={omschrijvingRef} id="shift-description" name="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
             {writeNote && <p className="mt-1 text-xs text-neutralx-500">{writeNote}</p>}
           </div>
 
@@ -521,6 +528,7 @@ export function NewShiftForm({
               {n.kleding} <span className="text-neutralx-400">{n.optioneel}</span>
             </span>
             <textarea
+              ref={kledingRef}
               name="dresscode"
               rows={2}
               value={dresscode}
@@ -866,28 +874,23 @@ export function NewShiftForm({
                   <img src={beeld.logoUrl} alt="" className="max-h-full max-w-full object-contain" />
                 </span>
               ) : (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={cat.photo} alt="" className="h-full w-full object-cover" />
-                  <span className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/10 to-transparent" />
-                </>
+                // geen foto van mensen in het voorbeeld (23 nov 2026, eigenaar): een rustig vlak met de brancheskleur
+                <KlusBeeldVlak accent={cat.accent} label={cat.label}>
+                  <div className="absolute inset-x-3 bottom-3">
+                    <p className="truncate font-display text-lg font-bold text-ink">{title || n.titelFallback}</p>
+                    <p className="truncate text-xs text-neutralx-600">
+                      {plek}
+                      {startsAt ? ` · ${tijdTekst(startsAt)}` : ""}
+                    </p>
+                  </div>
+                </KlusBeeldVlak>
               )}
-              <span className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold text-white" style={{ background: `${cat.accent}cc` }}>
-                {cat.label}
-              </span>
+              {/* bij een logo staat het branche-etiket boven op het witte vlak (zonder logo zit het al in het vlak) */}
+              {useLogo && beeld.logoUrl && <BrancheEtiket accent={cat.accent} label={cat.label} />}
               {totalDays > 1 && (
                 <span className="absolute right-3 top-3 rounded-full bg-brand-500/90 px-2 py-1 text-[11px] font-bold text-white">
                   {fmt(n.dagen, { n: totalDays })}
                 </span>
-              )}
-              {!(useLogo && beeld.logoUrl) && (
-                <div className="absolute inset-x-3 bottom-3 text-white">
-                  <p className="truncate font-display text-lg font-bold drop-shadow">{title || n.titelFallback}</p>
-                  <p className="truncate text-xs text-white/80">
-                    {plek}
-                    {startsAt ? ` · ${tijdTekst(startsAt)}` : ""}
-                  </p>
-                </div>
               )}
             </div>
             {useLogo && beeld.logoUrl && (
@@ -920,8 +923,7 @@ export function NewShiftForm({
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <BeeldKeuze actief={!useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(false)} label={n.beeldFoto}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={cat.photo} alt="" className="h-full w-full object-cover" />
+                    <KlusBeeldVlak accent={cat.accent} label={cat.label} klein />
                   </BeeldKeuze>
                   <BeeldKeuze actief={useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(true)} label={n.beeldLogo}>
                     <span className="flex h-full w-full items-center justify-center bg-[#ffffff] p-2">
@@ -964,7 +966,7 @@ function BeeldKeuze({ actief, disabled, onClick, label, children }: { actief: bo
       onClick={onClick}
       className={`overflow-hidden rounded-lg border text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${actief ? "border-brand-500 ring-2 ring-brand-500" : "border-hair hover:border-hairstrong"}`}
     >
-      <span className="block aspect-[16/9] overflow-hidden">{children}</span>
+      <span className="relative block aspect-[16/9] overflow-hidden">{children}</span>
       <span className="block px-2 py-1.5 text-xs font-semibold text-ink">{label}</span>
     </button>
   );

@@ -1897,7 +1897,7 @@ export const nl = {
     verbeter: "✨ Verbeter tekst",
     schrijfVoorMij: "✨ Schrijf voor mij",
     kleding: "Kledingvoorschriften",
-    kledingPlaceholder: "Bijv. veiligheidsschoenen verplicht, geen sieraden, bedrijfskleding wordt verstrekt…",
+    kledingPlaceholder: "Bijv. veiligheidsschoenen, geen sieraden",
     kledingKeuzes: "Stevige schoenen|Veiligheidsschoenen S3|Zwarte broek|Effen trui of t-shirt|Werkkleding op locatie|Veiligheidshesje op locatie|Geen sieraden|Lange haren vast|Nette kleding|Bedrijfskleding wordt verstrekt",
     uitzendbureau: "Via het ZekerFlex-uitzendbureau",
     uitzendbureauUitleg: "Alleen uitzendkrachten (loon via ZekerFlex) kunnen hierop reageren — zzp'ers en flexwerkers zien de klus wel staan, maar kunnen er niet op reageren.",
