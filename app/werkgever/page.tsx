@@ -5,11 +5,13 @@ import { EmployerDashboardHero } from "@/components/app/EmployerDashboardHero";
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/employer";
 import { pendingEmployerReviews } from "@/lib/reviews/pending";
-import { isEmployerOnboarded } from "@/lib/onboarding/employer";
-import { werkgeverStappen, berekenVoortgang } from "@/lib/onboarding/voortgang";
-import { WERKGEVER_KAART, WERKGEVER_STAPPEN } from "@/lib/onboarding/werkgever-teksten";
+import { heeftVestiging } from "@/lib/onboarding/employer";
+import { eersteKlusFeiten, GEEN_KLUS } from "@/lib/onboarding/eerste-klus";
+import { werkgeverStappen, berekenVoortgang, startKlaar } from "@/lib/onboarding/voortgang";
+import { werkgeverKaartTeksten } from "@/lib/onboarding/werkgever-teksten";
 import { OnboardingProgress } from "@/components/app/OnboardingProgress";
 import { tenantVerification } from "@/lib/company/verified";
+import { controleStand } from "@/lib/company/gecontroleerd";
 import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
 import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { maakBrancheKeuze } from "@/lib/shifts/branche-keuze";
@@ -30,10 +32,9 @@ import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
 import { RecentMessagesPanel } from "@/components/app/RecentMessagesPanel";
 import { EmployerOnboardingWizard } from "@/components/app/EmployerOnboardingWizard";
 import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
-import { getDict } from "@/lib/i18n/server";
+import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { followerCount } from "@/lib/worker/follows";
-import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { kl, startMarges } from "@/lib/werkgever/start-marges";
@@ -49,22 +50,23 @@ export default async function WerkgeverStartPage() {
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
 
-  // of het bedrijf al een klus plaatste (de stappen) en de vlag `publiek-alleen-flexwerk`
-  const [w, alleenFlexwerk] = await Promise.all([werkruimteVan(tenantId), alleenFlexwerkAan().catch(() => false)]);
+  // de vlag `publiek-alleen-flexwerk`
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
 
-  const [kvkDone, extra, o, threads, verificatie, pendingReviews, followers, tenantKvk] = await Promise.all([
-    isEmployerOnboarded(scope.tenantIds),
+  const [adresKlaar, extra, o, threads, verificatie, pendingReviews, followers, eersteKlus] = await Promise.all([
+    // het adres van de werklocatie is bevestigd (23 nov 2026: geen KVK-stap meer; die controle komt pas bij het inplannen)
+    heeftVestiging(scope.tenantIds),
     tenantId ? getOrgProfileExtra(tenantId) : Promise.resolve({} as OrgProfileExtra),
     getEmployerOverview(principal),
     recentThreads(principal.userId, false, 4),
     tenantId ? tenantVerification(tenantId) : Promise.resolve({ verified: true, via: null, inControle: false, buitenlands: false }),
     pendingEmployerReviews(principal).catch(() => []),
     followerCount(scope.tenantIds).catch(() => 0),
-    // het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen: vult de KVK-stap vooraf in
-    tenantId ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { kvkNumber: true, country: true } }).catch(() => null) : Promise.resolve(null),
+    // blok 2 van Jouw start: wat er met de eerste klus al gebeurd is
+    tenantId ? eersteKlusFeiten(tenantId).catch(() => GEEN_KLUS) : Promise.resolve(GEEN_KLUS),
   ]);
   const companyVerified = verificatie.verified;
-  const inControle = Boolean(verificatie.inControle);
+  const locale = await getLocale();
 
   const ob = extra.onboarding ?? {};
   const answers: Record<string, string> = {};
@@ -73,12 +75,24 @@ export default async function WerkgeverStartPage() {
   }
   const orgAnswered = Boolean(answers.role || answers.sector);
   const emailVerified = Boolean(principal.emailVerifiedAt);
-  const wizardComplete = kvkDone && Boolean(ob.profileStepDone) && emailVerified && orgAnswered;
+  // twee blokken (lib/onboarding/voortgang.ts): de grote checklist blijft tot blok 1 klaar is en de eerste klus live staat
+  const startFeiten = {
+    orgBeantwoord: orgAnswered,
+    adresKlaar,
+    profielKlaar: Boolean(ob.profileStepDone),
+    emailBevestigd: emailVerified,
+    heeftKlus: eersteKlus.heeftKlus,
+    heeftReactie: eersteKlus.heeftReactie,
+    heeftIngepland: eersteKlus.heeftIngepland,
+  };
   const canOnboard = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
-  const showWizard = canOnboard && !wizardComplete;
-  // de vaste werklocatie die er al is (Locaties of Klus uitzetten): dan vraagt de KVK-stap hem niet opnieuw (22 nov 2026)
+  const showWizard = canOnboard && !startKlaar(startFeiten);
+  const kaart = werkgeverKaartTeksten(locale);
+  // een bedrijf dat zijn gegevens invulde om iemand in te plannen en wacht op ZekerFlex: een rustige regel, geen waarschuwing
+  const wachtOpControle = controleStand({ gecontroleerd: companyVerified, aanvraag: extra.controle }) === "aangevraagd";
+  // de vaste werklocatie die er al is (Locaties of Klus uitzetten): de adres-stap toont hem alleen
   const bestaandeVestiging =
-    showWizard && !kvkDone && tenantId
+    showWizard && adresKlaar && tenantId
       ? await prisma.branch
           .findFirst({ where: { tenantId, kind: "PERMANENT" }, orderBy: { createdAt: "asc" }, select: { name: true, addressLine: true, postalCode: true, city: true } })
           .catch(() => null)
@@ -322,36 +336,20 @@ export default async function WerkgeverStartPage() {
       {!startModus && !alleenFlexwerk && <EmployerDashboardHero />}
       {/* ook in de startmodus: een nieuw bedrijf met een klus van /klus-plaatsen zet die meteen uit (22 nov 2026) */}
       <KlusConceptNudge />
-      {!companyVerified && !startModus && (
-        <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
-          <p className="font-semibold text-ink">{inControle ? ws.controleTitel : ws.nietGeverifieerd}</p>
-          <p className="mt-1">
-            {ws.eenKlusVoor}
-            <strong>{ws.eenKlusVet}</strong>
-            {ws.eenKlusNa}{" "}
-            {verificatie.buitenlands ? (
-              <>{ws.buitenland}</>
-            ) : inControle ? (
-              <>{ws.inControle}</>
-            ) : (
-              <>{ws.kvkNodig}</>
-            )}
-          </p>
-        </div>
+      {/* Geen banner "je bedrijf wordt gecontroleerd" meer (23 nov 2026): een nieuw bedrijf plaatst meteen en de controle komt pas
+          als het iemand wil inplannen. Heeft het zijn gegevens daarvoor ingevuld, dan een rustige regel. */}
+      {wachtOpControle && !startModus && (
+        <p role="status" className="mb-8 rounded-xl border border-hair bg-paper-soft px-4 py-3 text-sm text-neutralx-700">
+          {ws.controleAangevraagd}
+        </p>
       )}
       {showWizard && <OnboardingOnderhoudBalk />}
-      {/* na de wizard: wat er nog open staat (bv. nog geen eerste klus); verdwijnt vanzelf */}
+      {/* na de grote checklist: wat er van de eerste klus nog open staat (reacties bekijken, een freelancer kiezen); verdwijnt vanzelf */}
       {!showWizard && canOnboard && !startModus && (
         <OnboardingProgress
-          voortgang={berekenVoortgang(
-            werkgeverStappen({ emailBevestigd: emailVerified, bedrijfKlaar: kvkDone, verified: companyVerified, inControle, heeftKlus: w.heeftKlussen }),
-          )}
-          steps={
-            inControle
-              ? { ...WERKGEVER_STAPPEN, verificatie: { title: ws.stapTitel, why: ws.stapWhy } }
-              : WERKGEVER_STAPPEN
-          }
-          texts={WERKGEVER_KAART}
+          voortgang={berekenVoortgang(werkgeverStappen(startFeiten).filter((s) => s.blok === 2))}
+          steps={kaart.stappen}
+          texts={kaart.kaart}
         />
       )}
       {showWizard ? (
@@ -366,19 +364,13 @@ export default async function WerkgeverStartPage() {
           <div className="mt-8">
             <EmployerOnboardingWizard
               initial={{
-                kvkDone,
+                adresKlaar,
                 profileStepDone: Boolean(ob.profileStepDone),
                 emailVerified,
                 answers,
-                coverStepDone: Boolean(ob.coverStepDone),
-                kvkPrefill: tenantKvk?.kvkNumber ?? undefined,
-                landPrefill: tenantKvk?.country ?? undefined,
                 brancheKeuze: maakBrancheKeuze({ alle: ob.alleBranches, branches: ob.branches }),
-                verified: companyVerified,
-                inControle,
-                buitenlands: Boolean(verificatie.buitenlands),
-                companyName: o.orgName,
                 vestiging: bestaandeVestiging ? { naam: bestaandeVestiging.name, adres: vestigingRegel(bestaandeVestiging) } : null,
+                eersteKlus,
               }}
             />
           </div>

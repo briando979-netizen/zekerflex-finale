@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   BEDRIJF_NOG_NIET_GECONTROLEERD,
@@ -140,6 +142,28 @@ describe("de bewaarde keuzes", () => {
     const a = maakAanvraag(GOED, [k(1), k(2), k(3)], new Date());
     expect(openKeuzes(a, new Set(["o1", "o3"]))).toEqual(["o1", "o3"]);
     expect(openKeuzes(null, new Set(["o1"]))).toEqual([]);
+  });
+});
+
+// Waar de poort staat: plaatsen is vrij (geen limiet, geen controle), elke weg waarlangs iemand echt wordt ingepland of uitgenodigd
+// voor een plek is op de server dicht tot het bedrijf is gecontroleerd. Een bronbewaker: een nieuwe inplan-weg zonder poort valt hier op.
+describe("de poort in de code", () => {
+  const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
+
+  it("plaatsen heeft geen poort meer: geen limiet van één klus in de klusmaker, de publieke API of de zichtbaarheid voor werkers", () => {
+    for (const f of ["lib/shifts/create.ts", "app/api/public/v1/shifts/route.ts", "lib/dashboard/marketplace.ts"]) {
+      expect(lees(f), f).not.toMatch(/assertMayPlaceShift|eisBedrijfGecontroleerd|isTenantVerified/);
+    }
+    expect(lees("lib/company/verified.ts")).not.toContain("export async function assertMayPlaceShift");
+  });
+
+  it("de wegen waarlangs iemand wordt ingepland of uitgenodigd weigeren een bedrijf dat nog niet is gecontroleerd", () => {
+    for (const f of ["app/api/werkgever/planner/verstuur/route.ts", "app/api/werkgever/spoed/route.ts"]) expect(lees(f), f).toContain("await eisBedrijfGecontroleerd(");
+    expect(lees("app/werkgever/diensten/[shiftId]/actions.ts")).toContain('bedrijfMagDoen(await isTenantVerified(shift.branch.tenantId), "inplannen")');
+    // de ShiftAssignment-wegen die niet via de werkgever lopen: de werker neemt aan, automatisch inplannen en herstellen
+    for (const f of ["lib/notifications/dispatcher.ts", "lib/matching/apply.ts", "lib/matching/engine.ts", "lib/matching/heal.ts"]) {
+      expect(lees(f), f).toContain("isTenantVerified(shift.branch.tenantId)");
+    }
   });
 });
 

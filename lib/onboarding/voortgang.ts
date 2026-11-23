@@ -89,26 +89,50 @@ export function werkerStappen(f: WerkerFeiten): Stap<WerkerStapSleutel>[] {
 // Werkgever
 // ---------------------------------------------------------------------------
 
-export type WerkgeverStapSleutel = "email" | "bedrijf" | "verificatie" | "klus";
+// "Jouw start" (23 nov 2026, eigenaar: zoals YoungOnes): een checklist in twee blokken. Blok 1, "Jij en je bedrijf": de
+// organisatie, het adres, het profiel en het e-mailadres. Blok 2, "Jouw eerste klus": klus plaatsen, reacties bekijken, een
+// freelancer kiezen en afronden. Er is geen stap voor het KVK-nummer: de controle van het bedrijf komt pas als het iemand
+// wil inplannen (lib/company/gecontroleerd.ts), dus zijn de reacties en het kiezen hier gewoon de laatste stappen.
+export type WerkgeverStapSleutel = "org" | "adres" | "profiel" | "email" | "klus" | "reacties" | "kiezen" | "afronden";
 
 export interface WerkgeverFeiten {
+  /** de vragen over de organisatie (branche) zijn beantwoord */
+  orgBeantwoord: boolean;
+  /** minstens één vaste werklocatie: het adres is bevestigd */
+  adresKlaar: boolean;
+  /** het bedrijfsprofiel is bekeken */
+  profielKlaar: boolean;
   emailBevestigd: boolean;
-  /** KVK gekoppeld én minstens één vestiging */
-  bedrijfKlaar: boolean;
-  verified: boolean;
-  /** KVK klopt, ZekerFlex controleert met de hand */
-  inControle: boolean;
   heeftKlus: boolean;
+  /** minstens één werker reageerde op een klus */
+  heeftReactie: boolean;
+  /** er is minstens één freelancer ingepland */
+  heeftIngepland: boolean;
 }
 
-export function werkgeverStappen(f: WerkgeverFeiten): Stap<WerkgeverStapSleutel>[] {
-  const email: Stap<WerkgeverStapSleutel> = { key: "email", done: f.emailBevestigd, href: "/verifieer-email", minuten: 1 };
-  const bedrijf: Stap<WerkgeverStapSleutel> = { key: "bedrijf", done: f.bedrijfKlaar, href: "/werkgever", minuten: 3 };
-  const verificatie: Stap<WerkgeverStapSleutel> = { key: "verificatie", done: f.verified, href: "/werkgever", minuten: f.inControle ? 0 : 2 };
-  const klus: Stap<WerkgeverStapSleutel> = { key: "klus", done: f.heeftKlus, href: "/werkgever/diensten/nieuw", minuten: 5 };
-  // wij controleren het bedrijf met de hand: voor de werkgever valt daar niets te doen, dus die stap
-  // staat achteraan en de eerstvolgende stap is dan gewoon een klus plaatsen
-  return f.inControle && !f.verified ? [email, bedrijf, klus, verificatie] : [email, bedrijf, verificatie, klus];
+export interface WerkgeverStap extends Stap<WerkgeverStapSleutel> {
+  /** 1 = Jij en je bedrijf, 2 = Jouw eerste klus */
+  blok: 1 | 2;
+}
+
+export function werkgeverStappen(f: WerkgeverFeiten): WerkgeverStap[] {
+  const blok1Klaar = f.orgBeantwoord && f.adresKlaar && f.profielKlaar && f.emailBevestigd;
+  return [
+    { key: "org", done: f.orgBeantwoord, href: "/werkgever", minuten: 1, blok: 1 },
+    { key: "adres", done: f.adresKlaar, href: "/werkgever", minuten: 2, blok: 1 },
+    { key: "profiel", done: f.profielKlaar, href: "/werkgever/bedrijf", minuten: 2, blok: 1 },
+    { key: "email", done: f.emailBevestigd, href: "/verifieer-email", minuten: 1, blok: 1 },
+    { key: "klus", done: f.heeftKlus, href: "/werkgever/diensten/nieuw", minuten: 5, blok: 2 },
+    // wachten op werkers: er valt voor de werkgever niets te doen, dus geen minuten
+    { key: "reacties", done: f.heeftReactie, href: "/werkgever/diensten", minuten: 0, blok: 2 },
+    { key: "kiezen", done: f.heeftIngepland, href: "/werkgever/diensten", minuten: 1, blok: 2 },
+    { key: "afronden", done: blok1Klaar && f.heeftIngepland, href: "/werkgever", minuten: 0, blok: 2 },
+  ];
+}
+
+/** Blok 1 klaar én de eerste klus staat live: dan sluit de grote checklist en blijft alleen de kaart met wat er nog open staat. */
+export function startKlaar(f: WerkgeverFeiten): boolean {
+  return f.orgBeantwoord && f.adresKlaar && f.profielKlaar && f.emailBevestigd && f.heeftKlus;
 }
 
 // ---------------------------------------------------------------------------
@@ -119,8 +143,7 @@ export type HerinneringReden =
   | "email"
   | "werker-profiel"
   | "werker-verificatie"
-  | "bedrijf-gegevens"
-  | "bedrijf-verificatie"
+  | "bedrijf-adres"
   | "bedrijf-klus";
 
 export interface HerinneringFeiten {
@@ -129,23 +152,22 @@ export interface HerinneringFeiten {
   /** werker */
   kycVerified?: boolean;
   heeftProfiel?: boolean;
-  /** bedrijf */
-  bedrijfKlaar?: boolean;
-  verified?: boolean;
-  inControle?: boolean;
+  /** bedrijf: minstens één vaste werklocatie */
+  adresKlaar?: boolean;
   heeftKlus?: boolean;
 }
 
-/** Waar blijft deze gebruiker steken? null = niets te herinneren (of niets wat hij zelf kan doen). */
+/**
+ * Waar blijft deze gebruiker steken? null = niets te herinneren (of niets wat hij zelf kan doen). Een bedrijf hoort nooit een
+ * herinnering om een KVK-nummer in te vullen: die controle komt pas bij het inplannen.
+ */
 export function herinneringReden(f: HerinneringFeiten): HerinneringReden | null {
   if (!f.emailBevestigd) return "email";
   if (f.rol === "werker") {
     if (f.kycVerified && f.heeftProfiel) return null;
     return f.heeftProfiel ? "werker-verificatie" : "werker-profiel";
   }
-  if (!f.bedrijfKlaar) return "bedrijf-gegevens";
-  // wij controleren het bedrijf: de werkgever hoeft niets te doen, een herinnering zou onwaar zijn
-  if (!f.verified) return f.inControle ? null : "bedrijf-verificatie";
+  if (!f.adresKlaar) return "bedrijf-adres";
   if (!f.heeftKlus) return "bedrijf-klus";
   return null;
 }
@@ -165,22 +187,16 @@ export function herinneringInhoud(reden: Exclude<HerinneringReden, "email">): { 
         why: "Je profiel staat er al. Met een geverifieerde identiteit weten opdrachtgevers dat jij het echt bent, en kun je op klussen reageren.",
         href: "/dashboard/verificatie",
       };
-    case "bedrijf-gegevens":
+    case "bedrijf-adres":
       return {
-        todo: "vul je KVK-nummer en eerste vestiging in",
-        why: "Zodra je bedrijf geverifieerd is, kun je klussen plaatsen en freelancers inplannen. Tot die tijd kun je één klus uitzetten.",
-        href: "/werkgever",
-      };
-    case "bedrijf-verificatie":
-      return {
-        todo: "rond de verificatie van je bedrijf af",
-        why: "Je vestiging staat er al. Zodra je bedrijf is geverifieerd kun je mensen inplannen; tot die tijd kun je één klus uitzetten.",
+        todo: "bevestig het adres van je werklocatie",
+        why: "Freelancers zien waar ze komen werken. Daarna zet je je eerste klus uit: hij staat meteen live en freelancers kunnen erop reageren.",
         href: "/werkgever",
       };
     case "bedrijf-klus":
       return {
         todo: "plaats je eerste klus",
-        why: "Je bedrijf is geverifieerd. Een klus plaatsen kost een paar minuten; freelancers in jouw regio zien hem direct en kunnen reageren.",
+        why: "Een klus plaatsen kost een paar minuten. Hij staat meteen live: freelancers in jouw regio zien hem en kunnen reageren.",
         href: "/werkgever/diensten/nieuw",
       };
   }

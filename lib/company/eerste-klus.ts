@@ -20,9 +20,9 @@ export async function meldEersteKlusVanNieuwBedrijf(tenantId: string, titel: str
       prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
       prisma.membership.findFirst({ where: { tenantId, role: "HQ_ADMIN" }, select: { user: { select: { email: true } } } }),
     ]);
-    const { isReservedTestAddress } = await import("@/lib/mail/test-adres");
-    if (beheerder && isReservedTestAddress(beheerder.user.email)) return;
-    const [{ leesEigenTest }, { isEigenTestBedrijf }] = await Promise.all([import("@/lib/admin/eigen-test"), import("@/lib/admin/eigen-test-regel")]);
+    const [{ leesEigenTest }, { isEigenTestBedrijf, isInternAdres }] = await Promise.all([import("@/lib/admin/eigen-test"), import("@/lib/admin/eigen-test-regel")]);
+    // een testadres of een adres van ZekerFlex zelf, en een bedrijf dat de eigenaar als eigen test markeerde: geen melding
+    if (beheerder && isInternAdres(beheerder.user.email)) return;
     if (isEigenTestBedrijf(await leesEigenTest(), tenantId)) return;
     const { alertOwnerLater } = await import("@/lib/ops/alert");
     alertOwnerLater({

@@ -39,38 +39,53 @@ describe("rustiger werkgeversschermen (punt 14)", () => {
     expect(wizard).not.toContain("panels.find((p) => p.key === open)?.title");
     // de uitklapblokken zelf blijven, met de uitleg van de stap in de kop
     expect(wizard).toContain("aria-expanded={isOpen}");
-    expect(wizard).toContain('STEP_META.find((s) => s.key === p.key)?.hint');
+    expect(wizard).toContain("meta.hint && !klaar(k)");
   });
 });
 
-describe("de KVK-stap vraagt niet opnieuw wat al bekend is", () => {
+// 23 nov 2026 (eigenaar: zoals YoungOnes): geen KVK-stap meer in Jouw start. Het adres van de werklocatie vraagt het bestaande
+// formulier (PDOK-zoeker), en een werklocatie die er al is wordt alleen getoond. Het bedrijf en zijn nummers komen pas bij het inplannen.
+describe("Jouw start: geen KVK-stap, wel het adres", () => {
   const wizard = lees("components/app/EmployerOnboardingWizard.tsx");
 
-  it("een werklocatie die er al is: alleen tonen, en de server laat hem staan", () => {
-    expect(wizard).toContain('<input type="hidden" name="vestigingBekend" value="1" />');
+  it("de wizard heeft geen KVK-, land- of btw-velden en roept geen onboarding-actie voor het bedrijf aan", () => {
+    for (const oud of ["KvkZoeker", "kvkNumber", "btwNummer", "registratieNummer", "employerOnboardingAction", "useFormState", "countryKnown"]) {
+      expect(wizard, oud).not.toContain(oud);
+    }
+    expect(Object.hasOwn(nl.onboarding, "kvkNumber")).toBe(false);
+  });
+
+  it("een werklocatie die er al is: alleen tonen, met een link naar Locaties; anders het bestaande vestigingsformulier", () => {
     expect(wizard).toContain("{vestiging ? (");
     expect(wizard).toContain('href="/werkgever/locaties"');
-    const actie = lees("app/werkgever/onboarding/actions.ts");
-    expect(actie).toContain('formData.get("vestigingBekend") === "1"');
-    expect(actie).toContain("employerKvkSchema.safeParse(values)");
+    expect(wizard).toContain("<VestigingFormulier");
+    expect(wizard).toContain("beginPlaats={concept?.city ?? \"\"}");
     const start = lees("app/werkgever/page.tsx");
     expect(start).toContain('where: { tenantId, kind: "PERMANENT" }');
     expect(start).toContain("vestiging: bestaandeVestiging ? { naam: bestaandeVestiging.name, adres: vestigingRegel(bestaandeVestiging) } : null");
+    // het adres telt als gedaan zodra er een vaste werklocatie is, niet meer op een KVK-nummer
+    expect(start).toContain("heeftVestiging(scope.tenantIds)");
+    expect(start).not.toContain("isEmployerOnboarded");
   });
 
-  it("het land van het aanmelden: alleen tonen, met een knop om het te wijzigen", () => {
-    expect(wizard).toContain("useState(!landBekend)");
-    expect(wizard).toContain('<input type="hidden" name="land" value={land} />');
-    // de stappen hangen van het land af: zonder deze afhankelijkheden verandert het scherm niet bij "Wijzig"
-    expect(wizard).toContain("[kvkState, pending, orgSaved, initial, o, vestFout, werkBranches, land, landKiezen]");
+  it("twee blokken: Jij en je bedrijf, en Jouw eerste klus (YoungOnes-opzet, eigen woorden)", () => {
+    expect(wizard).toContain("{o.blok1Titel}");
+    expect(wizard).toContain("{o.firstJobTitle}");
+    expect(wizard).toContain("werkgeverStappen(");
+    expect(nl.onboarding.blok1Titel).toBe("Jij en je bedrijf");
+    expect(nl.onboarding.firstJobTitle).toBe("Jouw eerste klus");
+    // "Jouw eerste klus" staat er voor elk bedrijf, niet pas na een controle
+    expect(wizard).not.toContain("initial.verified");
   });
 
-  it("de nieuwe teksten staan in het Nederlands en het Engels", () => {
-    for (const k of ["countryKnown", "countryChange", "vestigingBekend", "vestigingWijzig"] as const) {
+  it("de teksten staan in het Nederlands en het Engels, met dezelfde sleutels en plaatshouders", () => {
+    expect(Object.keys(en.onboarding).sort()).toEqual(Object.keys(nl.onboarding).sort());
+    for (const k of ["blok1Titel", "adresIntro", "vestigingBekend", "vestigingWijzig", "klusLive", "naarKlussen", "aanDeSlag", "firstJobHint2", "firstJobHint3", "firstJobHint4"] as const) {
       expect(nl.onboarding[k].length, k).toBeGreaterThan(2);
       expect(en.onboarding[k].length, k).toBeGreaterThan(2);
+      expect(en.onboarding[k], k).not.toBe(nl.onboarding[k]);
     }
-    expect(nl.onboarding.countryKnown).toContain("{land}");
-    expect(en.onboarding.countryKnown).toContain("{land}");
+    for (const sleutel of Object.keys(nl.laatsteChecks)) expect(Object.hasOwn(en.laatsteChecks, sleutel), sleutel).toBe(true);
+    expect(Object.keys(en.laatsteChecks).sort()).toEqual(Object.keys(nl.laatsteChecks).sort());
   });
 });

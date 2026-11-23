@@ -47,6 +47,7 @@ export function ReactieLijst({
   reacties,
   bankBewerkbaar,
   laatstePlek,
+  gekozen = [],
 }: {
   shiftId: string;
   shiftTitle: string;
@@ -55,6 +56,8 @@ export function ReactieLijst({
   bankBewerkbaar: boolean;
   /** nog één plek open: bij accepteren eerst reserves kiezen uit de andere reacties */
   laatstePlek: boolean;
+  /** de reacties die het bedrijf koos terwijl het nog niet was gecontroleerd (bewaard, lib/company/gecontroleerd.ts): een label erbij */
+  gekozen?: readonly string[];
 }) {
   const { locale, t } = useI18n();
   const d = t.shiftDetail;
@@ -137,6 +140,7 @@ export function ReactieLijst({
                     <span className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold text-ink group-hover:underline">
                       {o.naam}
                       {o.favoriet && <span aria-hidden className="text-money-ink">♥</span>}
+                      {gekozen.includes(o.id) && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">{d.jouwKeuze}</span>}
                     </span>
                     <span className="block text-xs text-neutralx-500">
                       <span className="num font-semibold text-brand-600">{euro(o.proposedRateCents, nl)}/u</span>

@@ -79,7 +79,7 @@ async function eisVerkoper(tenantId: string): Promise<void> {
     throw AppError.precondition(
       s.inControle
         ? "We controleren nog of je bij dit bedrijf hoort. Zodra dat klaar is, kun je verkopen."
-        : "Laat eerst je bedrijf verifiëren met je KVK-nummer (Werkgever → Jouw start). Alleen geverifieerde bedrijven verkopen op ZekerFlex.",
+        : "Je bedrijf moet eerst zijn gecontroleerd. Dat gebeurt zodra je bij een klus een freelancer kiest en je bedrijfsgegevens invult (Werkgever → Klussen); kom je er niet uit, neem dan contact met ons op. Alleen gecontroleerde bedrijven verkopen op ZekerFlex.",
     );
   }
   if (!s.akkoord) throw AppError.precondition("Ga eerst akkoord met de verkoopvoorwaarden.");

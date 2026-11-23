@@ -4,11 +4,13 @@ import {
   herinneringInhoud,
   herinneringReden,
   werkerStappen,
+  startKlaar,
   werkgeverStappen,
   type WerkerFeiten,
+  type WerkgeverFeiten,
 } from "@/lib/onboarding/voortgang";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
-import { WERKGEVER_STAPPEN } from "@/lib/onboarding/werkgever-teksten";
+import { WERKGEVER_KAART, WERKGEVER_KAART_EN, WERKGEVER_STAPPEN, WERKGEVER_STAPPEN_EN, werkgeverKaartTeksten } from "@/lib/onboarding/werkgever-teksten";
 
 const leeg: WerkerFeiten = {
   emailBevestigd: false,
@@ -64,31 +66,75 @@ describe("werker-voortgang", () => {
   });
 });
 
+// "Jouw start" (23 nov 2026): twee blokken en geen KVK-stap. Blok 1 "Jij en je bedrijf": organisatie, adres, profiel, e-mail.
+// Blok 2 "Jouw eerste klus": klus plaatsen, reacties bekijken, een freelancer kiezen, afronden.
 describe("werkgever-voortgang", () => {
-  const f = { emailBevestigd: true, bedrijfKlaar: true, verified: true, inControle: false, heeftKlus: false };
+  const leegBedrijf: WerkgeverFeiten = {
+    orgBeantwoord: false,
+    adresKlaar: false,
+    profielKlaar: false,
+    emailBevestigd: false,
+    heeftKlus: false,
+    heeftReactie: false,
+    heeftIngepland: false,
+  };
+  const blok1: WerkgeverFeiten = { ...leegBedrijf, orgBeantwoord: true, adresKlaar: true, profielKlaar: true, emailBevestigd: true };
 
-  it("geverifieerd bedrijf zonder klus: volgende stap is de eerste klus", () => {
-    const v = berekenVoortgang(werkgeverStappen(f));
+  it("een nieuw bedrijf: acht stappen in twee blokken, geen stap voor KVK of verificatie", () => {
+    const stappen = werkgeverStappen(leegBedrijf);
+    expect(stappen.map((s) => `${s.blok}:${s.key}`)).toEqual(["1:org", "1:adres", "1:profiel", "1:email", "2:klus", "2:reacties", "2:kiezen", "2:afronden"]);
+    expect(stappen.map((s) => s.key).join(" ")).not.toMatch(/kvk|verificatie|bedrijf/);
+    const v = berekenVoortgang(stappen);
+    expect(v.total).toBe(8);
+    expect(v.done).toBe(0);
+    expect(v.volgende?.key).toBe("org");
+  });
+
+  it("blok 1 klaar: de volgende stap is de eerste klus, en die kost de meeste minuten", () => {
+    const v = berekenVoortgang(werkgeverStappen(blok1));
     expect(v.volgende?.key).toBe("klus");
-    expect(v.done).toBe(3);
+    expect(v.done).toBe(4);
+    // reacties wachten op werkers: daar valt voor het bedrijf niets te doen, dus geen minuten
+    expect(v.minutenOpen).toBe(5 + 1);
   });
 
-  it("onbevestigde e-mail komt eerst", () => {
-    expect(berekenVoortgang(werkgeverStappen({ ...f, emailBevestigd: false })).volgende?.key).toBe("email");
+  it("een bedrijf kan meteen een klus plaatsen: de klus telt zonder dat het KVK-nummer of een controle nodig is", () => {
+    const stappen = werkgeverStappen({ ...leegBedrijf, heeftKlus: true });
+    expect(stappen.find((s) => s.key === "klus")?.done).toBe(true);
+    expect(stappen.find((s) => s.key === "afronden")?.done).toBe(false);
   });
 
-  it("handmatige controle: wachten staat achteraan, volgende is een klus", () => {
-    const v = berekenVoortgang(werkgeverStappen({ ...f, verified: false, inControle: true }));
-    expect(v.volgende?.key).toBe("klus");
-    expect(v.open.map((s) => s.key)).toEqual(["klus", "verificatie"]);
+  it("afronden telt pas als blok 1 klaar is én er iemand is ingepland", () => {
+    const klaarVoorKiezen = { ...blok1, heeftKlus: true, heeftReactie: true };
+    expect(werkgeverStappen({ ...klaarVoorKiezen, heeftIngepland: true }).find((s) => s.key === "afronden")?.done).toBe(true);
+    expect(werkgeverStappen({ ...klaarVoorKiezen, heeftIngepland: true, adresKlaar: false }).find((s) => s.key === "afronden")?.done).toBe(false);
+    expect(berekenVoortgang(werkgeverStappen({ ...klaarVoorKiezen, heeftIngepland: true })).open).toEqual([]);
   });
 
-  it("alles klaar: kaart verdwijnt", () => {
-    expect(berekenVoortgang(werkgeverStappen({ ...f, heeftKlus: true })).open).toEqual([]);
+  it("de grote checklist sluit pas als blok 1 klaar is en de eerste klus er staat", () => {
+    expect(startKlaar(leegBedrijf)).toBe(false);
+    expect(startKlaar(blok1)).toBe(false);
+    expect(startKlaar({ ...blok1, heeftKlus: true })).toBe(true);
+    expect(startKlaar({ ...blok1, heeftKlus: true, emailBevestigd: false })).toBe(false);
   });
 
-  it("elke stap heeft Nederlandse tekst", () => {
-    for (const s of werkgeverStappen(f)) expect(WERKGEVER_STAPPEN[s.key].title.length).toBeGreaterThan(3);
+  it("na de checklist toont de kaart alleen blok 2: wat er van de eerste klus nog open staat", () => {
+    const v = berekenVoortgang(werkgeverStappen({ ...blok1, heeftKlus: true }).filter((s) => s.blok === 2));
+    expect(v.open.map((s) => s.key)).toEqual(["reacties", "kiezen", "afronden"]);
+    expect(v.volgende?.key).toBe("reacties");
+  });
+
+  it("elke stap heeft tekst in het Nederlands en het Engels", () => {
+    for (const s of werkgeverStappen(leegBedrijf)) {
+      for (const teksten of [WERKGEVER_STAPPEN, WERKGEVER_STAPPEN_EN]) {
+        expect(teksten[s.key].title.length, s.key).toBeGreaterThan(3);
+        expect(teksten[s.key].why.length, s.key).toBeGreaterThan(10);
+      }
+      expect(WERKGEVER_STAPPEN_EN[s.key].title, s.key).not.toBe(WERKGEVER_STAPPEN[s.key].title);
+    }
+    expect(werkgeverKaartTeksten("en").kaart).toBe(WERKGEVER_KAART_EN);
+    expect(werkgeverKaartTeksten("nl").kaart).toBe(WERKGEVER_KAART);
+    expect(werkgeverKaartTeksten("xx").stappen).toBe(WERKGEVER_STAPPEN);
   });
 });
 
@@ -102,20 +148,32 @@ describe("herinneringReden", () => {
     expect(herinneringReden({ rol: "werker", emailBevestigd: true, heeftProfiel: true, kycVerified: false })).toBe("werker-verificatie");
     expect(herinneringReden({ rol: "werker", emailBevestigd: true, heeftProfiel: true, kycVerified: true })).toBeNull();
   });
-  it("bedrijf: gegevens, verificatie, klus, niets", () => {
+  it("bedrijf: eerst het adres, dan de eerste klus, dan niets; nooit een herinnering om een KVK-nummer in te vullen", () => {
     const b = { rol: "bedrijf" as const, emailBevestigd: true };
-    expect(herinneringReden({ ...b, bedrijfKlaar: false })).toBe("bedrijf-gegevens");
-    expect(herinneringReden({ ...b, bedrijfKlaar: true, verified: false })).toBe("bedrijf-verificatie");
-    expect(herinneringReden({ ...b, bedrijfKlaar: true, verified: false, inControle: true })).toBeNull();
-    expect(herinneringReden({ ...b, bedrijfKlaar: true, verified: true, heeftKlus: false })).toBe("bedrijf-klus");
-    expect(herinneringReden({ ...b, bedrijfKlaar: true, verified: true, heeftKlus: true })).toBeNull();
+    expect(herinneringReden({ ...b, adresKlaar: false })).toBe("bedrijf-adres");
+    expect(herinneringReden({ ...b, adresKlaar: true, heeftKlus: false })).toBe("bedrijf-klus");
+    expect(herinneringReden({ ...b, adresKlaar: true, heeftKlus: true })).toBeNull();
+    // een bedrijf hoeft vóór het plaatsen niet gecontroleerd te zijn: de oude redenen bestaan niet meer
+    for (const adres of [false, true]) {
+      for (const klus of [false, true]) {
+        const r = herinneringReden({ ...b, adresKlaar: adres, heeftKlus: klus });
+        expect(r === null || r === "bedrijf-adres" || r === "bedrijf-klus").toBe(true);
+      }
+    }
   });
   it("elke reden heeft inhoud met een pad vanaf de root", () => {
-    for (const r of ["werker-profiel", "werker-verificatie", "bedrijf-gegevens", "bedrijf-verificatie", "bedrijf-klus"] as const) {
+    for (const r of ["werker-profiel", "werker-verificatie", "bedrijf-adres", "bedrijf-klus"] as const) {
       const i = herinneringInhoud(r);
       expect(i.href.startsWith("/")).toBe(true);
       expect(i.todo.length).toBeGreaterThan(5);
     }
+  });
+  it("de herinneringen aan een bedrijf noemen geen KVK, geen verificatie en geen limiet van een klus", () => {
+    for (const r of ["bedrijf-adres", "bedrijf-klus"] as const) {
+      const i = herinneringInhoud(r);
+      expect(`${i.todo} ${i.why}`, r).not.toMatch(/KVK|verifi|één klus|test/i);
+    }
+    expect(herinneringInhoud("bedrijf-klus").why).toContain("meteen live");
   });
 });
 

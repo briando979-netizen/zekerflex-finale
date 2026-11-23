@@ -32,7 +32,7 @@ const nl: RondleidingBedrijfTeksten = {
   stappen: {
     welkom: ["Welkom bij ZekerFlex", "In een paar stappen laten we zien waar je alles vindt als bedrijf: klussen uitzetten, mensen kiezen, uren goedkeuren en betalen. Overslaan kan altijd."],
     klus: ["Een klus uitzetten", "Kies Klus uitzetten, vul in wat er moet gebeuren, wanneer en waar, en welk tarief je biedt. Daarna zien passende werkers hem. Je vindt al je klussen onder Klussen."],
-    inplannen: ["Iemand inplannen", "Open een klus onder Klussen: daar zie je wie heeft gereageerd. Kies de werker die je wilt inplannen. Je kunt eerst een bericht sturen in de Chat. Inplannen kan zodra je bedrijf is geverifieerd."],
+    inplannen: ["Iemand inplannen", "Open een klus onder Klussen: daar zie je wie heeft gereageerd. Kies de werker die je wilt inplannen. Je kunt eerst een bericht sturen in de Chat. Kies je iemand en is je bedrijf nog niet gecontroleerd, dan vragen we eerst een paar bedrijfsgegevens; je keuze wordt bewaard."],
     uren: ["Uren goedkeuren", "Na afloop dient de werker zijn uren in. Onder Uren goedkeuren keur je ze goed of corrigeer je ze. Alleen goedgekeurde uren worden gefactureerd; automatisch goedkeuren kun je daar aanzetten."],
     facturen: ["Facturen en betalen", "Onder Facturen staan al je facturen. Betalen kan online of per bankoverschrijving; hoe, staat op de factuur en de betaalpagina."],
     chat: ["Chat met werkers", "Via Chat stuur je berichten, foto's en documenten, deel je een locatie, plan je een bericht in voor later of maak je een afspraak waarvoor mensen zich kunnen aanmelden."],
@@ -50,7 +50,7 @@ const en: RondleidingBedrijfTeksten = {
   stappen: {
     welkom: ["Welcome to ZekerFlex", "In a few steps we show you where to find everything as a company: posting jobs, choosing people, approving hours and paying. You can skip at any time."],
     klus: ["Post a job", "Choose Post a job, fill in what needs to be done, when and where, and the rate you offer. Suitable workers will then see it. You find all your jobs under Jobs."],
-    inplannen: ["Schedule someone", "Open a job under Jobs: there you see who has responded. Choose the worker you want to schedule. You can message them first in Chat. Scheduling is possible once your company is verified."],
+    inplannen: ["Schedule someone", "Open a job under Jobs: there you see who has responded. Choose the worker you want to schedule. You can message them first in Chat. If you choose someone and your company has not been checked yet, we first ask for a few company details; your choice is kept."],
     uren: ["Approve hours", "After a job the worker submits their hours. Under Approve hours you approve or correct them. Only approved hours are invoiced; you can switch on automatic approval there."],
     facturen: ["Invoices and paying", "Under Invoices you find all your invoices. You can pay online or by bank transfer; how is shown on the invoice and the payment page."],
     chat: ["Chat with workers", "In Chat you send messages, photos and documents, share a location, schedule a message for later or create an event people can sign up for."],

@@ -21,6 +21,8 @@ import { reservebankVoorPagina } from "@/lib/reservebank/store";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { isTenantVerified } from "@/lib/company/verified";
+import { controleStand, openKeuzes } from "@/lib/company/gecontroleerd";
+import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
 import { freelancerRatings } from "@/lib/reviews/ratings";
 import { explainMatch } from "@/lib/matching/explain";
 import { annuleerTermijnLabel } from "@/lib/shifts/annuleertermijn";
@@ -51,6 +53,10 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
     : { favorites: [], blocked: [] };
   const verified = scope.tenantIds[0] ? await isTenantVerified(scope.tenantIds[0]) : true;
   if (!verified) QUEUE_LABEL.VIEWED = d.queueResponded;
+  // wat het bedrijf bij "Nog een paar laatste checks" invulde en koos (lib/company/gecontroleerd.ts)
+  const orgExtra = scope.tenantIds[0] ? await getOrgProfileExtra(scope.tenantIds[0]).catch((): OrgProfileExtra => ({})) : ({} as OrgProfileExtra);
+  const aanvraag = orgExtra.controle ?? null;
+  const stand = controleStand({ gecontroleerd: verified, aanvraag });
   const ratings = await freelancerRatings([...s.assigned.map((a) => a.userId), ...s.queue.slice(0, 10).map((q) => q.userId)]);
   const stars = (userId: string) => {
     const r = ratings.get(userId);
@@ -82,6 +88,8 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
   const kanInplannen = bankBewerkbaar && verified && seatsFree > 0;
   const afzegBlok = bank.afzegging && kanInplannen && reserves.length > 0;
   const zoektVervanger = s.assigned.find((a) => a.replacementRequested);
+  // staat de klus live voor werkers? (open, nog niet voorbij, niet alleen voor een eigen pool)
+  const klusLive = ["OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(s.status) && !shiftEnded && !s.invitedPool;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -154,10 +162,24 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         </section>
       )}
 
-      {!verified && (
-        <div className="mb-6 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
-          <p className="font-semibold text-ink">{d.controleTitel}</p>
-          <p className="mt-1">{fmt(d.controleTekst, { label: d.queueResponded })}</p>
+      {/* Een bedrijf dat nog niet is gecontroleerd zet gewoon klussen live (23 nov 2026): geen waarschuwing. Wel zeggen dat de klus
+          live staat, dat de keuzes bewaard zijn als het bedrijf zijn gegevens invulde, en (voor Beheer) dat een klus in concept staat. */}
+      {s.status === "DRAFT" && (
+        <div role="status" className="mb-6 rounded-2xl border border-hair bg-paper-soft p-4 text-sm text-neutralx-700">
+          <p className="font-semibold text-ink">{d.conceptTitel}</p>
+          <p className="mt-1">{d.conceptTekst}</p>
+        </div>
+      )}
+      {!verified && klusLive && (
+        <div role="status" className="mb-6 rounded-2xl border border-ok/30 bg-ok/10 p-4 text-sm text-neutralx-700">
+          <p className="font-semibold text-ink">{d.liveTitel}</p>
+          <p className="mt-1">{d.liveTekst}</p>
+        </div>
+      )}
+      {!verified && stand === "aangevraagd" && (
+        <div role="status" className="mb-6 rounded-2xl border border-hair bg-paper-soft p-4 text-sm text-neutralx-700">
+          <p className="font-semibold text-ink">{d.bewaardTitel}</p>
+          <p className="mt-1">{d.bewaardTekst}</p>
         </div>
       )}
 
@@ -207,6 +229,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
               shiftTitle={s.title}
               bankBewerkbaar={bankBewerkbaar}
               laatstePlek={seatsFree === 1 && openReacties.length > 1}
+              gekozen={openKeuzes(aanvraag, new Set(openReacties.map((o) => o.id)))}
               reacties={openReacties.map((o) => ({
                 id: o.id,
                 userId: o.userId,

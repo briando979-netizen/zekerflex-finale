@@ -305,6 +305,15 @@ export async function submitEmployerOnboarding(
 }
 
 /**
+ * Heeft de organisatie een vaste werklocatie? Dat is de stap "adres bevestigen" van Jouw start (23 nov 2026): het KVK-nummer
+ * hoort daar niet meer bij, dat komt pas als het bedrijf iemand wil inplannen (lib/company/controle-aanvraag.ts).
+ */
+export async function heeftVestiging(tenantIds: string[]): Promise<boolean> {
+  if (tenantIds.length === 0) return false;
+  return (await prisma.branch.count({ where: { tenantId: { in: tenantIds }, kind: "PERMANENT" } })) > 0;
+}
+
+/**
  * Has this organization completed onboarding (company linked + at least one branch)? Linked means a
  * KVK registration, or for a company outside the Netherlands a btw-nummer / registration number.
  */
