@@ -19,6 +19,13 @@ vi.mock("@/lib/company/verified", () => ({
   setTenantApproval: (...a: unknown[]) => m.approve(...a),
   notifyPendingReactions: m.notify,
 }));
+// wie "Nog een paar laatste checks" invulde (OrgProfileExtra.controle, lib/company/gecontroleerd.ts); t-new vroeg om de controle, t-stil niet
+vi.mock("@/lib/profile/store", () => ({
+  getOrgProfileExtra: async (id: string) =>
+    id === "t-new"
+      ? { controle: { op: "2026-10-19T09:00:00.000Z", land: "NL", kvkNumber: "12345678", btwNummer: null, registratieNummer: null, bedrijfsnaam: "Nieuw BV", contactNaam: "Sanne Jansen", contactFunctie: "Eigenaar", telefoon: "0612345678", tekenaarNaam: null, keuzes: [{ offerId: "o1", shiftId: "s2" }, { offerId: "o2", shiftId: "s2" }], gemeldOp: null } }
+      : {},
+}));
 vi.mock("@/lib/auth/two-factor", () => ({ hasTwoFactor: async (id: string) => m.twoFa.has(id) }));
 vi.mock("@/lib/fraud/timesheet", () => ({ fraudForTimesheet: async () => [{ code: "x", severity: "critical", message: "GPS nep-locatie" }] }));
 vi.mock("@/lib/chat/webchat", () => ({ listConversations: async (s: string) => (s === "open" ? m.convs : []) }));
@@ -49,8 +56,10 @@ vi.mock("@/lib/prisma", () => ({
     },
     tenant: {
       findMany: async () => [
-        { id: "t-new", name: "Nieuw BV", kvkNumber: "12345678", branches: [{ shifts: [{ _count: { matches: 2 } }] }] },
-        { id: "t-ok", name: "Logistiek BV", kvkNumber: "87654321", branches: [{ shifts: [{ _count: { matches: 5 } }] }] },
+        { id: "t-new", name: "Nieuw BV" },
+        { id: "t-ok", name: "Logistiek BV" },
+        // nog niet geverifieerd, met reacties, maar nooit om de controle gevraagd: geen voorstel
+        { id: "t-stil", name: "Stil BV" },
       ],
     },
     user: { count: async () => 2 },
@@ -86,10 +95,14 @@ describe("extra AI-teams", () => {
     expect(out.logs.join("\n")).toContain("Mogelijke no-show: Piet");
   });
 
-  it("onboarding: only unverified companies with reactions are put up for approval", async () => {
+  // 23 nov 2026: een nieuw bedrijf plaatst zonder controle, dus "niet geverifieerd" is gewoon de normale stand. Alleen een bedrijf dat
+  // zijn gegevens invulde om iemand in te plannen komt als voorstel langs, niet elk niet-geverifieerd bedrijf met reacties.
+  it("onboarding: only companies that asked for the check are put up for approval, not every unverified company", async () => {
     await onboarding(NOW, tools as never);
+    // t-ok is geverifieerd, t-stil (hieronder) is niet geverifieerd maar vroeg niets: geen voorstel
     expect(out.props.map((p) => p.action)).toEqual([{ type: "approve-company", tenantId: "t-new" }]);
-    expect(out.props[0]!.title).toContain("2 freelancer(s) reageerden");
+    expect(out.props[0]!.title).toContain("wil iemand inplannen");
+    expect(out.props[0]!.title).toContain("2 gekozen freelancer(s)");
   });
 
   it("prijs: flags a klus paying far below the market median", async () => {

@@ -145,7 +145,8 @@ export async function onboardingData(opts: { testMeetellen: boolean; alleenId?: 
       doelgroep: "werkgever",
       tenantId,
       tenantNaam: tenant?.name ?? null,
-      gehaald: [true, email, Boolean(tenant?.companyRegistrationId), (tenant?._count.branches ?? 0) > 0, geverifieerd, tenantId ? klusSet.has(tenantId) : false],
+      // in de volgorde van WERKGEVER_STAPPEN: aangemeld, e-mail, vestiging, eerste klus, gecontroleerd (de controle komt pas bij het inplannen)
+      gehaald: [true, email, (tenant?._count.branches ?? 0) > 0, tenantId ? klusSet.has(tenantId) : false, geverifieerd],
     };
   });
 

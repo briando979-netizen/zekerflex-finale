@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { kvListValues } from "@/lib/storage/kv";
 import { shiftCategory } from "@/lib/shifts/category";
 import { isTenantVerified } from "@/lib/company/verified";
+import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
 import { fraudForTimesheet } from "@/lib/fraud/timesheet";
 import { listConversations } from "@/lib/chat/webchat";
 import type { Review } from "@/lib/reviews/store";
@@ -65,23 +66,28 @@ export async function planning(now: Date, t: TeamTools) {
   await t.log("planning", `${soon.length} klus(sen) binnen 48 uur bekeken: ${short} met minder dan de helft bezet, ${noShows.length} mogelijke no-show(s).`);
 }
 
-/** Onboarding: companies waiting for approval while people already reacted, and sign-ups that got stuck. */
+/**
+ * Onboarding: companies that asked for the check ("Nog een paar laatste checks", 23 nov 2026: they wanted to schedule someone and
+ * filled in their details), and sign-ups that got stuck. Not every unverified company: a new company places klussen without a check,
+ * so "not verified" is the normal state and no reason for a proposal.
+ */
 export async function onboarding(now: Date, t: TeamTools) {
   const tenants = await prisma.tenant.findMany({
-    where: { type: { not: "PLATFORM" }, createdAt: { gte: new Date(now.getTime() - 60 * DAY) } },
-    select: { id: true, name: true, kvkNumber: true, branches: { select: { shifts: { where: { status: { not: "CANCELLED" } }, select: { _count: { select: { matches: { where: { status: "VIEWED" } } } } } } } } },
+    where: { type: { not: "PLATFORM" }, createdAt: { gte: new Date(now.getTime() - 180 * DAY) } },
+    select: { id: true, name: true },
     take: 300,
   });
   let waiting = 0;
   for (const tn of tenants) {
     if (await isTenantVerified(tn.id)) continue;
-    const reactions = tn.branches.flatMap((b) => b.shifts).reduce((n, s) => n + s._count.matches, 0);
-    if (reactions === 0) continue;
+    const aanvraag = (await getOrgProfileExtra(tn.id).catch((): OrgProfileExtra => ({}))).controle;
+    if (!aanvraag) continue;
     waiting++;
+    const nummer = aanvraag.kvkNumber ? `KVK ${aanvraag.kvkNumber}` : aanvraag.btwNummer ? `btw-nummer ${aanvraag.btwNummer}` : `registratienummer ${aanvraag.registratieNummer ?? "onbekend"}`;
     await t.propose({
       team: "onboarding",
-      title: `${tn.name} wacht op goedkeuring — ${reactions} freelancer(s) reageerden al`,
-      detail: `${tn.kvkNumber ? `KVK ${tn.kvkNumber} kon niet automatisch worden bevestigd.` : "Nog geen KVK-nummer ingevuld."} Controleer het bedrijf (Admin → Bedrijven) en keur goed; wie reageerde krijgt dan meteen een melding.`,
+      title: `${tn.name} wil iemand inplannen en wacht op goedkeuring — ${aanvraag.keuzes.length} gekozen freelancer(s)`,
+      detail: `Opgegeven: ${nummer}, contactpersoon ${aanvraag.contactNaam} (${aanvraag.contactFunctie}). Controleer het bedrijf (Admin → KVK-controle) en keur goed; het bedrijf krijgt dan bericht en kan inplannen.`,
       action: { type: "approve-company", tenantId: tn.id },
     });
   }
