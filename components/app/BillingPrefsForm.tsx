@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useT } from "@/components/i18n/I18nProvider";
 
 export function BillingPrefsForm({
@@ -11,7 +12,6 @@ export function BillingPrefsForm({
   const b = useT().billing;
   const [billingEmail, setBillingEmail] = useState(initial.billingEmail);
   const [split, setSplit] = useState(initial.splitByCostCentre);
-  const [centres, setCentres] = useState(initial.costCentres.join("\n"));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -19,15 +19,11 @@ export function BillingPrefsForm({
     setSaving(true);
     setMsg(null);
     try {
-      const costCentres = centres
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .slice(0, 50);
+      // de kostenplaatsen zelf bewaart deze knop niet meer: die staan onder Instellingen → Kostenplaatsen
       const r = await fetch("/api/orgs", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billingEmail, splitByCostCentre: split, costCentres }),
+        body: JSON.stringify({ billingEmail, splitByCostCentre: split }),
       });
       setMsg(r.ok ? b.saved : b.saveFailed);
     } catch {
@@ -67,19 +63,15 @@ export function BillingPrefsForm({
         </span>
       </label>
 
+      {/* de kostenplaatsen beheer je sinds 23 nov 2026 onder Instellingen → Kostenplaatsen (alleen daar geldt de regel "niet wijzigen of
+          verwijderen zolang ze in gebruik zijn"); hier staat alleen wat erin staat, met de link */}
       <div>
-        <label htmlFor="cost-centres" className="field-label">
-          {b.poLabel}
-        </label>
-        <textarea
-          id="cost-centres"
-          rows={4}
-          value={centres}
-          onChange={(e) => setCentres(e.target.value)}
-          placeholder={b.poPh}
-          className="mt-1.5 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm leading-relaxed"
-        />
+        <p className="field-label">{b.poLabel}</p>
+        <p className="mt-1.5 break-words text-sm text-neutralx-700">{initial.costCentres.length > 0 ? initial.costCentres.join(", ") : b.poGeen}</p>
         <p className="mt-1 text-xs text-neutralx-500">{b.poHint}</p>
+        <Link href="/werkgever/instellingen/kostenplaatsen" className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-600 hover:underline">
+          {b.poBeheer}
+        </Link>
       </div>
 
       <div className="flex items-center gap-3">
