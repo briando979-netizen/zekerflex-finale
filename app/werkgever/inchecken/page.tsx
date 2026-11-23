@@ -27,8 +27,8 @@ export default async function IncheckenPage() {
     const vereist = tenantId ? await incheckenVereist(tenantId) : true;
     return (
       <>
-        <SamenTabs groep="uren" actief="inchecken" />
         <PaginaKop eyebrow={t.eyebrow} title={t.titel} subtitle={vereist ? t.uitleg : t.staatUit} />
+        <SamenTabs groep="uren" actief="inchecken" />
         {tenantId && (
           <div className="mb-6">
             <Panel title={c.incheckTitel}>
@@ -47,12 +47,12 @@ export default async function IncheckenPage() {
   const origin = new URL(env.APP_BASE_URL).origin;
   return (
     <>
-      <SamenTabs groep="uren" actief="inchecken" />
       <PaginaKop
         eyebrow="Personeel"
         title="Inchecken op locatie"
         subtitle="Een tablet bij de ingang, een NFC-sticker of een sleutelhanger: je krachten checken in zonder dat jij uren hoeft over te typen. Elke check-in staat meteen in het urenbriefje."
       />
+      <SamenTabs groep="uren" actief="inchecken" />
       <TerminalsBeheer origin={origin} />
     </>
   );

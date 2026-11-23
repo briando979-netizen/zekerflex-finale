@@ -20,8 +20,8 @@ export default async function BedrijfInKaartPage() {
   const magWijzigen = hasRole(principal, "HQ_ADMIN", "LOCAL_MANAGER", "PLATFORM_ADMIN");
   return (
     <>
-      <SamenTabs groep="cijfers" actief="inkaart" />
       <PaginaKop title={t.pagina.titel} eyebrow={t.pagina.eyebrow} subtitle={t.pagina.subtitel} />
+      <SamenTabs groep="cijfers" actief="inkaart" />
       <InKaart start={bewaard ?? leegBedrijf("overig", new Date())} magWijzigen={magWijzigen} t={t} />
     </>
   );

@@ -45,7 +45,6 @@ export default async function KalenderPage(
 
   return (
     <>
-      <PlanningTabs actief="kalender" />
       <PaginaKop
         title={t.calendar.title}
         eyebrow={t.calendar.eyebrow}
@@ -59,6 +58,7 @@ export default async function KalenderPage(
           </Link>
         }
       />
+      <PlanningTabs actief="kalender" />
 
       <div className="mb-4 flex items-center justify-between">
         <Link

@@ -35,7 +35,6 @@ export default async function FavorietenPage() {
 
   return (
     <>
-      <SamenTabs groep="werkers" actief="favorieten" />
       <PaginaKop
         title={f.title}
         eyebrow={f.eyebrow}
@@ -51,6 +50,7 @@ export default async function FavorietenPage() {
           </div>
         }
       />
+      <SamenTabs groep="werkers" actief="favorieten" />
 
       {cards.length === 0 ? (
         <EmptyState title={f.emptyTitle} body={f.emptyBody} />

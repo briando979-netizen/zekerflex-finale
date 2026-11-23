@@ -6,6 +6,7 @@ import { KAARTEN } from "@/lib/bi/dashboards";
 import { getTheme } from "@/lib/theme/server";
 import { getDict } from "@/lib/i18n/server";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 
 export const metadata: Metadata = { title: "Rapportages" };
 export const dynamic = "force-dynamic";
@@ -23,12 +24,9 @@ export default async function RapportagesPage() {
 
   return (
     <div className="space-y-5">
+      {/* de ene kop van de werkgeversapp, daaronder de tabbladen (23 nov 2026) */}
+      <PaginaKop title="Mijn bedrijf in cijfers" subtitle="Uren, loonkosten, bezetting en facturen, live uit ZekerFlex. Alleen de cijfers van je eigen bedrijf; niets wordt gedeeld." />
       <SamenTabs groep="cijfers" actief="rapportages" />
-      <header>
-        <p className="eyebrow">Rapportages</p>
-        <h1 className="mt-1 font-display text-2xl font-bold text-ink">Mijn bedrijf in cijfers</h1>
-        <p className="mt-1 max-w-2xl text-sm text-neutralx-600">Uren, loonkosten, bezetting en facturen, live uit ZekerFlex. Alleen de cijfers van je eigen bedrijf; niets wordt gedeeld.</p>
-      </header>
       {url ? (
         <>
           <p className="text-xs text-neutralx-500">{t.rapportages.laden}</p>

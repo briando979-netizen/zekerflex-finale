@@ -19,8 +19,8 @@ export default async function GeblokkeerdPage() {
 
   return (
     <>
-      <SamenTabs groep="werkers" actief="geblokkeerd" />
       <PaginaKop title={b.title} eyebrow={b.eyebrow} subtitle={b.subtitle} />
+      <SamenTabs groep="werkers" actief="geblokkeerd" />
 
       {rel.blocked.length === 0 ? (
         <EmptyState title={b.emptyTitle} body={b.emptyBody} />

@@ -304,6 +304,17 @@ export const nl = {
     panelTitle: "Vestigingen",
     panelManage: "Voeg een vestiging toe, of bewerk een bestaande.",
     panelNoManage: "Alleen een beheerder van je organisatie kan vestigingen toevoegen of verwijderen.",
+    // de lijst als tabel en de dialoog (23 nov 2026)
+    nieuw: "Nieuwe locatie",
+    dialoogTitel: "Locatie toevoegen",
+    leeg: "Je hebt nog geen locaties toegevoegd.",
+    laden: "Laden…",
+    verwijderen: "Verwijderen",
+    kolNaam: "Naam",
+    kolStraat: "Straat",
+    kolPostcode: "Postcode",
+    kolPlaats: "Plaats",
+    kolActies: "Acties",
     oneOff:
       "Voor een klus op een eenmalige locatie (bijv. een demo op afstand) hoef je geen vaste vestiging aan te maken — kies bij het uitzetten van de klus “Eenmalige locatie”.",
   },
@@ -484,6 +495,8 @@ export const nl = {
     groupHistory: "Historie",
     groupHistoryNote: "Afgeronde en verlopen klussen.",
     offerBadge: "{n} bod",
+    // de bezetting rechts in een rij van de klussenlijst (23 nov 2026)
+    rijBezet: "{filled}/{positions} plekken gevuld",
     reactions: "Reacties",
     tabOpen: "Openstaand",
     tabPlanned: "Klaar om uit te voeren",

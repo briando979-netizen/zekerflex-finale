@@ -12,8 +12,8 @@ export default async function WerkgeverOvereenkomstenPage() {
   const a = (await getDict()).agreements;
   return (
     <>
-      <SamenTabs groep="regels" actief="overeenkomsten" />
       <PaginaKop title={a.title} eyebrow={a.eyebrow} subtitle={a.subtitle} />
+      <SamenTabs groep="regels" actief="overeenkomsten" />
       <Panel title={a.allPanel}>
         <div className="p-5">
           <AgreementsList side="client" />

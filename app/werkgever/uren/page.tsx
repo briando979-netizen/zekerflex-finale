@@ -73,8 +73,8 @@ export default async function UrenGoedkeurenPage() {
 
   return (
     <>
-      <SamenTabs groep="uren" actief="uren" />
       <PaginaKop title={h.title} subtitle={h.subtitle} />
+      <SamenTabs groep="uren" actief="uren" />
 
       {autoUitgezet ? (
         <p className="mb-6 rounded-2xl border border-hair bg-white px-5 py-4 text-sm text-neutralx-600">{h.geenAutoGoedkeuren}</p>

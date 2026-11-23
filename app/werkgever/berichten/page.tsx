@@ -20,12 +20,12 @@ export default async function WerkgeverBerichtenPage() {
   const bedrijf = zakelijk && tenantId ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }).catch(() => null) : null;
   return (
     <>
-      <SamenTabs groep="chat" actief="berichten" />
       <div className="hidden md:block">
         <PaginaKop title={m.title} eyebrow={m.eyebrow} subtitle={m.subtitle} />
       </div>
       {/* op de telefoon is de kop verborgen; de pagina houdt een h1 voor schermlezers */}
       <h1 className="sr-only md:hidden">{m.title}</h1>
+      <SamenTabs groep="chat" actief="berichten" />
       {/* employer shell: 4rem top bar + page padding + header above the chat, no bottom tab bar on a phone */}
       <InboxPage mobileHeight="h-[calc(100dvh-8rem)]" desktopHeight="md:h-[calc(100dvh-20rem)]" zakelijk={zakelijk} bedrijfsnaam={bedrijf?.name ?? ""} {...(demo ? { demoNotice: DEMO_CHAT_NOTITIE } : {})} />
     </>

@@ -1,7 +1,5 @@
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { Panel } from "@/components/app/ui";
-import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { BranchesBoard } from "@/components/app/BranchesBoard";
 import { getDict } from "@/lib/i18n/server";
 
@@ -15,15 +13,10 @@ export default async function LocatiesPage() {
 
   return (
     <>
-      <InstellingenKop title={l.title} subtitle={l.subtitle} />
+      {/* de kop staat in het scherm zelf: de knop "Nieuwe locatie" rechtsboven opent daar de dialoog (components/app/BranchesBoard.tsx) */}
+      <BranchesBoard canManage={canManage} />
 
-      <Panel title={l.panelTitle} subtitle={canManage ? l.panelManage : l.panelNoManage}>
-        <div className="p-5">
-          <BranchesBoard canManage={canManage} />
-        </div>
-      </Panel>
-
-      <p className="mt-6 text-xs text-neutralx-500">{l.oneOff}</p>
+      <p className="mt-6 text-xs leading-relaxed text-neutralx-500">{l.oneOff}</p>
     </>
   );
 }

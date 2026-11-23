@@ -45,8 +45,8 @@ export default async function WerkgeverCompliancePage() {
   const cp = (await getDict()).compliance;
   return (
     <>
-      <SamenTabs groep="regels" actief="compliance" />
       <PaginaKop title={cp.title} subtitle={cp.subtitle} />
+      <SamenTabs groep="regels" actief="compliance" />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard label={cp.kpiHigh} value={String(high)} tone={high > 0 ? "crit" : "default"} />

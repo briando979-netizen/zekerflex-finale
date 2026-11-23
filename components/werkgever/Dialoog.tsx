@@ -28,14 +28,14 @@ export function Dialoog({
   onSluit: () => void;
   /** maakt van de dialoog één formulier */
   onVerstuur?: ((e: FormEvent<HTMLFormElement>) => void) | undefined;
-  /** de knoppen onderaan: Annuleren eerst, de hoofdknop als laatste */
-  acties: ReactNode;
+  /** de knoppen onderaan: Annuleren eerst, de hoofdknop als laatste; zonder als de inhoud een formulier met eigen knoppen is */
+  acties?: ReactNode;
   children?: ReactNode;
 }) {
   const uitlegId = uitleg ? `${id}-uitleg` : undefined;
   const binnen = (
     <>
-      <div className="min-h-0 overflow-y-auto px-6 pb-2">
+      <div className={`min-h-0 overflow-y-auto px-6 ${acties ? "pb-2" : "pb-6"}`}>
         {uitleg ? (
           <p id={uitlegId} className="text-center text-sm leading-relaxed text-neutralx-600">
             {uitleg}
@@ -43,7 +43,7 @@ export function Dialoog({
         ) : null}
         {children}
       </div>
-      <div className={DIALOOG_ACTIES}>{acties}</div>
+      {acties ? <div className={DIALOOG_ACTIES}>{acties}</div> : null}
     </>
   );
   return (

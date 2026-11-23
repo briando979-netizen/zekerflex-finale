@@ -12,7 +12,8 @@ const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").sp
 /** De bestaande onderpagina's die bij Instellingen horen, met hun adres (dat niet mag veranderen). */
 const ONDERPAGINAS: Record<string, string> = {
   "/werkgever/bedrijf": "app/werkgever/bedrijf/page.tsx",
-  "/werkgever/locaties": "app/werkgever/locaties/page.tsx",
+  // de kop van Locaties staat in het scherm zelf, met de knop "Nieuwe locatie" erin
+  "/werkgever/locaties": "components/app/BranchesBoard.tsx",
   "/werkgever/team": "app/werkgever/team/page.tsx",
   "/werkgever/templates": "app/werkgever/templates/page.tsx",
   "/werkgever/favorieten/pools": "app/werkgever/favorieten/pools/page.tsx",
@@ -84,7 +85,8 @@ describe("de onderpagina's van Instellingen", () => {
 
   it("de pagina's met een eigen titel in het woordenboek geven die door als title", () => {
     expect(lees("app/werkgever/favorieten/pools/page.tsx")).toContain("title={t.pools.title}");
-    expect(lees("app/werkgever/locaties/page.tsx")).toContain("<InstellingenKop title={l.title} subtitle={l.subtitle} />");
+    expect(lees("app/werkgever/locaties/page.tsx")).toContain("<BranchesBoard canManage={canManage} />");
+    expect(lees("components/app/BranchesBoard.tsx")).toContain("title={l.title}");
     expect(lees("app/werkgever/account/page.tsx")).toContain("<InstellingenKop title={t.titel} subtitle={t.sub} />");
   });
 

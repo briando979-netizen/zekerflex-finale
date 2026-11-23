@@ -15,12 +15,12 @@ export default async function PlannerPage(props: { searchParams: Promise<{ week?
 
   return (
     <>
-      <PlanningTabs actief="planner" />
       <PaginaKop
         title="Roosterplanner"
         eyebrow="Personeel"
         subtitle="Alle open diensten van een week in één keer ingepland: de juiste certificaten, dichtbij, uitgerust en binnen de uren. Jij kiest wat je verstuurt; de krachten accepteren zelf."
       />
+      <PlanningTabs actief="planner" />
       <Planner startWeek={start} />
     </>
   );
