@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { prisma } from "@/lib/prisma";
 import { listReviews, reviewSummary } from "@/lib/reviews/store";
 import { PageHeader, EmptyState, dateShort } from "@/components/app/ui";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -38,8 +37,7 @@ export default async function WerkgeverReviewsPage() {
     );
   }
 
-  const [tenant, summary, all] = await Promise.all([
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+  const [summary, all] = await Promise.all([
     reviewSummary("company", tenantId),
     listReviews("company", tenantId),
   ]);
@@ -48,17 +46,8 @@ export default async function WerkgeverReviewsPage() {
 
   return (
     <>
-      <div className="mb-6">
-        <Link href="/werkgever" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-          ← {rv.backToStart}
-        </Link>
-      </div>
-
-      <PageHeader
-        title={rv.title}
-        eyebrow={tenant?.name ?? co.title}
-        subtitle={rv.subtitle}
-      />
+      {/* de kaart "Beoordelingen van freelancers" op Instellingen en de sterren in de kopbalk openen deze pagina */}
+      <InstellingenKop title={rv.title} subtitle={rv.subtitle} />
 
       {summary.count === 0 ? (
         <EmptyState title={rv.emptyTitle} body={rv.emptyBody} />

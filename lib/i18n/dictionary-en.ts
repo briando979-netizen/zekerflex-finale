@@ -312,6 +312,7 @@ export const en: Dict = {
   },
   settings: {
     title: "Settings",
+    back: "Back to settings",
     coverTitle: "Add a cover photo",
     coverBody:
       "Jobs with a cover photo stand out more to the workers on our platform; add a cover photo easily and get more responses to your jobs.",

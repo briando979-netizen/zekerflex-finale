@@ -1,6 +1,7 @@
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { BranchesBoard } from "@/components/app/BranchesBoard";
 import { getDict } from "@/lib/i18n/server";
 
@@ -14,7 +15,7 @@ export default async function LocatiesPage() {
 
   return (
     <>
-      <PageHeader title={l.title} subtitle={l.subtitle} />
+      <InstellingenKop title={l.title} subtitle={l.subtitle} />
 
       <Panel title={l.panelTitle} subtitle={canManage ? l.panelManage : l.panelNoManage}>
         <div className="p-5">

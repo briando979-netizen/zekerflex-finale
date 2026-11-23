@@ -1,6 +1,7 @@
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { TeamBoard } from "@/components/app/TeamBoard";
 import { getDict } from "@/lib/i18n/server";
 
@@ -14,10 +15,7 @@ export default async function TeamPage() {
 
   return (
     <>
-      <PageHeader
-        title={k.titel}
-        subtitle={k.subtitel}
-      />
+      <InstellingenKop title={k.titel} subtitle={k.subtitel} />
 
       <Panel
         title={k.paneel}

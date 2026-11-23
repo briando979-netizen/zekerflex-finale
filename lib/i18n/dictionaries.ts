@@ -327,6 +327,8 @@ export const nl = {
   },
   settings: {
     title: "Instellingen",
+    // de link bovenaan elke onderpagina van Instellingen (components/werkgever/InstellingenKop.tsx)
+    back: "Terug naar instellingen",
     coverTitle: "Voeg een omslagfoto toe",
     coverBody:
       "Klussen met een omslagfoto springen meer in het oog bij de werkers op ons platform; voeg eenvoudig een omslagfoto toe en krijg meer reacties op jouw klussen.",

@@ -5,6 +5,7 @@ import { getOrgProfileExtra } from "@/lib/profile/store";
 import { reviewSummary } from "@/lib/reviews/store";
 import Link from "next/link";
 import { PageHeader, Panel, EmptyState } from "@/components/app/ui";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { OrgProfileForm } from "@/components/app/OrgProfileForm";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
@@ -54,17 +55,8 @@ export default async function WerkgeverBedrijfPage() {
 
   return (
     <>
-      <PageHeader
-        title={c.title}
-        eyebrow={c.eyebrow}
-        subtitle={fmt(c.subtitle, { org: tenant?.name ?? c.title })}
-        action={
-          // één plek voor bedrijfsgegevens: de instellingen zijn vanaf hier bereikbaar, niet meer los in de zijbalk
-          <Link href="/werkgever/instellingen" className="btn-ghost">
-            {dict.settings.title}
-          </Link>
-        }
-      />
+      {/* een onderpagina van Instellingen: titel, "Terug naar instellingen" (23 nov 2026, zoals bij YoungOnes) */}
+      <InstellingenKop title={c.title} subtitle={fmt(c.subtitle, { org: tenant?.name ?? c.title })} />
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <Panel title={c.editPanel}>

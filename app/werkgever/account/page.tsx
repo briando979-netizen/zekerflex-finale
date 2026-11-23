@@ -3,7 +3,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logoutAction } from "@/lib/auth/actions";
 import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updateEmployerPersonalInfoAction } from "@/app/werkgever/account/actions";
 import { PasskeySettings } from "@/components/auth/PasskeySettings";
@@ -35,11 +36,7 @@ export default async function WerkgeverAccountPage() {
 
   return (
     <>
-      <Link href="/werkgever/instellingen" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-        ← {d.shell.settings}
-      </Link>
-
-      <PageHeader title={t.titel} subtitle={t.sub} />
+      <InstellingenKop title={t.titel} subtitle={t.sub} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title={t.persoon}>

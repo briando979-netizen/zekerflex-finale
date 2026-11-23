@@ -4,7 +4,8 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { resolveTenantPlan } from "@/lib/api-plans/resolve";
 import { API_PLANS } from "@/lib/api-plans/catalog";
 import { isCompTenant } from "@/lib/billing/comp";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { PlanPicker } from "@/components/app/PlanPicker";
 import { WerkgeverApiKeysBoard } from "@/components/app/WerkgeverApiKeysBoard";
 import { WebhooksBoard } from "@/components/werkgever/WebhooksBoard";
@@ -21,7 +22,7 @@ export default async function IntegratiesPage() {
 
   return (
     <>
-      <PageHeader
+      <InstellingenKop
         title="Koppelingen & API"
         subtitle="Koppel ZekerFlex aan je agenda, boekhouding, salaris, Slack/Teams of 5.000+ apps via Zapier en Make — of bouw zelf met de API en webhooks."
       />

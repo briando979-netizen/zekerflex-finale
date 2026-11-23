@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getEmployerRelations } from "@/lib/employer/relations";
 import { listPools } from "@/lib/pools/store";
 import { getUserAvatars } from "@/lib/profile/store";
-import { PageHeader, EmptyState } from "@/components/app/ui";
+import { EmptyState } from "@/components/app/ui";
 import { PoolsManager } from "@/components/app/PoolsManager";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -27,13 +27,8 @@ export default async function FavoritePoolsPage() {
 
   return (
     <>
-      <div className="mb-6">
-        <Link href="/werkgever/favorieten" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-          ← {t.favorites.title}
-        </Link>
-      </div>
-
-      <PageHeader title={t.pools.title} subtitle={t.pools.subtitle} />
+      {/* de kaart "Labels voor favorieten" op Instellingen opent deze pagina; Mijn werkers heeft er ook een knop naartoe */}
+      <InstellingenKop title={t.pools.title} subtitle={t.pools.subtitle} />
 
       {rel.favorites.length === 0 ? (
         <EmptyState title={t.favorites.emptyTitle} body={t.pools.emptyBody} />

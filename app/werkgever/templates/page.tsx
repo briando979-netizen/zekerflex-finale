@@ -1,8 +1,9 @@
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { env } from "@/lib/env";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
 import { TemplatesBoard } from "@/components/app/TemplatesBoard";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function TemplatesPage() {
 
   return (
     <>
-      <PageHeader
+      <InstellingenKop
         title="Klus-templates"
         subtitle="Sla veelgebruikte dienst-instellingen op zodat jij en je collega's sneller een nieuwe klus kunnen plaatsen."
       />
