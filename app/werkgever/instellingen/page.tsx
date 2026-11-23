@@ -6,6 +6,8 @@ import { getOrgProfileExtra } from "@/lib/profile/store";
 import { heeftOmslagfoto } from "@/lib/werkgever/bedrijfsprofiel";
 import { getDict } from "@/lib/i18n/server";
 import { PushToggle } from "@/components/app/PushToggle";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
+import { Kaart } from "@/components/werkgever/Kaart";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 import {
   IUser,
@@ -97,71 +99,77 @@ export default async function InstellingenPage() {
 
   return (
     <>
-      <h1 className="mb-8 font-display text-2xl font-bold uppercase tracking-tight text-ink">{s.title}</h1>
+      {/* de ene kop van de werkgeversapp; het overzicht zelf heeft geen link terug */}
+      <PaginaKop title={s.title} />
 
+      {/* de oproep bovenaan zolang er geen omslagfoto is: tekst en knop links, rechts een rustig vak met een belletje (amber = wacht op jou) */}
       {!hasCover && (
-        <div className="mb-10 flex items-start justify-between gap-4 rounded-2xl bg-white p-6 shadow-card">
-          <div className="max-w-xl">
-            <h2 className="font-display text-lg font-bold text-ink">{s.coverTitle}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{s.coverBody}</p>
-            <Link href="/werkgever/bedrijf" className="btn-primary mt-4 inline-block">
-              {s.coverCta}
-            </Link>
+        <Kaart className="mb-10">
+          <div className="flex items-start justify-between gap-6 sm:p-4">
+            <div className="max-w-2xl">
+              <h2 className="font-display text-lg font-bold leading-snug text-ink">{s.coverTitle}</h2>
+              <p className="mt-3 text-sm leading-relaxed text-neutralx-600">{s.coverBody}</p>
+              <Link href="/werkgever/bedrijf" className="btn-primary mt-6 inline-flex min-h-11">
+                {s.coverCta}
+              </Link>
+            </div>
+            <span className="hidden h-20 w-20 flex-shrink-0 place-items-center rounded-lg bg-paper-soft text-warn sm:grid">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M6 16V10a6 6 0 1 1 12 0v6l2 2H4l2-2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                <path d="M10 20a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </span>
           </div>
-          <span className="hidden h-14 w-14 flex-shrink-0 place-items-center rounded-xl bg-paper-soft text-crit sm:grid">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M6 16V10a6 6 0 1 1 12 0v6l2 2H4l2-2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-              <path d="M10 20a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </span>
-        </div>
+        </Kaart>
       )}
 
       <Section title={s.sectionCompany} cards={bedrijf} soonLabel={d.common.soon} />
       <Section title={s.sectionShifts} cards={klussen} soonLabel={d.common.soon} />
       <Section title={s.sectionInvoicing} cards={facturatie} soonLabel={d.common.soon} />
       <Section title={s.sectionAccount} cards={account} soonLabel={d.common.soon} />
-      <div className="-mt-6 mb-10 max-w-xl">
+      <div className="-mt-4 mb-10 max-w-xl">
         <PushToggle />
       </div>
     </>
   );
 }
 
+// Eén groep kaarten: een dunne lijn, de naam van de groep in rustig grijs, en de kaarten in een raster (vier naast elkaar op een
+// brede laptop, drie op een smalle, twee op een tablet, één op een telefoon). Een kaart = pictogram in een grijs vakje, de titel
+// vet en één regel uitleg. De hele kaart is de link, dus het tikdoel is ruim 44 px.
 function Section({ title, cards, soonLabel }: { title: string; cards: Card[]; soonLabel: string }) {
   return (
-    <section className="mb-10 border-t border-hair pt-6">
-      <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-neutralx-400">{title}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <section className="mb-10 border-t border-hairstrong pt-6">
+      <h2 className="mb-4 text-sm text-neutralx-500">{title}</h2>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {cards.map((c) => {
           const inner = (
             <>
-              <span className="relative grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-paper-soft text-crit">
+              <span className="relative grid h-12 w-12 flex-shrink-0 place-items-center rounded-lg bg-paper-soft text-brand-600">
                 {c.icon}
                 {c.stip && <span aria-hidden className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-warn" />}
               </span>
-              <span className="min-w-0">
-                <span className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-ink">{c.title}</span>
+              <span className="min-w-0 pt-0.5">
+                <span className="flex flex-wrap items-center gap-x-2">
+                  <span className="break-words text-sm font-bold leading-snug text-ink">{c.title}</span>
                   {c.stip && c.stipTekst && <span className="sr-only"> ({c.stipTekst})</span>}
                   {c.soon && (
-                    <span className="rounded-full bg-paper-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase text-neutralx-400">
+                    <span className="rounded-full bg-paper-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase text-neutralx-500">
                       {soonLabel}
                     </span>
                   )}
                 </span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-neutralx-500">{c.sub}</span>
+                <span className="mt-0.5 block text-[13px] leading-snug text-neutralx-600">{c.sub}</span>
               </span>
             </>
           );
-          const cls =
-            "relative flex items-start gap-3 rounded-xl border border-hair bg-white p-4 shadow-card transition";
+          const cls = "relative flex min-h-[4.5rem] items-start gap-3 rounded-lg border border-hair bg-white p-3 shadow-e1 transition-colors";
           return c.href && !c.soon && c.gewoon ? (
-            <a key={c.title} href={c.href} className={`${cls} hover:-translate-y-0.5 hover:border-brand-300`}>
+            <a key={c.title} href={c.href} className={`${cls} hover:border-brand-300`}>
               {inner}
             </a>
           ) : c.href && !c.soon ? (
-            <Link key={c.title} href={c.href} className={`${cls} hover:-translate-y-0.5 hover:border-brand-300`}>
+            <Link key={c.title} href={c.href} className={`${cls} hover:border-brand-300`}>
               {inner}
             </Link>
           ) : (

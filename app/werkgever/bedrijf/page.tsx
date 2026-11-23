@@ -4,8 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { reviewSummary } from "@/lib/reviews/store";
 import Link from "next/link";
-import { PageHeader, Panel, EmptyState } from "@/components/app/ui";
+import { EmptyState } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
+import { Kaart } from "@/components/werkgever/Kaart";
+import { FormulierRij } from "@/components/werkgever/FormulierRij";
 import { OrgProfileForm } from "@/components/app/OrgProfileForm";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
@@ -35,7 +38,7 @@ export default async function WerkgeverBedrijfPage() {
   if (!tenantId) {
     return (
       <>
-        <PageHeader title={c.title} subtitle={c.subtitle.replace("{org}", "")} />
+        <PaginaKop title={c.title} subtitle={c.subtitle.replace("{org}", "")} />
         <EmptyState title={c.noOrgTitle} body={c.noOrgBody} />
       </>
     );
@@ -51,42 +54,36 @@ export default async function WerkgeverBedrijfPage() {
   return (
     <>
       {/* een onderpagina van Instellingen: titel, "Terug naar instellingen" (23 nov 2026, zoals bij YoungOnes) */}
-      <InstellingenKop title={c.title} subtitle={fmt(c.subtitle, { org: tenant?.name ?? c.title })} />
+      <InstellingenKop title={c.title} />
 
-      <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-        <Panel title={c.editPanel}>
-          <div className="p-5">
-            <OrgProfileForm
-              tenantId={tenantId}
-              initial={{
-                ...(extra.websiteUrl ? { websiteUrl: extra.websiteUrl } : {}),
-                ...(extra.about ? { about: extra.about } : {}),
-                hasPhoto: Boolean(extra.photoUploadId),
-              }}
-            />
-          </div>
-        </Panel>
+      {/* één witte kaart met de blokken onder elkaar: links de kop en de uitleg, rechts de velden (components/werkgever/FormulierRij.tsx) */}
+      <Kaart>
+        <FormulierRij titel={c.editPanel} uitleg={fmt(c.subtitle, { org: tenant?.name ?? c.title })}>
+          <OrgProfileForm
+            tenantId={tenantId}
+            initial={{
+              ...(extra.websiteUrl ? { websiteUrl: extra.websiteUrl } : {}),
+              ...(extra.about ? { about: extra.about } : {}),
+              hasPhoto: Boolean(extra.photoUploadId),
+            }}
+          />
+        </FormulierRij>
 
-        <Panel
-          title={c.reviewsPanel}
-          action={
-            reviews.count > 0 ? (
-              <Link href="/werkgever/reviews" className="text-xs font-medium text-brand-600">
-                {c.allReviews}
-              </Link>
-            ) : undefined
-          }
-        >
+        <FormulierRij titel={c.reviewsPanel}>
           {reviews.count === 0 ? (
-            <EmptyState title={c.reviewsEmptyTitle} body={c.reviewsEmptyBody} />
+            // de lege staat is één regel tekst
+            <p className="text-sm leading-relaxed text-neutralx-600">{c.reviewsEmptyBody}</p>
           ) : (
-            <div className="p-5">
-              <p className="text-sm">
-                <Stars n={reviews.average} />{" "}
-                <span className="font-semibold text-ink">{reviews.average}</span>{" "}
+            <div>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                <Stars n={reviews.average} />
+                <span className="font-semibold text-ink">{reviews.average}</span>
                 <span className="text-neutralx-500">{fmt(c.reviewsSummary, { n: reviews.count })}</span>
+                <Link href="/werkgever/reviews" className="ml-auto inline-flex min-h-11 items-center text-sm font-semibold text-brand-600 hover:underline">
+                  {c.allReviews}
+                </Link>
               </p>
-              <ul className="mt-4 space-y-3">
+              <ul className="mt-2 space-y-3">
                 {reviews.recent.slice(0, 8).map((r) => (
                   <li key={r.id} className="rounded-lg bg-paper-soft p-3">
                     <div className="flex items-center justify-between text-xs">
@@ -94,34 +91,29 @@ export default async function WerkgeverBedrijfPage() {
                       <Stars n={r.rating} />
                     </div>
                     {r.text && <p className="mt-1 text-sm text-neutralx-600">{r.text}</p>}
-                    {r.shiftTitle && <p className="mt-1 text-[11px] text-neutralx-400">{r.shiftTitle}</p>}
+                    {r.shiftTitle && <p className="mt-1 text-[11px] text-neutralx-500">{r.shiftTitle}</p>}
                   </li>
                 ))}
               </ul>
             </div>
           )}
-        </Panel>
-      </div>
+        </FormulierRij>
+
+        {/* #notificaties: de kaart Notificaties op Instellingen en "Notificatievoorkeuren" in het gebruikersmenu komen hier uit, tot er een eigen pagina is */}
+        <FormulierRij id="notificaties" titel={c.mailPanel} uitleg={c.mailIntro}>
+          <MailPrefsToggles
+            token={mailPrefs.token}
+            initialCategories={mailPrefs.categories}
+            initialUnsubscribedAll={mailPrefs.unsubscribedAll}
+            kant="bedrijf"
+          />
+        </FormulierRij>
+      </Kaart>
 
       <div className="mt-6 space-y-6">
         {/* maximum uren per werker en inchecken staan sinds 23 nov 2026 onder Instellingen → Klus-instellingen (/werkgever/instellingen/klussen) */}
         <VolumeCard />
         <FastPaySettings />
-      </div>
-
-      {/* #notificaties: de kaart Notificaties op Instellingen en "Notificatievoorkeuren" in het gebruikersmenu komen hier uit, tot er een eigen pagina is */}
-      <div id="notificaties" className="mt-6 scroll-mt-24">
-        <Panel title={c.mailPanel}>
-          <div className="p-5">
-            <p className="mb-4 text-sm text-neutralx-600">{c.mailIntro}</p>
-            <MailPrefsToggles
-              token={mailPrefs.token}
-              initialCategories={mailPrefs.categories}
-              initialUnsubscribedAll={mailPrefs.unsubscribedAll}
-              kant="bedrijf"
-            />
-          </div>
-        </Panel>
       </div>
     </>
   );
