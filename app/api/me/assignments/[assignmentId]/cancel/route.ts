@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { ShiftStatus, TimesheetStatus } from "@prisma/client";
+import { TimesheetStatus } from "@prisma/client";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toErrorBody, AppError } from "@/lib/errors";
@@ -17,6 +17,8 @@ import { notifyStandby } from "@/lib/matching/standby";
 import { sendUserPush } from "@/lib/notifications/push";
 import { runAfter } from "@/lib/run-after";
 import { meldReservesVrijePlek } from "@/lib/reservebank/store";
+import { automatischHeropenen } from "@/lib/werkgever/heropenen";
+import { blijftVolNaAfzegging, statusNaAfzegging } from "@/lib/werkgever/heropenen-kern";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,6 +75,12 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
     const hoursUntilStart = (assignment.shift.startsAt.getTime() - Date.now()) / 3_600_000;
     const late = hoursUntilStart < noticeHours;
 
+    // "Klussen automatisch heropenen" (Instellingen → Klus-instellingen, lib/werkgever/heropenen.ts): standaard aan, zoals het altijd
+    // werkte. Zet het bedrijf het uit, dan blijft een volle klus op "volledig bezet" staan en start er niets vanzelf (geen nieuwe
+    // matching, geen standby); het bedrijf zet hem zelf weer open. Een klus die nog niet vol was verandert niet: die is al open.
+    const heropenen = await automatischHeropenen(assignment.shift.branch.tenantId);
+    const blijftVol = blijftVolNaAfzegging(assignment.shift.status, heropenen);
+
     await prisma.$transaction(async (tx) => {
       await tx.shiftAssignment.update({
         where: { id: assignment.id },
@@ -87,7 +95,7 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
       const active = await tx.shiftAssignment.count({
         where: { shiftId: assignment.shift.id, cancelledAt: null },
       });
-      const next = active <= 0 ? ShiftStatus.OPEN : ShiftStatus.PARTIALLY_FILLED;
+      const next = statusNaAfzegging(assignment.shift.status, active, heropenen);
       if (assignment.shift.status !== next) {
         await tx.shift.update({ where: { id: assignment.shift.id }, data: { status: next } });
       }
@@ -117,9 +125,12 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
     });
     // Look for someone else right away instead of at the next autopilot round (twice a day),
     // and tell the client now rather than letting them find out on the day.
-    runAfter(() => runMatchingForShift(assignment.shift.id));
-    // Within 24 hours: workers on standby hear it straight away (lib/matching/standby).
-    runAfter(() => notifyStandby(assignment.shift.id));
+    // (met automatisch heropenen uit blijft de klus volledig bezet: dan zoekt het bedrijf zelf een vervanger)
+    if (!blijftVol) {
+      runAfter(() => runMatchingForShift(assignment.shift.id));
+      // Within 24 hours: workers on standby hear it straight away (lib/matching/standby).
+      runAfter(() => notifyStandby(assignment.shift.id));
+    }
     // Reservebank (lib/reservebank): de reserves van deze klus horen één keer dat er plek is, en het bedrijf hoort
     // dat het meteen uit zijn reserves kan kiezen (op de klus staat dan "Iemand zegde af — kies uit je reservebank").
     runAfter(async () => {
@@ -131,7 +142,9 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
           `${principal.fullName} komt niet op ${when}. ` +
           (reserves > 0
             ? `Je hebt ${reserves} ${reserves === 1 ? "reserve" : "reserves"} op de reservebank: kies er een op de klus.`
-            : "ZekerFlex zoekt direct een vervanger."),
+            : blijftVol
+              ? "De klus blijft op volledig bezet staan, want automatisch heropenen staat uit. Zet hem zelf weer open op de klus."
+              : "ZekerFlex zoekt direct een vervanger."),
         data: { type: "SHIFT", url: `/werkgever/diensten/${assignment.shift.id}`, tag: `afgezegd-${assignment.id}` },
         ttlSeconds: 43_200,
       });
@@ -167,7 +180,7 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
         `${principal.fullName} heeft de dienst "${assignment.shift.title}" bij ${assignment.shift.branch.name} ` +
         `op ${when} afgezegd zonder vervanger ` +
         `(${late ? "buiten de opzegtermijn — opdrachtgever kan 50% claimen" : "binnen de opzegtermijn"}).\n\n` +
-        `Reden: ${reason}\n\nDe dienst staat weer open op het platform.`,
+        `Reden: ${reason}\n\n${blijftVol ? "De dienst blijft op volledig bezet staan: het bedrijf heeft automatisch heropenen uitgezet." : "De dienst staat weer open op het platform."}`,
     }).catch(() => undefined);
 
     revalidatePath("/dashboard/diensten");

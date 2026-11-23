@@ -14,6 +14,7 @@ import { ClaimReviewPanel } from "@/components/app/ClaimReviewPanel";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
 import { CandidateCardButton } from "@/components/app/CandidateCardButton";
 import { PublishPoolShiftButton } from "@/components/app/PublishPoolShiftButton";
+import { KlusWeerOpenKnop } from "@/components/app/KlusWeerOpenKnop";
 import { RepeatTeamButton } from "@/components/app/RepeatTeamButton";
 import { SpoedoproepPaneel } from "@/components/app/SpoedoproepPaneel";
 import { ReservebankKnop, ReserveInplannenKnop } from "@/components/app/ReservebankKnoppen";
@@ -152,6 +153,13 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
             ))}
           </ul>
         </section>
+      )}
+
+      {/* een volle klus waar iemand van afzegde en "Klussen automatisch heropenen" staat uit (Instellingen → Klus-instellingen): zelf weer openzetten */}
+      {s.status === "FILLED" && seatsFree > 0 && verified && !shiftEnded && (
+        <div className="mb-6">
+          <KlusWeerOpenKnop shiftId={s.id} />
+        </div>
       )}
 
       {!verified && (

@@ -253,8 +253,9 @@ describe("teksten in alle talen en de aansluiting op de schermen", () => {
     expect(lees("app/dashboard/klussen/[shiftId]/page.tsx")).toContain("ft.checkinPage.geenInchecken");
   });
 
-  it("de werkgever vindt de keuze bij zijn bedrijfsinstellingen en bij Inchecken, en ziet het bij de uren", () => {
-    expect(lees("app/werkgever/bedrijf/page.tsx")).toContain("<IncheckenInstelling initial={incheckVereist} />");
+  it("de werkgever vindt de keuze bij zijn klus-instellingen (sinds 23 nov 2026, eerst onderaan Bedrijfsprofiel) en bij Inchecken, en ziet het bij de uren", () => {
+    expect(lees("app/werkgever/instellingen/klussen/page.tsx")).toContain("<IncheckenInstelling initial={incheckVereist} />");
+    expect(lees("app/werkgever/bedrijf/page.tsx")).not.toContain("<IncheckenInstelling");
     expect(lees("app/werkgever/inchecken/page.tsx")).toContain("<IncheckenInstelling initial={vereist} />");
     expect(lees("app/werkgever/inchecken/page.tsx")).toContain("(await getDict()).incheckQr");
     const uren = lees("app/werkgever/uren/page.tsx");

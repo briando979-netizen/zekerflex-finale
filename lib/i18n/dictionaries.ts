@@ -418,6 +418,34 @@ export const nl = {
     foutInGebruik: "Deze kostenplaats staat nog bij een vestiging of een lopende klus.",
     foutAlgemeen: "Opslaan lukte niet. Probeer het opnieuw.",
   },
+  // Instellingen → Klus-instellingen (/werkgever/instellingen/klussen, 23 nov 2026, naar YoungOnes): heropenen, maximum uren en inchecken
+  klusInstellingen: {
+    titel: "Klus-instellingen",
+    heropenenTitel: "Klussen automatisch heropenen",
+    heropenenUitleg:
+      "Het kan zijn dat een werker afzegt terwijl alle plekken van je klus gevuld zijn en de klus op volledig bezet staat. Staat automatisch heropenen aan, dan staat de klus meteen weer open en zoekt ZekerFlex een vervanger. Staat het uit, dan blijft de klus op volledig bezet staan en zet je hem zelf weer open met de knop op de klus.",
+    heropenenAan: "Aan",
+    heropenenUit: "Uit",
+    heropenenOpgeslagenAan: "Opgeslagen: een klus gaat vanzelf weer open als iemand afzegt.",
+    heropenenOpgeslagenUit: "Opgeslagen: een volle klus blijft staan als iemand afzegt. Je zet hem zelf weer open.",
+    heropenenMislukt: "Opslaan lukte niet. Probeer het opnieuw.",
+    heropenenAlleenBeheerder: "Alleen een beheerder van het bedrijf kan dit wijzigen.",
+  },
+  // de knop op een volle klus waar iemand van afzegde, als automatisch heropenen uit staat (components/app/KlusWeerOpenKnop.tsx)
+  klusWeerOpen: {
+    kop: "Er is een plek vrijgekomen",
+    uitleg: "Iemand zegde af, maar de klus staat nog op volledig bezet omdat automatisch heropenen uit staat bij je klus-instellingen. Zet de klus weer open, dan zoekt ZekerFlex een vervanger.",
+    knop: "Klus weer openzetten",
+    vraag: "Weet je het zeker? De klus staat dan weer open en werkers in de buurt kunnen reageren.",
+    ja: "Ja, zet open",
+    nee: "Annuleren",
+    bezig: "Bezig…",
+    nietVol: "Deze klus staat al open.",
+    alleBezet: "Alle plekken van deze klus zijn bezet.",
+    begonnen: "Deze klus is al begonnen.",
+    gedaan: "De klus staat weer open. ZekerFlex zoekt een vervanger.",
+    mislukt: "Weer openzetten lukte niet. Probeer het opnieuw.",
+  },
   reviews: {
     backToStart: "Jouw start",
     title: "Beoordelingen",

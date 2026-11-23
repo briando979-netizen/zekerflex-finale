@@ -15,6 +15,7 @@ import { nl as nlDict } from "@/lib/i18n/dictionaries";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
+import { statusNaHeropenen } from "@/lib/werkgever/heropenen-kern";
 import { notifyFollowersOfShifts } from "@/lib/worker/follows";
 import { notifyJobAlerts } from "@/lib/matching/job-alerts";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
@@ -320,6 +321,43 @@ export async function publishShiftAction(shiftId: string): Promise<OfferResponse
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
     return { ok: false, message: "Publiceren mislukt." };
+  }
+}
+
+/**
+ * Een volle klus weer openzetten nadat een werker afzegde en "Klussen automatisch heropenen" uit staat (Instellingen → Klus-instellingen,
+ * lib/werkgever/heropenen.ts). Precies wat een afzegging doet als automatisch heropenen aan staat: de klus gaat weer open (of staat
+ * deels bezet), er start een zoektocht naar een vervanger en standby-werkers horen het. De melding is in de taal van het bedrijf.
+ */
+export async function heropenShiftAction(shiftId: string): Promise<OfferResponse> {
+  const k = (await getDict().catch(() => nlDict)).klusWeerOpen;
+  try {
+    const { principal, shift } = await assertOwnsShift(shiftId);
+    if (shift.status !== "FILLED") return { ok: false, message: k.nietVol };
+    if (shift.assignments.length >= shift.positions) return { ok: false, message: k.alleBezet };
+    if (shift.startsAt.getTime() <= Date.now()) return { ok: false, message: k.begonnen };
+
+    await prisma.shift.update({ where: { id: shift.id }, data: { status: statusNaHeropenen(shift.assignments.length) } });
+    runAfter(() => runMatchingForShift(shift.id));
+    // binnen 24 uur: werkers op standby horen het meteen (lib/matching/standby); pas geladen als het nodig is
+    runAfter(async () => (await import("@/lib/matching/standby")).notifyStandby(shift.id));
+
+    await recordAudit({
+      category: "MATCHING",
+      action: "shift.reopened_by_employer",
+      actorUserId: principal.userId,
+      actorLabel: "user",
+      summary: `Dienst "${shift.title}" door het bedrijf weer open gezet (${shift.assignments.length}/${shift.positions} bezet)`,
+      targetType: "shift",
+      targetId: shift.id,
+    });
+
+    revalidatePath(`/werkgever/diensten/${shift.id}`);
+    revalidatePath("/werkgever/diensten");
+    return { ok: true, message: k.gedaan };
+  } catch (err) {
+    if (err instanceof AppError) return { ok: false, message: err.message };
+    return { ok: false, message: k.mislukt };
   }
 }
 
