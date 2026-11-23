@@ -823,15 +823,10 @@ export function NewShiftForm({
             </p>
           )}
 
-          {/* wat de klus kost, vlak boven de knop (op een laptop staat het uitgebreid naast het formulier, hier alleen het totaal) */}
+          {/* wat de klus kost, vlak boven de knop op een telefoon; op een laptop staat de kostenregel één keer, in het voorbeeld ernaast
+              (23 nov 2026: het totaal stond daar twee keer, ook nog eens hier bij de knop) */}
           {!edit && kostenZichtbaar && (
-            <>
-              <KostenBlok {...kostenRegels} className="lg:hidden" />
-              <p className="hidden items-baseline justify-between gap-3 text-sm lg:flex">
-                <span className="text-neutralx-600">{kostenTekst.kostenTotaal}</span>
-                <span className="num font-display text-lg font-bold text-ink">{kostenRegels.totaal}</span>
-              </p>
-            </>
+            <KostenBlok {...kostenRegels} className="lg:hidden" />
           )}
 
           {edit ? (
