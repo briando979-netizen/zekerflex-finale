@@ -195,7 +195,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
         <div className="mt-5 space-y-4">
           <label className="block text-sm font-semibold text-ink">
             {t.titel}
-            <input value={titel} onChange={(e) => setTitel(e.target.value)} maxLength={120} placeholder={t.titelHint} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 text-base font-normal" autoFocus />
+            <input value={titel} onChange={(e) => setTitel(e.target.value)} maxLength={120} placeholder={t.titelPlaceholder} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 text-base font-normal" autoFocus />
           </label>
           {sjablonen.length > 0 && (
             <div>

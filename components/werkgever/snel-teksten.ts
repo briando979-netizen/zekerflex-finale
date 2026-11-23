@@ -10,6 +10,8 @@ export interface SnelTeksten {
   stap3: string;
   titel: string;
   titelHint: string;
+  /** het korte voorbeeld in het titelveld: een invoerveld van één regel kapt een lange voorbeeldtekst af op een telefoon (23 nov 2026) */
+  titelPlaceholder: string;
   sjabloon: string;
   datum: string;
   van: string;
@@ -52,6 +54,7 @@ export const SNEL_NL: SnelTeksten = {
   stap3: "Tarief",
   titel: "Wat moet er gebeuren?",
   titelHint: "Bijvoorbeeld: Bediening terras, Orderpicker, Verkeersregelaar",
+  titelPlaceholder: "Bijv. Bediening terras",
   sjabloon: "Of kies een voorbeeld",
   datum: "Datum",
   van: "Van",
@@ -87,6 +90,7 @@ export const SNEL_EN: SnelTeksten = {
   stap3: "Rate",
   titel: "What needs to be done?",
   titelHint: "For example: Terrace service, Order picker, Traffic controller",
+  titelPlaceholder: "E.g. Terrace service",
   sjabloon: "Or pick an example",
   datum: "Date",
   van: "From",

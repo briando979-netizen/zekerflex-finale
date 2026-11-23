@@ -5,6 +5,8 @@ import { nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
 import { accentMetAlpha, vlakAchtergrond } from "@/lib/shifts/beeld-vlak";
 import { SHIFT_CATEGORIES } from "@/lib/shifts/category";
+import { SJABLOON_EN, SJABLOON_NL } from "@/lib/shifts/sjabloon-kiezer-teksten";
+import { SNEL_EN, SNEL_NL } from "@/components/werkgever/snel-teksten";
 
 // 23 nov 2026 (eigenaar, na het bekijken van de live site):
 // (a) het voorbeeld in het veld Kledingvoorschriften werd op een telefoon (390 px) aan het eind afgekapt: kortere voorbeeldtekst en
@@ -97,6 +99,15 @@ describe("tekstvakken in de klus-wizard worden niet afgekapt", () => {
     const literal = [...lees("components/marketing/KlusConcept.tsx").matchAll(/placeholder="([^"]*)"/g)].map((m) => m[1] ?? "");
     expect(literal.length).toBeGreaterThan(0);
     for (const p of literal) expect(p.length, p).toBeLessThanOrEqual(45);
+  });
+
+  it("ook de zoekvelden van de functiekiezer en van Snel een klus plaatsen hebben een korte voorbeeldtekst", () => {
+    for (const [taal, t] of [["nl", SJABLOON_NL], ["en", SJABLOON_EN]] as const) expect(t.zoekPlaceholder.length, `kiezer ${taal}`).toBeLessThanOrEqual(45);
+    for (const [taal, t] of [["nl", SNEL_NL], ["en", SNEL_EN]] as const) expect(t.titelPlaceholder.length, `snel ${taal}`).toBeLessThanOrEqual(45);
+    // de lange tekst blijft de melding bij een te korte titel; alleen het voorbeeld in het veld is korter
+    const snel = lees("components/werkgever/SnelPlaatsen.tsx");
+    expect(snel).toContain("placeholder={t.titelPlaceholder}");
+    expect(snel).toContain("setMelding(t.titelHint)");
   });
 
   it("de omschrijving en de kleding groeien mee met hun tekst, ook na het terugkeren naar stap 1", () => {
