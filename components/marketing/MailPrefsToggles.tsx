@@ -68,7 +68,8 @@ export function MailPrefsToggles({
               aria-checked={c.on && !all}
               disabled={busy || all}
               onClick={() => post({ category: c.slug, on: !c.on })}
-              className={`relative mt-1 h-6 w-11 flex-shrink-0 rounded-full transition-colors disabled:opacity-40 ${
+              // het tikvlak is 44 px hoog (een onzichtbare rand van 10 px rondom); de schakelaar zelf blijft zo klein als hij was
+              className={`relative mt-1 h-6 w-11 flex-shrink-0 rounded-full transition-colors before:absolute before:-inset-2.5 before:content-[''] disabled:opacity-40 ${
                 c.on && !all ? "bg-brand-500" : "bg-neutralx-300"
               }`}
             >

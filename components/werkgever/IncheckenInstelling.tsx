@@ -31,24 +31,28 @@ export function IncheckenInstelling({ initial }: { initial: boolean }) {
     }
   };
 
-  const optie = "flex items-start gap-3 rounded-xl border p-3";
+  // de gekozen optie: een dikke groene rand op een heel licht groen vlak, met donkere tekst (ronde 2, 23 nov 2026: op het felle
+  // mintgroen haalde de grijze uitleg 3,2:1). Het keuzerondje zelf zegt ook wat er gekozen is; de kleur is niet het enige teken.
+  const optie = "flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border-2 p-3";
+  const gekozen = "border-brand-600 bg-brand-50";
+  const nietGekozen = "border-hair";
   return (
     <fieldset className="p-5" disabled={bezig}>
       <legend className="sr-only">{c.incheckTitel}</legend>
       <p className="text-sm text-neutralx-600">{c.incheckUitleg}</p>
       <div className="mt-3 space-y-2">
-        <label className={`${optie} ${vereist ? "border-brand-500 bg-brand-mint" : "border-hair"}`}>
+        <label className={`${optie} ${vereist ? gekozen : nietGekozen}`}>
           <input type="radio" name="incheck-vereist" checked={vereist} onChange={() => void kies(true)} className="mt-1 h-4 w-4 accent-brand-500" />
           <span>
             <span className="block text-sm font-semibold text-ink">{c.incheckJa}</span>
-            <span className="block text-xs text-neutralx-500">{c.incheckJaUitleg}</span>
+            <span className="block text-xs text-neutralx-600">{c.incheckJaUitleg}</span>
           </span>
         </label>
-        <label className={`${optie} ${!vereist ? "border-brand-500 bg-brand-mint" : "border-hair"}`}>
+        <label className={`${optie} ${!vereist ? gekozen : nietGekozen}`}>
           <input type="radio" name="incheck-vereist" checked={!vereist} onChange={() => void kies(false)} className="mt-1 h-4 w-4 accent-brand-500" />
           <span>
             <span className="block text-sm font-semibold text-ink">{c.incheckNee}</span>
-            <span className="block text-xs text-neutralx-500">{c.incheckNeeUitleg}</span>
+            <span className="block text-xs text-neutralx-600">{c.incheckNeeUitleg}</span>
           </span>
         </label>
       </div>

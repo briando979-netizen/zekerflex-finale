@@ -86,7 +86,7 @@ export default async function WerkgeverFacturenPage() {
       {/* instellingen voor de boekhouder: standaard dicht, open als het bedrijf er al iets heeft ingevuld
           (lib/werkgever/facturen-instellingen.ts). Het anker #factuurgegevens (hulpcentrum) wijst naar dit blok. */}
       <details id="factuurgegevens" className="card mt-8 scroll-mt-24 p-4" open={instellingenOpen}>
-        <summary className="cursor-pointer text-sm font-semibold text-ink">{iv.moreSettings}</summary>
+        <summary className="cursor-pointer py-3 text-sm font-semibold text-ink sm:py-0">{iv.moreSettings}</summary>
 
         <div className="mt-4">
           <Panel title={iv.detailsPanel}>

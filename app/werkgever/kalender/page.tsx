@@ -66,14 +66,14 @@ export default async function KalenderPage(
       <div className="mb-4 flex items-center justify-between">
         <Link
           href={`/werkgever/kalender?m=${key(cal.prev.y, cal.prev.m)}`}
-          className="btn-ghost px-3 py-1.5 text-sm"
+          className="btn-ghost min-h-11 px-3 py-1.5 text-sm sm:min-h-0"
         >
           ← {t.calendar.prev}
         </Link>
         <p className="font-display text-lg font-bold text-ink">{cal.label}</p>
         <Link
           href={`/werkgever/kalender?m=${key(cal.next.y, cal.next.m)}`}
-          className="btn-ghost px-3 py-1.5 text-sm"
+          className="btn-ghost min-h-11 px-3 py-1.5 text-sm sm:min-h-0"
         >
           {t.calendar.next} →
         </Link>
@@ -101,8 +101,9 @@ export default async function KalenderPage(
                     cell.isToday
                       ? "mx-auto grid h-5 w-5 place-items-center rounded-full bg-brand-500 font-bold text-white"
                       : cell.inMonth
-                        ? "text-neutralx-500"
-                        : "text-neutralx-400/60"
+                        ? "font-semibold text-neutralx-700"
+                        : // de dagen van de vorige en volgende maand: lichter dan de eigen maand maar goed leesbaar (was 1,9:1)
+                          "text-neutralx-500"
                   }`}
                 >
                   {cell.day}

@@ -39,7 +39,7 @@ export function VolumeCard() {
     <div className="card space-y-4 p-5">
       <div className="flex flex-wrap items-end gap-3">
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink">{v.kop}</span>
+          <span className="block font-display text-xl font-bold leading-snug text-ink">{v.kop}</span>
           <span className="block text-xs text-neutralx-500">{v.uitleg}</span>
         </span>
         <span className="text-right">
@@ -60,7 +60,7 @@ export function VolumeCard() {
       </div>
       {/* alle treden staan standaard dicht: een bedrijf met weinig uren heeft genoeg aan zijn eigen tarief en de volgende trede */}
       <details>
-        <summary className="cursor-pointer text-xs font-medium text-brand-600">{v.alleStaffels}</summary>
+        <summary className="cursor-pointer py-3.5 text-xs font-medium text-brand-600 sm:py-1">{v.alleStaffels}</summary>
         <ul className="mt-3 grid gap-1.5 text-xs sm:grid-cols-5">
           {d.tiers.map((t) => (
             <li key={t.name} className={`rounded-lg border px-2 py-1.5 ${t.name === d.tier.name ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-hair text-neutralx-600"}`}>

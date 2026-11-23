@@ -177,7 +177,7 @@ export default async function WerkgeverStartPage() {
             </span>{" "}
             {ws.volgtNa}
           </p>
-          <Link href="/werkgever/diensten/nieuw" className="text-sm font-semibold text-brand-600 hover:underline">
+          <Link href="/werkgever/diensten/nieuw" className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-600 hover:underline sm:min-h-0">
             {ws.plaatsDienst}
           </Link>
         </div>

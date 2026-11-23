@@ -304,6 +304,56 @@ describe("de schil", () => {
   });
 });
 
+describe("contrast en tikdoelen (ronde 2, gemeten op 390 px)", () => {
+  const css = lees("app/globals.css");
+
+  it("op een telefoon is elke knop van de werkgeversapp minstens 44 px hoog", () => {
+    const blok = css.slice(css.indexOf("@media (max-width: 639px) {\n  .app-scope[data-app=\"werkgever\"] .btn-primary,"));
+    expect(blok.startsWith("@media (max-width: 639px) {")).toBe(true);
+    expect(blok.slice(0, 260)).toContain('.app-scope[data-app="werkgever"] .btn-ghost,');
+    expect(blok.slice(0, 260)).toContain("{ min-height: 44px; }");
+  });
+
+  it("de gekozen optie bij Inchecken heeft een dikke groene rand op een licht vlak met donkere tekst, geen fel mint met grijs", () => {
+    const scherm = lees("components/werkgever/IncheckenInstelling.tsx");
+    expect(scherm).toContain('const gekozen = "border-brand-600 bg-brand-50";');
+    expect(scherm).toContain("border-2");
+    expect(scherm).not.toContain("bg-brand-mint");
+    expect(scherm).not.toContain("text-neutralx-500");
+    // bg-brand-50 heeft een regel voor het donkere thema
+    expect(css).toMatch(/\.app-scope\[data-theme="dark"\] \.bg-brand-50/);
+  });
+
+  it("Planning: de dagen van de vorige en volgende maand zijn leesbaar, en Vorige en Volgende zijn 44 px op een telefoon", () => {
+    const pagina = lees("app/werkgever/kalender/page.tsx");
+    expect(pagina).not.toContain("text-neutralx-400/60");
+    expect(pagina).toContain('? "font-semibold text-neutralx-700"');
+    expect(pagina.match(/className="btn-ghost min-h-11 px-3 py-1\.5 text-sm sm:min-h-0"/g)?.length).toBe(2);
+  });
+
+  it("de schakelaars van de e-mailvoorkeuren hebben een tikvlak van 44 px; het bolletje blijft klein", () => {
+    const m = lees("components/marketing/MailPrefsToggles.tsx");
+    expect(m).toContain("relative mt-1 h-6 w-11 flex-shrink-0 rounded-full transition-colors before:absolute before:-inset-2.5 before:content-['']");
+  });
+
+  it("de sectietitels zijn groot en vet (20 px), ook op de kaarten van het Bedrijfsprofiel", () => {
+    expect(lees("components/werkgever/bouwstenen.ts")).toContain('export const BLOK_KOP = "font-display text-xl font-bold leading-snug text-ink";');
+    expect(lees("components/werkgever/VolumeCard.tsx")).toContain('<span className="block font-display text-xl font-bold leading-snug text-ink">{v.kop}</span>');
+    expect(lees("components/werkgever/FastPaySettings.tsx")).toContain('<h2 className="font-display text-xl font-bold leading-snug text-ink">{f.kop}</h2>');
+  });
+
+  it("de titel van een pagina onder een samengevoegde ingang is de naam uit het menu, in beide talen", () => {
+    for (const [pagina, groep] of [["kalender", "planning"], ["favorieten", "werkers"], ["uren", "uren"]] as const) {
+      expect(lees(`app/werkgever/${pagina}/page.tsx`), pagina).toContain(`samenTitel("${groep}", `);
+    }
+    const layout = lees("app/werkgever/layout.tsx");
+    for (const g of ["planning", "werkers", "regels", "cijfers", "uren"]) expect(layout, g).toContain(`samenLabel("${g}", locale)`);
+    const tabs = lees("lib/werkgever/samen-tabs.ts");
+    expect(tabs).toContain('werkers: "My workers",');
+    expect(tabs).toContain('locale === "en" ? SAMEN_LABEL_EN[groep] : SAMEN_GROEPEN[groep].label');
+  });
+});
+
 describe("elke pagina van de werkgeversapp heeft de ene kop", () => {
   it("de hoofdpagina's gebruiken PaginaKop of de kop van Instellingen, niet meer de oude kop", () => {
     const HOOFD = ["page.tsx", "diensten/page.tsx", "kalender/page.tsx", "favorieten/page.tsx", "berichten/page.tsx", "uren/page.tsx", "facturen/page.tsx", "compliance/page.tsx", "hulp/page.tsx"];

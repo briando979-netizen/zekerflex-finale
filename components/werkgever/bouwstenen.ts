@@ -15,8 +15,8 @@ export function kl(...delen: (string | false | null | undefined)[]): string {
 export const KAART = "rounded-xl border border-hair bg-white shadow-e1";
 /** De ruimte binnen een kaart. */
 export const KAART_VULLING = "p-5";
-/** De kop van een blok binnen een kaart of formulier. */
-export const BLOK_KOP = "font-display text-lg font-bold leading-snug text-ink";
+/** De kop van een blok binnen een kaart of formulier: groot en vet (20 px), zoals de sectietitels in de referentie. */
+export const BLOK_KOP = "font-display text-xl font-bold leading-snug text-ink";
 /** De uitleg onder zo'n kop. */
 export const BLOK_UITLEG = "mt-1 text-sm leading-relaxed text-neutralx-600";
 

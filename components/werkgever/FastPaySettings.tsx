@@ -53,7 +53,7 @@ export function FastPaySettings() {
   return (
     <div className="card space-y-4 p-5">
       <div>
-        <p className="text-sm font-semibold text-ink">{f.kop}</p>
+        <h2 className="font-display text-xl font-bold leading-snug text-ink">{f.kop}</h2>
         <p className="mt-1 text-xs leading-relaxed text-neutralx-500">
           {f.uitleg}
         </p>

@@ -1171,8 +1171,10 @@ html[data-tip-open] button[aria-label="Chat openen"] { visibility: hidden; }
 html:has(.app-scope[data-app="werkgever"]) body { background-color: #F1F3F8; }
 html:has(.app-scope[data-app="werkgever"][data-theme="dark"]) body { background-color: #0B0D11; }
 .app-scope[data-app="werkgever"] { min-height: 100vh; min-height: 100dvh; }
-/* een gekozen keuzevak (bijvoorbeeld "Ja, mijn werkers checken in"): donkergroen met witte tekst, in beide thema's (wit op het
-   diepe groen is ruim 9:1; de grijze uitleg op mintgroen haalde 3,2:1) */
-.app-scope[data-app="werkgever"] .wg-gekozen,
-.app-scope[data-app="werkgever"] .wg-gekozen * { color: #ffffff !important; }
-.app-scope[data-app="werkgever"] .wg-gekozen { background-color: rgb(var(--brand-700-rgb)) !important; border-color: rgb(var(--brand-700-rgb)) !important; }
+/* op een telefoon is elke knop minstens 44 px hoog om te tikken ("Opslaan", "Upload", "Klus uitzetten", "Vorige" en "Volgende"
+   waren lager); vanaf 640 px blijven ze zoals ze zijn */
+@media (max-width: 639px) {
+  .app-scope[data-app="werkgever"] .btn-primary,
+  .app-scope[data-app="werkgever"] .btn-ghost,
+  .app-scope[data-app="werkgever"] .btn-mint { min-height: 44px; }
+}
