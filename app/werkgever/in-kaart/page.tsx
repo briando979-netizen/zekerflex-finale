@@ -1,5 +1,5 @@
 import { hasRole } from "@/lib/auth";
-import { PageHeader } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { InKaart } from "@/components/werkgever/InKaart";
 import { getLocale } from "@/lib/i18n/server";
 import { leegBedrijf } from "@/lib/inkaart/model";
@@ -21,7 +21,7 @@ export default async function BedrijfInKaartPage() {
   return (
     <>
       <SamenTabs groep="cijfers" actief="inkaart" />
-      <PageHeader title={t.pagina.titel} eyebrow={t.pagina.eyebrow} subtitle={t.pagina.subtitel} />
+      <PaginaKop title={t.pagina.titel} eyebrow={t.pagina.eyebrow} subtitle={t.pagina.subtitel} />
       <InKaart start={bewaard ?? leegBedrijf("overig", new Date())} magWijzigen={magWijzigen} t={t} />
     </>
   );

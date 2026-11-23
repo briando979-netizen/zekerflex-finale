@@ -1,6 +1,7 @@
 import { requirePrincipal } from "@/lib/auth";
 import { env } from "@/lib/env";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { TerminalsBeheer } from "@/components/app/TerminalsBeheer";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
 import Link from "next/link";
@@ -27,7 +28,7 @@ export default async function IncheckenPage() {
     return (
       <>
         <SamenTabs groep="uren" actief="inchecken" />
-        <PageHeader eyebrow={t.eyebrow} title={t.titel} subtitle={vereist ? t.uitleg : t.staatUit} />
+        <PaginaKop eyebrow={t.eyebrow} title={t.titel} subtitle={vereist ? t.uitleg : t.staatUit} />
         {tenantId && (
           <div className="mb-6">
             <Panel title={c.incheckTitel}>
@@ -47,7 +48,7 @@ export default async function IncheckenPage() {
   return (
     <>
       <SamenTabs groep="uren" actief="inchecken" />
-      <PageHeader
+      <PaginaKop
         eyebrow="Personeel"
         title="Inchecken op locatie"
         subtitle="Een tablet bij de ingang, een NFC-sticker of een sleutelhanger: je krachten checken in zonder dat jij uren hoeft over te typen. Elke check-in staat meteen in het urenbriefje."

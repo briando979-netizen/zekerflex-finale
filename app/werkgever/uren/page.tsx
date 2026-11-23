@@ -1,7 +1,8 @@
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { PageHeader, Panel, EmptyState, StatusPill, KpiCard, money, moneyExact, dateTime } from "@/components/app/ui";
+import { Panel, EmptyState, StatusPill, KpiCard, money, moneyExact, dateTime } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { ApproveButton } from "@/components/app/ApproveButton";
 import { AutoApproveToggle } from "@/components/werkgever/AutoApproveToggle";
 import { BulkApproveButton } from "@/components/werkgever/BulkApproveButton";
@@ -73,7 +74,7 @@ export default async function UrenGoedkeurenPage() {
   return (
     <>
       <SamenTabs groep="uren" actief="uren" />
-      <PageHeader title={h.title} subtitle={h.subtitle} />
+      <PaginaKop title={h.title} subtitle={h.subtitle} />
 
       {autoUitgezet ? (
         <p className="mb-6 rounded-2xl border border-hair bg-white px-5 py-4 text-sm text-neutralx-600">{h.geenAutoGoedkeuren}</p>

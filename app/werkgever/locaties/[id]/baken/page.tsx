@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { requirePrincipal, hasRole } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { prisma } from "@/lib/prisma";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { BakenInstellingen } from "@/components/werkgever/BakenInstellingen";
 import { bakenInstellingen, bakenUrl } from "@/lib/checkin/baken";
 import { qrEncode, qrSvgPath } from "@/lib/qr/encode";
@@ -28,7 +29,7 @@ export default async function BakenPage(props: { params: Promise<{ id: string }>
 
   return (
     <>
-      <PageHeader
+      <PaginaKop
         title={`Locatiebaken: ${branch.name}`}
         eyebrow="Locaties"
         subtitle={`${branch.addressLine}, ${branch.city} · incheckgebied ${branch.geofenceRadiusMeters} m rond het adres. Krachten checken automatisch in als ze in dat gebied zijn, of met de QR-code of het Bluetooth-baken op de werkplek.`}

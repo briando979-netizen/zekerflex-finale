@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { PageHeader, EmptyState } from "@/components/app/ui";
+import { EmptyState } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
 import { listCounterOffers } from "@/lib/offers/store";
 import { getDict } from "@/lib/i18n/server";
@@ -67,7 +68,7 @@ export default async function WerkgeverDienstenPage({ searchParams }: { searchPa
 
   return (
     <>
-      <PageHeader
+      <PaginaKop
         title={sh.title}
         subtitle={sh.subtitle}
         action={

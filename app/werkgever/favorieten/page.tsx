@@ -3,7 +3,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getEmployerRelations } from "@/lib/employer/relations";
 import { responderCards } from "@/lib/replacements/responder-stats";
-import { PageHeader, EmptyState } from "@/components/app/ui";
+import { EmptyState } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -35,7 +36,7 @@ export default async function FavorietenPage() {
   return (
     <>
       <SamenTabs groep="werkers" actief="favorieten" />
-      <PageHeader
+      <PaginaKop
         title={f.title}
         eyebrow={f.eyebrow}
         subtitle={f.subtitle}

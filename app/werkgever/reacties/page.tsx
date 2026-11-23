@@ -3,7 +3,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { listCounterOffers } from "@/lib/offers/store";
-import { PageHeader, EmptyState, Panel, money } from "@/components/app/ui";
+import { EmptyState, Panel, money } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 
 // Nederlandse datum in Amsterdamse tijd (de server rekent in UTC)
@@ -44,7 +45,7 @@ export default async function WerkgeverReactiesPage() {
 
   return (
     <>
-      <PageHeader
+      <PaginaKop
         title="Reacties op je klussen"
         subtitle="Alle flexwerkers die gereageerd hebben en nog wachten op jouw keuze, per klus. Kies aannemen of een tegenbod op de klus zelf."
         action={

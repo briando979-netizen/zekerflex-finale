@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PageHeader, KpiCard, Panel, EmptyState, StatusPill, dateTime, dateShort } from "@/components/app/ui";
+import { KpiCard, Panel, EmptyState, StatusPill, dateTime, dateShort } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { BureauTabs, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { getDict } from "@/lib/i18n/server";
@@ -18,7 +19,7 @@ export default async function UitzendKrachtenPage() {
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow={u.eyebrow} title={u.tabs.krachten} />
+        <PaginaKop eyebrow={u.eyebrow} title={u.tabs.krachten} />
         <GeenUitzendPartner />
       </>
     );
@@ -32,7 +33,7 @@ export default async function UitzendKrachtenPage() {
   return (
     <>
       <BureauTabs actief="krachten" />
-      <PageHeader eyebrow={u.eyebrow} title={u.tabs.krachten} subtitle={t.uitleg} />
+      <PaginaKop eyebrow={u.eyebrow} title={u.tabs.krachten} subtitle={t.uitleg} />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <KpiCard label={t.kpiAantal} value={String(krachten.length)} />
         <KpiCard label={t.kpiVolgende} value={String(ingepland)} tone={ingepland > 0 ? "brand" : "default"} />

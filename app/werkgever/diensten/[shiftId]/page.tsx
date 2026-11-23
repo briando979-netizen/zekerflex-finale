@@ -5,7 +5,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { getEmployerShift, type EmployerShiftView } from "@/lib/dashboard/employer-shift";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getEmployerRelations } from "@/lib/employer/relations";
-import { PageHeader, Panel, EmptyState, StatusPill, money, moneyExact, dateTime } from "@/components/app/ui";
+import { Panel, EmptyState, StatusPill, money, moneyExact, dateTime } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { shiftCategory } from "@/lib/shifts/category";
 import { ChatUserButton } from "@/components/app/ChatUserButton";
 import { ReviewButton } from "@/components/app/ReviewButton";
@@ -123,7 +124,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         </div>
       </div>
 
-      <PageHeader
+      <PaginaKop
         title={d.manageTitle}
         subtitle={d.manageSubtitle}
         action={

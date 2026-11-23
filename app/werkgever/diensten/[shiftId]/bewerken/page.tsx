@@ -6,7 +6,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { SHIFT_TEMPLATES, MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
 import { getOrgProfileExtra, klusBeeldVan } from "@/lib/profile/store";
 import { amsterdamLocalInput } from "@/lib/time/amsterdam";
-import { PageHeader } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { NewShiftForm } from "@/components/app/NewShiftForm";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function KlusBewerkenPage(props: { params: Promise<{ shiftI
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader
+      <PaginaKop
         title="Klus bewerken"
         eyebrow="Klussen"
         subtitle="Pas je klus aan in hetzelfde formulier als waarmee je hem plaatste. Rechts zie je meteen hoe de kracht hem ziet."

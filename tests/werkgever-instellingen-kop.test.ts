@@ -24,23 +24,32 @@ const ONDERPAGINAS: Record<string, string> = {
 
 describe("InstellingenKop", () => {
   const kop = lees("components/werkgever/InstellingenKop.tsx");
+  // 23 nov 2026: dezelfde kop als op elke andere pagina van de werkgeversapp, met de link terug erbij
+  const pagina = lees("components/werkgever/PaginaKop.tsx");
+  const klassen = lees("components/werkgever/bouwstenen.ts");
 
   it("heeft een titel (h1, hoofdletters), een link terug naar het overzicht en een plek voor de actieknop", () => {
     expect(kop.startsWith('"use client";')).toBe(true);
-    expect(kop).toContain("<h1");
-    expect(kop).toContain("uppercase");
+    expect(kop).toContain("<PaginaKop title={title} subtitle={subtitle} action={action} terug={{ href: backHref, label: s.back }} />");
     expect(kop).toContain('backHref = "/werkgever/instellingen"');
-    expect(kop).toContain("{s.back}");
-    expect(kop).toContain("{action ? <div");
+    expect(pagina).toContain("<h1 className={KOP_TITEL}>{title}</h1>");
+    expect(pagina).toContain("{terug.label}");
+    expect(pagina).toContain("{action ? <div");
+    expect(klassen).toMatch(/KOP_TITEL = "[^"]*\buppercase\b/);
     // props heten zoals bij PageHeader, zodat een pagina alleen de kop wisselt
-    expect(kop).toMatch(/title: string;/);
-    expect(kop).toMatch(/subtitle\?: string \| undefined;/);
+    for (const bron of [kop, pagina]) {
+      expect(bron).toMatch(/title: string;/);
+      expect(bron).toMatch(/subtitle\?: string \| undefined;/);
+    }
+    // de gedeelde kop heeft geen hooks en geen servercode: een server- en een clientcomponent kunnen hem tonen
+    expect(pagina).not.toContain('"use client"');
+    expect(pagina).not.toMatch(/use[A-Z]\w+\(/);
   });
 
   it("de link is minstens 44 px hoog en breekt een lange titel af in plaats van de pagina te verbreden", () => {
-    expect(kop).toContain("min-h-11");
-    expect(kop).toContain("break-words");
-    expect(kop).toContain("flex-wrap");
+    expect(klassen).toMatch(/KOP_TERUG = "[^"]*\bmin-h-11\b/);
+    expect(klassen).toMatch(/KOP_TITEL = "[^"]*\bbreak-words\b/);
+    expect(pagina).toContain("flex-wrap");
   });
 
   it("de tekst komt uit het woordenboek, in het Nederlands en Engels, zonder servercode in de browser", () => {
@@ -51,7 +60,7 @@ describe("InstellingenKop", () => {
   });
 
   it("gebruikt alleen kleuren met een donkere regel of een eigen merkkleur (geen standaardkleur van Tailwind)", () => {
-    expect(kop).not.toMatch(/(?:bg|text)-(?:red|orange|amber|yellow|green|emerald|sky|blue|violet|purple|pink|rose|slate|gray|zinc)-\d{2,3}/);
+    for (const bron of [kop, pagina, klassen]) expect(bron).not.toMatch(/(?:bg|text)-(?:red|orange|amber|yellow|green|emerald|sky|blue|violet|purple|pink|rose|slate|gray|zinc)-\d{2,3}/);
   });
 });
 

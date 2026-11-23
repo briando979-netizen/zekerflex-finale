@@ -53,6 +53,8 @@ export const nl = {
   },
   shell: {
     collapse: "Inklappen",
+    // de zijbalk staat op een laptop standaard ingeklapt (alleen pictogrammen, 23 nov 2026); deze knop klapt hem uit
+    expand: "Menu uitklappen",
     logout: "Uitloggen",
     settings: "Instellingen",
     help: "Helpcentrum",
@@ -138,6 +140,21 @@ export const nl = {
     stepProgress: "Stap {step} van {total} · ± {min} min te gaan · {pct}% voltooid",
     // "Jouw start" (23 nov 2026): twee blokken, zonder een stap voor het KVK-nummer (die controle komt pas bij het inplannen)
     blok1Titel: "Jij en je bedrijf",
+    // de twee blokken naast elkaar (23 nov 2026): links het overzicht van alle stappen, rechts het blok waar je nu bent
+    blok1Intro: "Voor je eerste klus willen we nog een paar dingen over je bedrijf weten.",
+    voltooid: "Voltooid",
+    stapVan: "Stap {step} van {total}",
+    minutenTeGaan: "± {min} min te gaan",
+    pctVoltooid: "{pct}% voltooid",
+    overzichtLabel: "Alle stappen",
+    klusBody: "Een klus plaatsen kost een paar minuten. Hij staat meteen live en freelancers in jouw regio kunnen erop reageren.",
+    reactiesNog: "Er zijn nog geen reacties op je klus. Je krijgt een melding bij elke reactie.",
+    reactiesEr: "Er is gereageerd op je klus. Bekijk wie het is en wat hij vraagt.",
+    kiezenBody: "Kies bij je klus wie je wilt inplannen. We vragen dan nog een paar bedrijfsgegevens; je keuze wordt bewaard.",
+    afrondenBody: "Zodra je iemand hebt ingepland, is je start klaar. Daarna zie je hier je klussen, uren en facturen.",
+    fotoGelukt: "Je omslagfoto staat erop.",
+    fotoMislukt: "Uploaden lukte niet. Probeer het opnieuw met een JPG of PNG.",
+    fotoBezig: "Uploaden…",
     firstJobTitle: "Jouw eerste klus",
     firstJobBody: "Je klus staat meteen live. Zodra een freelancer reageert, krijg je een melding.",
     firstJob1: "Zet je eerste klus uit",
@@ -363,6 +380,8 @@ export const nl = {
   },
   // Instellingen → Kostenplaatsen (/werkgever/instellingen/kostenplaatsen, 23 nov 2026, naar YoungOnes): lijst, toevoegen, wijzigen, verwijderen
   kostenplaatsPagina: {
+    kolomGebruik: "Gebruik",
+    kolomActies: "Acties",
     titel: "Kostenplaatsen",
     subtitel: "Kostenplaatsen of PO-nummers voor je boekhouding. Bij het uitzetten van een klus kies je er een; hij komt op de klus, de factuur en in de export.",
     nieuw: "Nieuwe kostenplaats",

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PageHeader, KpiCard, Panel, EmptyState, StatusPill, dateTime, moneyExact } from "@/components/app/ui";
+import { KpiCard, Panel, EmptyState, StatusPill, dateTime, moneyExact } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { BureauTabs, BureauMeldingen, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
 import { AanvraagKnoppen } from "@/components/werkgever/uitzend/AanvraagKnoppen";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
@@ -66,7 +67,7 @@ export default async function UitzendAanvragenPage() {
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow={u.eyebrow} title={u.tabs.aanvragen} />
+        <PaginaKop eyebrow={u.eyebrow} title={u.tabs.aanvragen} />
         <GeenUitzendPartner />
       </>
     );
@@ -83,7 +84,7 @@ export default async function UitzendAanvragenPage() {
   return (
     <>
       <BureauTabs actief="aanvragen" />
-      <PageHeader
+      <PaginaKop
         eyebrow={u.eyebrow}
         title={u.tabs.aanvragen}
         subtitle={fmt(t.uitleg, { n: TERMIJN.reactieWerkdagen })}

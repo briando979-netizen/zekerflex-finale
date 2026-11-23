@@ -1,7 +1,8 @@
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { listReviews, reviewSummary } from "@/lib/reviews/store";
-import { PageHeader, EmptyState, dateShort } from "@/components/app/ui";
+import { EmptyState, dateShort } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -31,7 +32,7 @@ export default async function WerkgeverReviewsPage() {
   if (!tenantId) {
     return (
       <>
-        <PageHeader title={rv.title} subtitle={rv.subtitle} />
+        <PaginaKop title={rv.title} subtitle={rv.subtitle} />
         <EmptyState title={co.noOrgTitle} body={co.noOrgBody} />
       </>
     );

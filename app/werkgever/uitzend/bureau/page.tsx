@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { BureauTabs, BureauMeldingen, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
 import { BureauGegevensForm } from "@/components/werkgever/uitzend/BureauGegevensForm";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -23,7 +24,7 @@ export default async function UitzendBureauPage() {
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow={u.eyebrow} title={u.tabs.bureau} />
+        <PaginaKop eyebrow={u.eyebrow} title={u.tabs.bureau} />
         <GeenUitzendPartner />
       </>
     );
@@ -40,7 +41,7 @@ export default async function UitzendBureauPage() {
   return (
     <>
       <BureauTabs actief="bureau" />
-      <PageHeader
+      <PaginaKop
         eyebrow={u.eyebrow}
         title={u.tabs.bureau}
         subtitle={fmt(b.uitleg, {

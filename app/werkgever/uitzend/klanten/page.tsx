@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PageHeader, KpiCard, Panel, EmptyState, StatusPill } from "@/components/app/ui";
+import { KpiCard, Panel, EmptyState, StatusPill } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { BureauTabs, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { getDict } from "@/lib/i18n/server";
@@ -17,7 +18,7 @@ export default async function UitzendKlantenPage() {
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow={u.eyebrow} title={u.tabs.klanten} />
+        <PaginaKop eyebrow={u.eyebrow} title={u.tabs.klanten} />
         <GeenUitzendPartner />
       </>
     );
@@ -32,7 +33,7 @@ export default async function UitzendKlantenPage() {
   return (
     <>
       <BureauTabs actief="klanten" />
-      <PageHeader
+      <PaginaKop
         eyebrow={u.eyebrow}
         title={u.tabs.klanten}
         subtitle={k.uitleg}

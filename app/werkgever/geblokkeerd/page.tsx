@@ -1,7 +1,8 @@
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getEmployerRelations } from "@/lib/employer/relations";
-import { PageHeader, EmptyState, dateShort } from "@/components/app/ui";
+import { EmptyState, dateShort } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -19,7 +20,7 @@ export default async function GeblokkeerdPage() {
   return (
     <>
       <SamenTabs groep="werkers" actief="geblokkeerd" />
-      <PageHeader title={b.title} eyebrow={b.eyebrow} subtitle={b.subtitle} />
+      <PaginaKop title={b.title} eyebrow={b.eyebrow} subtitle={b.subtitle} />
 
       {rel.blocked.length === 0 ? (
         <EmptyState title={b.emptyTitle} body={b.emptyBody} />

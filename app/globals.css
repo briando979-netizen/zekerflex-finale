@@ -1119,3 +1119,28 @@ html[data-menu-open] [data-cookie-laag] { display: none; }
 /* 22 nov 2026 (gebruikersonderzoek punt 13): de bezoekerstip open = de chatknop van de site even weg (ze lagen over elkaar).
    Alleen de dichte knop ("Chat openen"); een open chat blijft staan. */
 html[data-tip-open] button[aria-label="Chat openen"] { visibility: hidden; }
+
+/* ============================================================ WERKGEVERSAPP: rustige, effen vormen (23 nov 2026)
+   Eigenaar: het werkgeversdashboard moet dezelfde rust en dezelfde vormen hebben als dat van YoungOnes, in onze eigen
+   huisstijl. EmployerShell zet data-app="werkgever"; de werker-app en de site blijven zoals ze zijn. Alleen vorm: een
+   kaart is wit met een dunne rand en bijna geen schaduw (geen verloop, geen randgloed, geen zweven bij aanwijzen), een
+   knop heeft afgeronde hoeken in plaats van een pilvorm. De kleuren en de donkere regels hierboven blijven gelden. */
+.app-scope[data-app="werkgever"] .surface {
+  border-radius: 0.75rem;
+  border: 1px solid #E6E7E1;
+}
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .surface {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(12, 14, 18, 0.05);
+}
+.app-scope[data-app="werkgever"][data-theme="dark"] .surface { border-color: var(--app-edge); }
+.app-scope[data-app="werkgever"] .surface::before { display: none; }
+.app-scope[data-app="werkgever"] .surface-hover:hover { transform: none; }
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .surface-hover:hover { box-shadow: 0 2px 6px rgba(12, 14, 18, 0.08); }
+/* de kop van een paneel: effen, geen verloop */
+.app-scope[data-app="werkgever"]:not([data-theme="dark"]) .surface > .bg-gradient-to-b { background-image: none; background-color: #ffffff; }
+.app-scope[data-app="werkgever"] .btn-primary,
+.app-scope[data-app="werkgever"] .btn-ghost,
+.app-scope[data-app="werkgever"] .btn-mint { border-radius: 0.5rem; }
+.app-scope[data-app="werkgever"] .btn-primary:hover,
+.app-scope[data-app="werkgever"] .btn-mint:hover { transform: none; }

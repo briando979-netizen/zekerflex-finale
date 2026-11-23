@@ -1,7 +1,8 @@
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, dateShort } from "@/components/app/ui";
+import { Panel, EmptyState, KpiCard, StatusPill, dateShort } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { getDict } from "@/lib/i18n/server";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
@@ -45,7 +46,7 @@ export default async function WerkgeverCompliancePage() {
   return (
     <>
       <SamenTabs groep="regels" actief="compliance" />
-      <PageHeader title={cp.title} subtitle={cp.subtitle} />
+      <PaginaKop title={cp.title} subtitle={cp.subtitle} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard label={cp.kpiHigh} value={String(high)} tone={high > 0 ? "crit" : "default"} />

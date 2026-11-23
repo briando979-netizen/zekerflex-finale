@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PageHeader, KpiCard, Panel, EmptyState, moneyExact } from "@/components/app/ui";
+import { KpiCard, Panel, EmptyState, moneyExact } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { BureauTabs, GeenUitzendPartner } from "@/components/werkgever/uitzend/BureauKop";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { getDict } from "@/lib/i18n/server";
@@ -20,7 +21,7 @@ export default async function UitzendVerloningPage(props: { searchParams: Promis
   if (!ctx.tenantId || !ctx.partnerSinds) {
     return (
       <>
-        <PageHeader eyebrow={u.eyebrow} title={u.tabs.verloning} />
+        <PaginaKop eyebrow={u.eyebrow} title={u.tabs.verloning} />
         <GeenUitzendPartner />
       </>
     );
@@ -39,7 +40,7 @@ export default async function UitzendVerloningPage(props: { searchParams: Promis
   return (
     <>
       <BureauTabs actief="verloning" />
-      <PageHeader
+      <PaginaKop
         eyebrow={u.eyebrow}
         title={u.tabs.verloning}
         subtitle={v.uitleg}

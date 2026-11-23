@@ -1,5 +1,6 @@
 import { requirePrincipal } from "@/lib/auth";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { Panel } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { AgreementsList } from "@/components/app/AgreementsList";
 import { getDict } from "@/lib/i18n/server";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
@@ -12,7 +13,7 @@ export default async function WerkgeverOvereenkomstenPage() {
   return (
     <>
       <SamenTabs groep="regels" actief="overeenkomsten" />
-      <PageHeader title={a.title} eyebrow={a.eyebrow} subtitle={a.subtitle} />
+      <PaginaKop title={a.title} eyebrow={a.eyebrow} subtitle={a.subtitle} />
       <Panel title={a.allPanel}>
         <div className="p-5">
           <AgreementsList side="client" />

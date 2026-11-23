@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { HulpPaginaInhoud } from "@/components/app/HulpPaginaInhoud";
 import { hulpTekstenWerkgever } from "@/lib/hulp/werkgever-teksten";
 import { getLocale } from "@/lib/i18n/server";
@@ -13,7 +13,7 @@ export default async function WerkgeverHulpPage() {
   const t = hulpTekstenWerkgever(await getLocale());
   return (
     <>
-      <PageHeader title={t.titel} subtitle={t.onder} />
+      <PaginaKop title={t.titel} subtitle={t.onder} />
       <HulpPaginaInhoud t={t} soort="bedrijf" handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null} />
     </>
   );

@@ -2,7 +2,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
-import { PageHeader, Panel, KpiCard, money } from "@/components/app/ui";
+import { Panel, KpiCard, money } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { BillingPrefsForm } from "@/components/app/BillingPrefsForm";
 import { EfactuurSettings } from "@/components/werkgever/EfactuurSettings";
 import { OpenBijAnker } from "@/components/werkgever/OpenBijAnker";
@@ -71,7 +72,7 @@ export default async function WerkgeverFacturenPage() {
 
   return (
     <>
-      <PageHeader title={iv.title} subtitle={iv.subtitle} />
+      <PaginaKop title={iv.title} subtitle={iv.subtitle} />
 
       {/* een nieuw bedrijf zag hier "€ 0", "€ 0" en "0": de telvakken komen pas bij de eerste factuur */}
       {toonFactuurTellers(invoices.length) && (

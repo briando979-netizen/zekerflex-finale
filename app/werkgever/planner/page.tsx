@@ -1,5 +1,5 @@
 import { requirePrincipal } from "@/lib/auth";
-import { PageHeader } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { Planner } from "@/components/werkgever/Planner";
 import { PlanningTabs } from "@/components/werkgever/PlanningTabs";
 import { planWeek, weekSleutelVan } from "@/lib/planner/week";
@@ -16,7 +16,7 @@ export default async function PlannerPage(props: { searchParams: Promise<{ week?
   return (
     <>
       <PlanningTabs actief="planner" />
-      <PageHeader
+      <PaginaKop
         title="Roosterplanner"
         eyebrow="Personeel"
         subtitle="Alle open diensten van een week in één keer ingepland: de juiste certificaten, dichtbij, uitgerust en binnen de uren. Jij kiest wat je verstuurt; de krachten accepteren zelf."

@@ -23,7 +23,18 @@ import { naamInitialen } from "@/lib/naam/initialen";
 // Employer workspace shell — its own chrome (org name + rating in the topbar,
 // language switch, help, a collapsible icon rail). The freelancer AppShell is
 // left untouched.
+//
+// 23 nov 2026 (eigenaar: het dashboard moet er net zo uitzien en zo zijn ingedeeld als dat van YoungOnes, in onze eigen
+// huisstijl): een smalle donkere zijbalk met alleen pictogrammen, die uitklapt naar pictogrammen met namen; een dunne witte
+// kopbalk; een lichte, effen achtergrond; de inhoud in één gecentreerde kolom met een vaste breedte. Op een laptop staat de
+// zijbalk standaard ingeklapt (de keuze wordt onthouden); op een telefoon is het een lade achter de menuknop, altijd met namen.
+// De zijbalk is in het lichte én het donkere thema donker (eigen kleuren: ink en het diepe groen), dus daar staan geen
+// klassen die het thema omkleurt. De kaarten en knoppen van de werkgeversapp krijgen hun vorm via data-app="werkgever"
+// (app/globals.css). Het menu zelf (welke regels, in welke volgorde) komt nog altijd van menuVoor().
 // ---------------------------------------------------------------------------
+
+/** een regel in de zijbalk: minstens 44 px hoog; de naam is op een laptop alleen voor een schermlezer als de zijbalk is ingeklapt */
+const railRij = "group relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors";
 
 /** een regel in het gebruikersmenu rechtsboven: minstens 44 px hoog om te tikken */
 const menuRij = "flex min-h-11 items-center rounded-lg px-3 text-sm text-ink hover:bg-paper-soft";
@@ -94,13 +105,13 @@ export function EmployerShell({
   const t = useT();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [userMenu, setUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
-      setCollapsed(localStorage.getItem("zf-emp-collapsed") === "1");
+      setCollapsed(localStorage.getItem("zf-emp-collapsed") !== "0");
     } catch {
       /* ignore */
     }
@@ -146,48 +157,53 @@ export function EmployerShell({
   return (
     <div
       data-theme={theme}
+      data-app="werkgever"
       className={`app-scope min-h-screen bg-paper-soft lg:grid ${
         // minmax(0,1fr): anders groeit de inhoudskolom mee met een lange rij tabbladen (horeca, rijschool)
         // en wordt de hele pagina breder dan het scherm
-        collapsed ? "lg:grid-cols-[76px_minmax(0,1fr)]" : "lg:grid-cols-[276px_minmax(0,1fr)]"
+        collapsed ? "lg:grid-cols-[72px_minmax(0,1fr)]" : "lg:grid-cols-[256px_minmax(0,1fr)]"
       }`}
     >
-      {/* Sidebar */}
+      {/* Sidebar: donker in beide thema's. Op een telefoon een lade (altijd met namen), op een laptop blijft hij in beeld staan. */}
       <aside
         id="employer-sidebar"
-        className={`fixed inset-y-0 left-0 z-40 flex transform flex-col border-r border-hair bg-gradient-to-b from-white to-paper-soft transition-all duration-300 ease-spring lg:static lg:translate-x-0 ${
-          collapsed ? "w-[76px]" : "w-[276px]"
+        className={`fixed inset-y-0 left-0 z-40 flex w-[272px] transform flex-col bg-gradient-to-b from-ink via-brand-700 to-ink text-white transition-all duration-300 ease-spring lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          collapsed ? "lg:w-[72px]" : "lg:w-[256px]"
         } ${open ? "translate-x-0 shadow-e3" : "-translate-x-full"}`}
       >
-        <div className={`flex h-16 items-center border-b border-hair ${collapsed ? "justify-center px-2" : "gap-2.5 px-5"}`}>
-          <span className="transition-transform hover:rotate-6">
-            <LogoGlyph size={26} />
-          </span>
-          {!collapsed && <p className="font-display text-sm font-bold">ZekerFlex</p>}
+        <div className={`flex h-16 flex-shrink-0 items-center gap-2.5 px-5 ${collapsed ? "lg:justify-center lg:px-2" : ""}`}>
+          <LogoGlyph size={28} tone="light" />
+          <p className={`font-display text-sm font-bold text-white ${collapsed ? "lg:hidden" : ""}`}>ZekerFlex</p>
         </div>
 
+        {/* in- en uitklappen (alleen op een laptop): ingeklapt blijven de pictogrammen staan, met de naam als tooltip */}
         <button
           type="button"
           onClick={toggleCollapse}
-          className={`hidden items-center gap-2 border-b border-hair py-2.5 text-xs font-medium text-neutralx-400 transition hover:text-brand-600 lg:flex ${
-            collapsed ? "justify-center px-2" : "px-5"
+          aria-expanded={!collapsed}
+          aria-controls="employer-sidebar"
+          aria-label={collapsed ? t.shell.expand : t.shell.collapse}
+          title={collapsed ? t.shell.expand : undefined}
+          className={`mx-3 hidden min-h-11 flex-shrink-0 items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white lg:flex ${
+            collapsed ? "justify-center px-0" : ""
           }`}
         >
-          <span className={`transition-transform ${collapsed ? "rotate-180" : ""}`} aria-hidden>
-            ←
+          <span className={`grid h-9 w-9 flex-shrink-0 place-items-center transition-transform ${collapsed ? "" : "rotate-180"}`} aria-hidden>
+            <RailToggleGlyph />
           </span>
           {!collapsed && t.shell.collapse}
         </button>
+        <div className="mx-3 mt-2 flex-shrink-0 border-t border-white/20" aria-hidden />
 
         <nav aria-label="Hoofdnavigatie" className="flex-1 space-y-3 overflow-y-auto p-3">
           {groups.map((g, gi) => (
-            <div key={gi} className="space-y-0.5">
-              {g.section && !collapsed && (
-                <p className="px-3 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-neutralx-400">
+            <div key={gi} className="space-y-1">
+              {g.section && (
+                <p className={`px-3 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-white/60 ${collapsed ? "lg:hidden" : ""}`}>
                   {g.section}
                 </p>
               )}
-              {g.section && collapsed && gi > 0 && <div className="mx-3 my-2 border-t border-hair" />}
+              {g.section && collapsed && gi > 0 && <div className="mx-3 my-2 hidden border-t border-white/20 lg:block" />}
               {g.items.map((n) => {
                 const active = isActive(n.href);
                 return (
@@ -197,25 +213,14 @@ export function EmployerShell({
                     onClick={() => setOpen(false)}
                     title={collapsed ? n.label : undefined}
                     aria-current={active ? "page" : undefined}
-                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                      collapsed ? "justify-center" : ""
-                    } ${
-                      active
-                        ? "bg-white text-brand-700 shadow-e1"
-                        : "text-neutralx-600 hover:bg-white/70 hover:text-ink"
+                    className={`${railRij} ${collapsed ? "lg:justify-center lg:px-0" : ""} ${
+                      active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
                     }`}
                   >
-                    <span
-                      className={`grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg transition ${
-                        active
-                          ? "bg-brand-50 text-brand-600"
-                          : "text-neutralx-400 group-hover:bg-paper-soft group-hover:text-brand-500"
-                      }`}
-                    >
-                      {n.icon}
-                    </span>
-                    {!collapsed && n.label}
-                    {n.badge ? <span className={collapsed ? "absolute right-0.5 top-0.5" : "ml-auto"}>{n.badge}</span> : null}
+                    {active && <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-brand-mint" />}
+                    <span className="grid h-9 w-9 flex-shrink-0 place-items-center">{n.icon}</span>
+                    <span className={collapsed ? "lg:sr-only" : ""}>{n.label}</span>
+                    {n.badge ? <span className={collapsed ? "ml-auto lg:absolute lg:right-1 lg:top-1 lg:ml-0" : "ml-auto"}>{n.badge}</span> : null}
                   </Link>
                 );
               })}
@@ -223,7 +228,7 @@ export function EmployerShell({
           ))}
         </nav>
 
-        <div className="border-t border-hair p-3">
+        <div className="flex-shrink-0 border-t border-white/20 p-3">
           {/* ZekerFlex OS: elk scherm als app op één bureaublad (de naam is in elke taal gelijk) */}
           {/* Een gewone link (geen <Link>): /os moet als eigen document laden, anders houdt de pagina de CSP van dit scherm (geen frame-src 'self') en blijft elk app-venster leeg. target=_top: vanuit een OS-venster zelf geen OS in de OS. */}
           {toonOs && (
@@ -233,9 +238,9 @@ export function EmployerShell({
             target="_top"
             onClick={() => setOpen(false)}
             title={collapsed ? "ZekerFlex OS" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-white ${collapsed ? "justify-center" : ""}`}
+            className={`${railRij} text-brand-mint hover:bg-white/10 ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
           >
-            <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+            <span className="grid h-9 w-9 flex-shrink-0 place-items-center">
               <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
                 <rect x="1" y="1" width="6" height="6" rx="1.5" />
                 <rect x="9" y="1" width="6" height="6" rx="1.5" />
@@ -243,7 +248,7 @@ export function EmployerShell({
                 <rect x="9" y="9" width="6" height="6" rx="1.5" />
               </svg>
             </span>
-            {!collapsed && "ZekerFlex OS"}
+            <span className={collapsed ? "lg:sr-only" : ""}>ZekerFlex OS</span>
           </a>
           )}
           {/* Instellingen staat er voor elk bedrijf (eigenaar, 23 nov 2026: zoals bij YoungOnes), onderaan de zijbalk als laatste ingang.
@@ -253,28 +258,27 @@ export function EmployerShell({
             onClick={() => setOpen(false)}
             title={collapsed ? t.shell.settings : undefined}
             aria-current={isActive(settingsHref) ? "page" : undefined}
-            className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              collapsed ? "justify-center" : ""
-            } ${isActive(settingsHref) ? "bg-white text-brand-700 shadow-e1" : "text-neutralx-600 hover:bg-white hover:text-ink"}`}
+            className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors min-h-11 ${
+              collapsed ? "lg:justify-center lg:px-0" : ""
+            } ${isActive(settingsHref) ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
           >
-            <span className={`relative grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg ${isActive(settingsHref) ? "bg-brand-50 text-brand-600" : "text-neutralx-400"}`}>
+            {isActive(settingsHref) && <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-brand-mint" />}
+            <span className="relative grid h-9 w-9 flex-shrink-0 place-items-center">
               <SettingsGlyph />
-              {profielOnvolledig && <span aria-hidden className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-warn" />}
+              {profielOnvolledig && <span aria-hidden className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-warn" />}
             </span>
-            {!collapsed && t.shell.settings}
+            <span className={collapsed ? "lg:sr-only" : ""}>{t.shell.settings}</span>
             {profielOnvolledig && <span className="sr-only"> ({t.shell.profileIncomplete})</span>}
           </Link>
           <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
             <button
               title={collapsed ? t.shell.logout : undefined}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutralx-500 transition hover:bg-white hover:text-crit ${
-                collapsed ? "justify-center" : ""
-              }`}
+              className={`${railRij} w-full text-left text-white/70 hover:bg-white/10 hover:text-white ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
             >
-              <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg text-neutralx-400">
+              <span className="grid h-9 w-9 flex-shrink-0 place-items-center">
                 <LogoutGlyph />
               </span>
-              {!collapsed && t.shell.logout}
+              <span className={collapsed ? "lg:sr-only" : ""}>{t.shell.logout}</span>
             </button>
           </form>
         </div>
@@ -285,8 +289,8 @@ export function EmployerShell({
       )}
 
       {/* Main */}
-      <div className="app-bg noise flex min-h-screen flex-col">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-hair bg-white/80 px-4 backdrop-blur-xl lg:px-8">
+      <div className="flex min-h-screen min-w-0 flex-col bg-paper-soft">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-hair bg-white px-4 lg:px-8">
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -409,7 +413,8 @@ export function EmployerShell({
         </header>
 
         <main id="main" tabIndex={-1} key={pathname} className="relative flex-1 animate-slide-up-fade px-4 py-8 outline-none lg:px-8 lg:py-10">
-          <div className="mx-auto max-w-6xl 2xl:max-w-7xl">
+          {/* één gecentreerde kolom met een vaste breedte, op elk scherm */}
+          <div className="mx-auto max-w-6xl">
             {children}
           </div>
         </main>
@@ -417,6 +422,15 @@ export function EmployerShell({
 
       <RecentResponseAlert />
     </div>
+  );
+}
+
+/** een streep met een pijl naar rechts (uitklappen); de knop draait hem om voor inklappen */
+function RailToggleGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M5 4v16M10 12h9m0 0-4-4m4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

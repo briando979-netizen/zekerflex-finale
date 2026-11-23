@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { getEmployerCalendarMonth } from "@/lib/dashboard/employer-calendar";
-import { PageHeader } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { ColorLegend } from "@/components/app/ColorLegend";
 import { PlanningTabs } from "@/components/werkgever/PlanningTabs";
 import { getDict, getLocale } from "@/lib/i18n/server";
@@ -46,7 +46,7 @@ export default async function KalenderPage(
   return (
     <>
       <PlanningTabs actief="kalender" />
-      <PageHeader
+      <PaginaKop
         title={t.calendar.title}
         eyebrow={t.calendar.eyebrow}
         subtitle={fmt(cal.total === 1 ? t.calendar.subtitleOne : t.calendar.subtitle, {

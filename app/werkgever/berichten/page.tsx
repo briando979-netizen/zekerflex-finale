@@ -1,7 +1,7 @@
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isZakelijk } from "@/lib/messaging/zakelijk-rol";
-import { PageHeader } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { InboxPage } from "@/components/chat/InboxPage";
 import { getDict } from "@/lib/i18n/server";
 import { inDemoSessie, DEMO_CHAT_NOTITIE } from "@/lib/auth/demo-sessie";
@@ -22,7 +22,7 @@ export default async function WerkgeverBerichtenPage() {
     <>
       <SamenTabs groep="chat" actief="berichten" />
       <div className="hidden md:block">
-        <PageHeader title={m.title} eyebrow={m.eyebrow} subtitle={m.subtitle} />
+        <PaginaKop title={m.title} eyebrow={m.eyebrow} subtitle={m.subtitle} />
       </div>
       {/* op de telefoon is de kop verborgen; de pagina houdt een h1 voor schermlezers */}
       <h1 className="sr-only md:hidden">{m.title}</h1>

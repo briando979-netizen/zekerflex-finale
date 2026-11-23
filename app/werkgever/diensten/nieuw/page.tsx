@@ -7,7 +7,7 @@ import { SHIFT_TEMPLATES, MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
 import { listPools } from "@/lib/pools/store";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
-import { PageHeader } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { NewShiftForm } from "@/components/app/NewShiftForm";
 import { SnelPlaatsen } from "@/components/werkgever/SnelPlaatsen";
 import { EersteVestiging } from "@/components/werkgever/EersteVestiging";
@@ -95,7 +95,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader
+      <PaginaKop
         title={n.title}
         eyebrow={n.eyebrow}
         // de korte weg (?snel=1) zonder "Kies een functie of vul het zelf in": dat hoort bij de kiezer van het uitgebreide formulier
