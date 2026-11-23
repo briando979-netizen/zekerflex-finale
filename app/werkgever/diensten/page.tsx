@@ -9,10 +9,10 @@ import { listCounterOffers } from "@/lib/offers/store";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { amsterdamClock, amsterdamDagLabel, amsterdamDayKey } from "@/lib/time/amsterdam";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { klusTab } from "@/lib/werkgever/klus-fase";
 
 export const dynamic = "force-dynamic";
 
-const OPEN = ["OPEN", "MATCHING", "PARTIALLY_FILLED"];
 const TABS = ["open", "gepland", "historie"] as const;
 type Tab = (typeof TABS)[number];
 /** de kleur van de status in een rij: groen = bezet, amber = wacht nog op mensen, rood = geannuleerd */
@@ -73,9 +73,10 @@ export default async function WerkgeverDienstenPage({ searchParams }: { searchPa
   const zoek = q.toLowerCase();
   const past = (s: (typeof shifts)[number]) => !zoek || s.title.toLowerCase().includes(zoek) || s.branch.name.toLowerCase().includes(zoek) || s.branch.city.toLowerCase().includes(zoek);
   const gefilterd = shifts.filter(past);
-  const open = gefilterd.filter((s) => OPEN.includes(s.status) && s.startsAt.getTime() >= now);
-  const planned = gefilterd.filter((s) => s.status === "FILLED" || (s.startsAt.getTime() >= now && !OPEN.includes(s.status)));
-  const historie = gefilterd.filter((s) => s.startsAt.getTime() < now);
+  // elke klus in precies één tabblad (lib/werkgever/klus-fase.ts): een voorbije volle klus stond eerst in twee
+  const open = gefilterd.filter((s) => klusTab(s, now) === "open");
+  const planned = gefilterd.filter((s) => klusTab(s, now) === "gepland");
+  const historie = gefilterd.filter((s) => klusTab(s, now) === "historie");
   const lijst = tab === "open" ? open : tab === "gepland" ? planned : historie;
   const leeg = tab === "open" ? sh.tabEmptyOpen : tab === "gepland" ? sh.tabEmptyPlanned : sh.tabEmptyHistory;
   const tabHref = (t: Tab) => `/werkgever/diensten?tab=${t}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
