@@ -257,7 +257,9 @@ export function KlusConcept({
   return (
     // meetcodes voor de eigen analytics (lib/analytics/label-privacy.ts): alleen codes, nooit wat iemand intypt
     <div className="space-y-8" data-track-ctx="stap=klus-concept">
-      <form onSubmit={readSite} className="rounded-3xl border border-hair bg-white p-5 shadow-sm md:p-6" noValidate>
+      {/* de velden en knoppen in dit formulier, het formulier eronder en het overzicht met de plaatsknop liggen nooit onder de chatknop
+          rechtsonder (data-chatknop-velden, lib/marketing/chatknop-vrij.ts, 23 nov 2026) */}
+      <form onSubmit={readSite} className="rounded-3xl border border-hair bg-white p-5 shadow-sm md:p-6" noValidate data-chatknop-velden="">
         <label className="block" htmlFor="klus-site">
           <span className="block font-display text-lg font-semibold text-ink">Heb je een website? Dan maken we je klus op maat.</span>
           <span className="mt-1 block text-sm text-neutralx-600">
@@ -297,7 +299,7 @@ export function KlusConcept({
       </form>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
-        <div className="min-w-0 space-y-5" onChange={used}>
+        <div className="min-w-0 space-y-5" onChange={used} data-chatknop-velden="">
           <Groep title="Wat moet er gebeuren?">
             <div className="min-w-0 sm:col-span-2">
               <SjabloonGalerij
@@ -382,7 +384,7 @@ export function KlusConcept({
           </Groep>
         </div>
 
-        <div className="rounded-3xl border border-hair bg-white p-6 shadow-sm md:p-8 lg:sticky lg:top-24" aria-live="polite">
+        <div className="rounded-3xl border border-hair bg-white p-6 shadow-sm md:p-8 lg:sticky lg:top-24" aria-live="polite" data-chatknop-velden="">
           <p className="eyebrow">Zo ziet je klus eruit</p>
           <p className="mt-1 text-xs text-neutralx-500">Zo zien krachten hem in de ZekerFlex-app.</p>
           <div className="mx-auto mt-4 max-w-sm">

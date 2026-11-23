@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { DEMO_TIME_SLOTS, formatDemoDate, isSelectableDemoDate } from "@/lib/demo/slots";
-import { CHATKNOP_VRIJ, raaktChatknop } from "@/lib/marketing/chatknop-vrij";
+import { CHATKNOP_VRIJ, TERUG_NA_MS, VELDEN_SELECTOR, wijktChatknop } from "@/lib/marketing/chatknop-vrij";
 
 interface Msg {
   role: "user" | "assistant" | "agent";
@@ -87,13 +87,37 @@ export function ChatWidget() {
   // de knop wijkt zolang een blok met data-chatknop-vrij (zoals een totaalbedrag) eronder doorschuift (lib/marketing/chatknop-vrij.ts)
   const [wijk, setWijk] = useState(false);
 
+  // Ook de velden van een formulier met data-chatknop-velden (23 nov 2026, /klus-plaatsen): de knop wijkt zolang een veld of knop
+  // erin onder de knop ligt en komt TERUG_NA_MS nadat er niets meer onder ligt (zo flikkert hij niet langs een rij velden).
   useEffect(() => {
     let frame = 0;
+    let terug: ReturnType<typeof setTimeout> | undefined;
+    let wijkt = false;
     const kijk = () => {
       frame = 0;
       const venster = { breedte: window.innerWidth, hoogte: window.innerHeight };
       const blokken = document.querySelectorAll(`[${CHATKNOP_VRIJ}]`);
-      setWijk(Array.from(blokken).some((b) => raaktChatknop(b.getBoundingClientRect(), venster)));
+      const velden = document.querySelectorAll(VELDEN_SELECTOR);
+      const raakt = wijktChatknop(
+        { blokken: Array.from(blokken, (b) => b.getBoundingClientRect()), velden: Array.from(velden, (v) => v.getBoundingClientRect()) },
+        venster,
+      );
+      if (raakt) {
+        if (terug) {
+          clearTimeout(terug);
+          terug = undefined;
+        }
+        if (!wijkt) {
+          wijkt = true;
+          setWijk(true);
+        }
+      } else if (wijkt && !terug) {
+        terug = setTimeout(() => {
+          terug = undefined;
+          wijkt = false;
+          setWijk(false);
+        }, TERUG_NA_MS);
+      }
     };
     const plan = () => {
       if (!frame) frame = requestAnimationFrame(kijk);
@@ -103,6 +127,7 @@ export function ChatWidget() {
     window.addEventListener("resize", plan);
     return () => {
       if (frame) cancelAnimationFrame(frame);
+      if (terug) clearTimeout(terug);
       window.removeEventListener("scroll", plan);
       window.removeEventListener("resize", plan);
     };

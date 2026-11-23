@@ -28,4 +28,16 @@ describe("niets over elkaar op de telefoon", () => {
     // de regel hangt aan het label van de chatknop: blijft dat zo heten?
     expect(lees("components/marketing/ChatWidget.tsx")).toContain('aria-label={open ? "Chat sluiten" : "Chat openen"}');
   });
+
+  // 23 nov 2026 (schermcontrole van de live site, 390 px): de chatknop lag op /klus-plaatsen over het pijltje van de keuzelijst en
+  // het kalenderpictogram bij Datum. De knop wijkt nu voor elk veld van het formulier dat onder hem ligt (tests/chatknop-vrij.test.ts).
+  it("de chatknop wijkt voor de velden van het klusformulier op /klus-plaatsen, en alleen daar", () => {
+    const concept = lees("components/marketing/KlusConcept.tsx");
+    expect(concept).toContain('onChange={used} data-chatknop-velden=""');
+    const knop = lees("components/marketing/ChatWidget.tsx");
+    expect(knop).toContain("document.querySelectorAll(VELDEN_SELECTOR)");
+    // geen andere pagina krijgt het attribuut: het uiterlijk elders blijft zoals het was
+    const anderen = ["app/(marketing)/page.tsx", "app/(marketing)/app/page.tsx", "app/(marketing)/flexwerk/page.tsx", "components/marketing/DemoBooking.tsx", "components/auth/RegisterForm.tsx"];
+    for (const f of anderen) expect(lees(f), f).not.toContain("data-chatknop-velden");
+  });
 });
