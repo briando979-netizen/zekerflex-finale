@@ -5,6 +5,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { listCounterOffers } from "@/lib/offers/store";
+import { naamVoorMatch } from "@/lib/werkgever/naam";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -88,7 +89,8 @@ export async function GET(request: Request): Promise<NextResponse> {
           id: `offer:${o.id}`,
           type: "counter_offer",
           freelancerUserId: o.userId,
-          freelancerName: o.freelancerName,
+          // een reactie is nog geen match: alleen de voornaam en de eerste letter van de achternaam (lib/werkgever/naam.ts)
+          freelancerName: naamVoorMatch(o.freelancerName),
           shiftId: o.shiftId,
           shiftTitle: o.shiftTitle,
           at: o.at,

@@ -107,7 +107,8 @@ describe("GET /api/werkgever/recent-responses", () => {
     const json = await res.json();
 
     expect(json.responses).toHaveLength(1);
-    expect(json.responses[0]).toMatchObject({ type: "counter_offer", shiftId: "myshift", freelancerName: "Marieke Jansen" });
+    // een reactie is nog geen match: de achternaam staat er niet voluit (lib/werkgever/naam.ts)
+    expect(json.responses[0]).toMatchObject({ type: "counter_offer", shiftId: "myshift", freelancerName: "Marieke J." });
   });
 
   it("excludes a counter-offer that is no longer pending", async () => {

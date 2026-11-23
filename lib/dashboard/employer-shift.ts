@@ -10,6 +10,8 @@ import { poolsInvitedToShift } from "@/lib/pools/store";
 import { isCompTenant } from "@/lib/billing/comp";
 import { opkomstVoor, type Opkomst } from "@/lib/employer/opkomst";
 import { klusAutoAccept } from "@/lib/shifts/auto-accept";
+import { GEEN_CIJFERS, werkerCijfersVoor, type WerkerCijfers } from "@/lib/employer/prestaties";
+import { naamVoorMatch } from "@/lib/werkgever/naam";
 
 // ---------------------------------------------------------------------------
 // Everything an employer needs on a single shift: bezetting, kandidaten,
@@ -29,6 +31,11 @@ export interface EmployerShiftView {
   /** het bedrijf van de vestiging (o.a. voor de reservebank, lib/reservebank) */
   tenantId: string;
   city: string;
+  /** straat en huisnummer van de vestiging */
+  address: string;
+  /** de plek van de vestiging, voor de speld op de kaart "Actieve regio's" */
+  latitude: number;
+  longitude: number;
   startsAt: Date;
   endsAt: Date;
   breakMinutes: number;
@@ -65,6 +72,7 @@ export interface EmployerShiftView {
   queue: {
     freelancerId: string;
     userId: string;
+    /** vóór een reactie alleen de voornaam en de eerste letter van de achternaam (lib/werkgever/naam.ts) */
     name: string;
     score: number;
     travelMinutes: number;
@@ -79,6 +87,7 @@ export interface EmployerShiftView {
   offers: {
     id: string;
     userId: string;
+    /** vóór de match alleen de voornaam en de eerste letter van de achternaam (lib/werkgever/naam.ts) */
     freelancerName: string;
     proposedRateCents: number;
     listedRateCents: number;
@@ -96,6 +105,8 @@ export interface EmployerShiftView {
     cancellations: number;
     /** booked on another shift at that time: accepting would be refused (lib/shifts/worker-overlap) */
     busyElsewhere: boolean;
+    /** prestaties (6 mnd), uren bij dit bedrijf (12 mnd), regio's, KVK en ervaring (lib/employer/prestaties.ts) */
+    cijfers: WerkerCijfers;
   }[];
 }
 
@@ -126,7 +137,7 @@ export async function getEmployerShift(
       status: true,
       visibility: true,
       requiredSkill: { select: { name: true } },
-      branch: { select: { id: true, name: true, city: true, tenantId: true } },
+      branch: { select: { id: true, name: true, city: true, tenantId: true, addressLine: true, latitude: true, longitude: true } },
       assignments: {
         where: { cancelledAt: null },
         select: {
@@ -186,7 +197,7 @@ export async function getEmployerShift(
       ...shift.matches.map((m) => m.freelancer.userId),
     ]),
   ];
-  const [avatars, offerProfiles, offerReviews, busyRows, opkomst, autoAcceptFavorieten] = await Promise.all([
+  const [avatars, offerProfiles, offerReviews, busyRows, opkomst, autoAcceptFavorieten, cijfers] = await Promise.all([
     getUserAvatars(allUserIds),
     prisma.freelancerProfile.findMany({
       where: { userId: { in: offerUserIds } },
@@ -209,6 +220,10 @@ export async function getEmployerShift(
     opkomstVoor(offerUserIds).catch(() => new Map<string, Opkomst>()),
     // altijd achteraan toevoegen: de destructuring hierboven volgt deze volgorde
     klusAutoAccept(shift.id).catch(() => false),
+    // de cijfers van de reactietabel; een storing laat de tabel staan, zonder cijfers
+    werkerCijfersVoor(offerUserIds, { id: shift.id, tenantId: shift.branch.tenantId, title: shift.title, skill: shift.requiredSkill?.name ?? null, startsAt: shift.startsAt }).catch(
+      () => new Map<string, WerkerCijfers>(),
+    ),
   ]);
   const busyUsers = new Set(busyRows.map((r) => r.freelancer.userId));
   const avatarUrl = (userId: string): string | null => (avatars[userId] ? `/api/profile/${userId}/avatar` : null);
@@ -228,6 +243,9 @@ export async function getEmployerShift(
     branchId: shift.branch.id,
     tenantId: shift.branch.tenantId,
     city: shift.branch.city,
+    address: shift.branch.addressLine,
+    latitude: shift.branch.latitude,
+    longitude: shift.branch.longitude,
     startsAt: shift.startsAt,
     endsAt: shift.endsAt,
     breakMinutes: shift.breakMinutes,
@@ -262,7 +280,7 @@ export async function getEmployerShift(
       .map((m) => ({
         freelancerId: m.freelancer.id,
         userId: m.freelancer.userId,
-        name: m.freelancer.user.fullName,
+        name: naamVoorMatch(m.freelancer.user.fullName),
         score: m.score,
         travelMinutes: m.travelMinutes,
         distanceMeters: m.distanceMeters,
@@ -278,7 +296,7 @@ export async function getEmployerShift(
       return {
         id: o.id,
         userId: o.userId,
-        freelancerName: o.freelancerName,
+        freelancerName: naamVoorMatch(o.freelancerName),
         proposedRateCents: o.proposedRateCents,
         listedRateCents: o.listedRateCents,
         note: o.note,
@@ -293,6 +311,7 @@ export async function getEmployerShift(
         shiftsCompleted: opkomst.get(o.userId)?.shiftsCompleted ?? 0,
         cancellations: opkomst.get(o.userId)?.cancellations ?? 0,
         busyElsewhere: busyUsers.has(o.userId),
+        cijfers: cijfers.get(o.userId) ?? GEEN_CIJFERS,
       };
     }),
   };

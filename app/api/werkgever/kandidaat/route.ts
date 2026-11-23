@@ -6,9 +6,13 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { myOfferForShift } from "@/lib/offers/store";
 import { buildCandidateCard } from "@/lib/employer/candidate-card";
 import { isFollowing } from "@/lib/worker/follows";
+import { getEmployerRelations, type EmployerRelations } from "@/lib/employer/relations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** zo lang na het einde van een klus blijven de contactgegevens van een ingeplande kracht zichtbaar (urencontrole, nabellen) */
+const MATCH_NAZORG_MS = 14 * 86_400_000;
 
 // GET /api/werkgever/kandidaat?userId=..&shiftId=..
 // De opdrachtgever mag de profielkaart van een freelancer alleen zien zodra die
@@ -48,12 +52,35 @@ export async function GET(request: Request): Promise<Response> {
       return NextResponse.json({ error: { code: "FORBIDDEN", message: "Deze freelancer heeft (nog) niet op deze klus gereageerd" } }, { status: 403 });
     }
 
+    // "De match" (23 nov 2026): de werker staat ingepland op een klus van dit bedrijf die nog loopt of hooguit twee weken
+    // geleden afliep. Pas dan geeft de kaart de volledige naam, het telefoonnummer en het e-mailadres; wie alleen
+    // reageerde blijft afgeschermd (tests/kluspagina-privacy.test.ts).
+    const tenantId = shift.branch.tenantId;
+    const nu = new Date();
+    const [matchCount, rel] = await Promise.all([
+      prisma.shiftAssignment.count({
+        where: {
+          freelancerId: profile.id,
+          cancelledAt: null,
+          shift: { branch: { tenantId }, status: { not: "CANCELLED" }, endsAt: { gte: new Date(nu.getTime() - MATCH_NAZORG_MS) } },
+        },
+      }),
+      getEmployerRelations(tenantId).catch((): EmployerRelations => ({ favorites: [], blocked: [] })),
+    ]);
+
     const [card, followsYou] = await Promise.all([
-      buildCandidateCard(userId),
-      isFollowing(userId, shift.branch.tenantId).catch(() => false),
+      buildCandidateCard(userId, nu, { tenantId, gematcht: matchCount > 0 }),
+      isFollowing(userId, tenantId).catch(() => false),
     ]);
     if (!card) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Profiel niet gevonden" } }, { status: 404 });
-    return NextResponse.json({ card: { ...card, followsYou } });
+    return NextResponse.json({
+      card: {
+        ...card,
+        followsYou,
+        favoriet: rel.favorites.some((f) => f.userId === userId),
+        geblokkeerd: rel.blocked.some((b) => b.userId === userId),
+      },
+    });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

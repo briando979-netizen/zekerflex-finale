@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Portal } from "@/components/chat/Portal";
 import Link from "next/link";
 import { cancelShiftAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { Punten } from "@/components/werkgever/iconen";
 
 interface ShiftInit {
   id: string;
@@ -20,31 +21,95 @@ interface ShiftInit {
   assignedCount: number;
 }
 
+
+// De knop "Opties" op de kluspagina (23 nov 2026, zoals het menu van YoungOnes): Klus aanpassen, Klus dupliceren en Klus annuleren
+// in één menu in plaats van drie losse knoppen. Escape en ergens anders tikken sluiten het menu; de pijltjestoetsen lopen langs de regels.
 export function EmployerShiftControls({ shift }: { shift: ShiftInit }) {
-  const c = useT().controls;
+  const t = useT();
+  const c = t.controls;
+  const k = t.klusPagina;
+  const menuId = useId();
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<null | "cancel">(null);
   const [msg, setMsg] = useState<string | null>(null);
   const editable = ["DRAFT", "OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status);
   const cancellable = !["COMPLETED", "CANCELLED"].includes(shift.status);
 
+  useEffect(() => {
+    if (!open) return;
+    const toets = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        ref.current?.querySelector<HTMLElement>("button[aria-haspopup]")?.focus();
+        return;
+      }
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      const regels = Array.from(ref.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+      if (regels.length === 0) return;
+      e.preventDefault();
+      const nu = regels.indexOf(document.activeElement as HTMLElement);
+      const volgende = e.key === "ArrowDown" ? (nu + 1) % regels.length : (nu - 1 + regels.length) % regels.length;
+      regels[volgende]?.focus();
+    };
+    const buiten = (e: PointerEvent) => {
+      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("keydown", toets);
+    document.addEventListener("pointerdown", buiten);
+    return () => {
+      document.removeEventListener("keydown", toets);
+      document.removeEventListener("pointerdown", buiten);
+    };
+  }, [open]);
+
+  const REGEL = "flex min-h-11 w-full items-center px-4 text-left text-sm hover:bg-paper-soft";
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* "Klus dupliceren" (naar YoungOnes): dezelfde klus opnieuw plaatsen met een nieuwe datum, ook na afloop */}
-      <Link href={`/werkgever/diensten/nieuw?kopie=${encodeURIComponent(shift.id)}`} className="btn-ghost text-sm">
-        {c.duplicateShift}
-      </Link>
-      {editable && (
-        // same form and preview as placing a klus (/werkgever/diensten/[id]/bewerken)
-        <Link href={`/werkgever/diensten/${shift.id}/bewerken`} className="btn-ghost text-sm">
-          {c.editShift}
-        </Link>
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        aria-label={k.optiesMenu}
+        className="btn-ghost min-h-11 gap-2 rounded-lg px-3 text-sm sm:px-4"
+      >
+        <span className="hidden sm:inline">{k.opties}</span>
+        <Punten maat={18} />
+      </button>
+      {open && (
+        <div id={menuId} role="menu" aria-label={k.optiesMenu} className="absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-lg border border-hair bg-white py-1 shadow-e3">
+          {editable && (
+            // same form and preview as placing a klus (/werkgever/diensten/[id]/bewerken)
+            <Link role="menuitem" href={`/werkgever/diensten/${shift.id}/bewerken`} className={`${REGEL} text-ink`}>
+              {c.editShift}
+            </Link>
+          )}
+          {/* "Klus dupliceren" (naar YoungOnes): dezelfde klus opnieuw plaatsen met een nieuwe datum, ook na afloop */}
+          <Link role="menuitem" href={`/werkgever/diensten/nieuw?kopie=${encodeURIComponent(shift.id)}`} className={`${REGEL} text-ink`}>
+            {c.duplicateShift}
+          </Link>
+          {cancellable && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                setMode("cancel");
+              }}
+              className={`${REGEL} font-medium text-crit`}
+            >
+              {c.cancelShift}
+            </button>
+          )}
+        </div>
       )}
-      {cancellable && (
-        <button type="button" onClick={() => setMode("cancel")} className="text-sm font-medium text-crit hover:underline">
-          {c.cancelShift}
-        </button>
+      {msg && (
+        <p role="status" className="absolute right-0 top-full mt-2 w-56 text-right text-xs text-neutralx-500">
+          {msg}
+        </p>
       )}
-      {msg && <span className="text-xs text-neutralx-500">{msg}</span>}
 
       {mode === "cancel" && (
         <CancelModal
