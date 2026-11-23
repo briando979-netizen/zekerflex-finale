@@ -29,7 +29,7 @@ export interface KostenplaatsRij {
 
 /** Per kostenplaats: bij hoeveel vestigingen (standaard) en lopende klussen van dit bedrijf staat hij. */
 export async function kostenplaatsGebruik(tenantId: string, namen: readonly string[]): Promise<Map<string, number>> {
-  const uit = new Map<string, number>(namen.map((n) => [n, 0]));
+  const uit = new Map<string, number>(namen.map((n): [string, number] => [n, 0]));
   if (namen.length === 0) return uit;
   const lijst = [...namen];
   const [vestigingen, klussen] = await Promise.all([

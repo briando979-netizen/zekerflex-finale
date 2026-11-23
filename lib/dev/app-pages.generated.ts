@@ -319,6 +319,8 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/werkgever/inchecken","file":"app/werkgever/inchecken/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/inchecken/sticker/[id]","file":"app/werkgever/inchecken/sticker/[id]/page.tsx","area":"Werkgever","dynamic":true},
   {"route":"/werkgever/instellingen","file":"app/werkgever/instellingen/page.tsx","area":"Werkgever","dynamic":false},
+  {"route":"/werkgever/instellingen/klussen","file":"app/werkgever/instellingen/klussen/page.tsx","area":"Werkgever","dynamic":false},
+  {"route":"/werkgever/instellingen/kostenplaatsen","file":"app/werkgever/instellingen/kostenplaatsen/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/integraties","file":"app/werkgever/integraties/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/introduceren","file":"app/werkgever/introduceren/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/kaart","file":"app/werkgever/kaart/page.tsx","area":"Werkgever","dynamic":false},
