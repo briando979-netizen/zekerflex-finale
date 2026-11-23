@@ -18,6 +18,7 @@ import { isTestwerker } from "@/lib/testwerker/adres";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { dienstUren, pastBinnenMaxUren, urenBijBedrijf } from "@/lib/werkgever/max-uren";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
+import { leggReactieVast, sluitEigenReactie } from "@/lib/matching/reactie";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -179,20 +180,24 @@ export async function applyToShift(
   });
 
   if (!(await isTenantVerified(shift.branch.tenantId))) {
-    // Test klus of a not-yet-verified company: keep the reaction (VIEWED =
-    // interested, no expiry) so the company sees it, but schedule nobody.
+    // A company that is not verified yet: keep the reaction (VIEWED = interested, no expiry) and lay it down as a normal reaction
+    // at the company (lib/matching/reactie.ts), so the company sees it and can accept it once it is verified; schedule nobody.
     await prisma.shiftMatch.update({
       where: { shiftId_freelancerId: { shiftId, freelancerId: profile.id } },
       data: { status: MatchStatus.VIEWED, expiresAt: null },
     });
+    await leggReactieVast(userId, shiftId);
     return { status: MatchStatus.VIEWED, shiftFilled: false, pendingCompanyVerification: true };
   }
 
   // Leunt de werker op een proefklus (KVK/btw/KOR of IBAN ontbreekt nog), dan in de transactie een slot per werker en
   // opnieuw tellen vlak vóór het aanmaken: twee acceptaties tegelijk mogen samen nooit meer dan 2 proefklussen geven.
   // Wie alle gegevens heeft (of een klus van een uitzendpartner) gaat zonder slot, zoals altijd.
-  if (!partnerKlus && eligible.proef) {
-    return recordOfferResponse(shiftId, profile.id, "ACCEPTED", { voorAanmaken: (tx) => eisProefklusInSlot(tx, userId) });
-  }
-  return recordOfferResponse(shiftId, profile.id, "ACCEPTED");
+  const uitkomst =
+    !partnerKlus && eligible.proef
+      ? await recordOfferResponse(shiftId, profile.id, "ACCEPTED", { voorAanmaken: (tx) => eisProefklusInSlot(tx, userId) })
+      : await recordOfferResponse(shiftId, profile.id, "ACCEPTED");
+  // ingepland: een reactie van deze werker die nog openstond is daarmee afgehandeld
+  if (!uitkomst?.pendingCompanyVerification) await sluitEigenReactie(userId, shiftId);
+  return uitkomst;
 }

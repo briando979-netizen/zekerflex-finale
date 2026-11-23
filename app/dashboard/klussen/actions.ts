@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { applyToShift } from "@/lib/matching/apply";
+import { REACTIE_KLAAR_TEKST } from "@/lib/matching/reactie";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
@@ -43,8 +44,9 @@ export async function applyToShiftAction(shiftId: string): Promise<ApplyResult> 
     if (!res.pendingCompanyVerification) runAfter(() => pushShiftTaken(shiftId, principal.fullName));
     return {
       ok: true,
+      // een bedrijf dat nog niet is gecontroleerd: de reactie staat vastgelegd bij het bedrijf (lib/matching/reactie.ts)
       message: res.pendingCompanyVerification
-        ? "Je reactie is verstuurd. Dit bedrijf wordt nog geverifieerd — je wordt pas ingepland zodra dat rond is."
+        ? REACTIE_KLAAR_TEKST
         : res.shiftFilled
           ? "Aangenomen — de dienst is nu vol."
           : "Aangenomen! Je vindt hem bij Mijn klussen.",
@@ -63,14 +65,20 @@ export async function applyToSeriesAction(shiftIds: string[]): Promise<ApplyResu
     const ids = [...new Set(shiftIds)].slice(0, 21);
     if (ids.length === 0) return { ok: false, message: "Kies minstens één dag." };
 
+    // ingepland: echt aangenomen. klaar: het bedrijf is nog niet gecontroleerd; de reactie staat vastgelegd en wacht op het bedrijf
     let taken = 0;
+    let klaar = 0;
     let firstTaken: string | null = null;
     const failed: string[] = [];
     for (const id of ids) {
       try {
         const res = await applyToShift(principal.userId, id);
-        taken += 1;
-        if (!res.pendingCompanyVerification) firstTaken ??= id;
+        if (res.pendingCompanyVerification) {
+          klaar += 1;
+        } else {
+          taken += 1;
+          firstTaken ??= id;
+        }
       } catch (e) {
         failed.push(e instanceof AppError ? e.message : "onbekende fout");
       }
@@ -81,13 +89,19 @@ export async function applyToSeriesAction(shiftIds: string[]): Promise<ApplyResu
       const id = firstTaken;
       runAfter(() => pushShiftTaken(id, principal.fullName, taken));
     }
-    if (taken === 0) return { ok: false, message: failed[0] ?? "Aanmelden mislukt." };
+    if (taken + klaar === 0) return { ok: false, message: failed[0] ?? "Aanmelden mislukt." };
+    const dagen = (n: number) => `${n} ${n === 1 ? "dag" : "dagen"}`;
+    const mislukt = failed.length === 0 ? "" : ` ${failed.length} dag(en) lukten niet.`;
     return {
       ok: true,
       message:
-        failed.length === 0
-          ? `Aangenomen voor ${taken} ${taken === 1 ? "dag" : "dagen"}.`
-          : `Aangenomen voor ${taken} ${taken === 1 ? "dag" : "dagen"} — ${failed.length} dag(en) lukten niet.`,
+        klaar === 0
+          ? failed.length === 0
+            ? `Aangenomen voor ${dagen(taken)}.`
+            : `Aangenomen voor ${dagen(taken)} — ${failed.length} dag(en) lukten niet.`
+          : taken === 0
+            ? `${REACTIE_KLAAR_TEKST}${mislukt}`
+            : `Aangenomen voor ${dagen(taken)}. Voor ${dagen(klaar)} staat je reactie klaar; het bedrijf ziet hem en bevestigt.${mislukt}`,
     };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };

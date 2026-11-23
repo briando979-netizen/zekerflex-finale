@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { recordOfferResponse } from "@/lib/notifications/dispatcher";
 import { pushShiftTaken } from "@/lib/notifications/employer-push";
 import { runAfter } from "@/lib/run-after";
+import { REACTIE_KLAAR_TEKST } from "@/lib/matching/reactie";
 import { eisWerkrecht } from "@/lib/werkrecht/store";
 import { eisUitzendGegevens } from "@/lib/fiscal/eligibility";
 import { isUitzendPartnerKlus } from "@/lib/uitzend/partners";
@@ -52,8 +53,10 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
       if (!(await isUitzendPartnerKlus(shiftId))) await eisUitzendGegevens(principal.userId);
     }
     const result = await recordOfferResponse(shiftId, profile.id, decision);
-    if (decision === "ACCEPTED") runAfter(() => pushShiftTaken(shiftId, principal.fullName));
-    return NextResponse.json(result, { status: 200 });
+    // Een bedrijf dat nog niet is gecontroleerd: de reactie staat vastgelegd en wacht op het bedrijf; er is niemand ingepland, dus ook
+    // geen "neemt je klus"-bericht aan het bedrijf (lib/matching/reactie.ts).
+    if (decision === "ACCEPTED" && !result.pendingCompanyVerification) runAfter(() => pushShiftTaken(shiftId, principal.fullName));
+    return NextResponse.json(result.pendingCompanyVerification ? { ...result, bericht: REACTIE_KLAAR_TEKST } : result, { status: 200 });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     if (status >= 500) log.error("offer response failed", { error: (err as Error).message });

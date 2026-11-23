@@ -104,10 +104,6 @@ export async function eisBedrijfGecontroleerd(tenantId: string): Promise<void> {
   }
 }
 
-/** Wat een werker leest als hij op een klus van een nog niet gecontroleerd bedrijf reageert (de werkerskant blijft zoals hij was). */
-export const UNVERIFIED_ASSIGN_MESSAGE =
-  "Dit bedrijf is nog niet geverifieerd. Je reactie is genoteerd — je wordt pas ingepland zodra hun bedrijf is goedgekeurd.";
-
 /**
  * The company just became verified: tell its admins (push and mail) that they can pick their freelancers now. Only when
  * the company asked for the check ("Nog een paar laatste checks"), and only once per request. Best-effort: never throws.
@@ -159,9 +155,8 @@ export async function notifyCompanyChecked(tenantId: string): Promise<boolean> {
 }
 
 /**
- * The company just became verified: tell every freelancer who reacted to its
- * klus that they can now confirm (re-tapping "aannemen" schedules them).
- * Best-effort push; returns how many people were told.
+ * The company just became verified: tell every freelancer whose reaction was waiting (lib/matching/reactie.ts: a VIEWED match plus
+ * a reaction at the company) that the company can now schedule them. Best-effort push; returns how many people were told.
  */
 export async function notifyPendingReactions(tenantId: string): Promise<number> {
   // het bedrijf zelf eerst: wie "Nog een paar laatste checks" invulde, krijgt bericht dat hij nu kan inplannen
