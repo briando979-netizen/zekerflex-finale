@@ -444,7 +444,7 @@ export function NewShiftForm({
                     key={t.id}
                     type="button"
                     onClick={() => applyOwnTemplate(t)}
-                    className="rounded-full border border-hairstrong px-3 py-1.5 text-xs font-medium text-neutralx-600 transition hover:border-brand-500"
+                    className="inline-flex min-h-[44px] items-center rounded-full border border-hairstrong px-3 py-1.5 text-xs font-medium text-neutralx-600 transition hover:border-brand-500 sm:min-h-0"
                   >
                     {t.label}
                   </button>
@@ -518,7 +518,7 @@ export function NewShiftForm({
                     setWriting(false);
                   }
                 }}
-                className="mb-1 rounded-full border border-hair bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
+                className="mb-1 inline-flex min-h-[44px] items-center rounded-full border border-hair bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50 sm:min-h-0"
               >
                 {writing ? n.schrijven : description.trim() ? n.verbeter : n.schrijfVoorMij}
               </button>
@@ -556,7 +556,7 @@ export function NewShiftForm({
                         return (aan ? zonder : [...zonder, keuze]).join(", ");
                       })
                     }
-                    className={`rounded-full border px-2.5 py-1 text-xs ${aan ? "border-ink bg-ink text-white" : "border-hair bg-white text-neutralx-700 hover:border-brand-300"}`}
+                    className={`inline-flex min-h-[44px] items-center rounded-full border px-3 py-1 text-xs sm:min-h-0 sm:px-2.5 ${aan ? "border-ink bg-ink text-white" : "border-hair bg-white text-neutralx-700 hover:border-brand-300"}`}
                   >
                     {keuze}
                   </button>
@@ -596,7 +596,7 @@ export function NewShiftForm({
             </div>
           ) : (
           <div>
-            <label className="flex items-center gap-2 text-xs font-medium text-neutralx-500">
+            <label className="flex min-h-[44px] items-center gap-2 text-xs font-medium text-neutralx-500 sm:min-h-0">
               <input
                 type="checkbox"
                 checked={oneOff}
@@ -619,7 +619,7 @@ export function NewShiftForm({
                 </select>
                 <span className="mt-1 block text-xs text-neutralx-400">
                   {n.vestigingenBeheer}{" "}
-                  <Link href="/werkgever/locaties" className="font-medium text-brand-600 hover:underline">
+                  <Link href="/werkgever/locaties" className="inline-flex min-h-[44px] items-center font-medium text-brand-600 hover:underline sm:min-h-0">
                     /werkgever/locaties
                   </Link>
                   .
