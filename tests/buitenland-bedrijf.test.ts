@@ -7,6 +7,7 @@ const m = vi.hoisted(() => ({
   tenantFindMany: vi.fn(),
   branchFindFirst: vi.fn(),
   branchCreate: vi.fn(),
+  branchCount: vi.fn(),
   userFindUnique: vi.fn(),
   registerTenantCompany: vi.fn(),
   checkVies: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     membership: { findFirst: m.membership },
     tenant: { update: m.tenantUpdate, findMany: m.tenantFindMany },
-    branch: { findFirst: m.branchFindFirst, create: m.branchCreate, update: vi.fn() },
+    branch: { findFirst: m.branchFindFirst, create: m.branchCreate, update: vi.fn(), count: m.branchCount },
     user: { findUnique: m.userFindUnique },
   },
 }));
@@ -33,7 +34,7 @@ vi.mock("@/lib/company/eigendom", () => ({ eigendomVanEmail: () => ({ ok: false,
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: m.alert }));
 vi.mock("@/lib/audit", () => ({ recordAudit: m.audit }));
 
-const { employerKvkSchema, employerOnboardingSchema, submitEmployerOnboarding, isEmployerOnboarded } = await import("@/lib/onboarding/employer");
+const { employerKvkSchema, employerOnboardingSchema, submitEmployerOnboarding, isEmployerOnboarded, koppelBedrijfsgegevens, heeftVestiging } = await import("@/lib/onboarding/employer");
 
 const vestiging = { branchName: "Magazijn", addressLine: "Damrak 1", postalCode: "1012 AB", houseNumber: "1" };
 
@@ -189,6 +190,69 @@ describe("de werklocatie staat er al", () => {
     await expect(submitEmployerOnboarding("u1", "t1", employerKvkSchema.parse({ kvkNumber: "12345678" }))).rejects.toMatchObject({ status: 422 });
     expect(m.registerTenantCompany).not.toHaveBeenCalled();
     expect(m.branchCreate).not.toHaveBeenCalled();
+  });
+});
+
+// 23 nov 2026 ("Nog een paar laatste checks"): het bedrijf wordt pas gekoppeld als het iemand wil inplannen, zonder vestiging erbij.
+describe("koppelBedrijfsgegevens: alleen het bedrijf, zonder vestiging", () => {
+  const kvk = () => employerKvkSchema.parse({ kvkNumber: "12345678" });
+
+  it("koppelt een Nederlands bedrijf via het KVK zonder dat er een vestiging nodig is of wordt gemaakt", async () => {
+    m.registerTenantCompany.mockResolvedValue({ kvkValid: true, profile: { legalName: "Bakker BV", tradeName: null, kvkNumber: "12345678" }, validation: { reasons: [] } });
+    m.userFindUnique.mockResolvedValue({ email: "jan@gmail.com" });
+    const r = await koppelBedrijfsgegevens("u1", "t1", kvk());
+    expect(r).toMatchObject({ kvkValid: true, inControle: true, buitenlands: false, zelfControle: false, companyName: "Bakker BV" });
+    expect(m.registerTenantCompany).toHaveBeenCalledWith({ tenantId: "t1", kvkNumber: "12345678", allowInactive: true });
+    expect(m.branchFindFirst).not.toHaveBeenCalled();
+    expect(m.branchCreate).not.toHaveBeenCalled();
+    // de naam uit het Handelsregister komt op de organisatie, zoals in de onboarding
+    expect(m.tenantUpdate).toHaveBeenCalledWith({ where: { id: "t1" }, data: { name: "Bakker BV" } });
+  });
+
+  it("een buitenlands bedrijf loopt via het btw-nummer en wacht op een beheerder", async () => {
+    m.checkVies.mockResolvedValue({ vatNumber: "DE123456789", countryCode: "DE", status: "valid", name: "Muster GmbH", address: null });
+    const r = await koppelBedrijfsgegevens("u1", "t1", employerKvkSchema.parse({ land: "DE", btwNummer: "DE 123 456 789" }));
+    expect(r).toMatchObject({ kvkValid: true, inControle: true, buitenlands: true, zelfControle: false });
+    expect(m.registerTenantCompany).not.toHaveBeenCalled();
+  });
+
+  it("alleen de beheerder van het bedrijf: een ander lid krijgt een 423 (geen 403) en er wordt niets gecontroleerd", async () => {
+    m.membership.mockResolvedValue(null);
+    await expect(koppelBedrijfsgegevens("u1", "t1", kvk())).rejects.toMatchObject({ status: 423, code: "ALLEEN_BEHEERDER" });
+    expect(m.registerTenantCompany).not.toHaveBeenCalled();
+  });
+
+  it("een KVK-nummer dat niet bestaat is geen zelfcontrole; een storing die we niet kennen wel (ZekerFlex kijkt zelf)", async () => {
+    const { AppError } = await import("@/lib/errors");
+    m.registerTenantCompany.mockRejectedValueOnce(AppError.notFound("No Handelsregister entry"));
+    const bestaatNiet = await koppelBedrijfsgegevens("u1", "t1", kvk());
+    expect(bestaatNiet).toMatchObject({ kvkValid: false, zelfControle: false });
+    expect(bestaatNiet.reasons[0]).toBe("Dit KVK-nummer staat niet in het Handelsregister.");
+
+    m.registerTenantCompany.mockRejectedValueOnce(new Error("onbekende storing"));
+    const storing = await koppelBedrijfsgegevens("u1", "t1", kvk());
+    expect(storing).toMatchObject({ kvkValid: false, zelfControle: true });
+    expect(storing.reasons[0]).toContain("We controleren je KVK-nummer zelf");
+
+    m.registerTenantCompany.mockRejectedValueOnce(Object.assign(new Error("unique"), { code: "P2002" }));
+    const alVergeven = await koppelBedrijfsgegevens("u1", "t1", kvk());
+    expect(alVergeven).toMatchObject({ kvkValid: false, zelfControle: false });
+    expect(alVergeven.reasons[0]).toMatch(/ander ZekerFlex-account/);
+  });
+});
+
+describe("heeftVestiging (de stap 'adres bevestigen' van Jouw start)", () => {
+  it("telt alleen een vaste werklocatie, ook zonder KVK-nummer", async () => {
+    m.branchCount.mockResolvedValue(1);
+    expect(await heeftVestiging(["t1"])).toBe(true);
+    expect(m.branchCount).toHaveBeenCalledWith({ where: { tenantId: { in: ["t1"] }, kind: "PERMANENT" } });
+    m.branchCount.mockResolvedValue(0);
+    expect(await heeftVestiging(["t1"])).toBe(false);
+  });
+
+  it("zonder organisaties niet, en dan ook geen vraag aan de database", async () => {
+    expect(await heeftVestiging([])).toBe(false);
+    expect(m.branchCount).not.toHaveBeenCalled();
   });
 });
 
