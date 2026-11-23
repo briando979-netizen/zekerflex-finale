@@ -76,8 +76,10 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   // kostenplaatsen/PO-nummers van het bedrijf (Facturen → factuurgegevens): keuze bij het plaatsen
   const kostenplaatsen = (extra.costCentres ?? []).map((k) => k.trim()).filter(Boolean);
 
+  // het uitgebreide formulier volgt de breedte van de pagina; de stappenbalk staat boven de kaarten en elke sectie is een eigen
+  // kaart (components/app/NewShiftForm.tsx), dus hier staat er geen kaart meer omheen (ronde 2, 23 nov 2026)
   const volledig = (
-    <div className="surface p-4 sm:p-6">
+    <div>
       <NewShiftForm
         branches={branches}
         templates={SHIFT_TEMPLATES}
@@ -94,7 +96,8 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   );
 
   return (
-    <div className="mx-auto max-w-5xl">
+    // de korte weg en het eerste adres zijn smalle formulieren: die houden hun breedte (links uitgelijnd, zoals de rest van de app)
+    <div className={snelModus || branches.length === 0 ? "max-w-5xl" : undefined}>
       <PaginaKop
         title={n.title}
         eyebrow={n.eyebrow}

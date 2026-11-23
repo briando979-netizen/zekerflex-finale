@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
@@ -27,6 +27,7 @@ import { SJABLOON_EN, SJABLOON_NL } from "@/lib/shifts/sjabloon-kiezer-teksten";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
+import { BLOK_KOP } from "@/components/werkgever/bouwstenen";
 
 const initial: NewShiftState = { error: null };
 
@@ -38,6 +39,21 @@ interface OwnTemplate {
   description: string | null;
   dresscode: string | null;
   annuleerUren?: number;
+}
+
+/**
+ * Een sectie van het formulier (ronde 2, 23 nov 2026, zoals "Basisinformatie" en "Vereisten" in de referentie): een witte kaart
+ * met een kop. Bij het wijzigen van een bestaande klus (`kaart` uit) blijft het formulier één geheel zoals het was: dan zijn het
+ * alleen de velden, zonder kaart en zonder kop. Een losse component, niet binnen het formulier gedefinieerd (velden houden hun focus).
+ */
+function Sectie({ titel, kaart, children }: { titel: string; kaart: boolean; children: ReactNode }) {
+  if (!kaart) return <div className="space-y-7">{children}</div>;
+  return (
+    <section className="surface p-4 sm:p-6">
+      <h3 className={BLOK_KOP}>{titel}</h3>
+      <div className="mt-5 space-y-6">{children}</div>
+    </section>
+  );
 }
 
 function Submit({ days, blocked }: { days: number; blocked?: boolean }) {
@@ -361,42 +377,49 @@ export function NewShiftForm({
   const kopieVestiging = kopie && branches.some((b) => b.id === kopie.branchId) ? kopie.branchId : undefined;
 
   return (
-    // grid-cols-1 + minmax(0,…): anders wordt de kolom zo breed als een brede rij in de kiezer (4 nov: pagina 2552px breed)
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <form {...(edit ? { onSubmit: saveEdit } : { action: formAction, onSubmit: stapOpIndienen })} onKeyDown={metStappen && stap === 1 ? enterOpStap1 : undefined} className="min-w-0 space-y-7">
+    <div>
+      {metStappen && (
+        // de stappenbalk staat boven de kaarten (ronde 2, 23 nov 2026): twee grote genummerde cirkels met een lijn ertussen; de
+        // lijn en de eerste cirkel worden groen zodra je bij stap 2 bent, en via die eerste cirkel kun je terug
+        <ol aria-label={n.stappenLabel} className="mb-6 flex max-w-3xl items-center gap-2 sm:gap-4">
+          {[n.stap1, n.stap2].map((naam, i) => {
+            const nr = i + 1;
+            const klaar = stap > nr;
+            const huidig = stap === nr;
+            const bol = `grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border-2 font-display text-base font-bold sm:h-11 sm:w-11 sm:text-lg ${
+              huidig ? "border-brand-500 bg-brand-500 text-white" : klaar ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-500"
+            }`;
+            return (
+              <Fragment key={nr}>
+                {i > 0 && <li role="presentation" aria-hidden className={`h-0.5 min-w-4 flex-1 rounded-full ${stap > 1 ? "bg-brand-500" : "bg-hairstrong"}`} />}
+                <li aria-current={huidig ? "step" : undefined} className="min-w-0">
+                  {klaar ? (
+                    <button type="button" onClick={() => setStap(1)} className="flex min-h-[44px] items-center gap-2 text-left text-xs font-semibold text-brand-700 hover:underline sm:gap-3 sm:text-base">
+                      <span aria-hidden className={bol}>✓</span>
+                      {naam}
+                    </button>
+                  ) : (
+                    <span className={`flex min-h-[44px] items-center gap-2 text-xs font-semibold sm:gap-3 sm:text-base ${huidig ? "text-ink" : "text-neutralx-500"}`}>
+                      <span aria-hidden className={bol}>{nr}</span>
+                      {naam}
+                    </span>
+                  )}
+                </li>
+              </Fragment>
+            );
+          })}
+        </ol>
+      )}
+    {/* grid-cols-1 + minmax(0,…): anders wordt de kolom zo breed als een brede rij in de kiezer (4 nov: pagina 2552px breed).
+        Bij een nieuwe klus volgt het formulier de breedte van de pagina, met het voorbeeld in een vaste smalle kolom ernaast. */}
+    <div className={`grid grid-cols-1 gap-8 ${metStappen ? "lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]" : "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"}`}>
+      <form {...(edit ? { onSubmit: saveEdit } : { action: formAction, onSubmit: stapOpIndienen })} onKeyDown={metStappen && stap === 1 ? enterOpStap1 : undefined} className={`min-w-0 ${metStappen ? "space-y-6" : "space-y-7"}`}>
         {metStappen && (
-          <div className="space-y-3">
-            {/* de stappenbalk: twee stappen, de balk onder de naam wordt groen zodra je er bent */}
-            <ol aria-label={n.stappenLabel} className="grid grid-cols-2 gap-3">
-              {[n.stap1, n.stap2].map((naam, i) => {
-                const nr = i + 1;
-                const klaar = stap > nr;
-                const huidig = stap === nr;
-                const bol = `grid h-6 w-6 flex-shrink-0 place-items-center rounded-full text-xs font-bold ${huidig ? "bg-brand-500 text-white" : klaar ? "bg-brand-50 text-brand-700" : "bg-paper-soft text-neutralx-500"}`;
-                return (
-                  <li key={nr} aria-current={huidig ? "step" : undefined}>
-                    {klaar ? (
-                      <button type="button" onClick={() => setStap(1)} className="flex min-h-[44px] w-full items-center gap-2 text-left text-xs font-semibold text-brand-700 hover:underline">
-                        <span aria-hidden className={bol}>✓</span>
-                        {naam}
-                      </button>
-                    ) : (
-                      <span className={`flex min-h-[44px] items-center gap-2 text-xs font-semibold ${huidig ? "text-ink" : "text-neutralx-500"}`}>
-                        <span aria-hidden className={bol}>{nr}</span>
-                        {naam}
-                      </span>
-                    )}
-                    <span aria-hidden className={`block h-1 rounded-full ${huidig || klaar ? "bg-brand-500" : "bg-hair"}`} />
-                  </li>
-                );
-              })}
-            </ol>
-            <div>
-              <h2 ref={stapKop} tabIndex={-1} className="sr-only scroll-mt-28">
-                {stap === 1 ? n.stap1 : n.stap2}
-              </h2>
-              <p className="text-sm text-neutralx-600">{stap === 1 ? n.stap1Uitleg : n.stap2Uitleg}</p>
-            </div>
+          <div>
+            <h2 ref={stapKop} tabIndex={-1} className="sr-only scroll-mt-28">
+              {stap === 1 ? n.stap1 : n.stap2}
+            </h2>
+            <p className="text-sm text-neutralx-600">{stap === 1 ? n.stap1Uitleg : n.stap2Uitleg}</p>
           </div>
         )}
         {(editError ?? state.error) && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{editError ?? state.error}</p>}
@@ -421,7 +444,8 @@ export function NewShiftForm({
         <input type="hidden" name="extraDates" value={extraDates.join(",")} />
 
         {/* ---- stap 1: klus omschrijven ---- */}
-        <div hidden={!toon1} className="space-y-7">
+        <div hidden={!toon1} className={metStappen ? "space-y-6" : "space-y-7"}>
+          <Sectie titel={n.sectieFunctie} kaart={metStappen}>
           <SjabloonGalerij
             sjablonen={galerij}
             gekozen={tpl}
@@ -452,7 +476,9 @@ export function NewShiftForm({
               </div>
             </div>
           )}
+          </Sectie>
 
+          <Sectie titel={n.sectieBasis} kaart={metStappen}>
           <div>
             <label className="block">
               <span className="field-label">{n.titel}</span>
@@ -526,7 +552,11 @@ export function NewShiftForm({
             <textarea ref={omschrijvingRef} id="shift-description" name="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
             {writeNote && <p className="mt-1 text-xs text-neutralx-500">{writeNote}</p>}
           </div>
+          </Sectie>
 
+          {/* kleding en annuleringstermijn naast elkaar zodra de kaart er breed genoeg voor is */}
+          <Sectie titel={n.sectieVereisten} kaart={metStappen}>
+          <div className={metStappen ? "grid gap-6 xl:grid-cols-2" : "space-y-7"}>
           <label className="block">
             <span className="field-label">
               {n.kleding} <span className="text-neutralx-400">{n.optioneel}</span>
@@ -578,6 +608,8 @@ export function NewShiftForm({
               <span className="mt-1 block text-xs text-neutralx-400">{n.annuleerTermijnUitleg}</span>
             </label>
           )}
+          </div>
+          </Sectie>
 
           {metStappen && (
             <button type="button" onClick={naarStap2} className="btn-primary min-h-[44px] w-full sm:w-auto sm:px-10">
@@ -587,7 +619,8 @@ export function NewShiftForm({
         </div>
 
         {/* ---- stap 2: klus inplannen ---- */}
-        <div hidden={!toon2} className="space-y-7">
+        <div hidden={!toon2} className={metStappen ? "space-y-6" : "space-y-7"}>
+          <Sectie titel={n.sectieLocatie} kaart={metStappen}>
           {edit ? (
             <div>
               <p className="field-label">{n.locatie}</p>
@@ -664,7 +697,9 @@ export function NewShiftForm({
             )}
           </div>
           )}
+          </Sectie>
 
+          <Sectie titel={n.sectieTijd} kaart={metStappen}>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="field-label">{n.start}</span>
@@ -682,41 +717,6 @@ export function NewShiftForm({
               <span className="field-label">{n.plekken}</span>
               <input type="number" name="positions" min={1} max={50} value={positions} onChange={(e) => setPositions(e.target.value)} className="field-input" />
             </label>
-            <label className="block sm:col-span-2">
-              <span className="field-label">{n.uurtarief}</span>
-              {/* tekstveld met een decimaaltoetsenbord: de browser maakt van een getalveld een punt of komma naar zijn eigen taal; dit
-                  veld toont altijd de komma van het Nederlands of de punt van het Engels (lib/klusconcept/weergave.ts) */}
-              <input
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={tariefWeergave(rateEuro, taal)}
-                onChange={(e) => setRateEuro(tariefInvoer(e.target.value))}
-                onBlur={() => {
-                  if (rateEuro.trim() !== "" && hourlyRateCents < minRateCents) setRateEuro(minRateEuro.toFixed(2));
-                }}
-                className="field-input"
-              />
-              <span className="mt-1 block text-xs text-neutralx-400">
-                {fmt(n.minimumTekst, { min: bedragTekst(minRateCents, taal) })}
-              </span>
-              {hourlyRateCents > 0 && hourlyRateCents < minRateCents && (
-                <span className="mt-1 block text-xs font-medium text-crit">
-                  {fmt(n.minimumFout, { min: bedragTekst(minRateCents, taal) })}
-                </span>
-              )}
-            </label>
-            {forecast && forecast.sample >= 8 && hourlyRateCents > 0 && (
-              <FairPayMeter
-                rateCents={hourlyRateCents}
-                marketRateCents={forecast.marketRateCents}
-                fillChance={forecast.fillChance}
-                suggestedRateCents={forecast.suggestedRateCents}
-                suggestedFillChance={forecast.suggestedFillChance}
-                sample={forecast.sample}
-                onApplySuggested={(cents) => setRateEuro((cents / 100).toFixed(2))}
-              />
-            )}
           </div>
 
           {/* multi-day (only when placing) */}
@@ -756,6 +756,54 @@ export function NewShiftForm({
             )}
           </div>
           )}
+          </Sectie>
+
+          {/* het uurtarief met de kans op invulling: een eigen sectie (bij wijzigen dezelfde velden, zonder kaart) */}
+          <Sectie titel={n.sectieTarief} kaart={metStappen}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
+              <span className="field-label">{n.uurtarief}</span>
+              {/* tekstveld met een decimaaltoetsenbord: de browser maakt van een getalveld een punt of komma naar zijn eigen taal; dit
+                  veld toont altijd de komma van het Nederlands of de punt van het Engels (lib/klusconcept/weergave.ts) */}
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={tariefWeergave(rateEuro, taal)}
+                onChange={(e) => setRateEuro(tariefInvoer(e.target.value))}
+                onBlur={() => {
+                  if (rateEuro.trim() !== "" && hourlyRateCents < minRateCents) setRateEuro(minRateEuro.toFixed(2));
+                }}
+                className="field-input"
+              />
+              <span className="mt-1 block text-xs text-neutralx-400">
+                {fmt(n.minimumTekst, { min: bedragTekst(minRateCents, taal) })}
+              </span>
+              {hourlyRateCents > 0 && hourlyRateCents < minRateCents && (
+                <span className="mt-1 block text-xs font-medium text-crit">
+                  {fmt(n.minimumFout, { min: bedragTekst(minRateCents, taal) })}
+                </span>
+              )}
+            </label>
+            {forecast && forecast.sample >= 8 && hourlyRateCents > 0 && (
+              <FairPayMeter
+                rateCents={hourlyRateCents}
+                marketRateCents={forecast.marketRateCents}
+                fillChance={forecast.fillChance}
+                suggestedRateCents={forecast.suggestedRateCents}
+                suggestedFillChance={forecast.suggestedFillChance}
+                sample={forecast.sample}
+                onApplySuggested={(cents) => setRateEuro((cents / 100).toFixed(2))}
+              />
+            )}
+          </div>
+          </Sectie>
+
+          {/* kostenplaats, groep, favorieten en het uitzendbureau: alleen bij een nieuwe klus */}
+          {!edit && (
+          <Sectie titel={n.sectieExtra} kaart>
+          {(kostenplaatsen.length > 0 || pools.length > 0) && (
+          <div className="grid gap-6 xl:grid-cols-2">
 
           {!edit && kostenplaatsen.length > 0 && (
             <label className="block">
@@ -790,6 +838,8 @@ export function NewShiftForm({
               </span>
             </label>
           )}
+          </div>
+          )}
 
           {!edit && (
             // "Favorieten automatisch accepteren" (naar YoungOnes): lib/shifts/auto-accept.ts + lib/pools/vaste-schil.ts
@@ -821,6 +871,8 @@ export function NewShiftForm({
                 {n.uitzendViaBureauLink}
               </Link>
             </p>
+          )}
+          </Sectie>
           )}
 
           {/* wat de klus kost, vlak boven de knop op een telefoon; op een laptop staat de kostenregel één keer, in het voorbeeld ernaast
@@ -953,6 +1005,7 @@ export function NewShiftForm({
           </fieldset>
         </div>
       </div>
+    </div>
     </div>
   );
 }

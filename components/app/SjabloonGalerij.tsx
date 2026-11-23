@@ -86,8 +86,10 @@ export function SjabloonGalerij({
         </p>
       </div>
 
-      <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_13rem]">
-        <div>
+      {/* het zoekveld is minstens 19rem breed zodat de voorbeeldtekst er helemaal in past; is de kaart daar te smal voor (het
+          klusformulier op een laptop van 1024 px), dan komt de keuzelijst eronder te staan in plaats van het zoekveld af te knijpen */}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <div className="relative min-w-0 flex-[1_1_19rem]">
           <label htmlFor={`${id}-zoek`} className="sr-only">
             {teksten.zoekLabel}
           </label>
@@ -103,7 +105,7 @@ export function SjabloonGalerij({
             className="field-input mt-0"
           />
         </div>
-        <div>
+        <div className="relative w-full sm:w-auto sm:flex-[0_0_13rem]">
           <label htmlFor={`${id}-branche`} className="sr-only">
             {teksten.brancheLabel}
           </label>

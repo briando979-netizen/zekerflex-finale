@@ -118,6 +118,40 @@ describe("het formulier (bron-controle)", () => {
     expect(form).toContain("onClick={() => setStap(1)}");
   });
 
+  // ronde 2 (23 nov 2026), naast de referentie gelegd
+  it("de stappenbalk staat boven de kaarten: twee grote genummerde cirkels met een lijn ertussen", () => {
+    const balk = form.indexOf("<ol aria-label={n.stappenLabel}");
+    expect(balk).toBeGreaterThan(0);
+    // vóór het formulier, dus buiten de kaarten
+    expect(balk).toBeLessThan(form.indexOf("<form {..."));
+    expect(form).toContain("rounded-full border-2 font-display text-base font-bold sm:h-11 sm:w-11 sm:text-lg");
+    expect(form).toContain('<li role="presentation" aria-hidden className={`h-0.5 min-w-4 flex-1 rounded-full ${stap > 1 ? "bg-brand-500" : "bg-hairstrong"}`} />');
+  });
+
+  it("het formulier staat in secties met een kop, elk in een eigen kaart; bij wijzigen blijft het één geheel zonder koppen", () => {
+    expect(form).toContain("function Sectie({ titel, kaart, children }");
+    expect(form).toContain('if (!kaart) return <div className="space-y-7">{children}</div>;');
+    for (const s of ["sectieFunctie", "sectieBasis", "sectieVereisten"]) expect(stap1, s).toContain(`<Sectie titel={n.${s}} kaart={metStappen}>`);
+    for (const s of ["sectieLocatie", "sectieTijd", "sectieTarief"]) expect(stap2, s).toContain(`<Sectie titel={n.${s}} kaart={metStappen}>`);
+    expect(stap2).toContain("<Sectie titel={n.sectieExtra} kaart>");
+    expect(form.match(/<Sectie /g)?.length).toBe(form.match(/<\/Sectie>/g)?.length);
+    for (const s of ["sectieFunctie", "sectieBasis", "sectieVereisten", "sectieLocatie", "sectieTijd", "sectieTarief", "sectieExtra"] as const) {
+      expect(nl.newShiftForm[s].trim(), `nl ${s}`).not.toBe("");
+      expect(en.newShiftForm[s].trim(), `en ${s}`).not.toBe("");
+    }
+    expect(nl.newShiftForm.sectieBasis).toBe("Basisinformatie");
+    // twee kolommen waar het past, en het voorbeeld in een vaste smalle kolom ernaast
+    expect(form).toContain('className={metStappen ? "grid gap-6 xl:grid-cols-2" : "space-y-7"}');
+    expect(form).toContain("lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]");
+  });
+
+  it("het zoekveld van de functiekiezer wordt niet afgeknepen: is de kaart te smal, dan komt de keuzelijst eronder", () => {
+    const galerij = lees("components/app/SjabloonGalerij.tsx");
+    expect(galerij).toContain('<div className="mt-2 flex flex-wrap gap-2">');
+    expect(galerij).toContain('<div className="relative min-w-0 flex-[1_1_19rem]">');
+    expect(galerij).not.toContain("sm:grid-cols-[minmax(0,1fr)_13rem]");
+  });
+
   it("Volgende controleert de titel met een melding (role alert) en Enter gaat naar de volgende stap", () => {
     expect(form).toContain("if (title.trim().length < 3) {");
     expect(form).toContain("setStapFout(n.titelKort);");
@@ -193,8 +227,11 @@ describe("de pagina Klus uitzetten (bron-controle)", () => {
   it("toont standaard het uitgebreide formulier, zonder iets uit te klappen", () => {
     expect(pagina).toContain("{volledig}");
     expect(pagina).not.toContain("<details");
-    // het formulier krijgt op een telefoon minder opvulling
-    expect(pagina).toContain('className="surface p-4 sm:p-6"');
+    // ronde 2 (23 nov 2026): het formulier volgt de breedte van de pagina (geen max-w-5xl in het midden) en elke sectie is een
+    // eigen kaart in het formulier zelf, met op een telefoon minder opvulling
+    expect(pagina).not.toContain("mx-auto max-w-5xl");
+    expect(pagina).toContain('<div className={snelModus || branches.length === 0 ? "max-w-5xl" : undefined}>');
+    expect(lees("components/app/NewShiftForm.tsx")).toContain('<section className="surface p-4 sm:p-6">');
   });
 
   it("de korte weg blijft als link ('Liever snel?') en terug kan met 'Alle opties'", () => {

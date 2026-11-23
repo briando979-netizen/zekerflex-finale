@@ -2002,6 +2002,14 @@ export const nl = {
     opslaanMislukt: "Opslaan lukte niet. Probeer het opnieuw.",
     // klus uitzetten in twee stappen: het uitgebreide formulier is de standaard (22 nov 2026)
     stappenLabel: "Stappen om een klus uit te zetten",
+    // de koppen van de secties van het formulier (ronde 2, 23 nov 2026)
+    sectieFunctie: "Functie",
+    sectieBasis: "Basisinformatie",
+    sectieVereisten: "Vereisten en afspraken",
+    sectieLocatie: "Locatie",
+    sectieTijd: "Datum, tijd en aantal mensen",
+    sectieTarief: "Tarief",
+    sectieExtra: "Extra opties",
     stap1: "Klus omschrijven",
     stap2: "Klus inplannen",
     stap1Uitleg: "Wat voor werk is het? Kies een functie, of vul zelf in wat er moet gebeuren.",

@@ -1958,6 +1958,13 @@ export const en: Dict = {
     opslaanMislukt: "Saving failed. Please try again.",
     // placing a job in two steps: the full form is the default (22 Nov 2026)
     stappenLabel: "Steps to place a job",
+    sectieFunctie: "Role",
+    sectieBasis: "Basic information",
+    sectieVereisten: "Requirements and terms",
+    sectieLocatie: "Location",
+    sectieTijd: "Date, time and number of people",
+    sectieTarief: "Rate",
+    sectieExtra: "Extra options",
     stap1: "Describe the job",
     stap2: "Schedule the job",
     stap1Uitleg: "What kind of work is it? Pick a role, or fill in yourself what needs to be done.",
