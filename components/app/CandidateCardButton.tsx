@@ -2,7 +2,9 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { respondToOfferAction, zetReserveAction } from "@/app/werkgever/diensten/[shiftId]/actions";
+import { respondToOfferAction, zetReserveAction, type OfferResponse } from "@/app/werkgever/diensten/[shiftId]/actions";
+import { LaatsteChecksVenster } from "@/components/werkgever/LaatsteChecksVenster";
+import { BEDRIJF_NOG_NIET_GECONTROLEERD } from "@/lib/company/gecontroleerd";
 import { useToast } from "@/components/ui/Toast";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -85,6 +87,8 @@ export function CandidateCardButton({
   // reserves kiezen vóór het accepteren van de laatste plek (zoals YoungOnes' back-up lijst, lib/reservebank)
   const [reserveStap, setReserveStap] = useState(false);
   const [reserves, setReserves] = useState<string[]>([]);
+  // "Nog een paar laatste checks": het venster voor een bedrijf dat nog niet is gecontroleerd
+  const [checks, setChecks] = useState(false);
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
@@ -119,10 +123,16 @@ export function CandidateCardButton({
       // een reserve die niet lukt houdt het accepteren niet tegen; de pagina toont daarna de echte stand
       await zetReserveAction(offerId, true).catch(() => undefined);
     }
-    const r = await respondToOfferAction(beslissing.offerId, decision).catch(() => ({ ok: false, message: k.mislukt }));
+    const r: OfferResponse = await respondToOfferAction(beslissing.offerId, decision).catch(() => ({ ok: false, message: k.mislukt }));
     setReserveStap(false);
     setBezig(false);
     if (!r.ok) {
+      // een bedrijf dat nog niet is gecontroleerd: de reactie blijft openstaan en het venster vraagt de bedrijfsgegevens (23 nov 2026)
+      if (r.code === BEDRIJF_NOG_NIET_GECONTROLEERD) {
+        setOpen(false);
+        setChecks(true);
+        return;
+      }
       setFout(r.message);
       return;
     }
@@ -388,6 +398,19 @@ export function CandidateCardButton({
             )}
           </div>
         </div>
+      )}
+
+      {checks && beslissing && (
+        <LaatsteChecksVenster
+          naam={name}
+          keuzes={[{ offerId: beslissing.offerId, shiftId }]}
+          onSluit={() => setChecks(false)}
+          onGecontroleerd={() => {
+            // het bedrijf is meteen gecontroleerd: de keuze gaat nu alsnog door (de reserves staan er al)
+            setChecks(false);
+            void beslis("accepted", []);
+          }}
+        />
       )}
     </>
   );

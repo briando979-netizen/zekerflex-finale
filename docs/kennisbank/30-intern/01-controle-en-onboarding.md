@@ -3,7 +3,7 @@
 ## Bedrijven
 
 - Een KVK-nummer alleen maakt een bedrijf niet geverifieerd. Vertrouwd is: een bevestigd adres op het eigen maildomein, of een handmatige controle door ons (Admin → Bedrijven) met een melding erbij.
-- Tot die tijd: één klus, geen inplannen.
+- Tot die tijd: klussen plaatsen en reacties zien mag (een klus staat meteen live), maar inplannen kan niet; de server geeft een 423 met de code BEDRIJF_NOG_NIET_GECONTROLEERD. De controle begint als het bedrijf bij het kiezen van een freelancer "Nog een paar laatste checks" invult; de aanvraag staat in Admin → KVK-controle en bij het bedrijf zelf. Beheer kan een klus met één klik naar concept zetten (Admin → Bedrijven → het bedrijf → Klussen).
 - Elke week controleert de server opnieuw of ingeschreven bedrijven nog actief zijn in het Handelsregister (Admin → Bronnen → KVK-controle). Een opgeheven of insolvent bedrijf: klussen pauzeren en contact opnemen.
 
 ## Flexwerkers (KYC)

@@ -3,13 +3,16 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getBuitenlandBewijs } from "@/lib/company/buitenland";
+import { bedrijfMagDoen, NOG_NIET_GECONTROLEERD_TEKST } from "@/lib/company/gecontroleerd";
 
 // ---------------------------------------------------------------------------
 // Is this company (tenant) verified enough to actually staff people?
 //
-// Until it is, a company may place ONE klus: it is visible and freelancers
-// can respond, but nobody gets scheduled on it (no assignment, no timesheet,
-// no invoice). Verified means any of:
+// Placing klussen is free for every company (23 nov 2026, owner: like YoungOnes): a klus is live at once and
+// freelancers can respond. Until the company is verified nobody gets scheduled on it (no assignment, no timesheet,
+// no invoice, no agreement to sign): that check comes when the company wants to pick someone ("Nog een paar laatste
+// checks", lib/company/gecontroleerd.ts). The rule of what a company may do lives there; this file enforces it on the
+// server. Verified means any of:
 //   - the KVK registration checks out as active in the Handelsregister AND the
 //     person who registered belongs to it: an own e-mail domain that fits the
 //     registered name (lib/company/eigendom.ts). An active KVK number alone only
@@ -90,27 +93,74 @@ export async function setTenantApproval(tenantId: string, approved: boolean, by:
   await kvSet(approvalKey(tenantId), { approved, at: new Date().toISOString(), by });
 }
 
-/** Unverified companies get one klus (not counting cancelled ones). */
-export async function assertMayPlaceShift(tenantId: string): Promise<{ test: boolean }> {
-  if (await isTenantVerified(tenantId)) return { test: false };
-  const existing = await prisma.shift.count({ where: { branch: { tenantId }, status: { not: "CANCELLED" } } });
-  if (existing >= 1) {
-    throw AppError.precondition(
-      "Je kunt één klus plaatsen zolang je bedrijf nog niet is geverifieerd. Vul je bedrijfsgegevens in bij Jouw start → Bedrijf verifiëren (het KVK-nummer, of voor een buitenlands bedrijf het btw- of registratienummer); zodra je bedrijf is goedgekeurd kun je onbeperkt klussen plaatsen en mensen inplannen.",
-    );
+/**
+ * Server-side poort voor alles wat iemand echt inplant, laat uitbetalen of een overeenkomst laat tekenen (de planner,
+ * de spoedoproep, een reactie accepteren). Een bedrijf dat nog niet is gecontroleerd krijgt een 423 met een eigen code
+ * (geen 403: CrowdSec); plaatsen en reacties zien blijven vrij (lib/company/gecontroleerd.ts).
+ */
+export async function eisBedrijfGecontroleerd(tenantId: string): Promise<void> {
+  if (!bedrijfMagDoen(await isTenantVerified(tenantId), "inplannen")) {
+    throw AppError.bedrijfNogNietGecontroleerd(NOG_NIET_GECONTROLEERD_TEKST);
   }
-  return { test: true };
 }
 
-export const UNVERIFIED_ASSIGN_MESSAGE =
-  "Dit bedrijf is nog niet geverifieerd. Je reactie is genoteerd — je wordt pas ingepland zodra hun bedrijf is goedgekeurd.";
+/**
+ * The company just became verified: tell its admins (push and mail) that they can pick their freelancers now. Only when
+ * the company asked for the check ("Nog een paar laatste checks"), and only once per request. Best-effort: never throws.
+ */
+export async function notifyCompanyChecked(tenantId: string): Promise<boolean> {
+  try {
+    const { getOrgProfileExtra, saveOrgProfileExtra } = await import("@/lib/profile/store");
+    const extra = await getOrgProfileExtra(tenantId);
+    if (!extra.controle || extra.controle.gemeldOp) return false;
+    // eerst markeren: een tweede goedkeuring vlak erna (dubbel klikken) stuurt niets opnieuw
+    await saveOrgProfileExtra(tenantId, { controle: { ...extra.controle, gemeldOp: new Date().toISOString() } });
+    const admins = await prisma.membership.findMany({
+      where: { tenantId, role: "HQ_ADMIN", user: { disabledAt: null } },
+      select: { userId: true, user: { select: { email: true, fullName: true } } },
+      take: 10,
+    });
+    if (admins.length === 0) return false;
+    const { sendUserPush } = await import("@/lib/notifications/push");
+    const { sendMail, mailShell, mailButton, escapeHtml } = await import("@/lib/mail");
+    const { env } = await import("@/lib/env");
+    const link = `${env.APP_BASE_URL.replace(/\/+$/, "")}/werkgever/diensten`;
+    const onderwerp = "Je bedrijf is gecontroleerd: je kunt nu inplannen";
+    await sendUserPush(admins.map((a) => a.userId), {
+      title: onderwerp,
+      body: "Je bewaarde keuzes staan klaar. Plan je freelancers nu in.",
+      data: { type: "SHIFT", url: "/werkgever/diensten", tag: `bedrijf-gecontroleerd-${tenantId}` },
+      ttlSeconds: 86_400,
+    }).catch(() => undefined);
+    for (const a of admins) {
+      const voornaam = a.user.fullName.split(" ")[0] || a.user.fullName;
+      await sendMail({
+        to: a.user.email,
+        subject: onderwerp,
+        kind: "bedrijf-gecontroleerd",
+        text: `Hoi ${voornaam},\n\nWe hebben je bedrijfsgegevens nagekeken. Je kunt nu freelancers inplannen: de keuzes die je maakte zijn bewaard en je reacties staan nog open.\n\nBekijk je klussen: ${link}`,
+        html: mailShell(
+          onderwerp,
+          `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(voornaam)}, we hebben je bedrijfsgegevens nagekeken. Je kunt nu freelancers inplannen.</p>
+           <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">De keuzes die je maakte zijn bewaard en je reacties staan nog open.</p>
+           <p style="margin:0">${mailButton(link, "Bekijk je klussen")}</p>`,
+        ),
+      }).catch(() => undefined);
+    }
+    return true;
+  } catch (err) {
+    logger.warn("notify company checked failed", { tenantId, error: (err as Error).message });
+    return false;
+  }
+}
 
 /**
- * The company just became verified: tell every freelancer who reacted to its
- * klus that they can now confirm (re-tapping "aannemen" schedules them).
- * Best-effort push; returns how many people were told.
+ * The company just became verified: tell every freelancer whose reaction was waiting (lib/matching/reactie.ts: a VIEWED match plus
+ * a reaction at the company) that the company can now schedule them. Best-effort push; returns how many people were told.
  */
 export async function notifyPendingReactions(tenantId: string): Promise<number> {
+  // het bedrijf zelf eerst: wie "Nog een paar laatste checks" invulde, krijgt bericht dat hij nu kan inplannen
+  await notifyCompanyChecked(tenantId);
   try {
     const matches = await prisma.shiftMatch.findMany({
       where: {

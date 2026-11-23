@@ -3,6 +3,8 @@ import { Empty, KpiStrip, NameCell, PageHead, Panel, Pill } from "@/components/a
 import { KvkHandmatigActie } from "@/components/admin/KvkHandmatigActie";
 import { dateNl } from "@/lib/admin/format";
 import { kvkControleOverzicht, type KvkWachtRij } from "@/lib/kvk/handmatig-server";
+import { openBedrijfAanvragen, type BedrijfAanvraagRij } from "@/lib/company/controle-aanvraag";
+import { landNaam } from "@/lib/onboarding/buitenland";
 import { handmatigRegel, isActief, terugdraaiRegel } from "@/lib/kvk/handmatig";
 import { tegoedLaag } from "@/lib/kvk/tegoed";
 
@@ -39,13 +41,44 @@ function WachtLijst({ rijen }: { rijen: KvkWachtRij[] }) {
   );
 }
 
+/** Bedrijven die iemand willen inplannen ("Nog een paar laatste checks"): wat ze invulden, en een link om te controleren en goed te keuren. */
+function AanvraagLijst({ rijen }: { rijen: BedrijfAanvraagRij[] }) {
+  return (
+    <ul>
+      {rijen.map(({ id, naam, aanvraag: a, href }) => {
+        const nummer = a.kvkNumber ? `KVK ${a.kvkNumber}` : a.btwNummer ? `btw ${a.btwNummer}` : `registratienummer ${a.registratieNummer ?? "onbekend"}`;
+        return (
+          <li key={id} className="space-y-1.5 px-4 py-3.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <NameCell
+                name={naam}
+                href={href}
+                sub={
+                  <>
+                    {a.land !== "NL" ? `${landNaam(a.land)}, ` : ""}
+                    {nummer} · wacht sinds {dateNl(a.op)}
+                  </>
+                }
+              />
+              <Pill tone="warn">{a.keuzes.length === 1 ? "1 keuze bewaard" : `${a.keuzes.length} keuzes bewaard`}</Pill>
+            </div>
+            <p style={{ color: "var(--a-dim)" }}>
+              Geregistreerd als {a.bedrijfsnaam}. Contact: {a.contactNaam} ({a.contactFunctie}), {a.telefoon}. Tekent de overeenkomst: {a.tekenaarNaam ?? "de contactpersoon zelf"}.
+            </p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default async function KvkControlePage() {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="Alleen voor platformbeheerders." />;
   }
 
-  const o = await kvkControleOverzicht();
+  const [o, aanvragen] = await Promise.all([kvkControleOverzicht(), openBedrijfAanvragen().catch((): BedrijfAanvraagRij[] => [])]);
   const actief = o.gedaan.filter((g) => isActief(g.record)).length;
   const tegoed = o.tegoed;
 
@@ -59,6 +92,7 @@ export default async function KvkControlePage() {
       <KpiStrip
         items={[
           { label: "Werkers wachten", value: String(o.werkers.length), tone: o.werkers.length > 0 ? "warn" : "ok", hint: "KVK-nummer ingevuld, nog niet gecontroleerd" },
+          { label: "Bedrijven willen inplannen", value: String(aanvragen.length), tone: aanvragen.length > 0 ? "warn" : "ok", hint: "bedrijfsgegevens ingevuld, nog niet goedgekeurd" },
           { label: "Bedrijven wachten", value: String(o.bedrijven.length), tone: o.bedrijven.length > 0 ? "warn" : "ok", hint: "de controle kon niet bij de KVK" },
           { label: "Met de hand goedgekeurd", value: String(actief), tone: "trust", hint: "nog geldig, terug te draaien" },
           { label: "KVKBase-tegoed", value: tegoed ? (tegoed.op ? "Op" : tegoed.tokens === null ? "Onbekend" : String(tegoed.tokens)) : "Niet gemeten", tone: tegoedLaag(tegoed) ? "crit" : "neutral", hint: "dit scherm gebruikt het niet" },
@@ -77,7 +111,11 @@ export default async function KvkControlePage() {
         {o.werkers.length === 0 ? <Empty title="Geen wachtende werkers" body="Iedereen met een KVK-nummer is gecontroleerd." /> : <WachtLijst rijen={o.werkers} />}
       </Panel>
 
-      <Panel flush title="Bedrijven die op een KVK-controle wachten" subtitle="Een bedrijf dat niet is gecontroleerd kan één testklus plaatsen; na je goedkeuring onbeperkt">
+      <Panel flush title="Bedrijven die iemand willen inplannen" subtitle="Ze plaatsten al klussen en kozen een freelancer; inplannen kan pas na jouw goedkeuring. Open het bedrijf om te controleren en goed te keuren.">
+        {aanvragen.length === 0 ? <Empty title="Geen bedrijven in de wacht" body="Zodra een nieuw bedrijf zijn gegevens invult om iemand in te plannen, staat het hier." /> : <AanvraagLijst rijen={aanvragen} />}
+      </Panel>
+
+      <Panel flush title="Bedrijven die op een KVK-controle wachten" subtitle="Het KVK-nummer kon niet automatisch worden gecontroleerd. Een bedrijf dat niet is gecontroleerd plaatst gewoon klussen; inplannen kan pas na je goedkeuring.">
         {o.bedrijven.length === 0 ? (
           <Empty title="Geen wachtende bedrijven" body="Een bedrijf zonder wacht vind je ook op zijn eigen scherm onder Mensen & bedrijven → Bedrijven." />
         ) : (

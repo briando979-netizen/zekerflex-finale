@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Een bedrijf buiten Nederland heeft geen KVK: het blijft ongeverifieerd tot een beheerder het goedkeurt,
-// en mag in de tussentijd één klus plaatsen.
+// en mag in de tussentijd klussen plaatsen, maar niemand inplannen (23 nov 2026).
 
 const m = vi.hoisted(() => ({
   tenant: { type: "ENTERPRISE_HQ", country: "DE", vatNumber: "DE123456789" as string | null, companyRegistration: null },
@@ -21,7 +21,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { assertMayPlaceShift, setTenantApproval, tenantVerification } from "@/lib/company/verified";
+import { eisBedrijfGecontroleerd, setTenantApproval, tenantVerification } from "@/lib/company/verified";
 import { setBuitenlandBewijs } from "@/lib/company/buitenland";
 
 describe("verificatie van een buitenlands bedrijf", () => {
@@ -46,17 +46,17 @@ describe("verificatie van een buitenlands bedrijf", () => {
     expect(await tenantVerification("t1")).toEqual({ verified: false, via: null, inControle: false });
   });
 
-  it("mag één klus plaatsen, daarna niet meer", async () => {
-    expect(await assertMayPlaceShift("t1")).toEqual({ test: true });
+  it("mag niemand inplannen zolang een beheerder het niet goedkeurt (423, eigen code)", async () => {
+    await expect(eisBedrijfGecontroleerd("t1")).rejects.toMatchObject({ status: 423, code: "BEDRIJF_NOG_NIET_GECONTROLEERD" });
     m.shifts = 1;
-    await expect(assertMayPlaceShift("t1")).rejects.toThrow(/één klus/);
+    await expect(eisBedrijfGecontroleerd("t1")).rejects.toMatchObject({ status: 423 });
   });
 
-  it("na goedkeuring door een beheerder is het geverifieerd en onbeperkt", async () => {
+  it("na goedkeuring door een beheerder is het geverifieerd en kan het inplannen", async () => {
     await setTenantApproval("t1", true, "admin1");
     expect(await tenantVerification("t1")).toEqual({ verified: true, via: "admin" });
     m.shifts = 5;
-    expect(await assertMayPlaceShift("t1")).toEqual({ test: false });
+    await expect(eisBedrijfGecontroleerd("t1")).resolves.toBeUndefined();
   });
 
   it("een Nederlands bedrijf houdt zijn gedrag: geen buitenlands-vlag", async () => {

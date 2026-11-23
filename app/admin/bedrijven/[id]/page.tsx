@@ -17,6 +17,8 @@ import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
 import { tenantVerification } from "@/lib/company/verified";
 import { getBuitenlandBewijs } from "@/lib/company/buitenland";
 import { landNaam } from "@/lib/onboarding/buitenland";
+import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
+import { KlusConceptKnop } from "@/components/admin/KlusConceptKnop";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +69,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     );
   }
 
-  const [activity, auditEntries, verification, buitenland, kvkHandmatig, kvkWacht] = await Promise.all([
+  const [activity, auditEntries, verification, buitenland, kvkHandmatig, kvkWacht, orgExtra] = await Promise.all([
     companyActivity(tenant.id),
     prisma.auditLog.findMany({
       where: { OR: [{ targetType: "tenant", targetId: tenant.id }, { targetType: "user", targetId: { in: tenant.memberships.map((m) => m.userId) } }] },
@@ -79,7 +81,10 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     tenant.country !== "NL" ? getBuitenlandBewijs(tenant.id) : Promise.resolve(null),
     leesKvkHandmatig("bedrijf", tenant.id),
     kvkWachtVan("bedrijf", tenant.id),
+    getOrgProfileExtra(tenant.id).catch((): OrgProfileExtra => ({})),
   ]);
+  // "Nog een paar laatste checks": wat het bedrijf invulde toen het iemand wilde inplannen
+  const aanvraag = orgExtra.controle ?? null;
   // het nummer dat het bedrijf opgaf: op de organisatie, of in de wacht als de controle niet kon (tegoed op)
   const opgegevenKvk = [tenant.kvkNumber, kvkWacht?.kvkNumber].find((n): n is string => /^\d{8}$/.test(n ?? "")) ?? null;
 
@@ -116,6 +121,13 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
         date: dateTimeNl(s.startsAt),
         filled: `${Math.min(s.assignments.length, s.positions)} van ${s.positions}`,
         status: <Pill tone={status.tone}>{status.label}</Pill>,
+        // de handrem: een klus waar nog niemand op staat naar concept (weg uit de lijst van werkers), en weer live
+        actie:
+          (s.status === "OPEN" || s.status === "MATCHING") && s.assignments.length === 0 ? (
+            <KlusConceptKnop tenantId={tenant.id} shiftId={s.id} naar="concept" />
+          ) : s.status === "DRAFT" && s.startsAt.getTime() > Date.now() ? (
+            <KlusConceptKnop tenantId={tenant.id} shiftId={s.id} naar="live" />
+          ) : null,
       },
       sort: { title: s.title, branch: s.branch.name, date: s.startsAt.getTime(), filled: s.assignments.length, status: status.label },
     };
@@ -146,7 +158,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
                     ? "Buitenlands bedrijf: zoek het zelf op en keur het zo nodig goed"
                     : verification.inControle
                     ? "KVK klopt: controleer of de aanmelder erbij hoort"
-                    : "Niet geverifieerd, mag één klus plaatsen"}
+                    : "Nog niet gecontroleerd: klussen plaatsen mag, inplannen wacht op jou"}
               </Pill>
             </div>
             <EigenTestSchakelaar soort="tenant" id={tenant.id} sinds={eigenTest.tenants[tenant.id] ?? null} />
@@ -164,6 +176,22 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
           { label: "Gewerkte uren", value: count(Math.round(activity.hours)), hint: "goedgekeurd" },
         ]}
       />
+
+      {aanvraag && (
+        <Panel title="Nog een paar laatste checks" subtitle={`Ingevuld op ${dateTimeNl(new Date(aanvraag.op))} toen het bedrijf iemand wilde inplannen`}>
+          <dl className="grid gap-x-6 gap-y-1.5 text-[0.8125rem] sm:grid-cols-2" style={{ color: "var(--a-text)" }}>
+            <div><dt className="text-xs" style={{ color: "var(--a-mute)" }}>Geregistreerd als</dt><dd>{aanvraag.bedrijfsnaam}</dd></div>
+            <div>
+              <dt className="text-xs" style={{ color: "var(--a-mute)" }}>{aanvraag.kvkNumber ? "KVK-nummer" : aanvraag.btwNummer ? "Btw-nummer" : "Registratienummer"}</dt>
+              <dd>{aanvraag.kvkNumber ?? aanvraag.btwNummer ?? aanvraag.registratieNummer ?? "onbekend"}{aanvraag.land !== "NL" ? ` (${landNaam(aanvraag.land)})` : ""}</dd>
+            </div>
+            <div><dt className="text-xs" style={{ color: "var(--a-mute)" }}>Contactpersoon</dt><dd>{aanvraag.contactNaam}, {aanvraag.contactFunctie}</dd></div>
+            <div><dt className="text-xs" style={{ color: "var(--a-mute)" }}>Telefoon</dt><dd>{aanvraag.telefoon}</dd></div>
+            <div><dt className="text-xs" style={{ color: "var(--a-mute)" }}>Tekent de overeenkomst</dt><dd>{aanvraag.tekenaarNaam ?? "de contactpersoon zelf"}</dd></div>
+            <div><dt className="text-xs" style={{ color: "var(--a-mute)" }}>Bewaarde keuzes</dt><dd>{aanvraag.keuzes.length === 0 ? "geen" : `${aanvraag.keuzes.length} reactie(s) wachten op inplannen`}</dd></div>
+          </dl>
+        </Panel>
+      )}
 
       {tenant.country === "NL" && (
         <KvkControlePaneel soort="bedrijf" id={tenant.id} geldig={Boolean(tenant.companyRegistrationId)} kvkNumber={opgegevenKvk} naam={tenant.name} handmatig={kvkHandmatig} />
@@ -232,6 +260,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
             { key: "date", label: "Wanneer", hideOnMobile: true },
             { key: "filled", label: "Ingevuld", align: "right" },
             { key: "status", label: "Status" },
+            { key: "actie", label: "", align: "right", sortable: false },
           ]}
           rows={shiftRows}
           pageSize={8}

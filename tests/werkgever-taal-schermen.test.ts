@@ -24,6 +24,8 @@ const SECTIES = [
   "claimPaneel",
   "herhaalKnop",
   "poolPubliceer",
+  // het venster "Nog een paar laatste checks" bij het inplannen (23 nov 2026)
+  "laatsteChecks",
 ] as const;
 
 const plaats = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(",");

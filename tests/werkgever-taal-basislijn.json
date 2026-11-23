@@ -18,7 +18,6 @@
     "components/app/BranchesBoard.tsx": 1,
     "components/app/ColorLegend.tsx": 1,
     "components/app/EmployerDashboardHero.tsx": 1,
-    "components/app/EmployerOnboardingWizard.tsx": 1,
     "components/app/KaartAanmelding.tsx": 8,
     "components/app/KlusConceptNudge.tsx": 1,
     "components/app/OnboardingOnderhoudBalk.tsx": 1,

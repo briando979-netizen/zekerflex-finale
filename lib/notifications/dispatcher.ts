@@ -1,4 +1,4 @@
-import { isTenantVerified, UNVERIFIED_ASSIGN_MESSAGE } from "@/lib/company/verified";
+import { isTenantVerified } from "@/lib/company/verified";
 import {
   MatchStatus,
   ShiftStatus,
@@ -15,6 +15,7 @@ import { mayPingNow } from "@/lib/notifications/timing";
 import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { myOfferForShift } from "@/lib/offers/store";
+import { leggReactieVast } from "@/lib/matching/reactie";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
@@ -405,7 +406,7 @@ export async function recordOfferResponse(
   freelancerId: string,
   decision: "ACCEPTED" | "DECLINED",
   opts: { voorAanmaken?: (tx: Prisma.TransactionClient) => Promise<void> } = {},
-): Promise<{ status: MatchStatus; shiftFilled: boolean }> {
+): Promise<{ status: MatchStatus; shiftFilled: boolean; pendingCompanyVerification?: boolean }> {
   void recordEngagement(freelancerId, "OFFER_RESPONDED");
 
   if (decision === "DECLINED") {
@@ -444,7 +445,11 @@ export async function recordOfferResponse(
       include: { branch: { select: { tenantId: true } } },
     });
     if (!(await isTenantVerified(shift.branch.tenantId))) {
-      throw AppError.precondition(UNVERIFIED_ASSIGN_MESSAGE);
+      // Een bedrijf dat nog niet is gecontroleerd (23 nov 2026): de reactie gaat niet verloren. De match blijft staan als
+      // "geïnteresseerd" (VIEWED, geen verloopmoment) en hieronder volgt een gewone reactie bij het bedrijf. Alleen het
+      // inplannen zelf, de ShiftAssignment, wacht op de poort.
+      await tx.shiftMatch.update({ where: { id: match.id }, data: { status: MatchStatus.VIEWED, expiresAt: null } });
+      return { wacht: true as const };
     }
     const taken = await tx.shiftAssignment.count({
       where: { shiftId, cancelledAt: null },
@@ -514,8 +519,14 @@ export async function recordOfferResponse(
         data: { status: MatchStatus.EXPIRED },
       });
     }
-    return { filled, open: shift.positions - (taken + 1), tenantId: shift.branch.tenantId };
+    return { wacht: false as const, filled, open: shift.positions - (taken + 1), tenantId: shift.branch.tenantId };
   });
+
+  if (outcome.wacht) {
+    const profiel = await prisma.freelancerProfile.findUnique({ where: { id: freelancerId }, select: { userId: true } });
+    if (profiel) await leggReactieVast(profiel.userId, shiftId);
+    return { status: MatchStatus.VIEWED, shiftFilled: false, pendingCompanyVerification: true };
+  }
 
   void dispatchWebhook("shift.matched", outcome.tenantId, {
     shiftId,

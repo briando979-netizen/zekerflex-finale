@@ -5,9 +5,8 @@ const m = vi.hoisted(() => ({
   kv: new Map<string, unknown>(),
   mail: vi.fn(async (_x: { subject: string; to: string; text: string }) => ({ delivered: true })),
   code: vi.fn(async () => ({ sent: true })),
+  /** het bedrijf heeft een vaste werklocatie (het adres is bevestigd) */
   onboarded: false,
-  verified: false,
-  inControle: false,
   klus: false,
   mist: ["identiteit"] as string[] | null,
   taal: "nl",
@@ -34,10 +33,7 @@ vi.mock("@/lib/onboarding/herinnering-mist", () => ({
 }));
 vi.mock("@/lib/i18n/worker-locale", () => ({ userLocale: async () => m.taal }));
 vi.mock("@/lib/notifications/localized-push", () => ({ sendLocalizedPush: m.push }));
-vi.mock("@/lib/onboarding/employer", () => ({ isEmployerOnboarded: async () => m.onboarded }));
-vi.mock("@/lib/company/verified", () => ({
-  tenantVerification: async () => ({ verified: m.verified, via: null, inControle: m.inControle }),
-}));
+vi.mock("@/lib/onboarding/employer", () => ({ heeftVestiging: async () => m.onboarded }));
 
 import { dueStage, runOnboardingReminders } from "@/lib/onboarding/reminders";
 
@@ -61,8 +57,6 @@ describe("onboarding reminders", () => {
     m.mail.mockClear();
     m.code.mockClear();
     m.onboarded = false;
-    m.verified = false;
-    m.inControle = false;
     m.klus = false;
     m.mist = ["identiteit"];
     m.taal = "nl";
@@ -95,34 +89,28 @@ describe("onboarding reminders", () => {
     expect(m.mail).not.toHaveBeenCalled();
   });
 
-  it("company without verified KVK is reminded; a verified one is not", async () => {
+  // 23 nov 2026: de controle van het bedrijf komt pas bij het inplannen, dus geen herinnering om een KVK-nummer in te vullen
+  it("a company without an address is reminded to confirm it, and the mail never asks for a KVK number", async () => {
     m.users = [user({ memberships: [{ role: "HQ_ADMIN", tenantId: "t1" }] })];
     await runOnboardingReminders(NOW);
     expect(m.mail).toHaveBeenCalledTimes(1);
     expect(m.mail.mock.calls[0]![0]).toMatchObject({ to: "nieuw@test.nl" });
-
-    m.kv.clear();
-    m.mail.mockClear();
-    m.onboarded = true;
-    m.verified = true;
-    m.klus = true;
-    await runOnboardingReminders(NOW);
-    expect(m.mail).not.toHaveBeenCalled();
+    expect(m.mail.mock.calls[0]![0].text).toMatch(/adres/);
+    expect(m.mail.mock.calls[0]![0].text).not.toMatch(/KVK|geverifieerd|verifi/i);
   });
 
-  it("verified company without a first klus is reminded to place one", async () => {
+  it("a company with an address but no klus yet is reminded to place its first klus, which is live at once", async () => {
     m.users = [user({ memberships: [{ role: "HQ_ADMIN", tenantId: "t1" }] })];
     m.onboarded = true;
-    m.verified = true;
     await runOnboardingReminders(NOW);
     expect(m.mail).toHaveBeenCalledTimes(1);
     expect(m.mail.mock.calls[0]![0].text).toMatch(/eerste klus/);
+    expect(m.mail.mock.calls[0]![0].text).not.toMatch(/KVK|geverifieerd|verifi/i);
   });
 
-  it("company that we are checking by hand gets no reminder (nothing for them to do)", async () => {
+  it("a company with a klus is not reminded, also when it never confirmed an address (one-off location)", async () => {
     m.users = [user({ memberships: [{ role: "HQ_ADMIN", tenantId: "t1" }] })];
-    m.onboarded = true;
-    m.inControle = true;
+    m.klus = true;
     await runOnboardingReminders(NOW);
     expect(m.mail).not.toHaveBeenCalled();
   });

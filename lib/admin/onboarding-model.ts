@@ -8,9 +8,9 @@ import { isTestwerker } from "@/lib/testwerker/adres";
 // feiten op, dit bestand rekent ze alleen uit (en is dus te testen).
 //
 // De stappen volgen de definities van de server: profiel af = rekeningnummer
-// én thuispostcode (lib/dashboard/freelancer.ts), bedrijf = KVK gekoppeld en
-// vestiging = minstens één (lib/onboarding/employer.ts), bedrijf geverifieerd =
-// lib/company/verified.ts, identiteit = User.kycStatus VERIFIED.
+// én thuispostcode (lib/dashboard/freelancer.ts), vestiging = minstens één
+// (lib/onboarding/employer.ts), bedrijf gecontroleerd = lib/company/verified.ts,
+// identiteit = User.kycStatus VERIFIED.
 // ---------------------------------------------------------------------------
 
 export type Doelgroep = "werker" | "werkgever";
@@ -31,13 +31,15 @@ export const WERKER_STAPPEN: readonly StapDef[] = [
   { key: "reactie", label: "Eerste reactie op een klus", open: "Nog niet op een klus gereageerd" },
 ];
 
+// 23 nov 2026: een bedrijf plaatst meteen klussen en hoeft vóór het plaatsen niet gekoppeld of gecontroleerd te zijn. De KVK-stap is dus
+// weg, en de controle staat achteraan: ze is pas nodig als het bedrijf iemand wil inplannen (lib/company/gecontroleerd.ts). Als laatste
+// stap telt ze nooit mee als "vastgelopen" (vastStatus kijkt alleen naar stappen vóór de laatste).
 export const WERKGEVER_STAPPEN: readonly StapDef[] = [
   { key: "aangemeld", label: "Aangemeld", open: "Aangemeld" },
   { key: "email", label: "E-mail bevestigd", open: "E-mail nog niet bevestigd" },
-  { key: "bedrijf", label: "Bedrijf (KVK)", open: "KVK-nummer nog niet gekoppeld" },
-  { key: "vestiging", label: "Vestiging", open: "Nog geen vestiging" },
-  { key: "geverifieerd", label: "Bedrijf geverifieerd", open: "Bedrijf wacht op verificatie" },
+  { key: "vestiging", label: "Vestiging", open: "Adres van de werklocatie nog niet bevestigd" },
   { key: "klus", label: "Eerste klus", open: "Nog geen klus geplaatst" },
+  { key: "gecontroleerd", label: "Bedrijf gecontroleerd", open: "Nog niet gecontroleerd (pas nodig bij het inplannen)" },
 ];
 
 export function stappenVan(doelgroep: Doelgroep): readonly StapDef[] {

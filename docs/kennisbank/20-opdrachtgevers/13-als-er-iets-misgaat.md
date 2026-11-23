@@ -2,9 +2,9 @@
 
 ## Ik kan niemand inplannen
 
-Staat je bedrijf nog in verificatie? Dan kun je één klus plaatsen, maar nog niemand inplannen. Kijk op Jouw start bij de stap **Bedrijf verifiëren**. Meestal is het binnen een werkdag klaar; je krijgt bericht.
+Is je bedrijf nog niet gecontroleerd? Dan kun je klussen plaatsen en reacties bekijken, maar nog niemand inplannen. Kies je een freelancer, dan vragen we eerst een paar bedrijfsgegevens in het venster **Nog een paar laatste checks**. Je keuze wordt bewaard en je krijgt een melding zodra je kunt inplannen.
 
-Lukt het inplannen niet terwijl je wel geverifieerd bent? Dan staat de werker waarschijnlijk al op een andere klus in dezelfde tijd, of ligt het tarief onder het minimumtarief. Je ziet dat op de reactie.
+Lukt het inplannen niet terwijl je bedrijf wel is gecontroleerd? Dan staat de werker waarschijnlijk al op een andere klus in dezelfde tijd, of ligt het tarief onder het minimumtarief. Je ziet dat op de reactie.
 
 ## Er reageert niemand
 

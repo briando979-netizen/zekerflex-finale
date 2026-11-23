@@ -17,7 +17,7 @@ Onder **Klussen** staan je klussen in drie groepen: **Werven**, **Gepland & beze
 
 Wil je iemand niet? Kies **Afwijzen**. Ook die werker krijgt een bericht.
 
-Accepteren lukt niet als de werker op dat moment al elders is ingepland, of als het tarief of tegenbod onder het minimumtarief ligt. Inplannen kan ook pas zodra je bedrijf is geverifieerd; tot die tijd staan de reacties onder **Heeft gereageerd**.
+Accepteren lukt niet als de werker op dat moment al elders is ingepland, of als het tarief of tegenbod onder het minimumtarief ligt. Is je bedrijf nog niet gecontroleerd, dan verschijnt bij **Accepteren** het venster **Nog een paar laatste checks**. Daar vul je je KVK-nummer in (buiten Nederland je btw- of registratienummer), de naam van je bedrijf zoals geregistreerd, een contactpersoon met functie en telefoon, en wie de overeenkomst tekent. Je keuze wordt bewaard en de reacties blijven openstaan, met het label **Jouw keuze**. Zodra we je gegevens hebben nagekeken, ontvang je een melding en kun je inplannen.
 
 Wie mag dit? Een beheerder of een lokale manager.
 
@@ -47,7 +47,7 @@ Onder **Annuleringsclaims** zie je claims van werkers. Je kiest **Goedkeuren —
 
 Moet er snel iemand komen? Open de klus en gebruik de **Spoedoproep**. Je kiest de straal rond je vestiging. De oproep gaat als melding in de app; ook sms en WhatsApp kunnen, als die voor je bedrijf zijn ingericht. Werkers antwoorden met 1 (ik kom) of 2 (nee). Bij 1 staat de werker meteen ingepland.
 
-Je kunt **Nog een ronde versturen** of **Oproep stoppen**. De spoedoproep staat alleen bij klussen die nog plekken vrij hebben, bij een geverifieerd bedrijf.
+Je kunt **Nog een ronde versturen** of **Oproep stoppen**. De spoedoproep staat alleen bij klussen die nog plekken vrij hebben, bij een bedrijf dat is gecontroleerd.
 
 ## Na afloop
 

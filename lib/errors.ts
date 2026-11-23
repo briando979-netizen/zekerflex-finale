@@ -16,6 +16,7 @@ export type ErrorCode =
   | "ALLEEN_BEHEERDER"
   | "ECHT_ONVERANDERLIJK"
   | "BETALEN_UIT"
+  | "BEDRIJF_NOG_NIET_GECONTROLEERD"
   | "COMMUNITY_UITGESLOTEN"
   | "COMMUNITY_DICHT"
   | "COMMUNITY_WACHT"
@@ -92,6 +93,10 @@ export class AppError extends Error {
   /** 423: het Stripe-account ontvangt even geen betalingen (lib/billing/stripe-betalen.ts); geen 403: CrowdSec. */
   static betalenUit(message = "Betalen kan op dit moment even niet. Probeer het later opnieuw of neem contact op.") {
     return new AppError("BETALEN_UIT", message, 423);
+  }
+  /** 423: het bedrijf is nog niet gecontroleerd, dus nog niet inplannen, uitbetalen of een overeenkomst laten tekenen (lib/company/verified.ts); geen 403: CrowdSec. */
+  static bedrijfNogNietGecontroleerd(message: string) {
+    return new AppError("BEDRIJF_NOG_NIET_GECONTROLEERD", message, 423);
   }
   /** 423: beheer heeft dit account uitgesloten van de community (lib/community); geen 403: CrowdSec. */
   static communityUitgesloten(message: string) {

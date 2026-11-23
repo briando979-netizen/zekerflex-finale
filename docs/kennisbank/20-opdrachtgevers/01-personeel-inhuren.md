@@ -2,9 +2,9 @@
 
 ## Bedrijf aanmelden
 
-1. Maak een account en vul het KVK-nummer in. We controleren het in het Handelsregister.
-2. Bevestig je e-mailadres. Een bedrijf met een eigen maildomein wordt meteen vertrouwd; anders kijkt een medewerker van ZekerFlex even mee (meestal binnen een werkdag).
-3. Tot de controle klaar is kun je één klus plaatsen, nog zonder inplannen.
+1. Maak een account, bevestig je e-mailadres en bevestig het adres van je werklocatie. Een KVK-nummer is hier niet voor nodig.
+2. Zet meteen je eerste klus uit: hij staat live en freelancers kunnen reageren.
+3. Kies je een freelancer, dan vragen we nog een paar bedrijfsgegevens (KVK-nummer, contactpersoon, wie de overeenkomst tekent). Je keuze wordt bewaard en je krijgt een melding zodra je kunt inplannen.
 
 ## Een klus plaatsen
 

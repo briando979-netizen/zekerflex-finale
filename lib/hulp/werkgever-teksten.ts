@@ -63,8 +63,8 @@ const nl: HulpTeksten = {
     },
     {
       id: "bedrijf-verifieren",
-      v: "Waarom moet ik mijn bedrijf laten verifiëren?",
-      a: "Zo weten werkers dat je een echt bedrijf bent. Vul op Jouw start je KVK-nummer in bij de stap Bedrijf verifiëren; meestal is het binnen een werkdag klaar. Tot die tijd kun je één klus uitzetten. Iemand echt inplannen kan pas als je bedrijf is geverifieerd.",
+      v: "Waarom vraagt ZekerFlex om de gegevens van mijn bedrijf?",
+      a: "Een klus uitzetten en de reacties bekijken kan meteen, zonder controle; op Jouw start zie je hoe ver je bent. Kies je een freelancer, dan vragen we nog een paar gegevens: je KVK-nummer (buiten Nederland je btw- of registratienummer), de naam van je bedrijf, een contactpersoon en wie de overeenkomst tekent. Zo weten werkers dat je een echt bedrijf bent. Je keuze wordt bewaard en je krijgt een melding zodra je kunt inplannen.",
       link: { href: "/werkgever", label: "Naar Jouw start" },
     },
     {
@@ -227,8 +227,8 @@ const en: HulpTeksten = {
     },
     {
       id: "bedrijf-verifieren",
-      v: "Why do I have to verify my company?",
-      a: "It shows workers you are a real company. On Your start, enter your KVK number in the step to verify your company; it is usually done within one working day. Until then you can post one job. Actually scheduling someone is only possible once your company is verified.",
+      v: "Why does ZekerFlex ask for my company details?",
+      a: "Posting a job and looking at the responses is possible right away, without a check; on Your start you see how far you are. When you choose a freelancer we ask for a few more details: your KVK number (outside the Netherlands your VAT or registration number), the name of your company, a contact person and who signs the agreement. That shows workers you are a real company. Your choice is kept and you get a message as soon as you can schedule.",
       link: { href: "/werkgever", label: "Go to Your start" },
     },
     {

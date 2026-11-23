@@ -3,24 +3,21 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
-import {
-  employerOnboardingAction,
-  saveOnboardingProfileAction,
-  type EmployerOnboardingState,
-} from "@/app/werkgever/onboarding/actions";
-import { KvkZoeker } from "@/components/kvk/KvkZoeker";
-import { useI18n, useT } from "@/components/i18n/I18nProvider";
-import { kvkTekstenVoor } from "@/lib/kvk/keuze";
+import { saveOnboardingProfileAction } from "@/app/werkgever/onboarding/actions";
+import { VestigingFormulier } from "@/components/werkgever/VestigingFormulier";
+import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
+import { useT } from "@/components/i18n/I18nProvider";
 import { nl, fmt } from "@/lib/i18n/dictionaries";
-import { BUITEN_LANDEN, EU_LANDEN, landNaam, landSoort } from "@/lib/onboarding/buitenland";
 import { BRANCHE_OPTIES, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
-import { controleerVestigingVeld, type VestigingVeld } from "@/lib/onboarding/vestiging";
+import { berekenVoortgang, werkgeverStappen, type WerkgeverStapSleutel } from "@/lib/onboarding/voortgang";
 
-// 20 nov 2026 (eigenaar: korter): de stap "omslagfoto" is weg (kan later in Bedrijfsprofiel) en van de vijf vragen over
-// de organisatie blijft alleen de branche over (die stuurt de matching; rol, frequentie, urgentie en vorig platform
-// waren marktonderzoek). De teksten en het serverveld coverStepDone blijven bestaan voor bedrijven die ze al invulden.
-type StepKey = "org" | "adres" | "profiel" | "email" | "klaar";
+// "Jouw start" (23 nov 2026, eigenaar: zoals YoungOnes): een checklist in twee blokken. Blok 1, "Jij en je bedrijf": de organisatie,
+// het adres van de werklocatie, het profiel en het e-mailadres. Blok 2, "Jouw eerste klus": klus plaatsen, reacties bekijken, een
+// freelancer kiezen en afronden. Er is geen KVK-stap meer: een nieuw bedrijf plaatst meteen, en de controle van het bedrijf komt
+// pas als het iemand wil inplannen ("Nog een paar laatste checks", components/werkgever/LaatsteChecksVenster.tsx).
+// 20 nov 2026 (eigenaar: korter): de stap "omslagfoto" is weg (kan later in Bedrijfsprofiel) en van de vijf vragen over de
+// organisatie blijft alleen de branche over (die stuurt de matching). De teksten en het serverveld coverStepDone blijven bestaan.
+type BlokStap = Extract<WerkgeverStapSleutel, "org" | "adres" | "profiel" | "email">;
 
 const SELECT_KEYS = ["role", "sector", "frequency", "urgency", "prior"] as const;
 /** de vragen die nog gesteld worden */
@@ -51,67 +48,32 @@ function Dot({ done, active }: { done: boolean; active?: boolean }) {
   );
 }
 
-/** Melding bij één vestigingsveld (role="alert", gekoppeld via aria-describedby). */
-function VeldMelding({ veld, tekst }: { veld: VestigingVeld; tekst: string | null | undefined }) {
-  if (!tekst) return null;
-  return (
-    <span id={`vestiging-${veld}-fout`} role="alert" className="mt-1 block text-xs font-medium text-crit">
-      {tekst}
-    </span>
-  );
-}
-
-function NextButton({ label, busy }: { label: string; busy: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" disabled={pending} className="btn-primary text-sm disabled:opacity-60">
-      {pending ? busy : label}
-    </button>
-  );
-}
-
 export function EmployerOnboardingWizard({
   initial,
 }: {
   initial: {
-    kvkDone: boolean;
+    /** minstens één vaste werklocatie: het adres is bevestigd */
+    adresKlaar: boolean;
     profileStepDone: boolean;
     emailVerified: boolean;
     answers: Record<string, string>;
-    coverStepDone?: boolean;
-    /** het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen */
-    kvkPrefill?: string | undefined;
-    /** het land van het bedrijf (ISO), uit de aanmelding */
-    landPrefill?: string | undefined;
     /** de branches waarvoor het bedrijf al mensen zoekt, of null */
     brancheKeuze?: BrancheKeuze | null | undefined;
-    /** na opnieuw laden: is het bedrijf goedgekeurd, of nog in controle bij ZekerFlex? */
-    verified?: boolean | undefined;
-    inControle?: boolean | undefined;
-    /** het bedrijf zit buiten Nederland: geen KVK, een beheerder keurt het goed */
-    buitenlands?: boolean | undefined;
-    companyName?: string | undefined;
-    /** de vaste werklocatie die er al is (Locaties of Klus uitzetten): dan vraagt de KVK-stap hem niet opnieuw */
+    /** de vaste werklocatie die er al is (Locaties of Klus uitzetten): dan tonen we hem alleen */
     vestiging?: { naam: string; adres: string } | null | undefined;
+    /** blok 2: wat er al gebeurd is */
+    eersteKlus: { heeftKlus: boolean; klusLive: boolean; heeftReactie: boolean; heeftIngepland: boolean };
   };
 }) {
   const o = useT().onboarding;
-  const { locale } = useI18n();
   const router = useRouter();
+  const concept = useKlusConcept();
   const [pending, startTransition] = useTransition();
-  const [kvkState, kvkFormAction] = useFormState<EmployerOnboardingState, FormData>(employerOnboardingAction, {
-    error: null,
-    done: initial.kvkDone,
-    ...(initial.kvkDone ? { kvkValid: Boolean(initial.verified || initial.inControle), inControle: Boolean(initial.inControle), buitenlands: Boolean(initial.buitenlands), companyName: initial.companyName ?? null } : {}),
-  });
-  // het land dat bij het aanmelden werd gekozen: dan niet opnieuw vragen, alleen tonen met "Wijzig" (22 nov 2026)
-  const landBekend = Boolean(initial.landPrefill && landSoort(initial.landPrefill));
-  const [land, setLand] = useState(landBekend && initial.landPrefill ? initial.landPrefill : "NL");
-  const [landKiezen, setLandKiezen] = useState(!landBekend);
-  const soort = landSoort(land) ?? "NL";
   const vestiging = initial.vestiging ?? null;
 
   const [orgSaved, setOrgSaved] = useState(Boolean(initial.answers.role || initial.answers.sector));
+  // het adres is net opgeslagen: de server laadt de pagina opnieuw, maar het scherm gaat alvast verder
+  const [adresOpgeslagen, setAdresOpgeslagen] = useState(false);
   // branches waarvoor het bedrijf mensen zoekt: één of meer, of alle
   const [werkBranches, setWerkBranches] = useState<Set<string>>(
     new Set(initial.brancheKeuze?.alle ? BRANCHE_OPTIES.map((b) => b.key) : (initial.brancheKeuze?.branches ?? [])),
@@ -124,39 +86,40 @@ export function EmployerOnboardingWizard({
       else volgend.add(k);
       return volgend;
     });
-  // meldingen per vestigingsveld: eerst wat de browser bij het verlaten van een veld vond, anders wat de server teruggaf
-  const [vestFout, setVestFout] = useState<Partial<Record<VestigingVeld, string | null>>>({});
-  const vestMelding = (k: VestigingVeld): string | null | undefined => (k in vestFout ? vestFout[k] : kvkState.fieldErrors?.[k]);
-  const vestAttrs = (k: VestigingVeld) => (vestMelding(k) ? { "aria-invalid": true as const, "aria-describedby": `vestiging-${k}-fout` } : {});
-  const vestBlur = (k: VestigingVeld) => (e: React.FocusEvent<HTMLInputElement>) => {
-    const m = controleerVestigingVeld(k, e.target.value);
-    setVestFout((o) => ({ ...o, [k]: m }));
+
+  // één bron voor "wat moet nog" (lib/onboarding/voortgang.ts): dezelfde stappen als de kaart na deze checklist en de herinneringen
+  const adresKlaar = initial.adresKlaar || adresOpgeslagen;
+  const stappen = useMemo(
+    () =>
+      werkgeverStappen({
+        orgBeantwoord: orgSaved,
+        adresKlaar,
+        profielKlaar: initial.profileStepDone,
+        emailBevestigd: initial.emailVerified,
+        heeftKlus: initial.eersteKlus.heeftKlus,
+        heeftReactie: initial.eersteKlus.heeftReactie,
+        heeftIngepland: initial.eersteKlus.heeftIngepland,
+      }),
+    [orgSaved, adresKlaar, initial.profileStepDone, initial.emailVerified, initial.eersteKlus],
+  );
+  const klaar = (k: WerkgeverStapSleutel) => stappen.find((s) => s.key === k)?.done ?? false;
+  const voortgang = berekenVoortgang(stappen);
+
+  const ORDER: BlokStap[] = ["org", "adres", "profiel", "email"];
+  const firstOpen = ORDER.find((k) => !klaar(k)) ?? "org";
+  const [open, setOpen] = useState<BlokStap>(firstOpen);
+  /** de eerstvolgende stap van blok 1 die nog niet klaar is, na deze */
+  const volgendeNa = (k: BlokStap, klaarNu: Partial<Record<BlokStap, boolean>> = {}): BlokStap => {
+    const rest = ORDER.slice(ORDER.indexOf(k) + 1).concat(ORDER.slice(0, ORDER.indexOf(k)));
+    return rest.find((s) => !(klaarNu[s] ?? klaar(s))) ?? k;
   };
 
-  const done: Record<StepKey, boolean> = {
-    org: orgSaved,
-    adres: initial.kvkDone || kvkState.done === true,
-    profiel: initial.profileStepDone,
-    email: initial.emailVerified,
-    klaar: false,
+  const STEP_META: Record<BlokStap, { label: string; hint: string }> = {
+    org: { label: o.stepOrg, hint: "" },
+    adres: { label: o.stepAdres, hint: o.stepAdresHint },
+    profiel: { label: o.stepProfiel, hint: o.stepProfielHint },
+    email: { label: o.stepEmail, hint: o.stepEmailHint },
   };
-  // de KVK-stap eerst: zonder geverifieerd bedrijf kun je niemand inplannen (4 nov 2026)
-  const ORDER: StepKey[] = ["adres", "org", "profiel", "email"];
-  const firstOpen = ORDER.find((k) => !done[k]) ?? "klaar";
-  const [open, setOpen] = useState<StepKey>(firstOpen);
-
-  const completed = ORDER.filter((k) => done[k]).length;
-  const pct = Math.round((completed / ORDER.length) * 100);
-  const stepNo = Math.min(completed + 1, ORDER.length);
-  const minutesLeft = Math.max(1, ORDER.length - completed);
-
-  const STEP_META: { key: StepKey; label: string; hint?: string }[] = [
-    { key: "adres", label: o.stepAdres, hint: o.stepAdresHint },
-    { key: "org", label: o.stepOrg },
-    { key: "profiel", label: o.stepProfiel, hint: o.stepProfielHint },
-    { key: "email", label: o.stepEmail, hint: o.stepEmailHint },
-  ];
-  const FIRST_JOB = [o.firstJob1, o.firstJob2, o.firstJob3, o.firstJob4];
 
   function saveOrg(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -164,10 +127,10 @@ export function EmployerOnboardingWizard({
     startTransition(async () => {
       await saveOnboardingProfileAction(form);
       setOrgSaved(true);
-      setOpen(done.adres ? "profiel" : "adres");
+      setOpen(volgendeNa("org", { org: true }));
     });
   }
-  function markStep(field: "profileStepDone", nextStep: StepKey) {
+  function markStep(field: "profileStepDone", nextStep: BlokStap) {
     const f = new FormData();
     f.set(field, "1");
     startTransition(async () => {
@@ -177,293 +140,185 @@ export function EmployerOnboardingWizard({
     });
   }
 
-  const panels: { key: StepKey; title: string; body: React.ReactNode }[] = useMemo(
-    () => [
-      {
-        key: "org",
-        title: o.stepOrg,
-        body: (
-          <form onSubmit={saveOrg} className="space-y-4">
-            <p className="text-sm text-neutralx-500">{o.orgIntro}</p>
-            {VRAGEN.map((k) => {
-              const sel = o.selects[k];
-              const name = FORM_NAME[k];
-              return (
-                <label key={k} className="block">
-                  <span className="field-label">{sel.label}</span>
-                  <select name={name} defaultValue={initial.answers[name] ?? ""} className="field-input">
-                    <option value="" disabled>
-                      {o.selectAnswer}
+  const panels: Record<BlokStap, React.ReactNode> = {
+      org: (
+        <form onSubmit={saveOrg} className="space-y-4">
+          <p className="text-sm text-neutralx-500">{o.orgIntro}</p>
+          {VRAGEN.map((k) => {
+            const sel = o.selects[k];
+            const name = FORM_NAME[k];
+            return (
+              <label key={k} className="block">
+                <span className="field-label">{sel.label}</span>
+                <select name={name} defaultValue={initial.answers[name] ?? ""} className="field-input">
+                  <option value="" disabled>
+                    {o.selectAnswer}
+                  </option>
+                  {sel.options.map((label, i) => (
+                    <option key={i} value={CANON[k].options[i]}>
+                      {label}
                     </option>
-                    {sel.options.map((label, i) => (
-                      <option key={i} value={CANON[k].options[i]}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              );
-            })}
-            <div>
-              <span className="field-label" id="org-branches-label">{o.orgBranches}</span>
-              <p className="mt-0.5 text-xs text-neutralx-500">{o.orgBranchesHint}</p>
-              <input type="hidden" name="branches" value={[...werkBranches].join(",")} />
-              <input type="hidden" name="alleBranches" value={alleWerkBranches ? "1" : ""} />
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="org-branches-label">
-                <button
-                  type="button"
-                  aria-pressed={alleWerkBranches}
-                  onClick={() => setWerkBranches(alleWerkBranches ? new Set() : new Set(BRANCHE_OPTIES.map((b) => b.key)))}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                    alleWerkBranches ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-ink hover:border-brand-500"
-                  }`}
-                >
-                  {o.orgAllBranches}
-                </button>
-                {BRANCHE_OPTIES.map((b) => {
-                  const aan = werkBranches.has(b.key);
-                  return (
-                    <button
-                      key={b.key}
-                      type="button"
-                      aria-pressed={aan}
-                      onClick={() => wisselBranche(b.key)}
-                      className={`rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                        aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
-                      }`}
-                    >
-                      {b.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex justify-end pt-1">
-              <button type="submit" disabled={pending} className="btn-primary text-sm disabled:opacity-60">
-                {pending ? o.busy : o.nextStep}
-              </button>
-            </div>
-          </form>
-        ),
-      },
-      {
-        key: "adres",
-        title: o.stepAdres,
-        body: kvkState.done ? (
-          <div className="space-y-3">
-            {/* groen = goedgekeurd, amber = wacht op ZekerFlex of op een geldig KVK-nummer (één kleur = één betekenis) */}
-            <p role="status" className={`rounded-lg px-3 py-2.5 text-sm ${kvkState.kvkValid && !kvkState.inControle ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}>
-              {fmt(kvkState.kvkValid ? (kvkState.inControle ? (kvkState.buitenlands ? o.kvkInControleForeign : o.kvkInControle) : o.kvkVerified) : o.kvkSaved, {
-                name: kvkState.companyName ?? nl.shell.orgFallback,
-              })}
-            </p>
-            {kvkState.reasons && kvkState.reasons.length > 0 && !kvkState.kvkValid && (
-              <ul className="list-disc pl-5 text-xs text-neutralx-600">
-                {kvkState.reasons.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-            )}
-            <button type="button" onClick={() => setOpen(done.org ? "profiel" : "org")} className="btn-primary text-sm">
-              {o.nextStep}
-            </button>
-          </div>
-        ) : (
-          <form action={kvkFormAction} className="space-y-4">
-            {kvkState.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{kvkState.error}</p>}
-            <KvkZoeker
-              label="Zoek je bedrijf in het Handelsregister"
-              vulFormulier={{ kvk: "kvkNumber", address: "addressLine", houseNumber: "houseNumber", postalCode: "postalCode", name: "branchName" }}
-              alleenAlsLeeg={["name"]}
-              teksten={kvkTekstenVoor(locale)}
-            />
-            {landKiezen ? (
-              <label className="block">
-                <span className="field-label">{o.country}</span>
-                <select name="land" value={land} onChange={(e) => setLand(e.target.value)} className="field-input">
-                  <option value="NL">Nederland</option>
-                  <optgroup label={o.countryEu}>
-                    {EU_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
-                  </optgroup>
-                  <optgroup label={o.countryOther}>
-                    {BUITEN_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
-                  </optgroup>
+                  ))}
                 </select>
               </label>
-            ) : (
-              // al gevraagd bij het aanmelden: alleen tonen
-              <p className="text-sm text-neutralx-700">
-                <input type="hidden" name="land" value={land} />
-                {fmt(o.countryKnown, { land: landNaam(land) })}{" "}
-                <button type="button" onClick={() => setLandKiezen(true)} className="font-semibold text-brand-600 underline underline-offset-2">
-                  {o.countryChange}
-                </button>
-              </p>
-            )}
-            {soort === "NL" && (
-              <label className="block">
-                <span className="field-label">{o.kvkNumber}</span>
-                <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" defaultValue={kvkState.values?.kvkNumber ?? initial.kvkPrefill ?? ""} className="field-input" />
-                <span className="mt-1 block text-xs text-neutralx-400">{o.kvkHint}</span>
-              </label>
-            )}
-            {soort === "EU" && (
-              <label className="block">
-                <span className="field-label">{o.vatNumber}</span>
-                <input name="btwNummer" required autoCapitalize="characters" placeholder="DE123456789" defaultValue={kvkState.values?.btwNummer ?? ""} className="field-input" />
-                <span className="mt-1 block text-xs text-neutralx-400">{o.vatHint}</span>
-              </label>
-            )}
-            {soort === "BUITEN" && (
-              <label className="block">
-                <span className="field-label">{o.regNumber}</span>
-                <input name="registratieNummer" required defaultValue={kvkState.values?.registratieNummer ?? ""} className="field-input" />
-                <span className="mt-1 block text-xs text-neutralx-400">{o.regHint}</span>
-              </label>
-            )}
-            {vestiging ? (
-              // de werklocatie is er al: niet opnieuw vragen (22 nov 2026, gebruikersonderzoek B27); aanpassen kan op Locaties
-              <div className="rounded-lg bg-paper-soft px-3 py-2.5 text-sm">
-                <input type="hidden" name="vestigingBekend" value="1" />
-                <p className="text-ink">
-                  <span className="font-semibold">{o.vestigingBekend}</span> {vestiging.naam}
-                  {vestiging.adres ? `, ${vestiging.adres}` : ""}
-                </p>
-                <Link href="/werkgever/locaties" className="mt-1 inline-block text-xs font-semibold text-brand-600 underline underline-offset-2">
-                  {o.vestigingWijzig}
-                </Link>
-              </div>
-            ) : (
-              <>
-                {soort !== "NL" && <p className="text-xs text-neutralx-600">{o.foreignWorkplace}</p>}
-                <label className="block">
-                  <span className="field-label">{o.branchName}</span>
-                  <input name="branchName" required aria-required="true" autoComplete="organization" placeholder={o.branchNamePh} defaultValue={kvkState.values?.branchName ?? ""} onBlur={vestBlur("branchName")} {...vestAttrs("branchName")} className="field-input" />
-                  <VeldMelding veld="branchName" tekst={vestMelding("branchName")} />
-                </label>
-                <label className="block">
-                  <span className="field-label">{o.address}</span>
-                  <input name="addressLine" required aria-required="true" autoComplete="street-address" placeholder={o.addressPh} defaultValue={kvkState.values?.addressLine ?? ""} onBlur={vestBlur("addressLine")} {...vestAttrs("addressLine")} className="field-input" />
-                  <VeldMelding veld="addressLine" tekst={vestMelding("addressLine")} />
-                </label>
-                <div className="grid grid-cols-[1fr_110px] gap-3">
-                  <label className="block">
-                    <span className="field-label">{o.postal}</span>
-                    <input name="postalCode" required aria-required="true" autoComplete="postal-code" placeholder="1012 AB" defaultValue={kvkState.values?.postalCode ?? ""} onBlur={vestBlur("postalCode")} {...vestAttrs("postalCode")} className="field-input" />
-                    <VeldMelding veld="postalCode" tekst={vestMelding("postalCode")} />
-                  </label>
-                  <label className="block">
-                    <span className="field-label">{o.houseNr}</span>
-                    <input name="houseNumber" required aria-required="true" autoComplete="off" placeholder="10" defaultValue={kvkState.values?.houseNumber ?? ""} onBlur={vestBlur("houseNumber")} {...vestAttrs("houseNumber")} className="field-input" />
-                    <VeldMelding veld="houseNumber" tekst={vestMelding("houseNumber")} />
-                  </label>
-                </div>
-              </>
-            )}
-            <div className="flex justify-end pt-1">
-              <NextButton label={o.verifyNext} busy={o.busy} />
-            </div>
-          </form>
-        ),
-      },
-      {
-        key: "profiel",
-        title: o.stepProfiel,
-        body: (
-          <div className="space-y-3 text-sm text-neutralx-600">
-            <p>{o.profielBody}</p>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/werkgever/bedrijf" className="btn-ghost text-sm">
-                {o.editProfile}
-              </Link>
+            );
+          })}
+          <div>
+            <span className="field-label" id="org-branches-label">{o.orgBranches}</span>
+            <p className="mt-0.5 text-xs text-neutralx-500">{o.orgBranchesHint}</p>
+            <input type="hidden" name="branches" value={[...werkBranches].join(",")} />
+            <input type="hidden" name="alleBranches" value={alleWerkBranches ? "1" : ""} />
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="org-branches-label">
               <button
                 type="button"
-                onClick={() => markStep("profileStepDone", "email")}
-                disabled={pending}
-                className="btn-primary text-sm disabled:opacity-60"
+                aria-pressed={alleWerkBranches}
+                onClick={() => setWerkBranches(alleWerkBranches ? new Set() : new Set(BRANCHE_OPTIES.map((b) => b.key)))}
+                className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                  alleWerkBranches ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-ink hover:border-brand-500"
+                }`}
               >
-                {o.doneThis}
+                {o.orgAllBranches}
               </button>
+              {BRANCHE_OPTIES.map((b) => {
+                const aan = werkBranches.has(b.key);
+                return (
+                  <button
+                    key={b.key}
+                    type="button"
+                    aria-pressed={aan}
+                    onClick={() => wisselBranche(b.key)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                      aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
-        ),
-      },
-      {
-        key: "email",
-        title: o.stepEmail,
-        body: initial.emailVerified ? (
-          <p className="rounded-lg bg-ok/10 px-3 py-2.5 text-sm text-ok">{o.emailVerified}</p>
-        ) : (
-          <div className="space-y-3 text-sm text-neutralx-600">
-            <p>{o.emailBody}</p>
-            <Link href="/verifieer-email" className="btn-primary inline-block text-sm">
-              {o.resend}
+          <div className="flex justify-end pt-1">
+            <button type="submit" disabled={pending} className="btn-primary text-sm disabled:opacity-60">
+              {pending ? o.busy : o.nextStep}
+            </button>
+          </div>
+        </form>
+      ),
+      adres: adresKlaar ? (
+        <div className="space-y-3">
+          {/* groen = klaar */}
+          {vestiging ? (
+            <p role="status" className="rounded-lg bg-ok/10 px-3 py-2.5 text-sm text-ok">
+              <span className="font-semibold">{o.vestigingBekend}</span> {vestiging.naam}
+              {vestiging.adres ? `, ${vestiging.adres}` : ""}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => setOpen(volgendeNa("adres", { adres: true }))} className="btn-primary text-sm">
+              {o.nextStep}
+            </button>
+            <Link href="/werkgever/locaties" className="text-xs font-semibold text-brand-600 underline underline-offset-2">
+              {o.vestigingWijzig}
             </Link>
           </div>
-        ),
-      },
-      {
-        key: "klaar",
-        title: o.stepKlaar,
-        body: (
-          <div className="space-y-3 text-sm text-neutralx-600">
-            <p>{o.klaarBody}</p>
-            <Link href="/werkgever/diensten/nieuw" className="btn-primary inline-block text-sm">
-              {o.placeFirst}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-neutralx-500">{o.adresIntro}</p>
+          <VestigingFormulier
+            key={concept?.city ?? ""}
+            beginPlaats={concept?.city ?? ""}
+            onOpgeslagen={() => {
+              setAdresOpgeslagen(true);
+              setOpen(volgendeNa("adres", { adres: true }));
+              router.refresh();
+            }}
+          />
+        </div>
+      ),
+      profiel: (
+        <div className="space-y-3 text-sm text-neutralx-600">
+          <p>{o.profielBody}</p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/werkgever/bedrijf" className="btn-ghost text-sm">
+              {o.editProfile}
             </Link>
+            <button
+              type="button"
+              onClick={() => markStep("profileStepDone", volgendeNa("profiel", { profiel: true }))}
+              disabled={pending}
+              className="btn-primary text-sm disabled:opacity-60"
+            >
+              {o.doneThis}
+            </button>
           </div>
-        ),
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [kvkState, pending, orgSaved, initial, o, vestFout, werkBranches, land, landKiezen],
-  );
+        </div>
+      ),
+      email: initial.emailVerified ? (
+        <p className="rounded-lg bg-ok/10 px-3 py-2.5 text-sm text-ok">{o.emailVerified}</p>
+      ) : (
+        <div className="space-y-3 text-sm text-neutralx-600">
+          <p>{o.emailBody}</p>
+          <Link href="/verifieer-email" className="btn-primary inline-block text-sm">
+            {o.resend}
+          </Link>
+        </div>
+      ),
+  };
+
+  // blok 2: de vier stappen van de eerste klus, elk met wat er al gebeurd is
+  const EERSTE_KLUS: { key: Extract<WerkgeverStapSleutel, "klus" | "reacties" | "kiezen" | "afronden">; label: string; hint?: string; href?: string; knop?: string }[] = [
+    { key: "klus", label: o.firstJob1, href: "/werkgever/diensten/nieuw", knop: o.aanDeSlag },
+    { key: "reacties", label: o.firstJob2, hint: o.firstJobHint2, ...(initial.eersteKlus.heeftKlus ? { href: "/werkgever/diensten", knop: o.naarKlussen } : {}) },
+    { key: "kiezen", label: o.firstJob3, hint: o.firstJobHint3, ...(initial.eersteKlus.heeftReactie ? { href: "/werkgever/diensten", knop: o.naarKlussen } : {}) },
+    { key: "afronden", label: o.firstJob4, hint: o.firstJobHint4 },
+  ];
+  // de eerstvolgende stap van blok 2 die nog open staat: die krijgt zijn knop, de rest is een rustige lijst
+  const volgendeKlusStap = EERSTE_KLUS.find((s) => !klaar(s.key))?.key ?? null;
+
+  const stepNo = Math.min(voortgang.done + 1, voortgang.total);
+  const minutesLeft = Math.max(1, voortgang.minutenOpen);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-      {/* De stappen, één keer (22 nov 2026, gebruikersonderzoek B11): de lijst links, de stippen en de kop herhaalden de
-          uitklapblokken. Nu de voortgang en daaronder de stappen zelf, met hun uitleg in de kop. */}
+      {/* De stappen, één keer (22 nov 2026, gebruikersonderzoek B11): de voortgang en daaronder de stappen zelf, met hun uitleg in de kop. */}
       <div>
-        <p className="text-xs text-neutralx-500">{fmt(o.stepProgress, { step: stepNo, total: ORDER.length, min: minutesLeft, pct })}</p>
+        <p className="text-xs text-neutralx-500">{fmt(o.stepProgress, { step: stepNo, total: voortgang.total, min: minutesLeft, pct: voortgang.pct })}</p>
         <div className="mt-2 flex gap-1.5" aria-hidden>
-          {ORDER.map((k, i) => (
-            <span key={k} className={`h-1.5 flex-1 rounded-full ${i < completed ? "bg-brand-500" : "bg-hairstrong"}`} />
+          {stappen.map((s) => (
+            <span key={s.key} className={`h-1.5 flex-1 rounded-full ${s.done ? "bg-brand-500" : "bg-hairstrong"}`} />
           ))}
         </div>
-        <div className="mt-4 space-y-2">
-          {panels
-            .filter((p) => p.key !== "klaar" || completed === ORDER.length)
-            .sort((a, b) => (a.key === "klaar" ? 99 : ORDER.indexOf(a.key)) - (b.key === "klaar" ? 99 : ORDER.indexOf(b.key)))
-            .map((p) => {
-              const isOpen = open === p.key;
-              const hint = STEP_META.find((s) => s.key === p.key)?.hint;
-              return (
-                <div key={p.key} className={`rounded-xl border ${isOpen ? "border-brand-500 bg-white" : "border-hair bg-paper"}`}>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(p.key)}
-                    aria-expanded={isOpen}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left"
-                  >
-                    <Dot done={p.key === "klaar" ? false : done[p.key]} active={isOpen} />
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-sm font-semibold ${isOpen ? "text-ink" : "text-neutralx-600"}`}>{p.title}</span>
-                      {hint && !done[p.key] && <span className="block text-[11px] text-neutralx-500">{hint}</span>}
-                    </span>
-                    <span aria-hidden className="text-neutralx-400">{isOpen ? "▲" : "▼"}</span>
-                  </button>
-                  {isOpen && <div className="border-t border-hair px-4 py-4">{p.body}</div>}
-                </div>
-              );
-            })}
+        {/* h2: het eerste kopje onder de h1 van de startpagina (axe heading-order) */}
+        <h2 className="mt-4 font-display text-sm font-bold uppercase tracking-wide text-ink">{o.blok1Titel}</h2>
+        <div className="mt-3 space-y-2">
+          {ORDER.map((k) => {
+            const isOpen = open === k;
+            const meta = STEP_META[k];
+            return (
+              <div key={k} className={`rounded-xl border ${isOpen ? "border-brand-500 bg-white" : "border-hair bg-paper"}`}>
+                <button
+                  type="button"
+                  onClick={() => setOpen(k)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                >
+                  <Dot done={klaar(k)} active={isOpen} />
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-sm font-semibold ${isOpen ? "text-ink" : "text-neutralx-600"}`}>{meta.label}</span>
+                    {meta.hint && !klaar(k) && <span className="block text-[11px] text-neutralx-500">{meta.hint}</span>}
+                  </span>
+                  <span aria-hidden className="text-neutralx-400">{isOpen ? "▲" : "▼"}</span>
+                </button>
+                {isOpen && <div className="border-t border-hair px-4 py-4">{panels[k]}</div>}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="space-y-6">
-        {/* "Jouw eerste klus" pas als het bedrijf is geverifieerd: daarvoor leidt het alleen af van de KVK-stap (20 nov) */}
-        {initial.verified && (
         <div>
-          {/* h2: het eerste kopje onder de h1 van de startpagina (axe heading-order); uiterlijk gelijk */}
           <h2 className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
             <span className="grid h-5 w-5 place-items-center rounded-full border border-hairstrong text-[10px] text-neutralx-400">
               ●
@@ -471,16 +326,32 @@ export function EmployerOnboardingWizard({
             {o.firstJobTitle}
           </h2>
           <p className="mt-2 text-xs text-neutralx-500">{o.firstJobBody}</p>
+          {initial.eersteKlus.klusLive && (
+            <p role="status" className="mt-3 rounded-lg bg-ok/10 px-3 py-2.5 text-sm text-ok">
+              {o.klusLive}
+            </p>
+          )}
           <ol className="mt-3 space-y-1">
-            {FIRST_JOB.map((label) => (
-              <li key={label} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutralx-400">
-                <Dot done={false} />
-                {label}
-              </li>
-            ))}
+            {EERSTE_KLUS.map((s) => {
+              const gedaan = klaar(s.key);
+              const aanZet = volgendeKlusStap === s.key;
+              return (
+                <li key={s.key} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm">
+                  <Dot done={gedaan} active={aanZet} />
+                  <span className="min-w-0 flex-1">
+                    <span className={`block ${gedaan ? "text-neutralx-500 line-through" : aanZet ? "font-semibold text-ink" : "text-neutralx-600"}`}>{s.label}</span>
+                    {s.hint && !gedaan && <span className="block text-[11px] text-neutralx-500">{s.hint}</span>}
+                  </span>
+                  {aanZet && s.href && s.knop && (
+                    <Link href={s.href} className="btn-primary flex-shrink-0 px-3 py-1.5 text-xs">
+                      {s.knop}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         </div>
-        )}
 
         <div className="rounded-xl bg-ink p-5 text-white">
           <p className="text-sm font-semibold">{o.helpTitle}</p>

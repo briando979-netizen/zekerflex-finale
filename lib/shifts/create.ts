@@ -1,4 +1,4 @@
-import { assertMayPlaceShift } from "@/lib/company/verified";
+import { meldEersteKlusVanNieuwBedrijf } from "@/lib/company/eerste-klus";
 import { z } from "zod";
 import type { Principal } from "@/lib/auth";
 import { env } from "@/lib/env";
@@ -97,7 +97,7 @@ export async function createShift(
     // staff are checking in somewhere unfamiliar.
     const tenantId = scope.tenantIds[0];
     if (!tenantId) throw AppError.forbidden("Geen organisatie gekoppeld aan je account.");
-    await assertMayPlaceShift(tenantId);
+    // plaatsen is vrij voor elk bedrijf (23 nov 2026): de controle komt pas bij het inplannen (lib/company/gecontroleerd.ts)
     branch = await prisma.branch.create({
       data: {
         tenantId,
@@ -122,7 +122,6 @@ export async function createShift(
       select: { id: true, name: true, matchingConfig: true, tenantId: true },
     });
     if (!found) throw AppError.forbidden("Je hebt geen toegang tot deze vestiging.");
-    await assertMayPlaceShift(found.tenantId);
     branch = found;
   }
 
@@ -222,6 +221,8 @@ export async function createShift(
       poolId: pool?.id ?? null,
     },
   });
+  // een bedrijf dat nog niet is gecontroleerd staat nu live: Beheer ziet het (melding bij de eerste klus, nooit een fout hier)
+  await meldEersteKlusVanNieuwBedrijf(branch.tenantId, input.title, created.length);
 
   let matchedCandidates: number | null = null;
   for (const c of created) {

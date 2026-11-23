@@ -54,6 +54,10 @@ vi.mock("@/lib/reservebank/store", () => ({
   zetOpReservebank: (...a: unknown[]) => zetOpReservebank(...a),
 }));
 
+// de poort (lib/company/verified.ts): standaard een gecontroleerd bedrijf; een nieuw bedrijf zet dit op false
+const bedrijfGecontroleerd = vi.hoisted(() => ({ waarde: true }));
+vi.mock("@/lib/company/verified", () => ({ isTenantVerified: async () => bedrijfGecontroleerd.waarde }));
+
 import { respondToOfferAction, zetReserveAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 
 function manager(): Principal {
@@ -96,6 +100,41 @@ const shift = {
 afterEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
+  bedrijfGecontroleerd.waarde = true;
+});
+
+describe("respondToOfferAction: een bedrijf dat nog niet is gecontroleerd (23 nov 2026)", () => {
+  const opzet = () => {
+    requirePrincipal.mockResolvedValue(manager());
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["org1"], branchIds: ["branch1"] });
+    listCounterOffers.mockResolvedValue([offer]);
+    shiftFindFirst.mockResolvedValue(shift);
+    bedrijfGecontroleerd.waarde = false;
+  };
+
+  it("accepteren plant niemand in, laat de reactie openstaan en geeft de herkenbare code terug", async () => {
+    opzet();
+
+    const result = await respondToOfferAction("offer1", "accepted");
+
+    expect(result).toMatchObject({ ok: false, code: "BEDRIJF_NOG_NIET_GECONTROLEERD" });
+    expect(result.message).toContain("Je klus staat live");
+    // niets veranderd: geen tarief, geen toewijzing, de reactie blijft pending (en een reserve blijft op de bank)
+    expect(shiftUpdate).not.toHaveBeenCalled();
+    expect(applyToShift).not.toHaveBeenCalled();
+    expect(setOfferStatus).not.toHaveBeenCalled();
+    expect(haalVanReservebank).not.toHaveBeenCalled();
+  });
+
+  it("afwijzen mag wel: dat plant niemand in", async () => {
+    opzet();
+    setOfferStatus.mockResolvedValue({ ...offer, status: "declined" });
+
+    const result = await respondToOfferAction("offer1", "declined");
+
+    expect(result.ok).toBe(true);
+    expect(setOfferStatus).toHaveBeenCalledWith("offer1", "declined");
+  });
 });
 
 describe("respondToOfferAction", () => {

@@ -1,4 +1,5 @@
 import { kvGet, kvGetMany, kvSet } from "@/lib/storage/kv";
+import type { ControleAanvraag } from "@/lib/company/gecontroleerd";
 
 // ---------------------------------------------------------------------------
 // Presentational profile extras that don't belong in the core schema:
@@ -41,6 +42,8 @@ export interface OrgProfileExtra {
     coverStepDone?: boolean;
     completedAt?: string;
   };
+  /** "Nog een paar laatste checks" (23 nov 2026): wat het bedrijf invulde toen het iemand wilde inplannen en nog niet was gecontroleerd */
+  controle?: ControleAanvraag;
   /** what the klus-kaarten show at the top: the branch photo (default) or the organisation's own logo/photo */
   klusBeeld?: "foto" | "logo";
   /** e-facturen (UBL/Peppol, lib/efactuur): waar en hoe het bedrijf ze wil ontvangen */

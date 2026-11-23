@@ -165,13 +165,16 @@ describe("KvkZoeker (bron-controle)", () => {
     expect(zoeker).not.toMatch(/useEffect\(\(\) => (kies|haal|wis|zet)/);
   });
 
-  it("het aanmeldformulier en de onboarding geven de teksten in de taal van de pagina mee; het aanmeldformulier wist bij onWis", () => {
+  it("het aanmeldformulier en het venster 'Nog een paar laatste checks' geven de teksten in de taal van de pagina mee; het aanmeldformulier wist bij onWis", () => {
     const register = lees("components/auth/RegisterForm.tsx");
     expect(register).toContain("teksten={kvkTekstenVoor(locale)}");
     expect(register).toMatch(/onWis=\{\(\) => \{\s*setKvk\(""\);\s*setKvkViaZoeker\(false\);\s*\}\}/);
-    const wizard = lees("components/app/EmployerOnboardingWizard.tsx");
-    expect(wizard).toContain("teksten={kvkTekstenVoor(locale)}");
-    expect(wizard).toContain("const { locale } = useI18n();");
+    // 23 nov 2026: de onboarding heeft geen KVK-zoeker meer (de controle komt pas bij het inplannen); het venster bij het inplannen wel
+    expect(lees("components/app/EmployerOnboardingWizard.tsx")).not.toContain("KvkZoeker");
+    const venster = lees("components/werkgever/LaatsteChecksVenster.tsx");
+    expect(venster).toContain("const zoekTeksten = kvkTekstenVoor(locale);");
+    expect(venster).toContain("teksten={zoekTeksten}");
+    expect(venster).toContain("const { locale } = useI18n();");
   });
 
   it("de werkgeversbewaker voor vaste Nederlandse zinnen telt het onderdeel niet meer (basislijn verlaagd)", () => {

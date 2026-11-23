@@ -26,7 +26,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/mail", async (orig) => ({ ...(await orig<typeof import("@/lib/mail")>()), sendMail: m.mail }));
 vi.mock("@/lib/auth/email-verify", () => ({ sendVerificationEmail: m.code }));
 vi.mock("@/lib/fiscal/store", () => ({ getFiscal: async () => ({ workerKind: "zzp" }) }));
-vi.mock("@/lib/onboarding/employer", () => ({ isEmployerOnboarded: async () => false }));
+vi.mock("@/lib/onboarding/employer", () => ({ isEmployerOnboarded: async () => false, heeftVestiging: async () => false }));
 vi.mock("@/lib/company/verified", async (orig) => ({ ...(await orig<typeof import("@/lib/company/verified")>()), isTenantVerified: async () => false }));
 
 import {
@@ -89,9 +89,20 @@ describe("stapbepaling", () => {
     expect(bereikteStappen([true, false, true])).toBe(1);
     expect(bereikteStappen([true, true])).toBe(2);
   });
-  it("stappenlijsten hebben zes stappen", () => {
+  it("de werkerslijst heeft zes stappen, de werkgeverslijst vijf", () => {
     expect(WERKER_STAPPEN).toHaveLength(6);
-    expect(WERKGEVER_STAPPEN).toHaveLength(6);
+    expect(WERKGEVER_STAPPEN).toHaveLength(5);
+  });
+  // 23 nov 2026: een bedrijf plaatst meteen klussen; het KVK-nummer en de controle komen pas bij het inplannen
+  it("een nieuw bedrijf zit niet vast op een KVK-nummer: die stap bestaat niet meer, en de controle staat achteraan", () => {
+    expect(WERKGEVER_STAPPEN.map((s) => s.key)).toEqual(["aangemeld", "email", "vestiging", "klus", "gecontroleerd"]);
+    expect(WERKGEVER_STAPPEN.map((s) => s.open).join(" ")).not.toMatch(/KVK-nummer nog niet gekoppeld|wacht op verificatie/);
+    const bedrijf = (gehaald: boolean[]) => vastStatus(rij({ doelgroep: "werkgever", gehaald }), NOW);
+    // wel e-mail, nog geen adres: dat is de stap waar hij staat (en dus vast na een dag)
+    expect(bedrijf([true, true, false, false, false])).toMatchObject({ stapKey: "vestiging", vast: true });
+    // adres en klus gedaan, nog niet gecontroleerd: dat is geen vastzitten, het bedrijf heeft er nog niets aan te doen
+    expect(bedrijf([true, true, true, true, false])).toMatchObject({ stapKey: "gecontroleerd", vast: false });
+    expect(bedrijf([true, true, true, true, true])).toMatchObject({ stap: -1, label: "Alles klaar", vast: false });
   });
   it("een nieuw account zit nog niet vast, na een dag wel", () => {
     expect(vastStatus(rij({ aangemeld: daysAgo(0.2), gehaald: [true, false, false, false, false, false] }), NOW).vast).toBe(false);

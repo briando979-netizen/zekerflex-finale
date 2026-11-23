@@ -138,30 +138,30 @@ async function meldBuitenlandsBedrijf(
   return { valid: true, companyName, reasons: [], detail };
 }
 
-export async function submitEmployerOnboarding(
-  userId: string,
-  tenantId: string,
-  input: EmployerOnboardingInput | EmployerKvkInput,
-): Promise<EmployerOnboardingResult> {
-  const membership = await prisma.membership.findFirst({
-    where: { userId, tenantId, role: { in: ["HQ_ADMIN", "PLATFORM_ADMIN"] } },
-    select: { id: true },
-  });
-  if (!membership) throw AppError.forbidden("Je beheert deze organisatie niet.");
+/** Wat het koppelen van een bedrijf opleverde (KVK in Nederland, btw- of registratienummer erbuiten). */
+export interface BedrijfUitslag {
+  kvkValid: boolean;
+  /** klopt, maar niet aantoonbaar van deze aanmelder: ZekerFlex controleert met de hand */
+  inControle: boolean;
+  companyName: string | null;
+  reasons: string[];
+  buitenlands: boolean;
+  /** de controle kon nu niet (tegoed op, onbekende storing): ZekerFlex doet hem zelf, het bedrijf hoeft niets te doen */
+  zelfControle: boolean;
+}
 
-  // Alleen het bedrijf (employerKvkSchema): dan moet er al een vaste werklocatie zijn; die blijft zoals hij is.
-  const vestiging = heeftVestigingVelden(input) ? input : null;
-  const bestaand = vestiging
-    ? null
-    : await prisma.branch.findFirst({ where: { tenantId, kind: "PERMANENT" }, select: { id: true } });
-  if (!vestiging && !bestaand) throw AppError.validation("Vul eerst het adres van je werklocatie in.");
-
+/**
+ * Het bedrijf koppelen aan de organisatie: het KVK-nummer (Nederland) of het btw- of registratienummer (buitenland), en de
+ * naam uit het Handelsregister. Gedeeld door de onboarding hieronder en "Nog een paar laatste checks" bij het inplannen
+ * (koppelBedrijfsgegevens). De verificatie zelf verandert niet.
+ */
+async function meldBedrijf(userId: string, tenantId: string, input: EmployerOnboardingInput | EmployerKvkInput): Promise<BedrijfUitslag> {
   const cleanKvk = input.kvkNumber.replace(/[^\d]/g, "");
-  const geo = vestiging ? await geocodePostcode(vestiging.postalCode, vestiging.houseNumber) : null;
   const reasons: string[] = [];
 
   let kvkValid = false;
   let inControle = false;
+  let zelfControle = false;
   let companyName: string | null = null;
   const buitenlands = landSoort(input.land) !== "NL";
   if (buitenlands) {
@@ -174,7 +174,7 @@ export async function submitEmployerOnboarding(
       alertOwnerLater({
         key: `bedrijf-controle:${tenantId}`,
         title: `Buitenlands bedrijf wacht op controle: ${b.companyName ?? "nieuwe opdrachtgever"} (${landNaam(input.land)})`,
-        detail: `Dit bedrijf zit niet in het KVK. Opgegeven: ${b.detail}. Zoek het bedrijf zelf op, neem zo nodig contact op en keur het goed in Admin → Bedrijven. Tot die tijd kan het één klus plaatsen.`,
+        detail: `Dit bedrijf zit niet in het KVK. Opgegeven: ${b.detail}. Zoek het bedrijf zelf op, neem zo nodig contact op en keur het goed in Admin → Bedrijven. Tot die tijd kan het klussen plaatsen, maar nog niemand inplannen.`,
         severity: "warning",
         url: `/admin/bedrijven/${tenantId}`,
       });
@@ -193,21 +193,71 @@ export async function submitEmployerOnboarding(
     // tegoed op of te veel vragen bij de KVK-dienst (13 nov 2026): later opnieuw, via de cron /api/internal/kvk/herkansing
     const limiet = kvkLimietVan(err);
     if (limiet) await zetKvkWacht("bedrijf", tenantId, cleanKvk, limiet);
+    const nietGevonden = err instanceof AppError && err.status === 404;
+    const cijfers = err instanceof AppError && err.status === 422 && /cijfers/.test(err.message);
+    const nietBereikbaar = err instanceof AppError && err.status >= 500;
+    const alInGebruik = (err as { code?: string }).code === "P2002";
+    zelfControle = !nietGevonden && !cijfers && !nietBereikbaar && !alInGebruik;
     // De KVK-koppeling geeft technische, Engelse fouten ("No Handelsregister entry…"): hier in gewoon Nederlands.
     reasons.push(
       limiet
         ? "We controleren je KVK-nummer zelf; je hoort binnen 1 werkdag van ons. Je kunt gewoon verder met je aanmelding."
-        : err instanceof AppError && err.status === 404
+        : nietGevonden
         ? "Dit KVK-nummer staat niet in het Handelsregister."
-        : err instanceof AppError && err.status === 422 && /cijfers/.test(err.message)
-          ? err.message
-          : err instanceof AppError && err.status >= 500
+        : cijfers
+          ? (err as AppError).message
+          : nietBereikbaar
             ? "Het Handelsregister is nu niet bereikbaar. Probeer het over een paar minuten opnieuw."
-            : (err as { code?: string }).code === "P2002"
+            : alInGebruik
               ? "Dit KVK-nummer hoort al bij een ander ZekerFlex-account. Is dit jouw bedrijf? Neem contact met ons op, dan zoeken we het uit."
               : "We controleren je KVK-nummer zelf; je hoort binnen 1 werkdag van ons.",
     );
   }
+
+  // De naam uit het Handelsregister (KVK) komt op de organisatie; een naam uit VIES blijft ernaast staan.
+  if (companyName && !buitenlands) {
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { name: companyName },
+    }).catch(() => undefined);
+  }
+  return { kvkValid, inControle, companyName, reasons: [...new Set(reasons)], buitenlands, zelfControle };
+}
+
+/**
+ * Alleen het bedrijf koppelen, zonder vestiging: "Nog een paar laatste checks" bij het inplannen (23 nov 2026). Alleen de
+ * beheerder van het bedrijf (423, geen 403: CrowdSec). De werkers die al reageerden hoeven hier nog niets te horen: dat doet de
+ * aanroeper (lib/company/controle-aanvraag.ts) na het bewaren van de aanvraag.
+ */
+export async function koppelBedrijfsgegevens(userId: string, tenantId: string, input: EmployerKvkInput): Promise<BedrijfUitslag> {
+  const membership = await prisma.membership.findFirst({
+    where: { userId, tenantId, role: { in: ["HQ_ADMIN", "PLATFORM_ADMIN"] } },
+    select: { id: true },
+  });
+  if (!membership) throw AppError.alleenBeheerder("Alleen de beheerder van het bedrijf kan de bedrijfsgegevens invullen. Vraag de beheerder om dit te doen.");
+  return meldBedrijf(userId, tenantId, input);
+}
+
+export async function submitEmployerOnboarding(
+  userId: string,
+  tenantId: string,
+  input: EmployerOnboardingInput | EmployerKvkInput,
+): Promise<EmployerOnboardingResult> {
+  const membership = await prisma.membership.findFirst({
+    where: { userId, tenantId, role: { in: ["HQ_ADMIN", "PLATFORM_ADMIN"] } },
+    select: { id: true },
+  });
+  if (!membership) throw AppError.forbidden("Je beheert deze organisatie niet.");
+
+  // Alleen het bedrijf (employerKvkSchema): dan moet er al een vaste werklocatie zijn; die blijft zoals hij is.
+  const vestiging = heeftVestigingVelden(input) ? input : null;
+  const bestaand = vestiging
+    ? null
+    : await prisma.branch.findFirst({ where: { tenantId, kind: "PERMANENT" }, select: { id: true } });
+  if (!vestiging && !bestaand) throw AppError.validation("Vul eerst het adres van je werklocatie in.");
+
+  const geo = vestiging ? await geocodePostcode(vestiging.postalCode, vestiging.houseNumber) : null;
+  const { kvkValid, inControle, companyName, reasons, buitenlands } = await meldBedrijf(userId, tenantId, input);
 
   // First branch for the organization, only when the form asked for it; otherwise the existing one stays as it is.
   let branch: { id: string };
@@ -236,14 +286,6 @@ export async function submitEmployerOnboarding(
     throw AppError.validation("Vul eerst het adres van je werklocatie in.");
   }
 
-  // De naam uit het Handelsregister (KVK) komt op de organisatie; een naam uit VIES blijft ernaast staan.
-  if (companyName && !buitenlands) {
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { name: companyName },
-    }).catch(() => undefined);
-  }
-
   await recordAudit({
     category: "COMPANY",
     action: "employer.onboarding",
@@ -260,6 +302,15 @@ export async function submitEmployerOnboarding(
   if (kvkValid && !inControle) void notifyPendingReactions(tenantId);
 
   return { kvkValid, inControle, companyName, branchId: branch.id, reasons: [...new Set(reasons)], buitenlands };
+}
+
+/**
+ * Heeft de organisatie een vaste werklocatie? Dat is de stap "adres bevestigen" van Jouw start (23 nov 2026): het KVK-nummer
+ * hoort daar niet meer bij, dat komt pas als het bedrijf iemand wil inplannen (lib/company/controle-aanvraag.ts).
+ */
+export async function heeftVestiging(tenantIds: string[]): Promise<boolean> {
+  if (tenantIds.length === 0) return false;
+  return (await prisma.branch.count({ where: { tenantId: { in: tenantIds }, kind: "PERMANENT" } })) > 0;
 }
 
 /**

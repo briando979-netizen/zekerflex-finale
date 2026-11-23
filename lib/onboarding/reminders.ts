@@ -5,8 +5,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { sendMail, onboardingReminderEmail } from "@/lib/mail";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
 import { getFiscal } from "@/lib/fiscal/store";
-import { isEmployerOnboarded } from "@/lib/onboarding/employer";
-import { tenantVerification } from "@/lib/company/verified";
+import { heeftVestiging } from "@/lib/onboarding/employer";
 import { herinneringReden, herinneringInhoud } from "@/lib/onboarding/voortgang";
 import { werkerMist } from "@/lib/onboarding/herinnering-mist";
 import { HERINNERING_TEKSTEN, werkerHerinnering } from "@/lib/onboarding/herinnering-teksten";
@@ -20,9 +19,9 @@ import { isEigenTestAccount } from "@/lib/admin/eigen-test-kern";
 //
 //  - e-mail address never confirmed → a fresh code mail (day 1 and 3)
 //  - freelancer without verified identity / KVK-or-btw → "maak je account af"
-//  - company without KVK / first branch / verification / first klus → idem, per toestand
-//    (lib/onboarding/voortgang.ts: herinneringReden); wacht ZekerFlex zelf op een
-//    handmatige controle, dan krijgt het bedrijf géén herinnering (er valt niets te doen)
+//  - company without a first branch (address) / first klus → idem, per toestand
+//    (lib/onboarding/voortgang.ts: herinneringReden). Nooit een herinnering om een KVK-nummer in
+//    te vullen: die controle komt pas als het bedrijf iemand wil inplannen (lib/company/gecontroleerd.ts)
 //
 // Day 1, 3 and 7 after sign-up, one step per run (a user who signed up long
 // ago gets one mail, not three at once), never more than three, and never
@@ -109,12 +108,13 @@ async function herinneringActie(u: HerinneringUser, stage: number, handmatig = f
     return () => sendMail({ ...onboardingReminderEmail(u.fullName, kind, env.APP_BASE_URL, stap, inhoud), to: u.email });
   }
   if (adminTenant) {
-    const [bedrijfKlaar, verificatie, klus] = await Promise.all([
-      isEmployerOnboarded([adminTenant]),
-      tenantVerification(adminTenant),
+    // 23 nov 2026: geen herinnering om een KVK-nummer in te vullen; de controle komt pas bij het inplannen. Alleen het adres en
+    // de eerste klus. Een bedrijf dat al een klus heeft (ook op een eenmalige locatie) hoort niets over het adres.
+    const [vestiging, klus] = await Promise.all([
+      heeftVestiging([adminTenant]),
       prisma.shift.findFirst({ where: { branch: { tenantId: adminTenant } }, select: { id: true } }),
     ]);
-    const reden = herinneringReden({ rol: "bedrijf", emailBevestigd: true, bedrijfKlaar, verified: verificatie.verified, inControle: Boolean(verificatie.inControle), heeftKlus: Boolean(klus) });
+    const reden = herinneringReden({ rol: "bedrijf", emailBevestigd: true, adresKlaar: vestiging || Boolean(klus), heeftKlus: Boolean(klus) });
     if (!reden || reden === "email") return null;
     const inhoud = herinneringInhoud(reden);
     return () => sendMail({ ...onboardingReminderEmail(u.fullName, "bedrijf", env.APP_BASE_URL, stap, inhoud), to: u.email });

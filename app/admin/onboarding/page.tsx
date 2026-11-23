@@ -54,7 +54,7 @@ export default async function OnboardingPage(props: { searchParams: Promise<{ te
   const status = rijen.map((r) => ({ rij: r, status: vastStatus(r, now) }));
   const vast = status.filter((s) => s.status.vast).length;
   const emailKlaar = rijen.filter((r) => r.gehaald[1]).length;
-  // Indexen volgen WERKER_STAPPEN: 3 = profiel, 4 = identiteit; WERKGEVER_STAPPEN: 4 = bedrijf geverifieerd.
+  // Indexen volgen WERKER_STAPPEN: 3 = profiel, 4 = identiteit; WERKGEVER_STAPPEN: 4 = bedrijf gecontroleerd.
   const profielAf = werkers.filter((r) => r.gehaald[3]).length;
   const identiteit = werkers.filter((r) => r.gehaald[4]).length;
   const bedrijfOk = werkgevers.filter((r) => r.gehaald[4]).length;

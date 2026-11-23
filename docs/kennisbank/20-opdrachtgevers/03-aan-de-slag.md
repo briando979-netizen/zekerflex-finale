@@ -7,45 +7,48 @@ In een paar stappen van een nieuw account naar je eerste klus. Alles wat hier st
 1. Maak een account en kies dat je een bedrijf bent.
 2. Je krijgt een mail om je e-mailadres te bevestigen. Heb je hem niet? Kies **Bevestigingsmail opnieuw sturen**.
 
-## 2. De afrondingskaart "Maak je bedrijf af"
+## 2. De checklist "Jouw start"
 
-Bovenaan Jouw start staat een kaart met vier stappen, in deze volgorde:
+Bovenaan Jouw start staat een checklist in twee blokken, met bovenaan hoever je bent en hoeveel minuten er ongeveer nog nodig zijn. Alleen de **beheerder** van het bedrijf ziet deze stappen. Een collega ziet het gewone dashboard.
 
-1. E-mailadres bevestigen.
-2. KVK-nummer en eerste vestiging invullen.
-3. Je bedrijf laten verifiëren.
-4. Je eerste klus plaatsen.
+### Blok 1: Jij en je bedrijf
 
-Alleen de **beheerder** van het bedrijf ziet deze stappen. Een collega ziet het gewone dashboard.
+1. **Jouw organisatie**: een korte vraag over je branche, en voor welke branches je mensen zoekt (of **Alle branches**). Klaar? Kies **Volgende stap**.
+2. **Adres van je werklocatie bevestigen**: zoek het adres waar freelancers komen werken. Heb je al een werklocatie, dan zie je die hier alleen. Een andere locatie voeg je later toe bij **Locaties**.
+3. **Je profiel instellen**: kies **Profiel bewerken** voor een bedrijfsfoto, je website en een korte tekst over je bedrijf. Werkers lezen dit voordat ze reageren.
+4. **E-mailadres bevestigen**.
 
-### Jouw organisatie
+Een KVK-nummer is hier niet voor nodig.
 
-Je beantwoordt een paar korte vragen: je rol, je branche, hoe vaak je flexwerkers nodig hebt, hoe dringend en of je eerder een flexplatform gebruikte. Ook kies je voor welke branches je mensen zoekt, of **Alle branches**. Klaar? Kies **Volgende stap**.
+### Blok 2: Jouw eerste klus
 
-### Bedrijf verifiëren: KVK en vestiging
+1. **Zet je eerste klus uit**. Hij staat meteen live: freelancers in jouw regio zien hem en kunnen erop reageren. Hoe dat werkt, lees je in *Een klus uitzetten*.
+2. **Bekijk reacties op je klus**. Bij elke reactie krijg je een melding.
+3. **Kies een freelancer**. Is je bedrijf nog niet gecontroleerd, dan vragen we dan eerst een paar bedrijfsgegevens, zie hieronder.
+4. **Onboarding afronden**: klaar zodra je iemand hebt ingepland.
 
-1. Zoek je bedrijf in het Handelsregister, of vul je KVK-nummer zelf in.
-2. Vul de **naam van je eerste vestiging** in, met adres, postcode en huisnummer.
-3. Kies **Verifiëren & verder**.
+Is blok 1 klaar en staat je eerste klus live? Dan sluit de grote checklist en blijft een kaart staan met wat er nog open staat.
 
-Een bedrijf uit het buitenland kiest het land en vult een btw-nummer in (met de landcode, bijvoorbeeld DE123456789), of een registratienummer als het buiten de EU zit. Ook geef je het adres van de werklocatie in Nederland. Een buitenlands bedrijf wordt altijd met de hand gecontroleerd.
+## 3. Wat kan een bedrijf dat nog niet is gecontroleerd?
 
-### Hoe lang duurt verifiëren?
+- Je kunt zoveel **klussen plaatsen** als je wilt. Ze staan meteen live en werkers kunnen reageren.
+- Je kunt de **reacties bekijken** en een werker een bericht sturen. Contactgegevens van werkers blijven afgeschermd tot je iemand inplant.
+- Je kunt **nog niemand inplannen**, laten uitbetalen of een overeenkomst laten tekenen. Dat kan pas als je bedrijf is gecontroleerd.
 
-Je bent geverifieerd als je KVK-inschrijving actief is **en** duidelijk is dat je bij het bedrijf hoort. Dat blijkt bijvoorbeeld uit een eigen mailadres dat bij de bedrijfsnaam past. Is je KVK-nummer in orde maar is dat bewijs er (nog) niet, dan kijkt een medewerker van ZekerFlex mee. Dat is meestal binnen een werkdag. Je hoeft in die tijd niets te doen.
+### Nog een paar laatste checks
 
-### Wat kan er voor de verificatie?
+Kies je een freelancer terwijl je bedrijf nog niet is gecontroleerd, dan verschijnt een venster. Daar vul je in:
 
-- Je kunt **één klus** plaatsen. Werkers zien hem en kunnen reageren.
-- Je kunt **nog niemand inplannen**. Dat kan pas zodra je bedrijf is geverifieerd. Werkers die reageerden, krijgen daarna een melding om te bevestigen.
+- je **KVK-nummer** (buiten Nederland: je btw-nummer, of buiten de EU je registratienummer);
+- de **bedrijfsnaam** zoals die is geregistreerd;
+- een **contactpersoon** met functie en telefoonnummer;
+- wie de **overeenkomst tekent**.
 
-### Je profiel instellen
+Je keuze wordt bewaard en de reacties blijven openstaan, met het label **Jouw keuze**. Klopt je KVK-nummer en hoort je e-mailadres duidelijk bij het bedrijf (bijvoorbeeld een eigen mailadres dat bij de bedrijfsnaam past), dan gaat je keuze meteen door. Anders kijkt een medewerker van ZekerFlex je gegevens na. Je ontvangt een melding zodra je kunt inplannen. Je hoeft in de tussentijd niets te doen. Een bedrijf uit het buitenland wordt altijd met de hand gecontroleerd.
 
-Onder **Je profiel instellen** kies je **Profiel bewerken**: een bedrijfsfoto, je website en een korte tekst over je bedrijf. Werkers lezen dit voordat ze reageren. Een omslagfoto is optioneel, je kunt hem **Overslaan**.
+## 4. Je eerste klus plaatsen
 
-## 3. Je eerste klus plaatsen
-
-Zodra de stappen klaar zijn, staat rechtsboven de knop **Klus uitzetten**. Hoe dat werkt, lees je in *Een klus uitzetten*.
+Rechtsboven op Jouw start staat de knop **Klus uitzetten**. Hoe dat werkt, lees je in *Een klus uitzetten*.
 
 ## Het dashboard
 
