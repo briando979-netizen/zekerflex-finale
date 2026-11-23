@@ -8,6 +8,7 @@ import { appleLoginAction, googleLoginAction } from "@/app/login/actions";
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
 import { KvkZoeker } from "@/components/kvk/KvkZoeker";
+import { kvkTekstenVoor } from "@/lib/kvk/keuze";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
 import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
@@ -389,6 +390,7 @@ export function RegisterForm({
                 setKvkViaZoeker(false);
               }}
               hint="Zoek in het Handelsregister op naam, plaats of KVK-nummer, of vul zelf in."
+              teksten={kvkTekstenVoor(locale)}
             />
             ) : (
               <label className="block">

@@ -28,10 +28,11 @@ export function vulWaarden(t: KvkTreffer): Partial<Record<VulSleutel, string>> {
 }
 
 /** Het rustige label bij een gekozen bedrijf: alleen "handelsregister" als het echt daaruit komt. */
-export function keuzeLabel(t: KvkTreffer): { tekst: string; register: boolean } {
-  return t.source === "register"
-    ? { tekst: "Gevonden in het handelsregister", register: true }
-    : { tekst: "Naam en adres uit OpenStreetMap. Vul het KVK-nummer zelf in.", register: false };
+export function keuzeLabel(
+  t: KvkTreffer,
+  teksten: { register: string; osm: string } = { register: "Gevonden in het handelsregister", osm: "Naam en adres uit OpenStreetMap. Vul het KVK-nummer zelf in." },
+): { tekst: string; register: boolean } {
+  return t.source === "register" ? { tekst: teksten.register, register: true } : { tekst: teksten.osm, register: false };
 }
 
 /** "Utrecht · KVK 12345678 · Besloten vennootschap" voor onder de naam in de lijst. */

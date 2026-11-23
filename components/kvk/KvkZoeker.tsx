@@ -2,13 +2,14 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { keuzeLabel, regelOnder, vulWaarden, type VulKaart, type VulSleutel } from "@/lib/kvk/formulier";
+import { enterKiest, gekozenTekst, KVK_ZOEKER_TEKSTEN_NL, pijlRij, type ActiefBron, type KvkZoekerTeksten } from "@/lib/kvk/keuze";
 import { MIN_VRAAG, schoonKvk } from "@/lib/kvk/normaliseer";
 import type { KvkTreffer } from "@/lib/kvk/types";
 
 // ---------------------------------------------------------------------------
 // KvkZoeker: een zoekveld voor bedrijven (combobox). Typ een naam, een plaats
 // of een KVK-nummer; kies een bedrijf en de gegevens vullen zichzelf in.
-// Overschrijven kan altijd: wie daarna weer in het veld typt, wist het label
+// Overschrijven kan altijd: wie daarna weer in het veld typt, wist de keuze
 // en vult zelf verder in. Zoekt via /api/company/search (eigen index, dan
 // KVKBase, en alleen op verzoek OpenStreetMap).
 //
@@ -17,28 +18,14 @@ import type { KvkTreffer } from "@/lib/kvk/types";
 //   - los, met `vulFormulier`: de namen van de velden in het omringende
 //     formulier die het bedrijf moet invullen (zoals de onboarding-wizard).
 // Alleen puur importeren: geen prisma, kv of zod in deze file (client).
+//
+// 23 nov 2026: Enter kiest alleen een rij die met de pijltjestoetsen is
+// geselecteerd, nooit een rij die alleen onder de muis staat (de eigenaar kreeg
+// zo een echte stichting in zijn bedrijf); na een keuze staat er duidelijk wat
+// er gekozen is, met een knop om opnieuw te kiezen (wist ook wat het formulier
+// ervan overnam). De teksten (Nederlands en Engels) en de regels staan in
+// lib/kvk/keuze.ts, zodat de test ze zonder browser nalopen kan.
 // ---------------------------------------------------------------------------
-
-export interface KvkZoekerTeksten {
-  zoekPlaceholder: string;
-  laden: string;
-  nietGevonden: string;
-  zoekOsm: string;
-  bezet: string;
-  aantal: string;
-  nietActief: string;
-}
-
-/** Nederlandse standaard; een scherm in een andere taal geeft zijn eigen teksten mee. */
-export const KVK_ZOEKER_TEKSTEN_NL: KvkZoekerTeksten = {
-  zoekPlaceholder: "Naam, plaats of KVK-nummer",
-  laden: "Zoeken in het handelsregister…",
-  nietGevonden: "Niet gevonden? Vul zelf in.",
-  zoekOsm: "Zoek ook in OpenStreetMap",
-  bezet: "Het handelsregister is even niet bereikbaar. Vul zelf in.",
-  aantal: "{n} bedrijven gevonden. Gebruik de pijltjestoetsen om te kiezen.",
-  nietActief: "Niet actief",
-};
 
 export interface KvkZoekerProps {
   label: string;
@@ -107,6 +94,8 @@ export function KvkZoeker({
   const [resultaten, setResultaten] = useState<KvkTreffer[]>([]);
   const [open, setOpen] = useState(false);
   const [actief, setActief] = useState(-1);
+  /** hoe `actief` is gezet: Enter kiest alleen een rij die met de pijltjestoetsen is geselecteerd */
+  const [actiefBron, setActiefBron] = useState<ActiefBron | null>(null);
   const [status, setStatus] = useState<Status>("rust");
   const [bezet, setBezet] = useState(false);
   const [osmGevraagd, setOsmGevraagd] = useState(false);
@@ -116,6 +105,8 @@ export function KvkZoeker({
   const keuzeNummer = useRef(0);
   /** pas zoeken als de bezoeker zelf typt: een ingevulde naam bij het openen vraagt niets */
   const getypt = useRef(false);
+  /** de velden van het omringende formulier die deze keuze invulde, met wat erin kwam: opnieuw kiezen leegt ze weer */
+  const ingevuld = useRef<{ el: HTMLInputElement; waarde: string }[]>([]);
 
   function zetTekst(nieuw: string) {
     if (value === undefined) setEigen(nieuw);
@@ -140,6 +131,7 @@ export function KvkZoeker({
       setResultaten(Array.isArray(d.results) ? d.results : []);
       setBezet(d.bezet === true);
       setActief(-1);
+      setActiefBron(null);
       setStatus("klaar");
       setOpen(true);
     } catch {
@@ -186,13 +178,42 @@ export function KvkZoeker({
       if (waarde === undefined || !(el instanceof HTMLInputElement)) continue;
       if (alleenAlsLeeg?.includes(sleutel) && el.value.trim() !== "") continue;
       zetWaarde(el, waarde);
+      ingevuld.current.push({ el, waarde });
     }
+  }
+
+  /** Wat deze keuze in het formulier zette weer leegmaken, maar alleen als de bezoeker er zelf niets aan veranderde. */
+  function wisIngevuld(): void {
+    for (const { el, waarde } of [...ingevuld.current].reverse()) {
+      if (el.isConnected && el.value === waarde) zetWaarde(el, "");
+    }
+    ingevuld.current = [];
+  }
+
+  /** De knop onder de bevestiging: de keuze weg, het veld leeg en terug naar het veld om opnieuw te zoeken. */
+  function kiesOpnieuw(): void {
+    keuzeNummer.current += 1; // een nog lopend verzoek om het adres mag niets meer terugzetten
+    getypt.current = true;
+    laatsteVraag.current = null;
+    setGekozen(null);
+    setResultaten([]);
+    setOpen(false);
+    setActief(-1);
+    setActiefBron(null);
+    setStatus("rust");
+    setBezet(false);
+    setOsmGevraagd(false);
+    zetTekst("");
+    wisIngevuld();
+    onWis?.();
+    invoerRef.current?.focus();
   }
 
   async function kies(t: KvkTreffer): Promise<void> {
     const nummer = ++keuzeNummer.current;
     setOpen(false);
     setActief(-1);
+    setActiefBron(null);
     laatsteVraag.current = t.name.trim();
     setGekozen(t);
     zetTekst(t.name);
@@ -222,9 +243,14 @@ export function KvkZoeker({
       e.preventDefault();
       setOpen(true);
       const n = resultaten.length;
-      setActief((a) => (e.key === "ArrowDown" ? (a + 1) % n : a <= 0 ? n - 1 : a - 1));
+      const omlaag = e.key === "ArrowDown";
+      setActief((a) => pijlRij(a, n, omlaag));
+      setActiefBron("toets");
     } else if (e.key === "Enter") {
-      const gekozenRij = open ? resultaten[actief] : undefined;
+      // alleen een rij die met de pijltjestoetsen is geselecteerd; staat de muis alleen boven een rij, dan kiest Enter niets
+      // en blijft wat de bezoeker typte gewoon staan (vrije tekst)
+      const rij = enterKiest({ open, actief, bron: actiefBron, aantal: resultaten.length });
+      const gekozenRij = rij === null ? undefined : resultaten[rij];
       if (gekozenRij) {
         e.preventDefault(); // geen formulier versturen: dit was een keuze
         void kies(gekozenRij);
@@ -233,6 +259,7 @@ export function KvkZoeker({
       e.preventDefault();
       setOpen(false);
       setActief(-1);
+      setActiefBron(null);
     }
   }
 
@@ -244,7 +271,9 @@ export function KvkZoeker({
 
   const toonLijst = open && resultaten.length > 0;
   const toonLeeg = status === "klaar" && !gekozen && resultaten.length === 0 && magZoeken(tekst);
-  const label2 = gekozen ? keuzeLabel(gekozen) : null;
+  const label2 = gekozen ? keuzeLabel(gekozen, { register: teksten.gevondenRegister, osm: teksten.gevondenOsm }) : null;
+  // alleen een rij die met de pijltjestoetsen is geselecteerd telt voor de schermlezer; een rij onder de muis is alleen gemarkeerd
+  const toetsActief = actief >= 0 && actiefBron === "toets";
 
   return (
     <div className="relative">
@@ -262,7 +291,7 @@ export function KvkZoeker({
         aria-autocomplete="list"
         aria-haspopup="listbox"
         aria-describedby={statusId}
-        {...(toonLijst && actief >= 0 ? { "aria-activedescendant": optieId(actief) } : {})}
+        {...(toonLijst && toetsActief ? { "aria-activedescendant": optieId(actief) } : {})}
         required={required ?? false}
         autoComplete={autoComplete ?? "off"}
         placeholder={placeholder ?? teksten.zoekPlaceholder}
@@ -289,6 +318,12 @@ export function KvkZoeker({
           id={lijstId}
           role="listbox"
           aria-label={label}
+          // de muis weg uit de lijst: een rij die alleen onder de muis was gemarkeerd is het niet meer
+          onMouseLeave={() => {
+            if (actiefBron !== "muis") return;
+            setActief(-1);
+            setActiefBron(null);
+          }}
           className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-hairstrong bg-white shadow-lg"
         >
           {resultaten.map((r, i) => (
@@ -296,13 +331,18 @@ export function KvkZoeker({
               key={`${r.kvkNumber ?? "osm"}-${i}`}
               id={optieId(i)}
               role="option"
-              aria-selected={i === actief}
+              aria-selected={toetsActief && i === actief}
               // mousedown vóór blur: anders sluit het veld de lijst voordat de klik aankomt
               onMouseDown={(e) => {
                 e.preventDefault();
                 void kies(r);
               }}
-              onMouseEnter={() => setActief(i)}
+              // echte beweging van de muis (niet mouseenter, dat ook afgaat als de lijst onder een stilstaande muis schuift)
+              onMouseMove={() => {
+                if (i === actief && actiefBron === "muis") return;
+                setActief(i);
+                setActiefBron("muis");
+              }}
               className={`flex cursor-pointer items-start justify-between gap-2 px-3 py-2 text-left text-sm ${i === actief ? "bg-paper-soft" : "hover:bg-paper-soft"}`}
             >
               <span className="min-w-0">
@@ -331,19 +371,31 @@ export function KvkZoeker({
             )}
           </span>
         )}
-        {label2 && (
-          <span
-            className={
-              label2.register
-                ? "inline-flex items-center gap-1 rounded-full bg-trust-soft px-2 py-0.5 font-medium text-trust-ink"
-                : "text-neutralx-500"
-            }
-          >
-            {label2.register && <span aria-hidden="true">✓</span>}
-            {label2.tekst}
-          </span>
-        )}
       </div>
+
+      {/* de bevestiging na een keuze: wat er gekozen is, en een knop om opnieuw te kiezen (23 nov 2026) */}
+      {gekozen && label2 && (
+        <div className="mt-2 rounded-lg border border-hair bg-paper-soft px-3 py-2.5 text-sm text-ink">
+          <p role="status" className="break-words font-medium">
+            {gekozenTekst(gekozen, teksten.gekozen)}
+          </p>
+          <p className="mt-1 text-xs">
+            <span
+              className={
+                label2.register
+                  ? "inline-flex items-center gap-1 rounded-full bg-trust-soft px-2 py-0.5 font-medium text-trust-ink"
+                  : "text-neutralx-500"
+              }
+            >
+              {label2.register && <span aria-hidden="true">✓</span>}
+              {label2.tekst}
+            </span>
+          </p>
+          <button type="button" onClick={kiesOpnieuw} className="mt-1 inline-flex min-h-[44px] items-center font-medium text-brand-600 underline underline-offset-2">
+            {teksten.kiesOpnieuw}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

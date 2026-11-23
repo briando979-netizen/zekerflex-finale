@@ -10,7 +10,8 @@ import {
   type EmployerOnboardingState,
 } from "@/app/werkgever/onboarding/actions";
 import { KvkZoeker } from "@/components/kvk/KvkZoeker";
-import { useT } from "@/components/i18n/I18nProvider";
+import { useI18n, useT } from "@/components/i18n/I18nProvider";
+import { kvkTekstenVoor } from "@/lib/kvk/keuze";
 import { nl, fmt } from "@/lib/i18n/dictionaries";
 import { BUITEN_LANDEN, EU_LANDEN, landNaam, landSoort } from "@/lib/onboarding/buitenland";
 import { BRANCHE_OPTIES, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
@@ -95,6 +96,7 @@ export function EmployerOnboardingWizard({
   };
 }) {
   const o = useT().onboarding;
+  const { locale } = useI18n();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [kvkState, kvkFormAction] = useFormState<EmployerOnboardingState, FormData>(employerOnboardingAction, {
@@ -273,6 +275,7 @@ export function EmployerOnboardingWizard({
               label="Zoek je bedrijf in het Handelsregister"
               vulFormulier={{ kvk: "kvkNumber", address: "addressLine", houseNumber: "houseNumber", postalCode: "postalCode", name: "branchName" }}
               alleenAlsLeeg={["name"]}
+              teksten={kvkTekstenVoor(locale)}
             />
             {landKiezen ? (
               <label className="block">

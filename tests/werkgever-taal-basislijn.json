@@ -40,7 +40,6 @@
     "components/brain/BrainChat.tsx": 2,
     "components/chat/ChatDock.tsx": 3,
     "components/chat/InboxPage.tsx": 1,
-    "components/kvk/KvkZoeker.tsx": 1,
     "components/ritten/RittenBeheer.tsx": 25,
     "components/werkgever/AbonnementScherm.tsx": 4,
     "components/werkgever/BakenInstellingen.tsx": 4,
