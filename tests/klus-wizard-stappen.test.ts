@@ -142,7 +142,8 @@ describe("het formulier (bron-controle)", () => {
     expect(form).not.toMatch(/\*\s*3[.,]5\b/);
     // 23 nov 2026: alle bedragen op de cent (twee decimalen), het totaal is de som van loon en platformkosten, en de regel is de
     // gedeelde KostenLijst met één doorlopende scheidingslijn
-    expect(form).toContain('kostenBedragen(kosten, locale === "en" ? "en" : "nl")');
+    // de taal komt uit één plek (lib/klusconcept/weergave.ts): `const taal: WeergaveTaal = locale === "en" ? "en" : "nl"`
+    expect(form).toContain("const bedragen = kostenBedragen(kosten, taal);");
     expect(form).toContain("totaal: bedragen.totaal,");
     expect(form).toContain("<KostenLijst");
     expect(form).not.toMatch(/maximumFractionDigits: 0|euroHeel/);
