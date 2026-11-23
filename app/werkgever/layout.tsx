@@ -13,7 +13,8 @@ import { DemoBanner } from "@/components/app/DemoBanner";
 import { DEMO_BANNER_WERKGEVER } from "@/components/app/demo-banner-texts";
 import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
 import { EmployerShell } from "@/components/app/EmployerShell";
-import { getUserAvatars } from "@/lib/profile/store";
+import { getOrgProfileExtra, getUserAvatars } from "@/lib/profile/store";
+import { bedrijfsprofielOnvolledig } from "@/lib/werkgever/bedrijfsprofiel";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
@@ -56,7 +57,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars, birthday, werkruimte, alleenFlexwerk] = await Promise.all([
+  const [tenant, rating, avatars, birthday, werkruimte, alleenFlexwerk, profielExtra] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
@@ -67,6 +68,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     werkruimteVan(tenantId),
     // vlag `publiek-alleen-flexwerk`: samengevoegde ingangen en een kort startmenu (lib/werkgever/werkruimte.ts)
     alleenFlexwerkAan().catch(() => false),
+    // de stip bij Instellingen: het bedrijfsprofiel is nog niet af (lib/werkgever/bedrijfsprofiel.ts); een storing zegt: geen stip
+    tenantId ? getOrgProfileExtra(tenantId).catch(() => null) : Promise.resolve(null),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
   // in een voorbeeld (demo) wordt de uitlogknop een gewone uitgang-link (lib/auth/demo-sessie.ts)
@@ -153,8 +156,9 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
         // "ZekerFlex OS" onderin de zijbalk: met de vlag aan alleen voor een platformbeheerder (een bedrijf dat personeel zoekt snapt het niet, 20 nov)
         toonOs={!alleenFlexwerk || hasRole(principal, "PLATFORM_ADMIN")}
-        // met de vlag aan één plek voor bedrijfsgegevens: Bedrijfsprofiel (met daar een knop Instellingen), geen losse regel onderin
-        toonInstellingen={!alleenFlexwerk}
+        // "Instellingen" onderin de zijbalk staat er voor elk bedrijf, ook met de vlag aan (eigenaar, 23 nov 2026: zoals bij YoungOnes;
+        // het besluit van 20 nov "één plek voor bedrijfsgegevens" is vervangen). De stip: alleen voor wie het profiel mag aanvullen.
+        profielOnvolledig={profielExtra !== null && hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") && bedrijfsprofielOnvolledig(profielExtra)}
         {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}
       >
         {/* de opbouwfase-melding staat sinds 22 nov 2026 alleen op het startscherm (app/werkgever/page.tsx) */}

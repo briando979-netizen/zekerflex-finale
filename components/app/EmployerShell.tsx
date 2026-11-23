@@ -56,13 +56,17 @@ export function EmployerShell({
   settingsHref = "/werkgever/instellingen",
   demoUitgang,
   toonOs = true,
-  toonInstellingen = true,
+  profielOnvolledig = false,
   children,
 }: {
   /** de ingang "ZekerFlex OS" onderin de zijbalk; met de vlag `publiek-alleen-flexwerk` aan alleen voor een platformbeheerder (20 nov) */
   toonOs?: boolean;
-  /** de losse regel "Instellingen" onderin; met de vlag aan weg, want Bedrijfsprofiel heeft dan een knop Instellingen (één plek, 20 nov) */
-  toonInstellingen?: boolean;
+  /**
+   * een kleine stip bij "Instellingen" zolang het bedrijfsprofiel niet af is (lib/werkgever/bedrijfsprofiel.ts), zoals de rode stip bij
+   * YoungOnes. De regel "Instellingen" zelf staat er voor elk bedrijf: het besluit van 20 nov (met de vlag `publiek-alleen-flexwerk` weg,
+   * "één plek voor bedrijfsgegevens") is op 23 nov 2026 teruggedraaid door de eigenaar, die Instellingen wil zoals bij YoungOnes.
+   */
+  profielOnvolledig?: boolean;
   nav: NavItem[];
   locale: Locale;
   theme: Theme;
@@ -239,22 +243,24 @@ export function EmployerShell({
             {!collapsed && "ZekerFlex OS"}
           </a>
           )}
-          {toonInstellingen && (
+          {/* Instellingen staat er voor elk bedrijf (eigenaar, 23 nov 2026: zoals bij YoungOnes), onderaan de zijbalk als laatste ingang.
+              De stip (amber = wacht op jou) verdwijnt zodra het bedrijfsprofiel af is. `relative`: de sr-only tekst blijft in deze regel. */}
           <Link
             href={settingsHref}
             onClick={() => setOpen(false)}
             title={collapsed ? t.shell.settings : undefined}
             aria-current={isActive(settingsHref) ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+            className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               collapsed ? "justify-center" : ""
             } ${isActive(settingsHref) ? "bg-white text-brand-700 shadow-e1" : "text-neutralx-600 hover:bg-white hover:text-ink"}`}
           >
-            <span className={`grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg ${isActive(settingsHref) ? "bg-brand-50 text-brand-600" : "text-neutralx-400"}`}>
+            <span className={`relative grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg ${isActive(settingsHref) ? "bg-brand-50 text-brand-600" : "text-neutralx-400"}`}>
               <SettingsGlyph />
+              {profielOnvolledig && <span aria-hidden className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-warn" />}
             </span>
             {!collapsed && t.shell.settings}
+            {profielOnvolledig && <span className="sr-only"> ({t.shell.profileIncomplete})</span>}
           </Link>
-          )}
           <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
             <button
               title={collapsed ? t.shell.logout : undefined}

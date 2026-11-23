@@ -65,6 +65,8 @@ export const nl = {
     menuCompany: "Bedrijfsprofiel",
     menuWorkerWorkspace: "Werkersomgeving",
     orgFallback: "Je organisatie",
+    // de stip bij Instellingen in de zijbalk (alleen voor een schermlezer: het bedrijfsprofiel is nog niet af)
+    profileIncomplete: "bedrijfsprofiel nog niet af",
   },
   // de persoonlijke accountpagina in de werkgeversapp (/werkgever/account, 15 nov 2026: was alleen Nederlands)
   persoonlijkAccount: {
