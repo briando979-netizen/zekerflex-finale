@@ -14,6 +14,13 @@ import { naamVoorMatch } from "@/lib/werkgever/naam";
 export const CONTACT_NAZORG_DAGEN = 14;
 export const CONTACT_NAZORG_MS = CONTACT_NAZORG_DAGEN * 86_400_000;
 
+/**
+ * Schakelaar: telefoon en e-mail van een ingeplande kracht tonen aan het bedrijf. Staat UIT tot de privacyverklaring en de
+ * melding aan de werker bij het reageren er zijn (besluit eigenaar 23 nov 2026: ja, na het inplannen). Zet pas op true als
+ * die twee live staan.
+ */
+export const CONTACT_NA_MATCH_AAN: boolean = false;
+
 export interface Inplanning {
   cancelledAt: Date | null;
   shift: { status: string; endsAt: Date };

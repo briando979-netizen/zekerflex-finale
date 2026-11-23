@@ -8,7 +8,7 @@ import { buildCandidateCard } from "@/lib/employer/candidate-card";
 import { isFollowing } from "@/lib/worker/follows";
 import { getEmployerRelations, type EmployerRelations } from "@/lib/employer/relations";
 import { inplanningenBij } from "@/lib/employer/match";
-import { contactZichtbaar, naamBekend } from "@/lib/employer/match-kern";
+import { CONTACT_NA_MATCH_AAN, contactZichtbaar, naamBekend } from "@/lib/employer/match-kern";
 import { recordAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
@@ -61,7 +61,7 @@ export async function GET(request: Request): Promise<Response> {
       inplanningenBij(tenantId, profile.id),
       getEmployerRelations(tenantId).catch((): EmployerRelations => ({ favorites: [], blocked: [] })),
     ]);
-    const contact = contactZichtbaar(inplanningen, nu);
+    const contact = CONTACT_NA_MATCH_AAN && contactZichtbaar(inplanningen, nu);
 
     const [card, followsYou] = await Promise.all([
       buildCandidateCard(userId, nu, { tenantId, naamBekend: naamBekend(inplanningen), contact }),
