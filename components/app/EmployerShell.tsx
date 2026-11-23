@@ -25,6 +25,9 @@ import { naamInitialen } from "@/lib/naam/initialen";
 // left untouched.
 // ---------------------------------------------------------------------------
 
+/** een regel in het gebruikersmenu rechtsboven: minstens 44 px hoog om te tikken */
+const menuRij = "flex min-h-11 items-center rounded-lg px-3 text-sm text-ink hover:bg-paper-soft";
+
 function Stars({ value }: { value: number }) {
   return (
     <span className="inline-flex" aria-hidden>
@@ -376,24 +379,26 @@ export function EmployerShell({
                 </span>
               </button>
               {userMenu && (
-                <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-hair bg-white p-1.5 shadow-lift">
-                  <p className="px-3 py-1.5 text-xs text-neutralx-400">{userMeta}</p>
-                  <Link href={settingsHref} className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
-                    {t.shell.menuSettings}
+                <div className="absolute right-0 top-full z-30 mt-1 w-56 rounded-xl border border-hair bg-white p-1.5 shadow-lift">
+                  <p className="truncate px-3 py-1.5 text-xs text-neutralx-400">{userMeta}</p>
+                  {/* zoals bij YoungOnes (23 nov 2026): Persoonlijke instellingen, Notificatievoorkeuren en Uitloggen. Instellingen en
+                      Bedrijfsprofiel staan altijd in de zijbalk; de mailvoorkeuren staan op de bedrijfspagina (anker #notificaties). */}
+                  <Link href="/werkgever/account" onClick={() => setUserMenu(false)} className={menuRij}>
+                    {t.shell.menuPersonal}
+                  </Link>
+                  <Link href="/werkgever/bedrijf#notificaties" onClick={() => setUserMenu(false)} className={menuRij}>
+                    {t.shell.menuNotifications}
                   </Link>
                   {canSwitchToFreelancer && (
-                    <Link href="/dashboard/klussen" className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
+                    <Link href="/dashboard/klussen" onClick={() => setUserMenu(false)} className={menuRij}>
                       {t.shell.menuWorkerWorkspace}
                     </Link>
                   )}
-                  <Link href="/werkgever/bedrijf" className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
-                    {t.shell.menuCompany}
-                  </Link>
-                  <Link href="/" className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
+                  <Link href="/" onClick={() => setUserMenu(false)} className={menuRij}>
                     {t.common.naarWebsite}
                   </Link>
                   <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
-                    <button className="block w-full rounded-lg px-3 py-2 text-left text-sm text-crit hover:bg-crit/5">
+                    <button className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm text-crit hover:bg-crit/5">
                       {t.shell.logout}
                     </button>
                   </form>

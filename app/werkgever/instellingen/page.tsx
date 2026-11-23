@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
+import { heeftOmslagfoto } from "@/lib/werkgever/bedrijfsprofiel";
 import { getDict } from "@/lib/i18n/server";
 import { PushToggle } from "@/components/app/PushToggle";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
@@ -18,6 +19,7 @@ import {
   IHeart,
   IList,
   IActivity,
+  IBell,
 } from "@/components/app/icons";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +32,10 @@ interface Card {
   soon?: boolean;
   /** een gewone link (download of mail), geen pagina van de app: zonder Link, zodat er niets wordt voorgeladen */
   gewoon?: boolean;
+  /** een kleine stip bij het pictogram: wacht op jou (amber), zoals de rode stip bij YoungOnes */
+  stip?: boolean;
+  /** de woorden voor een schermlezer bij de stip */
+  stipTekst?: string;
 }
 
 export default async function InstellingenPage() {
@@ -39,30 +45,42 @@ export default async function InstellingenPage() {
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
   const extra = tenantId ? await getOrgProfileExtra(tenantId) : {};
-  const hasCover = Boolean(extra.photoUploadId || extra.onboarding?.coverStepDone);
+  // dezelfde regel als de stip bij Instellingen in de zijbalk (lib/werkgever/bedrijfsprofiel.ts)
+  const hasCover = heeftOmslagfoto(extra);
   // vlag `publiek-alleen-flexwerk`: de API-koppelingen (het ontwikkelaarsportaal is verborgen) niet meer als kaart
   const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
 
+  // Elke kaart wijst naar de plek waar je het ook echt doet (23 nov 2026, eigenaar: "exact overnemen wat YoungOnes heeft"). Waar een eigen
+  // pagina nog niet bestaat, wijst de kaart naar het dichtstbijzijnde scherm en staat dat hieronder:
+  //  - Contactinformatie: de contactpersoon bij een klus is nu de vestigingsmanager of een beheerder (lib/messaging/contacts.ts), dus
+  //    /werkgever/team. Wacht op ronde 2 (C6): een eigen lijst contactpersonen op /werkgever/instellingen/contactpersonen.
+  //  - Verwerkersovereenkomst: de openbare tekst /verwerkersovereenkomst. Wacht op ronde 2 (C4): versies, ondertekenen en downloaden.
+  //  - Notificaties: de mailvoorkeuren onderaan Bedrijfsprofiel (#notificaties). Wacht op ronde 2 (B3/C8): een eigen pagina met
+  //    een schakelaar per gebeurtenis.
+  //  - Factuurgegevens: het blok "Meer instellingen voor je boekhouding" op Facturen (#factuurgegevens klapt het open). Wacht op
+  //    ronde 2 (C2): een eigen pagina met tenaamstelling, t.a.v., KVK en btw.
   const bedrijf: Card[] = [
-    { title: s.cProfileT, sub: s.cProfileS, href: "/werkgever/bedrijf", icon: <IUser /> },
+    { title: s.cProfileT, sub: s.cProfileS, href: "/werkgever/bedrijf", icon: <IUser />, ...(hasCover ? {} : { stip: true, stipTekst: d.shell.profileIncomplete }) },
     { title: s.cReviewsT, sub: s.cReviewsS, href: "/werkgever/reviews", icon: <IActivity /> },
-    { title: s.cContactT, sub: s.cContactS, href: "/werkgever/bedrijf", icon: <IMail /> },
+    { title: s.cContactT, sub: s.cContactS, href: "/werkgever/team", icon: <IMail /> },
     { title: s.cLocationsT, sub: s.cLocationsS, href: "/werkgever/locaties", icon: <IPin /> },
-    { title: s.cCostT, sub: s.cCostS, href: "/werkgever/facturen", icon: <IHash /> },
+    { title: s.cCostT, sub: s.cCostS, href: "/werkgever/instellingen/kostenplaatsen", icon: <IHash /> },
     { title: s.cUsersT, sub: s.cUsersS, href: "/werkgever/team", icon: <IUsers /> },
     ...(alleenFlexwerk ? [] : [{ title: s.cApiT, sub: s.cApiS, href: "/werkgever/integraties", icon: <IKey /> }]),
-    { title: s.cDpaT, sub: s.cDpaS, href: "/werkgever/overeenkomsten", icon: <IDoc /> },
+    // de openbare tekst staat buiten de app: een gewone link, zonder voorladen
+    { title: s.cDpaT, sub: s.cDpaS, href: "/verwerkersovereenkomst", icon: <IDoc />, gewoon: true },
   ];
 
   const klussen: Card[] = [
     { title: s.cTemplatesT, sub: s.cTemplatesS, href: "/werkgever/templates", icon: <IGrid /> },
-    { title: s.cLabelsT, sub: s.cLabelsS, href: "/werkgever/favorieten", icon: <IHeart /> },
-    { title: s.cShiftSettingsT, sub: s.cShiftSettingsS, href: "/werkgever/bedrijf", icon: <IList /> },
+    { title: s.cLabelsT, sub: s.cLabelsS, href: "/werkgever/favorieten/pools", icon: <IHeart /> },
+    { title: s.cShiftSettingsT, sub: s.cShiftSettingsS, href: "/werkgever/instellingen/klussen", icon: <IList /> },
+    { title: s.cNotifT, sub: s.cNotifS, href: "/werkgever/bedrijf#notificaties", icon: <IBell /> },
   ];
 
   // met de vlag aan is er geen abonnement meer te kiezen (prijs per gewerkt uur): de kaart valt weg, de pagina blijft bereikbaar
   const facturatie: Card[] = [
-    { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/facturen", icon: <IDoc /> },
+    { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/facturen#factuurgegevens", icon: <IDoc /> },
     ...(alleenFlexwerk ? [] : [{ title: "Abonnement en uitbreidingen", sub: "Wat je nu hebt en wat je erbij kunt nemen", href: "/werkgever/abonnement", icon: <IGrid /> }]),
   ];
 
@@ -118,12 +136,14 @@ function Section({ title, cards, soonLabel }: { title: string; cards: Card[]; so
         {cards.map((c) => {
           const inner = (
             <>
-              <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-paper-soft text-crit">
+              <span className="relative grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-paper-soft text-crit">
                 {c.icon}
+                {c.stip && <span aria-hidden className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-warn" />}
               </span>
               <span className="min-w-0">
                 <span className="flex items-center gap-2">
                   <span className="text-sm font-bold text-ink">{c.title}</span>
+                  {c.stip && c.stipTekst && <span className="sr-only"> ({c.stipTekst})</span>}
                   {c.soon && (
                     <span className="rounded-full bg-paper-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase text-neutralx-400">
                       {soonLabel}
@@ -135,7 +155,7 @@ function Section({ title, cards, soonLabel }: { title: string; cards: Card[]; so
             </>
           );
           const cls =
-            "flex items-start gap-3 rounded-xl border border-hair bg-white p-4 shadow-card transition";
+            "relative flex items-start gap-3 rounded-xl border border-hair bg-white p-4 shadow-card transition";
           return c.href && !c.soon && c.gewoon ? (
             <a key={c.title} href={c.href} className={`${cls} hover:-translate-y-0.5 hover:border-brand-300`}>
               {inner}

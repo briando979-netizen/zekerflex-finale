@@ -121,7 +121,8 @@ export default async function WerkgeverBedrijfPage() {
         <FastPaySettings />
       </div>
 
-      <div className="mt-6">
+      {/* #notificaties: de kaart Notificaties op Instellingen en "Notificatievoorkeuren" in het gebruikersmenu komen hier uit, tot er een eigen pagina is */}
+      <div id="notificaties" className="mt-6 scroll-mt-24">
         <Panel title={c.mailPanel}>
           <div className="p-5">
             <p className="mb-4 text-sm text-neutralx-600">{c.mailIntro}</p>
