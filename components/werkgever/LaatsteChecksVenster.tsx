@@ -4,9 +4,10 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { vraagControleAanAction } from "@/app/werkgever/onboarding/controle-actions";
-import { KvkZoeker, type KvkZoekerTeksten } from "@/components/kvk/KvkZoeker";
-import { useT } from "@/components/i18n/I18nProvider";
+import { KvkZoeker } from "@/components/kvk/KvkZoeker";
+import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { kvkTekstenVoor } from "@/lib/kvk/keuze";
 import { BUITEN_LANDEN, EU_LANDEN, landSoort } from "@/lib/onboarding/buitenland";
 import {
   controleerControleInvoer,
@@ -40,6 +41,7 @@ export function LaatsteChecksVenster({
   onGecontroleerd: () => void;
 }) {
   const t = useT().laatsteChecks;
+  const { locale } = useI18n();
   const router = useRouter();
   const id = useId();
   const titelId = `${id}-titel`;
@@ -65,15 +67,7 @@ export function LaatsteChecksVenster({
     eersteRef.current?.focus();
   }, []);
 
-  const zoekTeksten: KvkZoekerTeksten = {
-    zoekPlaceholder: t.zoekPlaceholder,
-    laden: t.zoekLaden,
-    nietGevonden: t.zoekNietGevonden,
-    zoekOsm: t.zoekOsm,
-    bezet: t.zoekBezet,
-    aantal: t.zoekAantal,
-    nietActief: t.zoekNietActief,
-  };
+  const zoekTeksten = kvkTekstenVoor(locale);
 
   const veldTekst = (veld: ControleVeld, code: ControleFout): string => {
     if (code === "leeg") return t.foutLeeg;
