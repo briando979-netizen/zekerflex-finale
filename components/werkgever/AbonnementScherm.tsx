@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { HuidigAbonnement, PlanRegel, UitbreidingGroep } from "@/lib/abonnement/overzicht";
 import { REGEL_OP_WEBSITE } from "@/lib/abonnement/overzicht";
+import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 
 // Abonnement en uitbreidingen. Kleuren: geld = goud (money), "wacht op jou" = amber (warn).
 // In de Android- en iPhone-app staat hier nooit een koopknop (Play en Apple hebben eigen betaalregels
@@ -42,10 +43,11 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
 
   return (
     <div className="space-y-10">
-      <header>
-        <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-ink">Abonnement en uitbreidingen</h1>
-        <p className="mt-2 max-w-2xl text-sm text-neutralx-600">Hier zie je wat je nu hebt en wat je erbij kunt nemen. Je betaalt alleen voor wat je zelf aanzet.</p>
-      </header>
+      {/* een onderpagina van Instellingen: dezelfde kop met "Terug naar instellingen" als de rest (23 nov 2026) */}
+      <InstellingenKop
+        title="Abonnement en uitbreidingen"
+        subtitle="Hier zie je wat je nu hebt en wat je erbij kunt nemen. Je betaalt alleen voor wat je zelf aanzet."
+      />
 
       {inApp && (
         <div role="note" className="rounded-2xl bg-white p-5 shadow-card">

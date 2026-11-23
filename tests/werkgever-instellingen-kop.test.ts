@@ -65,6 +65,14 @@ describe("de onderpagina's van Instellingen", () => {
     expect(bron, adres).not.toContain("← {d.shell.settings}");
   });
 
+  it("Abonnement en uitbreidingen (alleen bereikbaar via Instellingen) heeft de kop in zijn scherm", () => {
+    expect(existsSync(path.join(process.cwd(), "app/werkgever/abonnement/page.tsx"))).toBe(true);
+    const scherm = lees("components/werkgever/AbonnementScherm.tsx");
+    expect(scherm).toContain("<InstellingenKop");
+    expect(scherm).toContain('title="Abonnement en uitbreidingen"');
+    expect(scherm).not.toContain("<h1");
+  });
+
   it("de pagina's met een eigen titel in het woordenboek geven die door als title", () => {
     expect(lees("app/werkgever/favorieten/pools/page.tsx")).toContain("title={t.pools.title}");
     expect(lees("app/werkgever/locaties/page.tsx")).toContain("<InstellingenKop title={l.title} subtitle={l.subtitle} />");
