@@ -4,7 +4,8 @@ import { getDict } from "@/lib/i18n/server";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { incheckenVereist } from "@/lib/checkin/vereist";
 import { automatischHeropenen } from "@/lib/werkgever/heropenen";
-import { EmptyState, Panel } from "@/components/app/ui";
+import { EmptyState } from "@/components/app/ui";
+import { Kaart } from "@/components/werkgever/Kaart";
 import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { HeropenenInstelling } from "@/components/werkgever/HeropenenInstelling";
 import { MaxUrenInstelling } from "@/components/werkgever/MaxUrenInstelling";
@@ -43,17 +44,18 @@ export default async function KlusInstellingenPage() {
       <InstellingenKop title={k.titel} />
       {/* één kolom, zoals bij YoungOnes: elke instelling in een eigen kaart met uitleg */}
       <div className="max-w-2xl space-y-6">
-        <Panel title={k.heropenenTitel}>
+        {/* de gedeelde kaart van de werkgeversapp (components/werkgever/Kaart.tsx); de instelling zelf heeft haar eigen ruimte */}
+        <Kaart titel={k.heropenenTitel} vulling={false}>
           <HeropenenInstelling initial={heropenen} kanBeheren={hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN")} />
-        </Panel>
+        </Kaart>
         {/* maximum uren per werker per 12 maanden (lib/werkgever/max-uren.ts) */}
-        <Panel title={d.company.maxUrenTitel}>
+        <Kaart titel={d.company.maxUrenTitel} vulling={false}>
           <MaxUrenInstelling initial={extra.maxUrenPerWerker ?? 0} />
-        </Panel>
+        </Kaart>
         {/* inchecken door je werkers: ja (standaard) of nee, dan is jouw goedkeuring van de uren het bewijs */}
-        <Panel title={d.company.incheckTitel}>
+        <Kaart titel={d.company.incheckTitel} vulling={false}>
           <IncheckenInstelling initial={incheckVereist} />
-        </Panel>
+        </Kaart>
       </div>
     </>
   );

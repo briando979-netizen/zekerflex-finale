@@ -202,12 +202,19 @@ describe("de schakelaar", () => {
   const schakelaar = lees("components/werkgever/HeropenenInstelling.tsx");
 
   it("is een echte schakelaar met een naam, een uitleg en een tikdoel van minstens 44 px", () => {
-    expect(schakelaar).toContain('role="switch"');
-    expect(schakelaar).toContain("aria-checked={aan}");
-    expect(schakelaar).toContain("aria-label={c.heropenenTitel}");
-    expect(schakelaar).toContain('aria-describedby="heropenen-uitleg"');
-    expect(schakelaar).toContain("min-h-11");
-    expect(schakelaar).toContain("disabled={bezig || !kanBeheren}");
+    // 23 nov 2026: de schakelaar zelf is het gedeelde onderdeel van de werkgeversapp; dit scherm geeft de naam, de uitleg en de stand door
+    const gedeeld = lees("components/werkgever/Schakelaar.tsx");
+    expect(gedeeld).toContain('role="switch"');
+    expect(gedeeld).toContain("aria-checked={aan}");
+    expect(gedeeld).toContain("aria-label={label}");
+    expect(gedeeld).toContain("aria-describedby={beschrijvingId}");
+    expect(gedeeld).toContain("min-h-11");
+    expect(gedeeld).toContain("disabled={uit}");
+    expect(schakelaar).toContain("<Schakelaar");
+    expect(schakelaar).toContain("label={c.heropenenTitel}");
+    expect(schakelaar).toContain('beschrijvingId="heropenen-uitleg"');
+    expect(schakelaar).toContain('id="heropenen-uitleg"');
+    expect(schakelaar).toContain("uit={bezig || !kanBeheren}");
   });
 
   it("bewaart meteen en neemt de stand van de server over; een fout is role=alert, een gelukt-melding role=status", () => {

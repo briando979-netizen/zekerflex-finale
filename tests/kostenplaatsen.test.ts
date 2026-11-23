@@ -251,7 +251,12 @@ describe("het scherm en de teksten", () => {
     expect(scherm).toContain("<InstellingenKop");
     expect(scherm).toContain("action={");
     expect(scherm).toContain("{k.nieuw}");
-    expect(scherm).toContain("<OnderSheet");
+    // 23 nov 2026: de lijst en de dialoog zijn de gedeelde bouwstenen van de werkgeversapp (de dialoog is het sheet-patroon van OnderSheet)
+    expect(scherm).toContain("<LijstTabel");
+    expect(scherm.match(/<Dialoog\b/g)?.length).toBe(2);
+    expect(scherm).toContain("onVerstuur={opslaan}");
+    expect(scherm).not.toContain("<form");
+    expect(lees("components/werkgever/Dialoog.tsx")).toContain("<OnderSheet");
     expect(scherm).toContain("setRijen(d.kostenplaatsen as Rij[]);");
     expect(scherm.match(/<input\b/g)?.length).toBe(1);
     expect(scherm).toContain('htmlFor="kostenplaats-naam"');
