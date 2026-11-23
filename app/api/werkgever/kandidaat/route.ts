@@ -7,12 +7,12 @@ import { myOfferForShift } from "@/lib/offers/store";
 import { buildCandidateCard } from "@/lib/employer/candidate-card";
 import { isFollowing } from "@/lib/worker/follows";
 import { getEmployerRelations, type EmployerRelations } from "@/lib/employer/relations";
+import { inplanningenBij } from "@/lib/employer/match";
+import { contactZichtbaar, naamBekend } from "@/lib/employer/match-kern";
+import { recordAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** zo lang na het einde van een klus blijven de contactgegevens van een ingeplande kracht zichtbaar (urencontrole, nabellen) */
-const MATCH_NAZORG_MS = 14 * 86_400_000;
 
 // GET /api/werkgever/kandidaat?userId=..&shiftId=..
 // De opdrachtgever mag de profielkaart van een freelancer alleen zien zodra die
@@ -52,27 +52,36 @@ export async function GET(request: Request): Promise<Response> {
       return NextResponse.json({ error: { code: "FORBIDDEN", message: "Deze freelancer heeft (nog) niet op deze klus gereageerd" } }, { status: 403 });
     }
 
-    // "De match" (23 nov 2026): de werker staat ingepland op een klus van dit bedrijf die nog loopt of hooguit twee weken
-    // geleden afliep. Pas dan geeft de kaart de volledige naam, het telefoonnummer en het e-mailadres; wie alleen
-    // reageerde blijft afgeschermd (tests/kluspagina-privacy.test.ts).
+    // "De match" (23 nov 2026, lib/employer/match-kern.ts): de volledige naam zodra de werker ooit bij dit bedrijf is ingepland;
+    // telefoon en e-mail alleen zolang hij is ingepland op een klus die nog loopt of hooguit 14 dagen geleden afliep. Wie alleen
+    // reageerde blijft afgeschermd (tests/kluspagina-privacy.test.ts). De match komt uit de database, nooit uit het verzoek.
     const tenantId = shift.branch.tenantId;
     const nu = new Date();
-    const [matchCount, rel] = await Promise.all([
-      prisma.shiftAssignment.count({
-        where: {
-          freelancerId: profile.id,
-          cancelledAt: null,
-          shift: { branch: { tenantId }, status: { not: "CANCELLED" }, endsAt: { gte: new Date(nu.getTime() - MATCH_NAZORG_MS) } },
-        },
-      }),
+    const [inplanningen, rel] = await Promise.all([
+      inplanningenBij(tenantId, profile.id),
       getEmployerRelations(tenantId).catch((): EmployerRelations => ({ favorites: [], blocked: [] })),
     ]);
+    const contact = contactZichtbaar(inplanningen, nu);
 
     const [card, followsYou] = await Promise.all([
-      buildCandidateCard(userId, nu, { tenantId, gematcht: matchCount > 0 }),
+      buildCandidateCard(userId, nu, { tenantId, naamBekend: naamBekend(inplanningen), contact }),
       isFollowing(userId, tenantId).catch(() => false),
     ]);
     if (!card) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Profiel niet gevonden" } }, { status: 404 });
+    // Vastleggen dát een bedrijf de contactgegevens van een ingeplande kracht zag (wie, van wie, bij welke klus): nooit de
+    // waarden zelf, niet hier en niet in een log.
+    if (card.contact) {
+      await recordAudit({
+        category: "MATCHING",
+        action: "worker.contact.shown",
+        actorUserId: principal.userId,
+        actorLabel: "user",
+        summary: "Contactgegevens van een ingeplande kracht getoond aan het bedrijf",
+        targetType: "user",
+        targetId: userId,
+        metadata: { shiftId, tenantId },
+      });
+    }
     return NextResponse.json({
       card: {
         ...card,

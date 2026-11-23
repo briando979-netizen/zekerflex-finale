@@ -22,8 +22,10 @@ import { gewerktBij, groepeerReviews, type FunctieGroep, type KlusVoorGroep } fr
 //
 // Sinds 23 nov 2026 ook (naar de profielkaart van YoungOnes): de drie cijfers over 6 maanden, de verdeling per ster, de
 // beoordeling per sector en functie met "Gewerkt bij", de eigen werkervaring en de bedrijven waar via ZekerFlex is gewerkt.
-// Privacy: vóór de match (`gematcht` = ingepland bij dit bedrijf) staat de achternaam er niet voluit en worden telefoon en
-// e-mail niet eens opgevraagd. Nooit in de kaart: adres, postcode voluit, geboortedatum, ID-gegevens.
+// Privacy (lib/employer/match-kern.ts): de achternaam staat er pas voluit als de werker ooit bij dit bedrijf is ingepland;
+// telefoon en e-mail worden alleen opgevraagd zolang hij is ingepland (tot 14 dagen na de klus), anders bestaan ze hier niet.
+// De werkervaring staat er alleen als de werker dat zelf heeft aangezet (lib/werker/ervaring-store.ts, standaard uit).
+// Nooit in de kaart: adres, postcode voluit, geboortedatum, ID-gegevens.
 // ---------------------------------------------------------------------------
 
 export interface CandidateHistoryItem {
@@ -36,7 +38,7 @@ export interface CandidateHistoryItem {
 
 export interface CandidateCard {
   userId: string;
-  /** vóór de match alleen de voornaam en de eerste letter van de achternaam (lib/werkgever/naam.ts) */
+  /** tot de eerste inplanning alleen de voornaam en de eerste letter van de achternaam (lib/werkgever/naam.ts) */
   name: string;
   avatarUrl: string | null;
   badge: string;
@@ -53,15 +55,15 @@ export interface CandidateCard {
   history: CandidateHistoryItem[];
   /** Volgt deze werker het bedrijf dat de kaart bekijkt? (lib/worker/follows) */
   followsYou?: boolean;
-  /** ingepland bij dit bedrijf: dan pas de volledige naam en de contactgegevens */
+  /** nu ingepland bij dit bedrijf (tot 14 dagen na de klus): dan staan de contactgegevens erbij */
   matched: boolean;
-  /** telefoon en e-mail; null vóór de match (de kaart toont dan een afgeschermd vlak) */
+  /** telefoon en e-mail; null buiten die periode (de kaart toont dan een afgeschermd vlak) */
   contact: { phone: string | null; email: string } | null;
   /** gematchte klussen, niet voltooid en vervanging geregeld over de laatste 6 maanden (lib/employer/prestaties-kern.ts) */
   prestaties: Prestaties;
   /** beoordelingen per sector en functie, met de bedrijven waar gewerkt is */
   perFunctie: FunctieGroep[];
-  /** werkervaring die de werker zelf invulde (lib/werker/ervaring.ts) */
+  /** werkervaring die de werker zelf invulde (lib/werker/ervaring.ts); leeg zolang de werker hem niet deelt met bedrijven */
   ervaring: { functie: string; bedrijf: string; vanMaand: number; vanJaar: number; nu: boolean; totMaand: number | null; totJaar: number | null; omschrijving: string }[];
   /** bedrijven waar de werker via ZekerFlex werkte */
   gewerktBij: string[];
@@ -76,12 +78,15 @@ const GEEN_VERDELING: ReviewSummary["distribution"] = { 1: 0, 2: 0, 3: 0, 4: 0, 
 export interface KaartOpties {
   /** het bedrijf dat de kaart bekijkt: bepaalt welke bedrijven in de kaart verborgen blijven (eigen test) */
   tenantId?: string | undefined;
-  /** de werker is ingepland bij dit bedrijf (bepaald in de API): volledige naam en contactgegevens */
-  gematcht?: boolean | undefined;
+  /** de werker is ooit bij dit bedrijf ingepland (bepaald in de API): de volledige naam */
+  naamBekend?: boolean | undefined;
+  /** de werker is nu bij dit bedrijf ingepland, tot 14 dagen na de klus (bepaald in de API): telefoon en e-mail */
+  contact?: boolean | undefined;
 }
 
 export async function buildCandidateCard(freelancerUserId: string, now = new Date(), opties: KaartOpties = {}): Promise<CandidateCard | null> {
-  const gematcht = opties.gematcht === true;
+  const metContact = opties.contact === true;
+  const naamVoluit = metContact || opties.naamBekend === true;
   const user = await prisma.user.findUnique({
     where: { id: freelancerUserId },
     select: {
@@ -101,7 +106,7 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
   if (!user?.freelancerProfile) return null;
   const fp = user.freelancerProfile;
 
-  const [assignments, summary, alleReviews, certs, avatars, ervaring, verborgen, contact] = await Promise.all([
+  const [assignments, summary, alleReviews, certs, avatars, ervaring, verborgen, contactRij] = await Promise.all([
     prisma.shiftAssignment.findMany({
       where: { freelancerId: fp.id },
       select: {
@@ -130,8 +135,8 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
     getUserAvatars([freelancerUserId]).catch(() => ({}) as Record<string, boolean>),
     getErvaring(freelancerUserId, now).catch((): ErvaringStand => ({ items: [], geen: false })),
     opties.tenantId ? verborgenVoorBedrijf(opties.tenantId).catch(() => new Set<string>()) : Promise.resolve(new Set<string>()),
-    // telefoon en e-mail worden alleen opgevraagd als de werker bij dit bedrijf is ingepland; anders bestaan ze hier niet
-    gematcht ? prisma.user.findUnique({ where: { id: freelancerUserId }, select: { phone: true, email: true } }) : Promise.resolve(null),
+    // telefoon en e-mail worden alleen opgevraagd zolang de werker bij dit bedrijf is ingepland; anders bestaan ze hier niet
+    metContact ? prisma.user.findUnique({ where: { id: freelancerUserId }, select: { phone: true, email: true } }) : Promise.resolve(null),
   ]);
 
   const active = assignments.filter((a) => !a.cancelledAt);
@@ -185,7 +190,7 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
 
   return {
     userId: freelancerUserId,
-    name: gematcht ? user.fullName : naamVoorMatch(user.fullName),
+    name: naamVoluit ? user.fullName : naamVoorMatch(user.fullName),
     avatarUrl: avatarUrlFor(freelancerUserId, Boolean(avatars[freelancerUserId])),
     badge: fp.badgeLevel,
     area: gebiedVan(fp.homePostalCode),
@@ -199,11 +204,11 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
     skills,
     certificates,
     history,
-    matched: gematcht,
-    contact: contact ? { phone: contact.phone, email: contact.email } : null,
+    matched: metContact,
+    contact: contactRij ? { phone: contactRij.phone, email: contactRij.email } : null,
     prestaties: telPrestaties(rijen, now),
     perFunctie: groepeerReviews(alleReviews, klusMap, verborgen),
-    ervaring: ervaring.items.map((e) => ({
+    ervaring: (ervaring.zichtbaar === true ? ervaring.items : []).map((e) => ({
       functie: e.functie,
       bedrijf: e.bedrijf,
       vanMaand: e.vanMaand,

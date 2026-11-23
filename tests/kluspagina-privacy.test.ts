@@ -111,7 +111,7 @@ describe("de gegevens van de kluspagina (getEmployerShift)", () => {
 
 describe("de profielkaart (buildCandidateCard, /api/werkgever/kandidaat)", () => {
   it("vóór de match: telefoon en e-mail worden niet eens opgevraagd en de achternaam staat er niet voluit", async () => {
-    const card = await buildCandidateCard("w1", NU, { tenantId: "t1", gematcht: false });
+    const card = await buildCandidateCard("w1", NU, { tenantId: "t1", naamBekend: false, contact: false });
     expect(card?.name).toBe("Sanne V.");
     expect(card?.matched).toBe(false);
     expect(card?.contact).toBeNull();
@@ -131,7 +131,7 @@ describe("de profielkaart (buildCandidateCard, /api/werkgever/kandidaat)", () =>
   });
 
   it("na de match: de volledige naam, het telefoonnummer en het e-mailadres, maar nog steeds geen postcode of rekeningnummer", async () => {
-    const card = await buildCandidateCard("w1", NU, { tenantId: "t1", gematcht: true });
+    const card = await buildCandidateCard("w1", NU, { tenantId: "t1", naamBekend: true, contact: true });
     expect(card?.name).toBe("Sanne Vandersteen");
     expect(card?.contact).toEqual({ phone: GEHEIM.telefoon, email: GEHEIM.email });
     const alles = JSON.stringify(card);
@@ -143,9 +143,9 @@ describe("de profielkaart (buildCandidateCard, /api/werkgever/kandidaat)", () =>
 describe("de bronnen", () => {
   it("de API bepaalt de match zelf (een ingeplande kracht bij dit bedrijf) en geeft die door aan de kaart", () => {
     const route = lees("app/api/werkgever/kandidaat/route.ts");
-    expect(route).toContain("prisma.shiftAssignment.count(");
-    expect(route).toContain("cancelledAt: null");
-    expect(route).toContain("gematcht: matchCount > 0");
+    expect(route).toContain("inplanningenBij(tenantId, profile.id)");
+    expect(route).toContain("contactZichtbaar(inplanningen, nu)");
+    expect(route).toContain("naamBekend: naamBekend(inplanningen), contact");
     // de match komt nooit uit het verzoek zelf
     expect(route).not.toMatch(/searchParams\.get\("(gematcht|matched)"\)/);
   });
@@ -153,7 +153,7 @@ describe("de bronnen", () => {
   it("de kaart vraagt telefoon en e-mail alleen op achter de match", () => {
     const kaart = lees("lib/employer/candidate-card.ts");
     expect(kaart.match(/phone: true/g) ?? []).toHaveLength(1);
-    expect(kaart).toMatch(/gematcht \? prisma\.user\.findUnique\(\{ where: \{ id: freelancerUserId \}, select: \{ phone: true, email: true \} \}\)/);
+    expect(kaart).toMatch(/metContact \? prisma\.user\.findUnique\(\{ where: \{ id: freelancerUserId \}, select: \{ phone: true, email: true \} \}\)/);
     expect(kaart).not.toMatch(/dateOfBirth|birthDate|geboorte(datum)?: true|bsn/i);
   });
 

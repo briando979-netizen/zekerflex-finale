@@ -43,6 +43,8 @@ export interface ErvaringStand {
   items: Ervaring[];
   /** de werker koos "Ik heb nog geen werkervaring": ook een geldige afronding van de stap */
   geen: boolean;
+  /** de werker deelt zijn werkervaring met bedrijven waar hij op reageert; ontbreekt = uit (de standaard) */
+  zichtbaar?: boolean | undefined;
 }
 
 /** Tekst zonder tekens die in HTML iets betekenen of onzichtbaar zijn; spaties netjes. */
@@ -122,7 +124,7 @@ export function leesErvaringStand(raw: unknown, huidigJaar: number, huidigeMaand
       if (uitslag.ok) items.push({ id, ...uitslag.waarde });
     }
   }
-  return { items: sorteerErvaring(items), geen: r.geen === true };
+  return { items: sorteerErvaring(items), geen: r.geen === true, ...((raw as { zichtbaar?: unknown }).zichtbaar === true ? { zichtbaar: true } : {}) };
 }
 
 /** "mrt 2022 – nu": de maandnamen en het woord voor "nu" komen van de aanroeper (per taal). */
