@@ -43,7 +43,7 @@ Ben je zelf een uitzendbureau en aangesloten als uitzendpartner? Dan zijn je klu
 
 ## Beeld bij je klus
 
-Bij **Beeld op je klussen** kies je **Foto van de branche** of **Ons logo**. Alleen een beheerder kan dit wijzigen.
+Bij **Beeld bij je klus** kies je **Branchebeeld** of **Ons logo**. Alleen een beheerder kan dit wijzigen.
 
 ## Plaatsen
 

@@ -46,7 +46,7 @@ describe("geen foto's van mensen in het voorbeeld van de wizard en op /klus-plaa
     expect(form).not.toContain("cat.photo");
     expect(form).not.toMatch(/<img src=\{cat\./);
     expect(form).toContain("<KlusBeeldVlak accent={cat.accent} label={cat.label}>");
-    // de miniatuur van "Foto van de branche" bij de keuze tussen foto en logo is ook een vlak
+    // de miniatuur van "Branchebeeld" (voorheen "Foto van de branche") bij de keuze tussen branchebeeld en logo is ook een vlak
     expect(form).toContain("<KlusBeeldVlak accent={cat.accent} label={cat.label} klein />");
     // het logo van het bedrijf zelf blijft staan (dat is geen foto van mensen)
     expect(form).toContain("src={beeld.logoUrl}");
