@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { conceptCost } from "@/lib/klusconcept/concept";
 import { euroCents, euroWhole } from "@/lib/rekentools/invoer";
+import { kostenBedragen } from "@/lib/klusconcept/kosten-tekst";
 import { pauzeKeuzes, SNEL_EN, SNEL_NL, snelSamenvatting } from "@/components/werkgever/snel-teksten";
 
 // "Snel een klus plaatsen" in de werkgeversapp (components/werkgever/SnelPlaatsen.tsx). 22 nov 2026, gebruikersonderzoek
@@ -44,11 +45,13 @@ describe("de samenvatting", () => {
 });
 
 describe("de kostenregel bij Plaats de klus", () => {
-  it("rekent zoals /klus-plaatsen: 1 persoon, 7,5 uur, € 17 = € 154 excl. btw", () => {
+  it("rekent zoals /klus-plaatsen: 1 persoon, 7,5 uur, € 17 = € 153,75 excl. btw (op de cent, niet afgerond op € 154)", () => {
     const k = conceptCost({ start: "09:00", end: "17:00", breakMinutes: 30, positions: 1, rateCents: 1_700 });
     expect(euroCents(k.grossTotalCents)).toMatch(/€\s127,50/);
     expect(euroCents(k.feeTotalCents)).toMatch(/€\s26,25/);
-    expect(euroWhole(k.totalCents)).toMatch(/€\s154$/);
+    expect(euroWhole(k.totalCents)).toMatch(/€\s154$/); // het oude afgeronde getal bestaat nog voor andere schermen
+    expect(kostenBedragen(k).totaal).toMatch(/€\s153,75$/);
+    expect(kostenBedragen(k).totaalCents).toBe(k.grossTotalCents + k.feeTotalCents);
   });
 
   it("zonder pauze en met meer mensen telt het platform over alle gewerkte uren", () => {
@@ -62,7 +65,10 @@ describe("de kostenregel bij Plaats de klus", () => {
     const s = lees("components/werkgever/SnelPlaatsen.tsx");
     expect(s).toContain("conceptCost({ start: van, end: tot, breakMinutes: pauze, positions: personen, rateCents: tariefCent })");
     expect(s).toContain("{t.kostenTotaal}");
-    expect(s).toContain("euroWhole(kosten.totalCents)");
+    // het totaal staat op de cent en is de som van loon en platformkosten (lib/klusconcept/kosten-tekst.ts), niet meer afgerond op hele euro's
+    expect(s).toContain("kostenBedragen(kosten, locale)");
+    expect(s).toContain("totaal={bedragen.totaal}");
+    expect(s).not.toContain("euroWhole(kosten.totalCents)");
     expect(s).not.toMatch(/\b3[.,]5\b|\b350\b/);
     // de pauze gaat mee naar de server
     expect(s).toContain('name="breakMinutes" value={String(pauze)}');

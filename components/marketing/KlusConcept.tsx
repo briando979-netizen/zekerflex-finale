@@ -6,7 +6,9 @@ import { CONCEPT_KEY, conceptCost, conceptOntbreekt, conceptOntbreektVeld, type 
 import { meldOntbreekt, meldVerstuurd } from "@/components/analytics/formulier";
 import { VIA_WERKER, type KlusVia, type ViaStap } from "@/lib/klusconcept/via";
 import { initialen, websiteOmschrijving, type WebsiteKlus } from "@/lib/klusconcept/website";
-import { centsFrom, euroCents, euroWhole, numberFrom } from "@/lib/rekentools/invoer";
+import { centsFrom, euroCents, numberFrom } from "@/lib/rekentools/invoer";
+import { kostenBedragen } from "@/lib/klusconcept/kosten-tekst";
+import { KostenLijst } from "@/components/app/KostenLijst";
 import { tekstOp } from "@/lib/rijschool/kleuren";
 import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 import { KlusKaart } from "@/components/marketing/KlusKaart";
@@ -202,6 +204,7 @@ export function KlusConcept({
     () => conceptCost({ start, end, breakMinutes, positions: people, rateCents: effectiveRate }),
     [start, end, breakMinutes, people, effectiveRate],
   );
+  const bedragen = kostenBedragen(cost);
   const costOne = useMemo(
     () => conceptCost({ start, end, breakMinutes, positions: 1, rateCents: effectiveRate }),
     [start, end, breakMinutes, effectiveRate],
@@ -389,15 +392,19 @@ export function KlusConcept({
             {people} {people === 1 ? "persoon" : "mensen"} · {uurNl(cost.hours)} uur per persoon
           </p>
 
-          {/* de chatknop rechtsonder valt niet over de bedragen (lib/marketing/chatknop-vrij.ts, 22 nov 2026) */}
-          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm" data-chatknop-vrij="">
-            <dt className="text-neutralx-600">Loon kracht{people > 1 ? "en" : ""}</dt>
-            <dd className="num text-right font-semibold text-ink">{euroCents(cost.grossTotalCents)}</dd>
-            <dt className="text-neutralx-600">Platformkosten ({uurNl(cost.totalHours)} uur)</dt>
-            <dd className="num text-right font-semibold text-ink">{euroCents(cost.feeTotalCents)}</dd>
-            <dt className="border-t border-hair pt-2 font-semibold text-ink">Totaal excl. btw</dt>
-            <dd className="num border-t border-hair pt-2 text-right font-display text-xl font-bold text-ink">{euroWhole(cost.totalCents)}</dd>
-          </dl>
+          {/* de chatknop rechtsonder valt niet over de bedragen (lib/marketing/chatknop-vrij.ts, 22 nov 2026); alle bedragen op de cent
+              en het totaal is de som van de twee erboven (lib/klusconcept/kosten-tekst.ts, 23 nov 2026) */}
+          <KostenLijst
+            className="mt-5"
+            chatknopVrij
+            groot
+            loonLabel={`Loon kracht${people > 1 ? "en" : ""}`}
+            platformLabel={`Platformkosten, ${uurNl(cost.totalHours)} uur`}
+            totaalLabel="Totaal excl. btw"
+            loon={bedragen.loon}
+            platform={bedragen.platform}
+            totaal={bedragen.totaal}
+          />
 
           {supply ? (
             <p className="mt-5 rounded-2xl bg-mintwash p-4 text-sm text-brand-700">

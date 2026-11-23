@@ -19,6 +19,8 @@ import { SNEL_EN, SNEL_NL, type SnelTeksten } from "@/components/werkgever/snel-
 import type { SnelVoorinvulling } from "@/components/werkgever/SnelPlaatsen";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
 import { BrancheEtiket, KlusBeeldVlak } from "@/components/app/KlusBeeldVlak";
+import { KostenLijst } from "@/components/app/KostenLijst";
+import { kostenBedragen } from "@/lib/klusconcept/kosten-tekst";
 import { useAutoHoogte } from "@/components/app/useAutoHoogte";
 import { SJABLOON_EN, SJABLOON_NL } from "@/lib/shifts/sjabloon-kiezer-teksten";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
@@ -331,15 +333,15 @@ export function NewShiftForm({
   );
   const kostenTekst: SnelTeksten = locale === "en" ? SNEL_EN : SNEL_NL;
   const kostenZichtbaar = hours > 0 && hourlyRateCents > 0;
-  const euro = useMemo(() => new Intl.NumberFormat(loc, { style: "currency", currency: "EUR" }), [loc]);
-  const euroHeel = useMemo(() => new Intl.NumberFormat(loc, { style: "currency", currency: "EUR", maximumFractionDigits: 0 }), [loc]);
+  // alle bedragen op de cent en het totaal is de som van loon en platformkosten (lib/klusconcept/kosten-tekst.ts, 23 nov 2026)
+  const bedragen = kostenBedragen(kosten, locale === "en" ? "en" : "nl");
   const kostenRegels = {
     teksten: kostenTekst,
     meer: (Number(positions) || 1) > 1 || totalDays > 1,
-    loon: euro.format(kosten.grossTotalCents / 100),
+    loon: bedragen.loon,
     uren: kosten.totalHours.toLocaleString(loc, { maximumFractionDigits: 2 }),
-    platform: euro.format(kosten.feeTotalCents / 100),
-    totaal: euroHeel.format(Math.round(kosten.totalCents / 100)),
+    platform: bedragen.platform,
+    totaal: bedragen.totaal,
   };
 
   function toggleDate(iso: string) {
@@ -985,14 +987,14 @@ function Row({ k, v, highlight = false }: { k: string; v: string; highlight?: bo
 function KostenBlok({ teksten, meer, loon, uren, platform, totaal, className = "" }: { teksten: SnelTeksten; meer: boolean; loon: string; uren: string; platform: string; totaal: string; className?: string }) {
   return (
     <div className={`rounded-xl border border-hair p-3 text-sm ${className}`}>
-      <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5">
-        <dt className="text-neutralx-600">{meer ? teksten.kostenLoonMeer : teksten.kostenLoon}</dt>
-        <dd className="num text-right font-semibold text-ink">{loon}</dd>
-        <dt className="text-neutralx-600">{fmt(teksten.kostenPlatform, { u: uren })}</dt>
-        <dd className="num text-right font-semibold text-ink">{platform}</dd>
-        <dt className="border-t border-hair pt-1.5 font-semibold text-ink">{teksten.kostenTotaal}</dt>
-        <dd className="num border-t border-hair pt-1.5 text-right font-display text-lg font-bold text-ink">{totaal}</dd>
-      </dl>
+      <KostenLijst
+        loonLabel={meer ? teksten.kostenLoonMeer : teksten.kostenLoon}
+        platformLabel={fmt(teksten.kostenPlatform, { u: uren })}
+        totaalLabel={teksten.kostenTotaal}
+        loon={loon}
+        platform={platform}
+        totaal={totaal}
+      />
       <p className="mt-2 text-xs text-neutralx-500">{teksten.kostenUitleg}</p>
     </div>
   );

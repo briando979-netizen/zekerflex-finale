@@ -35,6 +35,10 @@ describe("de pagina's", () => {
 
   it("de kostenregel op /klus-plaatsen is zo'n blok", () => {
     expect(CHATKNOP_VRIJ).toBe("data-chatknop-vrij");
-    expect(lees("components/marketing/KlusConcept.tsx")).toMatch(/<dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm" data-chatknop-vrij="">/);
+    // sinds 23 nov 2026 via de gedeelde KostenLijst (components/app/KostenLijst.tsx): het attribuut komt uit CHATKNOP_VRIJ
+    expect(lees("components/marketing/KlusConcept.tsx")).toMatch(/<KostenLijst[^>]*\bchatknopVrij\b/);
+    const lijst = lees("components/app/KostenLijst.tsx");
+    expect(lijst).toContain("chatknopVrij ? { [CHATKNOP_VRIJ]: \"\" } : {}");
+    expect(lijst).toContain("<dl {...vrij}");
   });
 });

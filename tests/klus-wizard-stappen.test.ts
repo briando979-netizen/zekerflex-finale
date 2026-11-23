@@ -16,7 +16,7 @@ describe("de kosten bij het uitgebreide formulier", () => {
   it("geven voor één dag hetzelfde als /klus-plaatsen en Snel plaatsen (conceptCost)", () => {
     const uitUren = kostenUitUren({ hours: 7.5, positions: 1, rateCents: 1_700 });
     expect(uitUren).toEqual(conceptCost({ start: "09:00", end: "17:00", breakMinutes: 30, positions: 1, rateCents: 1_700 }));
-    // 7,5 uur × € 17 = € 127,50 loon, € 3,50 per uur = € 26,25 platform, samen € 153,75 (afgerond € 154)
+    // 7,5 uur × € 17 = € 127,50 loon, € 3,50 per uur = € 26,25 platform, samen € 153,75 (en dat staat er, niet € 154)
     expect(uitUren.grossTotalCents).toBe(12_750);
     expect(uitUren.feeTotalCents).toBe(2_625);
     expect(uitUren.totalCents).toBe(15_375);
@@ -140,6 +140,12 @@ describe("het formulier (bron-controle)", () => {
     expect(form).toContain("function KostenBlok(");
     expect(form).toContain("{teksten.kostenTotaal}");
     expect(form).not.toMatch(/\*\s*3[.,]5\b/);
+    // 23 nov 2026: alle bedragen op de cent (twee decimalen), het totaal is de som van loon en platformkosten, en de regel is de
+    // gedeelde KostenLijst met één doorlopende scheidingslijn
+    expect(form).toContain('kostenBedragen(kosten, locale === "en" ? "en" : "nl")');
+    expect(form).toContain("totaal: bedragen.totaal,");
+    expect(form).toContain("<KostenLijst");
+    expect(form).not.toMatch(/maximumFractionDigits: 0|euroHeel/);
     // bij de knop (op een telefoon uitgebreid, op een laptop het totaal) én onder het voorbeeld op een laptop
     expect(form).toContain('<KostenBlok {...kostenRegels} className="lg:hidden" />');
     expect(form).toContain('<KostenBlok {...kostenRegels} className="mt-3 hidden lg:block" />');

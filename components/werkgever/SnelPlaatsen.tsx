@@ -7,7 +7,8 @@ import { fmt } from "@/lib/i18n/dictionaries";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
 import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { conceptCost, conceptHours, naarSnelFormulier } from "@/lib/klusconcept/concept";
-import { euroCents, euroWhole } from "@/lib/rekentools/invoer";
+import { kostenBedragen } from "@/lib/klusconcept/kosten-tekst";
+import { KostenLijst } from "@/components/app/KostenLijst";
 import { useT } from "@/components/i18n/I18nProvider";
 import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 import { pauzeKeuzes, snelSamenvatting, type SnelTeksten } from "@/components/werkgever/snel-teksten";
@@ -104,6 +105,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
   const tariefOk = tariefCent >= minRateCents;
   // wat de klus kost, met hetzelfde rekenhulpje als /klus-plaatsen (de staffel komt uit lib/pricing/tiers.ts)
   const kosten = conceptCost({ start: van, end: tot, breakMinutes: pauze, positions: personen, rateCents: tariefCent });
+  const bedragen = kostenBedragen(kosten, locale);
   const urenTekst = (u: number) => u.toLocaleString(locale === "nl" ? "nl-NL" : "en-GB", { maximumFractionDigits: 2 });
 
   useEffect(() => {
@@ -308,14 +310,15 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
           {/* wat de klus kost, vlak boven "Plaats de klus" (zoals /klus-plaatsen) */}
           {tijdOk && tariefCent > 0 && (
             <div className="rounded-xl border border-hair p-3 text-sm">
-              <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5">
-                <dt className="text-neutralx-600">{personen === 1 ? t.kostenLoon : t.kostenLoonMeer}</dt>
-                <dd className="num text-right font-semibold text-ink">{euroCents(kosten.grossTotalCents)}</dd>
-                <dt className="text-neutralx-600">{vul(t.kostenPlatform, { u: urenTekst(kosten.totalHours) })}</dt>
-                <dd className="num text-right font-semibold text-ink">{euroCents(kosten.feeTotalCents)}</dd>
-                <dt className="border-t border-hair pt-1.5 font-semibold text-ink">{t.kostenTotaal}</dt>
-                <dd className="num border-t border-hair pt-1.5 text-right font-display text-lg font-bold text-ink">{euroWhole(kosten.totalCents)}</dd>
-              </dl>
+              {/* alle bedragen op de cent en het totaal is de som van de twee erboven (lib/klusconcept/kosten-tekst.ts) */}
+              <KostenLijst
+                loonLabel={personen === 1 ? t.kostenLoon : t.kostenLoonMeer}
+                platformLabel={vul(t.kostenPlatform, { u: urenTekst(kosten.totalHours) })}
+                totaalLabel={t.kostenTotaal}
+                loon={bedragen.loon}
+                platform={bedragen.platform}
+                totaal={bedragen.totaal}
+              />
               <p className="mt-2 text-xs text-neutralx-500">{t.kostenUitleg}</p>
             </div>
           )}

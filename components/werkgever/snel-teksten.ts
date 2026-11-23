@@ -78,7 +78,7 @@ export const SNEL_NL: SnelTeksten = {
   fout: "Vul de eindtijd ná de begintijd in.",
   kostenLoon: "Loon kracht",
   kostenLoonMeer: "Loon krachten",
-  kostenPlatform: "Platformkosten ({u} uur)",
+  kostenPlatform: "Platformkosten, {u} uur",
   kostenTotaal: "Totaal excl. btw",
   kostenUitleg: "Je betaalt alleen voor gewerkte uren; de pauze telt niet mee.",
 };
@@ -114,7 +114,7 @@ export const SNEL_EN: SnelTeksten = {
   fout: "The end time must be after the start time.",
   kostenLoon: "Worker's pay",
   kostenLoonMeer: "Workers' pay",
-  kostenPlatform: "Platform fee ({u} hours)",
+  kostenPlatform: "Platform fee, {u} hours",
   kostenTotaal: "Total excl. VAT",
   kostenUitleg: "You only pay for hours worked; the break does not count.",
 };
