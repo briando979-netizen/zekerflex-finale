@@ -338,7 +338,7 @@ export function EmployerShell({
                 title={t.shell.reviewsTitle}
               >
                 <Stars value={rating.count > 0 ? rating.average : 0} />
-                <span className="text-xs font-semibold text-brand-600 underline-offset-2 hover:underline">
+                <span className="hidden text-xs font-semibold text-brand-600 underline-offset-2 hover:underline lg:inline">
                   {rating.count > 0
                     ? `(${fmt(rating.count === 1 ? t.shell.reviewsCountOne : t.shell.reviewsCount, { avg: rating.average.toFixed(1), n: rating.count })})`
                     : t.shell.reviewsZero}
@@ -401,7 +401,8 @@ export function EmployerShell({
                     {naamInitialen(userName)}
                   </span>
                 )}
-                <span className="hidden max-w-[9rem] truncate sm:inline">{userName}</span>
+                {/* de naam staat erbij zodra er ruimte is (vanaf 1280 px); daaronder gaat de ruimte naar de bedrijfsnaam en de sterren */}
+                <span className="hidden max-w-[9rem] truncate xl:inline">{userName}</span>
                 <span className="text-neutralx-400" aria-hidden>
                   ▾
                 </span>
