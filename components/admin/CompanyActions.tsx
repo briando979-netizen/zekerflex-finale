@@ -13,7 +13,7 @@ export function CompanyActions({
   tenantId: string;
   contactUserId: string;
   blocked: boolean;
-  /** how the company counts as verified (null = not verified → test klus only) */
+  /** how the company counts as verified (null = not verified → it can place klussen, but nobody can be scheduled) */
   verifiedVia?: "platform" | "kvk" | "admin" | "history" | null;
 }) {
   const router = useRouter();
@@ -48,7 +48,7 @@ export function CompanyActions({
   }
 
   async function setApproval(approved: boolean) {
-    if (!window.confirm(approved ? "Bedrijf goedkeuren? Het kan dan klussen plaatsen en mensen inplannen." : "Goedkeuring intrekken?")) return;
+    if (!window.confirm(approved ? "Bedrijf goedkeuren? Het kan dan mensen inplannen en krijgt daar bericht van." : "Goedkeuring intrekken? Het bedrijf kan dan niemand meer inplannen; klussen plaatsen blijft kunnen.")) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/bedrijven/${tenantId}/verifieer`, {

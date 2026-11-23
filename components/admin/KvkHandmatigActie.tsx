@@ -107,7 +107,7 @@ export function KvkHandmatigActie({ soort, id, actie, kvkNumber, naam }: Props) 
       ) : (
         <p className="text-xs" style={{ color: "var(--a-dim)" }}>
           {soort === "bedrijf"
-            ? "De goedkeuring van het bedrijf wordt ingetrokken: het kan dan weer één testklus plaatsen, en de KVK-controle staat weer open."
+            ? "De goedkeuring van het bedrijf wordt ingetrokken: het kan dan niemand meer inplannen (klussen plaatsen blijft kunnen), en de KVK-controle staat weer open."
             : "De KVK-controle van de werker staat daarna weer open en komt terug in de wacht."}
         </p>
       )}

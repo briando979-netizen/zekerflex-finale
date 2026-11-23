@@ -13,7 +13,7 @@ const schema = z.object({ approved: z.boolean() });
 
 // POST /api/admin/bedrijven/<id>/verifieer — approve a company by hand (e.g.
 // when the automatic KVK check can't confirm it). Until a company is verified
-// it can place one test klus and nobody can be scheduled (lib/company/verified.ts).
+// it can place klussen, but nobody can be scheduled (lib/company/verified.ts).
 export const POST = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
   const { approved } = schema.parse(await request.json().catch(() => ({})));
   const tenant = await prisma.tenant.findUnique({ where: { id: params.id }, select: { id: true, name: true } });
