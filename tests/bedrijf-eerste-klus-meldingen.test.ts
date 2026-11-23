@@ -166,7 +166,7 @@ describe("notifyCompanyChecked: het bedrijf hoort dat het kan inplannen", () => 
     expect(m.push).toHaveBeenCalledTimes(1);
     expect(m.push.mock.calls[0]).toMatchObject([["u1"], { data: { url: "/werkgever/diensten" } }]);
     expect(m.mail).toHaveBeenCalledTimes(1);
-    const mail = m.mail.mock.calls[0]?.[0] as { to: string; subject: string; text: string; kind: string };
+    const mail = (m.mail.mock.calls[0] as unknown[] | undefined)?.[0] as { to: string; subject: string; text: string; kind: string };
     expect(mail).toMatchObject({ to: "sanne@bakkerijjansen.nl", kind: "bedrijf-gecontroleerd" });
     expect(mail.text).toContain("https://zf.example/werkgever/diensten");
     expect(mail.subject + mail.text).not.toMatch(/test|proef/i);

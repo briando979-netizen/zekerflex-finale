@@ -120,7 +120,7 @@ export function LaatsteChecksVenster({
 
   const veldKlasse = "field-input";
   return (
-    <div className="fixed inset-0 z-[2100] flex items-end justify-center bg-ink/50 p-0 sm:items-center sm:p-4" onClick={onSluit}>
+    <div className="fixed inset-0 z-[2050] flex items-end justify-center bg-ink/50 p-0 sm:items-center sm:p-4" onClick={onSluit}>
       <div
         role="dialog"
         aria-modal="true"

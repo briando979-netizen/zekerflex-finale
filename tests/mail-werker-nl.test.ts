@@ -30,7 +30,7 @@ const GOLDEN: Record<string, string> = {
   welkom_zzp: "8896366ae7364c6afed636bc23495215c7e570ee344393355e6d5505f805cafd",
   // 22 nov: de zin over "testklussen" is uit de ontwikkelingsnotitie (ook in de lijst met andere talen); de rest is gelijk gebleven
   welkom_uitzend: "e4c7869fa21fe2e18c74fe3964b2fb1e6ee8ae28732546540faad26c83bc55f2",
-  welkom_bedrijf: "92fd90c33c40d92702a2f2308b00cc056f788c8a06636e006b83f58bb0408c6c",
+  welkom_bedrijf: "85a2322af8d2c45a51d4d3a61778dfdc8fa0899d4dd21d92a2ab58e663d2ea6e", // 23 nov: nextBedrijf zonder KVK-stap
   id_ja: "db76768f535c2e2d707c9872923fbfdce3417a1737d148a739d26eb05ff771f8",
   id_nee: "87d276a61b037fb8fe87751d8a3b149d11df04947472edfce65895b81b610e68",
 };
