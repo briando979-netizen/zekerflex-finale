@@ -76,7 +76,9 @@ describe("het scherm", () => {
 
   it("de kop, de stappen en de melding over verificatie blijven vast bovenaan", () => {
     const vast = src.slice(src.indexOf("  return (\n    <>"), src.indexOf("zichtbaar.map("));
-    for (const v of ["<WelcomeBack", "<EmployerOnboardingWizard", "<PageHeader", "<OnboardingProgress"]) expect(vast).toContain(v);
+    // 23 nov 2026: de kop is de ene kop van de werkgeversapp (components/werkgever/PaginaKop.tsx), ook boven Jouw start
+    for (const v of ["<WelcomeBack", "<EmployerOnboardingWizard", "<PaginaKop", "<OnboardingProgress"]) expect(vast).toContain(v);
+    expect(src).not.toContain("<PageHeader");
   });
 
   it("de regels voor de ruimte zijn puur", () => {

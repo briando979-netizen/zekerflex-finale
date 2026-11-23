@@ -7,7 +7,8 @@ import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/emplo
 import { pendingEmployerReviews } from "@/lib/reviews/pending";
 import { heeftVestiging } from "@/lib/onboarding/employer";
 import { eersteKlusFeiten, GEEN_KLUS } from "@/lib/onboarding/eerste-klus";
-import { werkgeverStappen, berekenVoortgang, startKlaar } from "@/lib/onboarding/voortgang";
+import { werkgeverStappen, berekenVoortgang } from "@/lib/onboarding/voortgang";
+import { heeftOmslagfoto } from "@/lib/werkgever/bedrijfsprofiel";
 import { werkgeverKaartTeksten } from "@/lib/onboarding/werkgever-teksten";
 import { OnboardingProgress } from "@/components/app/OnboardingProgress";
 import { tenantVerification } from "@/lib/company/verified";
@@ -19,7 +20,6 @@ import { prisma } from "@/lib/prisma";
 import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
 import { recentThreads } from "@/lib/messaging/recent";
 import {
-  PageHeader,
   KpiCard,
   Panel,
   EmptyState,
@@ -28,6 +28,7 @@ import {
   moneyExact,
   dateTime,
 } from "@/components/app/ui";
+import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
 import { RecentMessagesPanel } from "@/components/app/RecentMessagesPanel";
 import { EmployerOnboardingWizard } from "@/components/app/EmployerOnboardingWizard";
@@ -75,7 +76,9 @@ export default async function WerkgeverStartPage() {
   }
   const orgAnswered = Boolean(answers.role || answers.sector);
   const emailVerified = Boolean(principal.emailVerifiedAt);
-  // twee blokken (lib/onboarding/voortgang.ts): de grote checklist blijft tot blok 1 klaar is en de eerste klus live staat
+  // twee blokken (lib/onboarding/voortgang.ts). 23 nov 2026 (eigenaar: de onboarding precies zoals YoungOnes): de checklist met de twee
+  // blokken naast elkaar blijft het startscherm tot ook "Jouw eerste klus" af is (er is iemand ingepland), en zolang staat er niets
+  // anders onder: geen takenlijst, geen cijfers, geen panelen. Daarna komt het gewone startscherm.
   const startFeiten = {
     orgBeantwoord: orgAnswered,
     adresKlaar,
@@ -86,7 +89,7 @@ export default async function WerkgeverStartPage() {
     heeftIngepland: eersteKlus.heeftIngepland,
   };
   const canOnboard = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
-  const showWizard = canOnboard && !startKlaar(startFeiten);
+  const showWizard = canOnboard && !berekenVoortgang(werkgeverStappen(startFeiten)).klaar;
   const kaart = werkgeverKaartTeksten(locale);
   // een bedrijf dat zijn gegevens invulde om iemand in te plannen en wacht op ZekerFlex: een rustige regel, geen waarschuwing
   const wachtOpControle = controleStand({ gecontroleerd: companyVerified, aanvraag: extra.controle }) === "aangevraagd";
@@ -97,13 +100,10 @@ export default async function WerkgeverStartPage() {
           .findFirst({ where: { tenantId, kind: "PERMANENT" }, orderBy: { createdAt: "asc" }, select: { name: true, addressLine: true, postalCode: true, city: true } })
           .catch(() => null)
       : null;
-  // Startmodus: nog bezig met de stappen en nog niets te laten zien (geen klussen, uren of facturen).
-  // Dan staan de stappen bovenaan en vallen de lege cijfers, grafiek en panelen weg (4 nov 2026:
-  // een nieuw bedrijf zag eerst een scherm vol nullen en vond de KVK-stap pas ver naar beneden).
-  const nogLeeg =
-    o.kpis.openShifts === 0 && o.kpis.toApprove === 0 && o.kpis.activeFreelancers === 0 && o.kpis.spentThisMonthCents === 0 &&
-    o.shifts.length === 0 && o.approvals.length === 0 && o.invoices.length === 0;
-  const startModus = showWizard && nogLeeg;
+  // Startmodus: nog bezig met de stappen. Dan is het startscherm alleen de kop en de twee blokken van Jouw start; de groet, de
+  // takenlijst, de cijfers en de panelen komen pas daarna (23 nov 2026, zoals bij YoungOnes; eerder alleen bij een leeg bedrijf).
+  // De klussen, uren en facturen zelf blijven gewoon bereikbaar via het menu.
+  const startModus = showWizard;
 
   // Warme, contextuele subregel bij de groet — wat vraagt nu om aandacht?
   const greetSub =
@@ -331,14 +331,15 @@ export default async function WerkgeverStartPage() {
   return (
     <>
       {/* alleen hier, niet meer op elke werkgeverspagina (22 nov 2026, gebruikersonderzoek punt 14: hij duwde alles een half scherm omlaag) */}
-      <OpbouwfaseBalk />
-      <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
+      {!startModus && <OpbouwfaseBalk />}
+      {!startModus && <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />}
       {!startModus && !alleenFlexwerk && <EmployerDashboardHero />}
       {/* ook in de startmodus: een nieuw bedrijf met een klus van /klus-plaatsen zet die meteen uit (22 nov 2026) */}
       <KlusConceptNudge />
       {/* Geen banner "je bedrijf wordt gecontroleerd" meer (23 nov 2026): een nieuw bedrijf plaatst meteen en de controle komt pas
           als het iemand wil inplannen. Heeft het zijn gegevens daarvoor ingevuld, dan een rustige regel. */}
-      {wachtOpControle && !startModus && (
+      {/* ook tijdens Jouw start: het is de reden dat de stap "kies een freelancer" nog open staat */}
+      {wachtOpControle && (
         <p role="status" className="mb-8 rounded-xl border border-hair bg-paper-soft px-4 py-3 text-sm text-neutralx-700">
           {ws.controleAangevraagd}
         </p>
@@ -354,19 +355,17 @@ export default async function WerkgeverStartPage() {
       )}
       {showWizard ? (
         <section className="mb-12">
-          <p className="eyebrow mb-2">{t.start.eyebrow}</p>
-          <h1 className="font-display text-[1.9rem] font-bold uppercase leading-tight tracking-tight text-ink">
-            {t.start.welcomeTitle}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-neutralx-600">
-            {fmt(t.start.welcomeBody, { org: o.orgName })}
-          </p>
-          <div className="mt-8">
+          {/* de kop van Jouw start: de titel in hoofdletters en één regel uitleg, daaronder de twee blokken naast elkaar */}
+          <PaginaKop title={t.start.welcomeTitle} subtitle={fmt(t.start.welcomeBody, { org: o.orgName })} />
+          <div>
             <EmployerOnboardingWizard
               initial={{
                 adresKlaar,
                 profileStepDone: Boolean(ob.profileStepDone),
                 emailVerified,
+                // de omslagfoto is alleen in dit scherm een stap: er is een foto, of de stap is bewust overgeslagen
+                omslagKlaar: heeftOmslagfoto(extra),
+                profiel: { websiteUrl: extra.websiteUrl ?? "", about: extra.about ?? "" },
                 answers,
                 brancheKeuze: maakBrancheKeuze({ alle: ob.alleBranches, branches: ob.branches }),
                 vestiging: bestaandeVestiging ? { naam: bestaandeVestiging.name, adres: vestigingRegel(bestaandeVestiging) } : null,
@@ -376,9 +375,8 @@ export default async function WerkgeverStartPage() {
           </div>
         </section>
       ) : (
-        <PageHeader
-          title={o.orgName}
-          eyebrow={t.start.eyebrow}
+        <PaginaKop
+          title={t.start.eyebrow}
           subtitle={t.start.dashSubtitle}
           action={
             <Link href="/werkgever/diensten/nieuw" className="btn-primary">
@@ -388,7 +386,7 @@ export default async function WerkgeverStartPage() {
         />
       )}
 
-      {/* in de startmodus is alles hieronder nog leeg (zie startModus) */}
+      {/* in de startmodus staat hieronder niets: eerst Jouw start afmaken (zie startModus) */}
       {!startModus && alleenFlexwerk && teDoenBlok}
       {!startModus &&
         zichtbaarFlex.map((id) => (
