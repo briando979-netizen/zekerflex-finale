@@ -36,7 +36,16 @@ describe("rustiger werkgeversschermen (punt 14)", () => {
   // bent met de stappen als uitklapbare rijen. Het besluit van 22 nov ("de stappen één keer") is daarmee vervangen.
   it("Jouw start heeft twee blokken naast elkaar: links het overzicht, rechts de uitklapbare stappen met de voortgang", () => {
     const wizard = lees("components/app/EmployerOnboardingWizard.tsx");
-    expect(wizard).toContain("lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]");
+    expect(wizard).toContain("xl:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]");
+    // op een smalle laptop (1024 px) is het overzicht links breder, zodat een stapnaam op één regel past
+    expect(wizard).toContain("lg:grid-cols-[minmax(0,6fr)_minmax(0,7fr)]");
+    // wat nog niet aan de beurt is, staat er grijs en is niet aan te tikken; wat af is en de eerstvolgende stap wel
+    expect(wizard).toContain("const aanDeBeurt = (g: 1 | 2, k: StapId): boolean => klaar(k) || ((g === 1 || blok1Klaar) && eersteOpen(g === 1 ? BLOK1 : BLOK2) === k);");
+    expect(wizard).toContain("disabled={!kan}");
+    // "Waarvan ken je ons?" hoort bij de vragen over de organisatie en wordt bewaard in profile-org
+    expect(wizard).toContain('const SELECT_KEYS = ["role", "sector", "frequency", "urgency", "prior", "heard"] as const;');
+    expect(wizard).toContain('heard: "heardFrom",');
+    expect(lees("app/werkgever/onboarding/actions.ts")).toContain("...(p.data.heardFrom ? { heardFrom: p.data.heardFrom } : {}),");
     expect(wizard).toContain("<nav aria-label={o.overzichtLabel}");
     expect(wizard).toContain('aria-labelledby="start-blok-kop"');
     expect(wizard).toContain("aria-expanded={isOpen}");

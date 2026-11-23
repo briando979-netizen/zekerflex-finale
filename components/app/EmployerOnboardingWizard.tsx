@@ -33,8 +33,8 @@ const BLOK2: readonly Blok2Stap[] = ["klus", "reacties", "kiezen", "afronden"];
 /** ongeveer hoeveel minuten de omslagfoto kost (de andere stappen hebben hun minuten in lib/onboarding/voortgang.ts) */
 const MINUTEN_OMSLAG = 1;
 
-const SELECT_KEYS = ["role", "sector", "frequency", "urgency", "prior"] as const;
-/** de vragen over de organisatie: alle vijf waarvoor de opslag bestaat (profile-org, onboarding) */
+const SELECT_KEYS = ["role", "sector", "frequency", "urgency", "prior", "heard"] as const;
+/** de vragen over de organisatie: alle zes waarvoor de opslag bestaat (profile-org, onboarding); "Waarvan ken je ons?" kwam erbij op 23 nov 2026 */
 const VRAGEN: readonly (typeof SELECT_KEYS)[number][] = SELECT_KEYS;
 // The stored value is always the canonical Dutch option (matched on re-display).
 const CANON = nl.onboarding.selects;
@@ -44,6 +44,7 @@ const FORM_NAME: Record<(typeof SELECT_KEYS)[number], string> = {
   frequency: "shortageFrequency",
   urgency: "urgency",
   prior: "priorPlatform",
+  heard: "heardFrom",
 };
 
 const MAAT = { klein: "h-4 w-4", rij: "h-8 w-8", groot: "h-9 w-9" } as const;
@@ -160,6 +161,13 @@ export function EmployerOnboardingWizard({
   // welke groep rechts staat en welke stap daarin open is: de eerste stap die nog open staat
   const [groep, setGroep] = useState<1 | 2>(blok1Klaar ? 2 : 1);
   const [open, setOpen] = useState<StapId | null>(blok1Klaar ? eersteOpen(BLOK2) : eersteOpen(BLOK1));
+
+  /**
+   * Is een stap in het overzicht links aan de beurt? Wat af is en de eerstvolgende open stap wel; wat daarna komt staat er grijs
+   * en is niet aan te tikken (zoals de referentie, ronde 2). De stappen van "Jouw eerste klus" komen pas aan de beurt als
+   * "Jij en je bedrijf" af is. Rechts, in de groep waar je bent, blijft elke rij gewoon open te klappen.
+   */
+  const aanDeBeurt = (g: 1 | 2, k: StapId): boolean => klaar(k) || ((g === 1 || blok1Klaar) && eersteOpen(g === 1 ? BLOK1 : BLOK2) === k);
 
   /** Een stap in het overzicht links aantikken: zijn groep komt rechts te staan, met die stap open. */
   const kies = (g: 1 | 2, k: StapId) => {
@@ -486,15 +494,16 @@ export function EmployerOnboardingWizard({
   ];
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-hair shadow-e1 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
-      {/* Links (op een telefoon onder het blok waar je nu bent): het overzicht van alle stappen en het blok met hulp */}
-      <nav aria-label={o.overzichtLabel} className="order-2 bg-paper px-5 py-8 sm:px-8 lg:order-1 lg:px-10 lg:py-12">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-hair shadow-e1 lg:grid lg:grid-cols-[minmax(0,6fr)_minmax(0,7fr)] xl:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
+      {/* Links (op een telefoon onder het blok waar je nu bent): het overzicht van alle stappen en het blok met hulp.
+          Op een smalle laptop (1024 px) is dit blok iets breder en de ruimte eromheen kleiner, zodat een stapnaam op één regel past. */}
+      <nav aria-label={o.overzichtLabel} className="order-2 bg-paper-soft px-5 py-8 sm:px-8 lg:order-1 lg:px-6 lg:py-12 xl:px-10">
         <ol>
           {GROEPEN.map((g, gi) => {
             const stand: StapStand = g.af ? "klaar" : groep === g.nr || (g.nr === 1 && !blok1Klaar) ? "actief" : "open";
             const laatste = gi === GROEPEN.length - 1;
             return (
-              <li key={g.nr} className={`relative pl-12 ${laatste ? "" : "pb-10"}`}>
+              <li key={g.nr} className={`relative pl-12 lg:pl-11 xl:pl-12 ${laatste ? "" : "pb-10"}`}>
                 {/* de lijn naar de volgende groep: groen zodra deze groep af is */}
                 {!laatste && <span aria-hidden className={`absolute bottom-0 left-[17px] top-9 w-0.5 ${g.af ? "bg-brand-500" : "bg-hairstrong"}`} />}
                 <span className="absolute left-0 top-0">
@@ -506,14 +515,20 @@ export function EmployerOnboardingWizard({
                 <ul className="mt-4 space-y-2">
                   {g.stappen.map((k) => {
                     const nu = groep === g.nr && open === k;
+                    const kan = aanDeBeurt(g.nr, k);
                     return (
                       <li key={k}>
                         <button
                           type="button"
                           onClick={() => kies(g.nr, k)}
+                          disabled={!kan}
                           aria-current={nu ? "step" : undefined}
-                          className={`flex min-h-11 w-full items-center gap-2 rounded-lg border bg-white px-4 py-2 text-left text-sm font-semibold transition-colors hover:border-brand-500 ${
-                            nu ? "border-hairstrong text-ink" : "border-hair text-neutralx-500"
+                          className={`flex min-h-11 w-full items-center gap-2 rounded-lg border px-4 py-2 text-left text-sm font-semibold transition-colors lg:px-3 lg:text-[13px] xl:px-4 xl:text-sm ${
+                            !kan
+                              ? "cursor-default border-hair bg-transparent font-medium text-neutralx-400"
+                              : nu
+                                ? "border-hairstrong bg-white text-ink hover:border-brand-500"
+                                : "border-hair bg-white text-neutralx-600 hover:border-brand-500"
                           }`}
                         >
                           <span className="min-w-0 flex-1">
@@ -545,7 +560,7 @@ export function EmployerOnboardingWizard({
       </nav>
 
       {/* Rechts (op een telefoon bovenaan): de groep waar je nu bent, met de voortgang en de stappen als uitklapbare rijen */}
-      <section aria-labelledby="start-blok-kop" className="order-1 bg-white px-5 py-8 sm:px-8 lg:order-2 lg:px-12 lg:py-12">
+      <section aria-labelledby="start-blok-kop" className="order-1 bg-white px-5 py-8 sm:px-8 lg:order-2 lg:px-8 lg:py-12 xl:px-12">
         <h2 id="start-blok-kop" className="font-display text-xl font-bold leading-snug text-ink">
           {groep === 1 ? o.blok1Titel : o.firstJobTitle}
         </h2>

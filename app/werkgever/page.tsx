@@ -71,7 +71,7 @@ export default async function WerkgeverStartPage() {
 
   const ob = extra.onboarding ?? {};
   const answers: Record<string, string> = {};
-  for (const k of ["role", "sector", "shortageFrequency", "urgency", "priorPlatform"] as const) {
+  for (const k of ["role", "sector", "shortageFrequency", "urgency", "priorPlatform", "heardFrom"] as const) {
     if (ob[k]) answers[k] = ob[k]!;
   }
   const orgAnswered = Boolean(answers.role || answers.sector);

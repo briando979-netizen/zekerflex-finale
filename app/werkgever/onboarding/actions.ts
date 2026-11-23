@@ -16,6 +16,8 @@ const profileSchema = z.object({
   shortageFrequency: z.string().trim().max(60).optional(),
   urgency: z.string().trim().max(60).optional(),
   priorPlatform: z.string().trim().max(60).optional(),
+  /** "Waarvan ken je ons?" (23 nov 2026) */
+  heardFrom: z.string().trim().max(60).optional(),
   /** gekozen branches, komma-gescheiden ("horeca,retail"), en "1" als alle branches zijn gekozen */
   branches: z.string().trim().max(400).optional(),
   alleBranches: z.enum(["1", ""]).optional(),
@@ -48,6 +50,7 @@ export async function saveOnboardingProfileAction(formData: FormData): Promise<{
       ...(p.data.shortageFrequency ? { shortageFrequency: p.data.shortageFrequency } : {}),
       ...(p.data.urgency ? { urgency: p.data.urgency } : {}),
       ...(p.data.priorPlatform ? { priorPlatform: p.data.priorPlatform } : {}),
+      ...(p.data.heardFrom ? { heardFrom: p.data.heardFrom } : {}),
       ...(p.data.profileStepDone === "1" ? { profileStepDone: true } : {}),
       ...(p.data.coverStepDone === "1" ? { coverStepDone: true } : {}),
     },

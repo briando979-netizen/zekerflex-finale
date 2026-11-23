@@ -194,6 +194,10 @@ export const en: Dict = {
         label: "Have you worked with a flex platform before?",
         options: ["Yes", "No"],
       },
+      heard: {
+        label: "How did you hear about us?",
+        options: ["Search engine (Google, Bing)", "Social media", "A colleague or acquaintance", "A freelancer who works with us", "An advertisement", "An event or trade fair", "Other"],
+      },
     },
     adresIntro: "Look up the address where freelancers will work. You can add another location later under Locations.",
     vestigingBekend: "Work location:",

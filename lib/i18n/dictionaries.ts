@@ -207,6 +207,10 @@ export const nl = {
         label: "Heb je al eerder met een flexplatform gewerkt?",
         options: ["Ja", "Nee"],
       },
+      heard: {
+        label: "Waarvan ken je ons?",
+        options: ["Zoekmachine (Google, Bing)", "Sociale media", "Een collega of bekende", "Een freelancer die bij ons werkt", "Een advertentie", "Een evenement of beurs", "Anders"],
+      },
     },
     // de werklocatie is er al (Locaties of Klus uitzetten): de adres-stap vraagt hem niet opnieuw
     adresIntro: "Zoek het adres waar freelancers komen werken. Een andere locatie voeg je later toe bij Locaties.",

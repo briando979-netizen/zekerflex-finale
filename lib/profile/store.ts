@@ -35,6 +35,8 @@ export interface OrgProfileExtra {
     shortageFrequency?: string;
     urgency?: string;
     priorPlatform?: string;
+    /** "Waarvan ken je ons?" (Jouw start, 23 nov 2026) */
+    heardFrom?: string;
     /** de branches waarvoor het bedrijf mensen zoekt (lib/shifts/branche-keuze.ts); leeg met alleBranches = alle */
     branches?: string[];
     alleBranches?: boolean;
