@@ -38,8 +38,6 @@ export function FreelancerTableWrapper({
           id: r.id,
           fullName: typeof r.cells["name"] === "string" ? (r.cells["name"] as string) : "",
           ...(r.filters?.["postalCode"] ? { postalCode: r.filters["postalCode"] as string } : {}),
-          latitude: undefined, // Zou uit de DB moeten komen
-          longitude: undefined, // Zou uit de DB moeten komen
         })),
     [rows]
   );

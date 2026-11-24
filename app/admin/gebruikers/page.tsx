@@ -182,9 +182,9 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
           .map((u) => ({
             id: u.id,
             fullName: u.fullName,
-            postalCode: u.freelancerProfile?.homePostalCode,
-            latitude: u.freelancerProfile?.homeLatitude,
-            longitude: u.freelancerProfile?.homeLongitude,
+            ...(u.freelancerProfile?.homePostalCode ? { postalCode: u.freelancerProfile.homePostalCode } : {}),
+            ...(u.freelancerProfile?.homeLatitude != null ? { latitude: u.freelancerProfile.homeLatitude } : {}),
+            ...(u.freelancerProfile?.homeLongitude != null ? { longitude: u.freelancerProfile.homeLongitude } : {}),
           }))}
       />
 
