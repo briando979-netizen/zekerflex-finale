@@ -33,11 +33,11 @@ export function FreelancerTableWrapper({
   const freelancerItems = useMemo(
     () =>
       rows
-        .filter((r) => r.filters.kind === "flexwerker")
+        .filter((r) => r.filters?.["kind"] === "flexwerker")
         .map((r) => ({
           id: r.id,
-          fullName: typeof r.cells.name === "string" ? r.cells.name : "",
-          postalCode: r.filters.postalCode,
+          fullName: typeof r.cells["name"] === "string" ? (r.cells["name"] as string) : "",
+          ...(r.filters?.["postalCode"] ? { postalCode: r.filters["postalCode"] as string } : {}),
           latitude: undefined, // Zou uit de DB moeten komen
           longitude: undefined, // Zou uit de DB moeten komen
         })),

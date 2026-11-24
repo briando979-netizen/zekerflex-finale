@@ -8,7 +8,7 @@ import { Funnel, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
-import FreelancerLocationFilterWrapper from "@/components/admin/FreelancerLocationFilterWrapper";
+import { FreelancerLocationFilterWrapper } from "@/components/admin/FreelancerLocationFilterWrapper";
 
 export const dynamic = "force-dynamic";
 

@@ -105,9 +105,8 @@ export function LocationRadiusFilter({ items, onFilter, onClose }: LocationRadiu
           {[5, 10, 25].map((radius) => (
             <AButton
               key={radius}
-              variant={radiusKm === radius ? "primary" : "secondary"}
+              variant={radiusKm === radius ? "primary" : "ghost"}
               onClick={() => setRadiusKm(radius)}
-              className="flex-1"
             >
               {radius}km
             </AButton>
@@ -131,10 +130,10 @@ export function LocationRadiusFilter({ items, onFilter, onClose }: LocationRadiu
       )}
 
       <div className="flex gap-2">
-        <AButton onClick={handleApply} disabled={results.length === 0} className="flex-1">
+        <AButton onClick={handleApply} disabled={results.length === 0}>
           Toepassen ({results.length})
         </AButton>
-        <AButton onClick={onClose} variant="secondary" className="flex-1">
+        <AButton onClick={onClose} variant="ghost">
           Annuleren
         </AButton>
       </div>
