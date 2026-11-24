@@ -8,9 +8,6 @@ import { Funnel, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
-import dynamic from "next/dynamic";
-
-const FreelancerLocationFilterWrapper = dynamic(() => import("@/components/admin/FreelancerLocationFilterWrapper").then(m => ({ default: m.FreelancerLocationFilterWrapper })), { ssr: false });
 
 export const dynamic = "force-dynamic";
 
@@ -177,18 +174,6 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
           emptyText="Nog niemand heeft zijn account verwijderd."
         />
       </Panel>
-
-      <FreelancerLocationFilterWrapper
-        items={d.rows
-          .filter((u) => u.kind === "flexwerker")
-          .map((u) => ({
-            id: u.id,
-            fullName: u.fullName,
-            postalCode: u.freelancerProfile?.homePostalCode,
-            latitude: u.freelancerProfile?.homeLatitude,
-            longitude: u.freelancerProfile?.homeLongitude,
-          }))}
-      />
 
       <Panel flush title="Alle gebruikers" subtitle={d.capped ? "De nieuwste 2.000 accounts" : `${count(d.total)} accounts`}>
         <DataTable
