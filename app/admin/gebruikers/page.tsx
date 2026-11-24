@@ -8,6 +8,7 @@ import { Funnel, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
+import { FreelancerLocationFilterWrapper } from "@/components/admin/FreelancerLocationFilterWrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -176,6 +177,19 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
       </Panel>
 
       <Panel flush title="Alle gebruikers" subtitle={d.capped ? "De nieuwste 2.000 accounts" : `${count(d.total)} accounts`}>
+        <div className="mb-4 border-b pb-4">
+          <FreelancerLocationFilterWrapper
+            items={d.rows
+              .filter((u) => u.kind === "flexwerker")
+              .map((u) => ({
+                id: u.id,
+                fullName: u.fullName,
+                postalCode: u.freelancerProfile?.homePostalCode,
+                latitude: u.freelancerProfile?.homeLatitude,
+                longitude: u.freelancerProfile?.homeLongitude,
+              }))}
+          />
+        </div>
         <DataTable
           columns={[
             { key: "name", label: "Naam" },
@@ -193,12 +207,8 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
           filters={[
             { key: "kind", label: "Type", chips: true, options: (["flexwerker", "opdrachtgever", "beheerder"] as const).map((value) => ({ value, label: KIND_LABEL[value] })) },
             { key: "kyc", label: "Identiteit", options: Object.entries(KYC).map(([value, k]) => ({ value, label: k.label })) },
-<<<<<<< HEAD
+            { key: "postalCode", label: "Locatie", chips: true, options: Array.from(new Set(d.rows.map(u => u.freelancerProfile?.homePostalCode ?? "").filter(Boolean))).sort().map(pc => ({ value: pc, label: pc })) },
             { key: "status", label: "Status", options: [{ value: "actief", label: "Actief" }, { value: "onbevestigd", label: "E-mail onbevestigd" }, { value: "geblokkeerd", label: "Geblokkeerd" }, { value: "verwijderd", label: "Verwijderd" }] },
-=======
-            { key: "postalCode", label: "Locatie", chips: true, options: Array.from(new Set(d.rows.map(u => u.postalCode ?? "").filter(Boolean))).sort().map(pc => ({ value: pc, label: pc })) },
-            { key: "status", label: "Status", options: [{ value: "actief", label: "Actief" }, { value: "onbevestigd", label: "E-mail onbevestigd" }, { value: "geblokkeerd", label: "Geblokkeerd" }] },
->>>>>>> 791d1c37 (feat(admin): locatiefilter voor freelancers met postcode)
           ]}
           emptyText="Er zijn nog geen gebruikers."
         />
