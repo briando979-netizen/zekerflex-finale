@@ -28,6 +28,7 @@ export async function usersInsights(period: Period) {
         lastLoginAt: true,
         emailVerifiedAt: true,
         createdAt: true,
+        freelancerProfile: { select: { homePostalCode: true, homeLatitude: true, homeLongitude: true } },
         memberships: { select: { role: true, tenant: { select: { name: true, type: true } } } },
       },
       orderBy: { createdAt: "desc" },

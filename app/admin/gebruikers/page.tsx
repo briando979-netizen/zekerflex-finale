@@ -55,17 +55,19 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
     const kyc = KYC[u.kycStatus] ?? { label: u.kycStatus, tone: "neutral" as const };
     const verwijderd = isVerwijderd(u.email);
     const status = verwijderd ? "verwijderd" : u.disabledAt ? "geblokkeerd" : u.emailVerifiedAt ? "actief" : "onbevestigd";
+    const postalCode = u.freelancerProfile?.homePostalCode ?? "";
     return {
       id: u.id,
       href: `/admin/gebruikers/${u.id}`,
-      search: `${u.fullName} ${u.email} ${u.phone ?? ""} ${role}`,
-      filters: { kind: u.kind, kyc: u.kycStatus, status },
+      search: `${u.fullName} ${u.email} ${u.phone ?? ""} ${role} ${postalCode}`,
+      filters: { kind: u.kind, kyc: u.kycStatus, status, postalCode },
       cells: {
         name: <NameCell name={u.fullName} sub={u.email} href={`/admin/gebruikers/${u.id}`} fotoUrl={avatarUrlFor(u.id, Boolean(avatars[u.id]))} />,
         role: <span className="block max-w-[16rem] truncate" title={role}>{role}</span>,
         kyc: <Pill tone={kyc.tone}>{kyc.label}</Pill>,
         last: u.lastLoginAt ? timeAgoNl(u.lastLoginAt) : "Nooit",
         since: dateNl(u.createdAt),
+        location: postalCode ? <span className="text-xs text-muted">{postalCode}</span> : <span className="text-xs text-muted">—</span>,
         status: verwijderd ? (
           <Pill tone="neutral">Verwijderd</Pill>
         ) : u.disabledAt ? (
@@ -77,7 +79,7 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
         ),
       },
       sort: { name: u.fullName, role, kyc: kyc.label, last: u.lastLoginAt?.getTime() ?? null, since: u.createdAt.getTime(), status },
-      csv: { name: `${u.fullName} <${u.email}>`, role, kyc: kyc.label, last: u.lastLoginAt?.toISOString() ?? "", since: u.createdAt.toISOString(), status },
+      csv: { name: `${u.fullName} <${u.email}>`, role, kyc: kyc.label, location: postalCode, last: u.lastLoginAt?.toISOString() ?? "", since: u.createdAt.toISOString(), status },
     };
   });
 
@@ -179,18 +181,24 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
             { key: "name", label: "Naam" },
             { key: "role", label: "Rol", hideOnMobile: true },
             { key: "kyc", label: "Identiteit" },
+            { key: "location", label: "Postcode", hideOnMobile: true },
             { key: "last", label: "Laatst ingelogd", hideOnMobile: true },
             { key: "since", label: "Lid sinds", hideOnMobile: true },
             { key: "status", label: "Status", hideOnMobile: true },
           ]}
           rows={rows}
-          searchPlaceholder="Zoek op naam, e-mail of bedrijf"
+          searchPlaceholder="Zoek op naam, e-mail, postcode of bedrijf"
           csvName="gebruikers"
           defaultSort={{ key: "since", dir: "desc" }}
           filters={[
             { key: "kind", label: "Type", chips: true, options: (["flexwerker", "opdrachtgever", "beheerder"] as const).map((value) => ({ value, label: KIND_LABEL[value] })) },
             { key: "kyc", label: "Identiteit", options: Object.entries(KYC).map(([value, k]) => ({ value, label: k.label })) },
+<<<<<<< HEAD
             { key: "status", label: "Status", options: [{ value: "actief", label: "Actief" }, { value: "onbevestigd", label: "E-mail onbevestigd" }, { value: "geblokkeerd", label: "Geblokkeerd" }, { value: "verwijderd", label: "Verwijderd" }] },
+=======
+            { key: "postalCode", label: "Locatie", chips: true, options: Array.from(new Set(d.rows.map(u => u.postalCode ?? "").filter(Boolean))).sort().map(pc => ({ value: pc, label: pc })) },
+            { key: "status", label: "Status", options: [{ value: "actief", label: "Actief" }, { value: "onbevestigd", label: "E-mail onbevestigd" }, { value: "geblokkeerd", label: "Geblokkeerd" }] },
+>>>>>>> 791d1c37 (feat(admin): locatiefilter voor freelancers met postcode)
           ]}
           emptyText="Er zijn nog geen gebruikers."
         />
