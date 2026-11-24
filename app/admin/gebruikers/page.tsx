@@ -8,7 +8,7 @@ import { Funnel, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
-import { FreelancerLocationFilterWrapper } from "@/components/admin/FreelancerLocationFilterWrapper";
+import { FreelancerTableWrapper } from "@/components/admin/FreelancerTableWrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +106,14 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
     };
   });
 
+  // Thuisbasis van de flexwerkers voor het straalfilter (de client rekent zelf).
+  const locaties: Record<string, { lat: number; lon: number }> = {};
+  for (const u of d.rows) {
+    const lat = u.freelancerProfile?.homeLatitude;
+    const lon = u.freelancerProfile?.homeLongitude;
+    if (u.kind === "flexwerker" && typeof lat === "number" && typeof lon === "number") locaties[u.id] = { lat, lon };
+  }
+
   return (
     <div className="space-y-4">
       <PageHead
@@ -180,21 +188,8 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
         flush
         title="Alle gebruikers"
         subtitle={d.capped ? "De nieuwste 2.000 accounts" : `${count(d.total)} accounts`}
-        actions={
-          <FreelancerLocationFilterWrapper
-            items={d.rows
-              .filter((u) => u.kind === "flexwerker")
-              .map((u) => ({
-                id: u.id,
-                fullName: u.fullName,
-                ...(u.freelancerProfile?.homePostalCode ? { postalCode: u.freelancerProfile.homePostalCode } : {}),
-                ...(u.freelancerProfile?.homeLatitude != null ? { latitude: u.freelancerProfile.homeLatitude } : {}),
-                ...(u.freelancerProfile?.homeLongitude != null ? { longitude: u.freelancerProfile.homeLongitude } : {}),
-              }))}
-          />
-        }
       >
-        <DataTable
+        <FreelancerTableWrapper
           columns={[
             { key: "name", label: "Naam" },
             { key: "role", label: "Rol", hideOnMobile: true },
@@ -215,6 +210,7 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
             { key: "status", label: "Status", options: [{ value: "actief", label: "Actief" }, { value: "onbevestigd", label: "E-mail onbevestigd" }, { value: "geblokkeerd", label: "Geblokkeerd" }, { value: "verwijderd", label: "Verwijderd" }] },
           ]}
           emptyText="Er zijn nog geen gebruikers."
+          locaties={locaties}
         />
       </Panel>
     </div>
