@@ -10,7 +10,7 @@ import { naamVoorMatch } from "@/lib/werkgever/naam";
 import { getErvaring } from "@/lib/werker/ervaring-store";
 import type { ErvaringStand } from "@/lib/werker/ervaring";
 import { naarPrestatieRij, verborgenVoorBedrijf } from "@/lib/employer/prestaties";
-import { telPrestaties, zelfGewerkt, type Prestaties } from "@/lib/employer/prestaties-kern";
+import { telPrestaties, zelfGewerkt, actieveRegios, type Prestaties } from "@/lib/employer/prestaties-kern";
 import { gewerktBij, groepeerReviews, type FunctieGroep, type KlusVoorGroep } from "@/lib/employer/kaart-kern";
 
 // ---------------------------------------------------------------------------
@@ -70,6 +70,8 @@ export interface CandidateCard {
   /** staat bij dit bedrijf als favoriet / geblokkeerd (gezet door de API) */
   favoriet?: boolean;
   geblokkeerd?: boolean;
+  /** regio's waar de werker actief was (lib/employer/prestaties-kern.ts) */
+  regios: { naam: string; lat: number; lng: number }[];
 }
 
 const MONTHS_NL = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
@@ -222,5 +224,6 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
       assignments.filter((a) => a.shift.endsAt < now && zelfGewerkt(a)).map((a) => ({ tenantId: a.shift.branch.tenantId, bedrijf: a.shift.branch.tenant.name })),
       verborgen,
     ),
+    regios: actieveRegios(rijen, now, verborgen).slice(0, 60).map((r) => ({ naam: r.naam, lat: r.lat, lng: r.lng })),
   };
 }

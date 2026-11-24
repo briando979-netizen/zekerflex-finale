@@ -2319,6 +2319,7 @@ export const en: Dict = {
     ervaringNu: "present",
     maanden: "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
     gewerktVia: "{naam} has worked through ZekerFlex at",
+    actiefInRegios: "Was active in {n} regions",
     relatieKop: "Favourite or block",
     werkerNietKlaar: "This worker cannot take this job yet: some details are still missing from their account, such as their business details or bank account number. Their response stays open; once they have filled everything in, you can accept them.",
   },

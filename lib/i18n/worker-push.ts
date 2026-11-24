@@ -127,6 +127,17 @@ export interface WorkerPushTexts {
   /** een bericht op je eigen werknummer (lib/telephony/lijn-server.ts): soort = terugbelverzoek | voicemail | sms */
   lijnTitle: (soort: "terugbelverzoek" | "voicemail" | "sms", van: string) => string;
   lijnBody: string;
+  /** een bedrijf heeft je als favoriet gemarkeerd */
+  favorietTitle: (company: string) => string;
+  favorietBody: string;
+  /** je staat op de reservebank van een klus */
+  reserveTitle: (title: string) => string;
+  reserveBody: (company: string, when: string) => string;
+  /** annulering met reden (lib/shifts/cancel.ts) */
+  cancelledReasonBody: (when: string, reden: string) => string;
+  /** uitgekozen: je bent ingepland op een klus (lib/employer/candidate-card.ts) */
+  uitgekozenTitle: (title: string) => string;
+  uitgekozenBody: (company: string, when: string) => string;
 }
 
 export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
@@ -233,6 +244,13 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `${n} heeft de afspraak van ${w} afgezegd.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Voicemail van ${v}` : s === "sms" ? `Sms van ${v}` : `Terugbelverzoek van ${v}`),
     lijnBody: "Bekijk het bij je werknummer.",
+    favorietTitle: (c) => `⭐ ${c} heeft je als favoriet`,
+    favorietBody: "Je staat in hun lijst van vaste krachten.",
+    reserveTitle: (t) => `📋 Je staat op de reservebank: ${t}`,
+    reserveBody: (c, w) => `${c}, ${w}. Zegt iemand af, dan krijg jij als eerste een berichtje.`,
+    cancelledReasonBody: (w, r) => `De opdrachtgever heeft je dienst van ${w} geannuleerd. Reden: ${r}`,
+    uitgekozenTitle: (t) => `✅ Je bent uitgekozen: ${t}`,
+    uitgekozenBody: (c, w) => `${c} heeft je ingepland voor ${w}. Zet hem in je agenda!`,
   },
   en: {
     hours: "hours",
@@ -337,6 +355,13 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `${n} cancelled the event on ${w}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Voicemail from ${v}` : s === "sms" ? `Text from ${v}` : `Call-back request from ${v}`),
     lijnBody: "See it at your work number.",
+    favorietTitle: (c) => `⭐ ${c} added you as a favourite`,
+    favorietBody: "You're on their list of regular workers.",
+    reserveTitle: (t) => `📋 You're on the reserve bench: ${t}`,
+    reserveBody: (c, w) => `${c}, ${w}. If someone cancels, you'll be the first to hear.`,
+    cancelledReasonBody: (w, r) => `The client cancelled your shift on ${w}. Reason: ${r}`,
+    uitgekozenTitle: (t) => `✅ You've been selected: ${t}`,
+    uitgekozenBody: (c, w) => `${c} scheduled you for ${w}. Add it to your calendar!`,
   },
   pl: {
     hours: "godz.",
@@ -441,6 +466,13 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `Wydarzenie (${w}) odwołane przez: ${n}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Poczta głosowa od ${v}` : s === "sms" ? `SMS od ${v}` : `Prośba o oddzwonienie od ${v}`),
     lijnBody: "Zobacz przy swoim numerze służbowym.",
+    favorietTitle: (c) => `⭐ ${c} dodał(a) Cię do ulubionych`,
+    favorietBody: "Jesteś na ich liście stałych pracowników.",
+    reserveTitle: (t) => `📋 Jesteś na liście rezerwowej: ${t}`,
+    reserveBody: (c, w) => `${c}, ${w}. Jeśli ktoś zrezygnuje, jako pierwszy(a) dostaniesz wiadomość.`,
+    cancelledReasonBody: (w, r) => `Zleceniodawca anulował Twoją zmianę z dnia ${w}. Powód: ${r}`,
+    uitgekozenTitle: (t) => `✅ Zostałeś(aś) wybrany(a): ${t}`,
+    uitgekozenBody: (c, w) => `${c} wpisał(a) Cię na ${w}. Dodaj do kalendarza!`,
   },
   ro: {
     hours: "ore",
@@ -545,6 +577,13 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `${n} a anulat evenimentul din ${w}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Mesaj vocal de la ${v}` : s === "sms" ? `SMS de la ${v}` : `Cerere de apel înapoi de la ${v}`),
     lijnBody: "Vezi-l la numărul tău de serviciu.",
+    favorietTitle: (c) => `⭐ ${c} te-a adăugat ca favorit`,
+    favorietBody: "Ești pe lista lor de lucrători permanenți.",
+    reserveTitle: (t) => `📋 Ești pe lista de rezervă: ${t}`,
+    reserveBody: (c, w) => `${c}, ${w}. Dacă cineva anulează, tu vei fi primul(a) anunțat(ă).`,
+    cancelledReasonBody: (w, r) => `Clientul a anulat tura ta din ${w}. Motiv: ${r}`,
+    uitgekozenTitle: (t) => `✅ Ai fost ales(ă): ${t}`,
+    uitgekozenBody: (c, w) => `${c} te-a programat pentru ${w}. Adaugă-l în calendar!`,
   },
   uk: {
     hours: "год",
@@ -649,6 +688,13 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `${n} скасував(ла) подію ${w}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Голосове повідомлення від ${v}` : s === "sms" ? `SMS від ${v}` : `Запит на зворотний дзвінок від ${v}`),
     lijnBody: "Переглянь біля свого робочого номера.",
+    favorietTitle: (c) => `⭐ ${c} додав(ла) тебе до улюблених`,
+    favorietBody: "Ти в їхньому списку постійних працівників.",
+    reserveTitle: (t) => `📋 Ти в резервному списку: ${t}`,
+    reserveBody: (c, w) => `${c}, ${w}. Якщо хтось відмовиться, ти дізнаєшся першим(ою).`,
+    cancelledReasonBody: (w, r) => `Замовник скасував твою зміну ${w}. Причина: ${r}`,
+    uitgekozenTitle: (t) => `✅ Тебе вибрано: ${t}`,
+    uitgekozenBody: (c, w) => `${c} поставив(ла) тебе в графік на ${w}. Додай до календаря!`,
   },
 };
 

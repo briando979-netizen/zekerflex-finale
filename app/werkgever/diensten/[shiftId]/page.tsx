@@ -35,6 +35,7 @@ import { FASE_TOON, klusFase, urenNogOpen, type KlusFase } from "@/lib/werkgever
 import { ReactieLijst } from "@/components/werkgever/ReactieLijst";
 import { LinkKopieren } from "@/components/werkgever/LinkKopieren";
 import { InfoBlok, KlusInformatie, KlusOmschrijving, type InfoBlokje } from "@/components/werkgever/KlusInformatie";
+import { naamVoorMatch } from "@/lib/werkgever/naam";
 
 export const dynamic = "force-dynamic";
 
@@ -310,7 +311,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                   reacties={openReacties.map((o) => ({
                     id: o.id,
                     userId: o.userId,
-                    naam: o.freelancerName,
+                    naam: naamVoorMatch(o.freelancerName),
                     avatarUrl: o.avatarUrl,
                     proposedRateCents: o.proposedRateCents,
                     listedRateCents: o.listedRateCents,

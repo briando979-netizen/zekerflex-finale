@@ -6,6 +6,8 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { prisma } from "@/lib/prisma";
 import { toErrorBody, AppError } from "@/lib/errors";
 import { updateEmployerRelation, getEmployerRelations } from "@/lib/employer/relations";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { runAfter } from "@/lib/run-after";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,10 +46,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!tenantId) throw AppError.forbidden("Geen organisatie");
 
     // The target must be a real freelancer.
-    const target = await prisma.user.findFirst({
-      where: { id: input.userId, freelancerProfile: { isNot: null } },
-      select: { id: true, fullName: true },
-    });
+    const [target, tenant] = await Promise.all([
+      prisma.user.findFirst({
+        where: { id: input.userId, freelancerProfile: { isNot: null } },
+        select: { id: true, fullName: true },
+      }),
+      prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+    ]);
     if (!target) throw AppError.notFound("Kracht niet gevonden");
 
     const rel = await updateEmployerRelation(tenantId, input.action, {
@@ -55,6 +60,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       name: target.fullName || input.name,
       ...(input.note ? { note: input.note } : {}),
     });
+
+    if (input.action === "favorite" && tenant) {
+      const bedrijf = tenant.name;
+      runAfter(() => sendLocalizedPush([target.id], (t) => ({ title: t.favorietTitle(bedrijf), body: t.favorietBody, url: "/dashboard" })));
+    }
 
     revalidatePath("/werkgever/favorieten");
     revalidatePath("/werkgever/geblokkeerd");

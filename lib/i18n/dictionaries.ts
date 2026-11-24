@@ -2367,6 +2367,7 @@ export const nl = {
     ervaringNu: "heden",
     maanden: "jan,feb,mrt,apr,mei,jun,jul,aug,sep,okt,nov,dec",
     gewerktVia: "{naam} heeft via ZekerFlex gewerkt bij",
+    actiefInRegios: "Was actief in {n} regio's",
     relatieKop: "Favoriet of blokkeren",
     // accepteren lukt niet omdat de kracht zelf nog gegevens mist (lib/fiscal/werker-niet-klaar.ts); belooft geen bericht dat niet gaat
     werkerNietKlaar: "Deze kracht kan deze klus nog niet aannemen: er ontbreken nog gegevens in zijn account, zoals zijn bedrijfsgegevens of rekeningnummer. Zijn reactie blijft staan; zodra hij alles heeft ingevuld, kun je hem accepteren.",

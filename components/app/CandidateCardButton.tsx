@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { respondToOfferAction, zetReserveAction, type OfferResponse } from "@/app/werkgever/diensten/[shiftId]/actions";
 import { LaatsteChecksVenster } from "@/components/werkgever/LaatsteChecksVenster";
 import { BreedVenster } from "@/components/werkgever/BreedVenster";
+import { RegioVenster } from "@/components/werkgever/RegioVenster";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
 import { Envelop, Hoek, Kalender, KruisRond, Speld, Ster, Telefoon, Trechter, Wissel } from "@/components/werkgever/iconen";
 import { BEDRIJF_NOG_NIET_GECONTROLEERD } from "@/lib/company/gecontroleerd";
@@ -43,6 +44,7 @@ interface Card {
   gewerktBij?: string[];
   favoriet?: boolean;
   geblokkeerd?: boolean;
+  regios?: { naam: string; lat: number; lng: number }[];
 }
 
 const euroIn = (c: number, nl: boolean) => `€ ${nl ? (c / 100).toFixed(2).replace(".", ",") : (c / 100).toFixed(2)}`;
@@ -154,6 +156,8 @@ export function CandidateCardButton({
   const [alleReviews, setAlleReviews] = useState(false);
   const [alleSkills, setAlleSkills] = useState(false);
   const [sector, setSector] = useState("");
+  const [regioOpen, setRegioOpen] = useState(false);
+  const [fotoOpen, setFotoOpen] = useState(false);
   const titleId = useId();
 
   const load = async () => {
@@ -257,8 +261,27 @@ export function CandidateCardButton({
         kop={
           card ? (
             card.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={card.avatarUrl} alt={fmt(k.fotoVan, { naam: toonNaam })} className="mb-5 h-28 w-28 rounded-full object-cover sm:h-44 sm:w-44" />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={card.avatarUrl}
+                  alt={fmt(k.fotoVan, { naam: toonNaam })}
+                  className="mb-5 h-28 w-28 cursor-zoom-in rounded-full object-cover sm:h-44 sm:w-44"
+                  onClick={() => setFotoOpen(true)}
+                />
+                {fotoOpen && (
+                  <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4"
+                    onClick={() => setFotoOpen(false)}
+                    role="dialog"
+                    aria-modal
+                    aria-label={fmt(k.fotoVan, { naam: toonNaam })}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={card.avatarUrl} alt={fmt(k.fotoVan, { naam: toonNaam })} className="max-h-[90vh] max-w-full rounded-xl object-contain" />
+                  </div>
+                )}
+              </>
             ) : (
               <span aria-hidden className="mb-5 grid h-28 w-28 place-items-center rounded-full bg-brand-100 text-4xl font-bold text-brand-700 sm:h-44 sm:w-44">
                 {toonNaam.slice(0, 1).toUpperCase()}
@@ -575,6 +598,16 @@ export function CandidateCardButton({
               </div>
             )}
 
+            {/* actieve regio's */}
+            {(card.regios ?? []).length > 0 && (
+              <div className="py-2">
+                <button type="button" className={LINK} onClick={() => setRegioOpen(true)}>
+                  <Speld maat={15} />
+                  {fmt(k.actiefInRegios, { n: (card.regios ?? []).length })}
+                </button>
+              </div>
+            )}
+
             {/* waar via ZekerFlex is gewerkt */}
             {((card.gewerktBij ?? []).length > 0 || card.history.length > 0) && (
               <div className="py-6">
@@ -620,6 +653,16 @@ export function CandidateCardButton({
           </div>
         )}
       </BreedVenster>
+
+      {(card?.regios ?? []).length > 0 && (
+        <RegioVenster
+          open={regioOpen}
+          naam={toonNaam}
+          regios={(card?.regios ?? []).map((r) => ({ naam: r.naam, lat: r.lat, lng: r.lng, klussen: 0 }))}
+          klus={null}
+          onSluit={() => setRegioOpen(false)}
+        />
+      )}
 
       {checks && beslissing && (
         <LaatsteChecksVenster

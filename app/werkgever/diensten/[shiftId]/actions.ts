@@ -21,8 +21,11 @@ import { notifyJobAlerts } from "@/lib/matching/job-alerts";
 import { repeatWithSameTeam } from "@/lib/shifts/repeat";
 import { runAfter } from "@/lib/run-after";
 import { maybeSweepWorkerPushes, pushOfferDeclined } from "@/lib/notifications/worker-push";
+import { userLocales } from "@/lib/i18n/worker-locale";
+import { uitgekozenEmailT } from "@/lib/mail/werker/uitgekozen";
+import { sendMail } from "@/lib/mail";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
-import { pushWhen } from "@/lib/i18n/worker-push";
+import { pushWhen, pushDayMonth } from "@/lib/i18n/worker-push";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 import { parseAmsterdamLocal } from "@/lib/time/amsterdam";
@@ -274,10 +277,11 @@ export async function cancelShiftAction(shiftId: string, reason: string): Promis
     // System chat messages send no push: tell the booked people now, not on the day itself.
     if (hadAssignees) {
       const booked = shift.assignments.map((a) => a.freelancer.userId);
+      const cancelReason = reason.trim();
       runAfter(() =>
         sendLocalizedPush(booked, (t, locale) => ({
           title: t.cancelledTitle(shift.title),
-          body: t.cancelledBody(pushWhen(locale, shift)),
+          body: cancelReason ? t.cancelledReasonBody(pushWhen(locale, shift), cancelReason) : t.cancelledBody(pushWhen(locale, shift)),
           data: { type: "SHIFT", url: `/dashboard/klussen/${shift.id}`, tag: `geannuleerd-${shift.id}` },
           ttlSeconds: 86_400,
         })),
@@ -484,7 +488,26 @@ export async function respondToOfferAction(
     // Gekozen of afgewezen: dan staat hij niet meer op de reservebank (lezen filtert hem ook al weg; dit ruimt op).
     await haalVanReservebank({ id: shift.id, tenantId: shift.branch.tenantId }, offerId).catch(() => undefined);
     // "uitgekozen" push right away (the sweep would also catch it)
-    if (decision === "accepted") runAfter(() => maybeSweepWorkerPushes());
+    if (decision === "accepted") {
+      runAfter(() => maybeSweepWorkerPushes());
+      // mail aan de werker in zijn/haar taal
+      const shiftId2 = shift.id;
+      const shiftTitle2 = shift.title;
+      const startsAt2 = shift.startsAt;
+      const endsAt2 = shift.endsAt;
+      const workerUserId2 = offer.userId;
+      runAfter(async () => {
+        const locales = await userLocales([workerUserId2]);
+        const locale = locales.get(workerUserId2) ?? "nl";
+        const werker = await prisma.user.findUnique({ where: { id: workerUserId2 }, select: { email: true, fullName: true } });
+        if (!werker) return;
+        const tenant = await prisma.tenant.findUnique({ where: { id: shift.branch.tenantId }, select: { name: true } });
+        const bedrijf = tenant?.name ?? "";
+        const when = pushDayMonth(locale, startsAt2) + "–" + new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" }).format(endsAt2);
+        const mail = uitgekozenEmailT({ fullName: werker.fullName, title: shiftTitle2, bedrijf, when, link: `https://zekerflex.com/dashboard/klussen/${shiftId2}` }, locale);
+        await sendMail({ ...mail, to: werker.email }).catch(() => undefined);
+      });
+    }
 
     // let the freelancer know in chat
     try {
@@ -523,7 +546,7 @@ export async function respondToOfferAction(
 /**
  * Reservebank (lib/reservebank): een open reactie achter de hand houden in plaats van afwijzen, of er weer af halen.
  * De reactie blijft gewoon openstaan; inplannen gaat later via respondToOfferAction (dezelfde weg als altijd).
- * Alleen het bedrijf zelf past de bank aan; het beheer van ZekerFlex kan hem alleen zien. Geen push aan de werker.
+ * Alleen het bedrijf zelf past de bank aan; het beheer van ZekerFlex kan hem alleen zien.
  */
 export async function zetReserveAction(offerId: string, aan: boolean): Promise<OfferResponse> {
   try {
@@ -543,6 +566,12 @@ export async function zetReserveAction(offerId: string, aan: boolean): Promise<O
         return { ok: false, message: "Deze klus is al begonnen of gaat niet door: de reservebank telt niet meer." };
       }
       await zetOpReservebank(klus, offer.id);
+      // push aan de werker: je staat op de reservebank
+      const wanneer = pushWhen(shift.startsAt, shift.endsAt, "nl");
+      const tenantNaam = await prisma.tenant.findUnique({ where: { id: shift.branch.tenantId }, select: { name: true } }).then((t) => t?.name ?? shift.branch.tenantId);
+      const shiftTitle = shift.title;
+      const userId = offer.userId;
+      runAfter(() => sendLocalizedPush([userId], (t) => ({ title: t.reserveTitle(shiftTitle), body: t.reserveBody(tenantNaam, wanneer), url: "/dashboard" })));
     } else {
       await haalVanReservebank(klus, offer.id);
     }

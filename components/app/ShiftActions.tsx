@@ -235,18 +235,7 @@ export function ShiftActions({
   return (
     <div className={variant === "detail" ? "space-y-3" : "space-y-2"}>
       <div className="flex items-center justify-between gap-2">
-        {confirmed ? (
-          <span className="pill-ok">{t.confirmed}</span>
-        ) : (
-          <button
-            type="button"
-            disabled={pending || started}
-            onClick={confirmAttendance}
-            className="btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
-          >
-            {t.confirmBtn}
-          </button>
-        )}
+        {confirmed && <span className="pill-ok">{t.confirmed}</span>}
         {AgendaLink}
       </div>
 

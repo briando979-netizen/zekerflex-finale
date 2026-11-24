@@ -10,6 +10,7 @@ import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
 import { samenTitel } from "@/lib/werkgever/samen-titel";
+import { naamVoorMatch } from "@/lib/werkgever/naam";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function FavorietenPage() {
               <li key={c.userId} className="surface p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-display text-base font-bold text-ink">{c.name}</p>
+                    <p className="font-display text-base font-bold text-ink">{naamVoorMatch(c.name)}</p>
                     <p className="mt-0.5 text-xs text-neutralx-400">
                       {BADGE[c.badgeLevel] ?? c.badgeLevel}
                       {c.avgRating > 0
