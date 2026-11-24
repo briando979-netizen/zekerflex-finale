@@ -567,11 +567,11 @@ export async function zetReserveAction(offerId: string, aan: boolean): Promise<O
       }
       await zetOpReservebank(klus, offer.id);
       // push aan de werker: je staat op de reservebank
-      const wanneer = pushWhen(shift.startsAt, shift.endsAt, "nl");
       const tenantNaam = await prisma.tenant.findUnique({ where: { id: shift.branch.tenantId }, select: { name: true } }).then((t) => t?.name ?? shift.branch.tenantId);
       const shiftTitle = shift.title;
+      const shiftId = shift.id;
       const userId = offer.userId;
-      runAfter(() => sendLocalizedPush([userId], (t) => ({ title: t.reserveTitle(shiftTitle), body: t.reserveBody(tenantNaam, wanneer), url: "/dashboard" })));
+      runAfter(() => sendLocalizedPush([userId], (t, locale) => ({ title: t.reserveTitle(shiftTitle), body: t.reserveBody(tenantNaam, pushWhen(locale, shift)), data: { type: "SHIFT", url: `/dashboard/klussen/${shiftId}`, tag: `reserve-${shiftId}` }, ttlSeconds: 86_400 })));
     } else {
       await haalVanReservebank(klus, offer.id);
     }

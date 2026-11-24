@@ -63,7 +63,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (input.action === "favorite" && tenant) {
       const bedrijf = tenant.name;
-      runAfter(() => sendLocalizedPush([target.id], (t) => ({ title: t.favorietTitle(bedrijf), body: t.favorietBody, url: "/dashboard" })));
+      runAfter(() => sendLocalizedPush([target.id], (t) => ({ title: t.favorietTitle(bedrijf), body: t.favorietBody, data: { type: "PROFILE", url: "/dashboard", tag: "favoriet" }, ttlSeconds: 86_400 })));
     }
 
     revalidatePath("/werkgever/favorieten");
