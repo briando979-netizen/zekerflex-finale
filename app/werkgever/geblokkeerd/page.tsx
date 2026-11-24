@@ -7,6 +7,8 @@ import { FreelancerRelationButton } from "@/components/app/FreelancerRelationBut
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
+import { werkerNamenVoor } from "@/lib/employer/match";
+import { naamVoorMatch } from "@/lib/werkgever/naam";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,10 @@ export default async function GeblokkeerdPage() {
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
   const rel = tenantId ? await getEmployerRelations(tenantId) : { favorites: [], blocked: [] };
+  const blockedIds = rel.blocked.map((x) => x.userId);
+  const namenMap = tenantId && blockedIds.length > 0
+    ? await werkerNamenVoor([tenantId], blockedIds)
+    : new Map<string, string>();
 
   return (
     <>
@@ -29,7 +35,7 @@ export default async function GeblokkeerdPage() {
           {rel.blocked.map((x) => (
             <li key={x.userId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-ink">{x.name}</p>
+                <p className="text-sm font-medium text-ink">{namenMap.get(x.userId) ?? naamVoorMatch(x.name)}</p>
                 <p className="text-xs text-neutralx-500">
                   {fmt(b.blockedSince, { date: dateShort(x.at) })}
                   {x.note ? ` · ${x.note}` : ""}

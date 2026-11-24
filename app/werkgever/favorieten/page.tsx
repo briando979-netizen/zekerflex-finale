@@ -11,6 +11,7 @@ import { fmt } from "@/lib/i18n/dictionaries";
 import { SamenTabs } from "@/components/werkgever/SamenTabs";
 import { samenTitel } from "@/lib/werkgever/samen-titel";
 import { naamVoorMatch } from "@/lib/werkgever/naam";
+import { werkerNamenVoor } from "@/lib/employer/match";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,11 @@ export default async function FavorietenPage() {
   const rel = tenantId ? await getEmployerRelations(tenantId) : { favorites: [], blocked: [] };
 
   const noteByUser = new Map(rel.favorites.map((f) => [f.userId, f.note]));
-  const cards = await responderCards(rel.favorites.map((f) => f.userId));
+  const favUserIds = rel.favorites.map((f) => f.userId);
+  const [cards, namenMap] = await Promise.all([
+    responderCards(favUserIds),
+    tenantId ? werkerNamenVoor([tenantId], favUserIds) : Promise.resolve(new Map<string, string>()),
+  ]);
   // keep the order the employer favourited them
   const order = new Map(rel.favorites.map((f, i) => [f.userId, i]));
   cards.sort((a, b) => (order.get(a.userId) ?? 0) - (order.get(b.userId) ?? 0));
@@ -66,7 +71,7 @@ export default async function FavorietenPage() {
               <li key={c.userId} className="surface p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-display text-base font-bold text-ink">{naamVoorMatch(c.name)}</p>
+                    <p className="font-display text-base font-bold text-ink">{namenMap.get(c.userId) ?? naamVoorMatch(c.name)}</p>
                     <p className="mt-0.5 text-xs text-neutralx-400">
                       {BADGE[c.badgeLevel] ?? c.badgeLevel}
                       {c.avgRating > 0

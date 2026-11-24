@@ -815,7 +815,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 blokkade={applyBlokkade}
                 full
                 fixedRate={agencyTerms}
-                {...(partner ? { label: D.partnerKnop, toestemming: metBureau(D.partnerToestemming), uitzendBureau: bureau } : {})}
+                {...(partner ? { label: D.partnerKnop, toestemming: metBureau(D.partnerToestemming), uitzendBureau: bureau } : { toestemming: D.contactToestemming })}
               />
             </div>
           )}

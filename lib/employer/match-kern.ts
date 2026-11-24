@@ -19,7 +19,7 @@ export const CONTACT_NAZORG_MS = CONTACT_NAZORG_DAGEN * 86_400_000;
  * melding aan de werker bij het reageren er zijn (besluit eigenaar 23 nov 2026: ja, na het inplannen). Zet pas op true als
  * die twee live staan.
  */
-export const CONTACT_NA_MATCH_AAN: boolean = false;
+export const CONTACT_NA_MATCH_AAN: boolean = true;
 
 export interface Inplanning {
   cancelledAt: Date | null;

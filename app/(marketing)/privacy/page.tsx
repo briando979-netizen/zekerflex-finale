@@ -61,6 +61,10 @@ export default function PrivacyPage() {
         body="Wil je werken zonder btw-id, dan vragen we je BSN. Dat is nodig zodat de opdrachtgever een UBD-formulier voor de Belastingdienst kan invullen. ZekerFlex verwerkt deze gegevens als verwerker en deelt ze één keer per jaar, via de beveiligde ZekerFlex-omgeving, met de opdrachtgevers waarvoor je hebt gewerkt."
       />
       <LegalSection
+        heading="Contactgegevens na een inplanning"
+        body="Wordt een flexwerker ingepland voor een klus, dan deelt ZekerFlex zijn of haar telefoonnummer en e-mailadres met de opdrachtgever. Dat is nodig zodat opdrachtgever en flexwerker elkaar kunnen bereiken over praktische zaken rond de klus. De contactgegevens zijn zichtbaar voor de opdrachtgever tijdens de klus en tot 14 dagen na afloop. Daarna worden ze weer verborgen. De flexwerker ziet bij het reageren op een klus altijd een melding dat zijn of haar contactgegevens op deze manier worden gedeeld."
+      />
+      <LegalSection
         heading="Contact met opdrachtgevers"
         body="We houden klantcontacten bij in onze eigen software. Meldt een opdrachtgever zich aan, dan gaat die akkoord met onze gebruiksvoorwaarden en wordt de contactpersoon toegevoegd aan ons systeem. We verwerken daarbij alleen naam, e-mailadres en telefoonnummer, om uitvoering te geven aan de gebruiksovereenkomst."
       />
