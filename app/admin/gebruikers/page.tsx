@@ -176,19 +176,24 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
         />
       </Panel>
 
-      <FreelancerLocationFilterWrapper
-        items={d.rows
-          .filter((u) => u.kind === "flexwerker")
-          .map((u) => ({
-            id: u.id,
-            fullName: u.fullName,
-            ...(u.freelancerProfile?.homePostalCode ? { postalCode: u.freelancerProfile.homePostalCode } : {}),
-            ...(u.freelancerProfile?.homeLatitude != null ? { latitude: u.freelancerProfile.homeLatitude } : {}),
-            ...(u.freelancerProfile?.homeLongitude != null ? { longitude: u.freelancerProfile.homeLongitude } : {}),
-          }))}
-      />
-
-      <Panel flush title="Alle gebruikers" subtitle={d.capped ? "De nieuwste 2.000 accounts" : `${count(d.total)} accounts`}>
+      <Panel
+        flush
+        title="Alle gebruikers"
+        subtitle={d.capped ? "De nieuwste 2.000 accounts" : `${count(d.total)} accounts`}
+        actions={
+          <FreelancerLocationFilterWrapper
+            items={d.rows
+              .filter((u) => u.kind === "flexwerker")
+              .map((u) => ({
+                id: u.id,
+                fullName: u.fullName,
+                ...(u.freelancerProfile?.homePostalCode ? { postalCode: u.freelancerProfile.homePostalCode } : {}),
+                ...(u.freelancerProfile?.homeLatitude != null ? { latitude: u.freelancerProfile.homeLatitude } : {}),
+                ...(u.freelancerProfile?.homeLongitude != null ? { longitude: u.freelancerProfile.homeLongitude } : {}),
+              }))}
+          />
+        }
+      >
         <DataTable
           columns={[
             { key: "name", label: "Naam" },
