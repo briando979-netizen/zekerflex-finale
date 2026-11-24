@@ -567,7 +567,7 @@ export async function zetReserveAction(offerId: string, aan: boolean): Promise<O
       }
       await zetOpReservebank(klus, offer.id);
       // push aan de werker: je staat op de reservebank
-      const tenantNaam = await prisma.tenant.findUnique({ where: { id: shift.branch.tenantId }, select: { name: true } }).then((t) => t?.name ?? shift.branch.tenantId);
+      const tenantNaam = shift.branch.name;
       const shiftTitle = shift.title;
       const shiftId = shift.id;
       const userId = offer.userId;
