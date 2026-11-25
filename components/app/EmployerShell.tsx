@@ -357,7 +357,7 @@ export function EmployerShell({
 
             {/* op een telefoon staan de weergave en de hulp niet in de kopbalk (de bedrijfsnaam heeft de ruimte nodig): de weergave
                 staat dan in het gebruikersmenu, het hulpcentrum in de lade */}
-            <ThemeToggle theme={theme} className={`${kopKnop} hidden sm:grid`} texts={locale === "en" ? THEMA_EN : THEMA_NL} />
+            {/* thema-toggle staat in het gebruikersmenu (ook op een laptop), zodat de kopbalk eenvoudig blijft */}
 
             <div className="hidden sm:block">
               {hulp ? (

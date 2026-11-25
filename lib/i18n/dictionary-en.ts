@@ -766,7 +766,7 @@ export const en: Dict = {
     reactiesKop: "{n} open responses",
     reactiesKopEen: "1 open response",
     reactiesUitleg:
-      "Freelancers respond to your job, sometimes with a higher or lower hourly rate (a counter-offer). If you want to discuss it, send a message. If you accept a counter-offer, that hourly rate applies to this job.",
+      "Freelancers can respond to your job and simultaneously propose a different hourly rate or different working hours. If the freelancer changes the rate or hours, you will receive a new notification by e-mail.",
     reactiesLeeg: "As soon as someone responds, the response appears here and you get a notification.",
     jouwDienst: "Your shift:",
     filters: "Filters",

@@ -800,7 +800,7 @@ export const nl = {
     reactiesKop: "{n} openstaande reacties",
     reactiesKopEen: "1 openstaande reactie",
     reactiesUitleg:
-      "Freelancers reageren op je klus, soms met een hoger of lager uurtarief (een tegenbod). Wil je daarover praten, stuur dan een bericht. Accepteer je een tegenbod, dan geldt dat uurtarief voor deze klus.",
+      "Freelancers kunnen reageren op je klus en tegelijkertijd een aangepast uurtarief of andere werktijden voorstellen. Als de freelancer het uurtarief of de werktijden wijzigt, ontvang je een nieuwe notificatie per e-mail.",
     reactiesLeeg: "Zodra iemand reageert, staat de reactie hier en krijg je een melding.",
     jouwDienst: "Jouw dienst:",
     filters: "Filters",
