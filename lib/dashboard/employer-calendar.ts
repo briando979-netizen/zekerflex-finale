@@ -60,6 +60,108 @@ export function monthGrid(year: number, month: number, shifts: CalShift[], now =
   return weeks;
 }
 
+export interface CalendarWeek {
+  /** ISO date string "YYYY-MM-DD" van de maandag */
+  mondayKey: string;
+  /** 7 dagen van ma t/m zo */
+  days: { dayKey: string; dayLabel: string; dayNum: number; isToday: boolean; shifts: CalShift[] }[];
+  prev: string; // ISO date maandag van vorige week
+  next: string; // ISO date maandag van volgende week
+}
+
+/** Maandag van de week waar de gegeven datum in valt (Amsterdam-tijd). */
+export function weekMaandag(dateKey: string): string {
+  const d = new Date(dateKey + "T12:00:00Z");
+  const dow = (d.getUTCDay() + 6) % 7; // 0 = ma
+  const mon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dow));
+  return mon.toISOString().slice(0, 10);
+}
+
+export async function getEmployerCalendarWeek(
+  p: Principal,
+  mondayKey: string,
+): Promise<CalendarWeek> {
+  const scope = await resolveEmployerScope(p);
+  const branchFilter = scope.branchIds
+    ? { id: { in: scope.branchIds } }
+    : { tenantId: { in: scope.tenantIds } };
+
+  const mon = new Date(mondayKey + "T00:00:00Z");
+  const sun = new Date(Date.UTC(mon.getUTCFullYear(), mon.getUTCMonth(), mon.getUTCDate() + 7));
+  const gridStart = amsterdamToUtc(mon.getUTCFullYear(), mon.getUTCMonth() + 1, mon.getUTCDate());
+  const gridEnd = amsterdamToUtc(sun.getUTCFullYear(), sun.getUTCMonth() + 1, sun.getUTCDate());
+
+  const rows = await prisma.shift.findMany({
+    where: {
+      branch: branchFilter,
+      status: { not: "CANCELLED" },
+      startsAt: { gte: gridStart, lt: gridEnd },
+    },
+    select: {
+      id: true,
+      title: true,
+      startsAt: true,
+      endsAt: true,
+      positions: true,
+      status: true,
+      branch: { select: { name: true } },
+      _count: { select: { assignments: { where: { cancelledAt: null } } } },
+    },
+    orderBy: { startsAt: "asc" },
+  });
+
+  const perKlus = new Map<string, number>();
+  try {
+    const ids = new Set(rows.map((r) => r.id));
+    for (const o of await listCounterOffers(500)) if (o.status === "pending" && ids.has(o.shiftId)) perKlus.set(o.shiftId, (perKlus.get(o.shiftId) ?? 0) + 1);
+  } catch { /* geen reacties */ }
+
+  const shifts: CalShift[] = rows.map((s) => ({
+    id: s.id,
+    title: s.title,
+    branch: s.branch.name,
+    startsAt: s.startsAt,
+    endsAt: s.endsAt,
+    positions: s.positions,
+    filled: s._count.assignments,
+    status: s.status,
+    reacties: perKlus.get(s.id) ?? 0,
+  }));
+
+  const byDay = new Map<string, CalShift[]>();
+  for (const s of shifts) {
+    const k = amsterdamDayKey(s.startsAt);
+    byDay.set(k, [...(byDay.get(k) ?? []), s]);
+  }
+
+  const todayKey = amsterdamDayKey(new Date());
+  const dict = await getDict();
+  const SHORT_DAYS = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(Date.UTC(mon.getUTCFullYear(), mon.getUTCMonth(), mon.getUTCDate() + i));
+    const key = d.toISOString().slice(0, 10);
+    const monthName = dict.calendar.months[d.getUTCMonth()] ?? "";
+    return {
+      dayKey: key,
+      dayLabel: `${SHORT_DAYS[i] ?? ""} ${d.getUTCDate()} ${monthName.slice(0, 3)}`,
+      dayNum: d.getUTCDate(),
+      isToday: key === todayKey,
+      shifts: byDay.get(key) ?? [],
+    };
+  });
+
+  const prevMon = new Date(Date.UTC(mon.getUTCFullYear(), mon.getUTCMonth(), mon.getUTCDate() - 7));
+  const nextMon = new Date(Date.UTC(mon.getUTCFullYear(), mon.getUTCMonth(), mon.getUTCDate() + 7));
+
+  return {
+    mondayKey,
+    days,
+    prev: prevMon.toISOString().slice(0, 10),
+    next: nextMon.toISOString().slice(0, 10),
+  };
+}
+
 export async function getEmployerCalendarMonth(
   p: Principal,
   year: number,

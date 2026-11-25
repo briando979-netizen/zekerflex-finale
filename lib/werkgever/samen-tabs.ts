@@ -32,6 +32,7 @@ export const SAMEN_GROEPEN: Record<SamenGroep, SamenGroepDef> = {
     label: "Planning",
     tabs: [
       { id: "kalender", href: "/werkgever/kalender", label: "Kalender" },
+      { id: "week", href: "/werkgever/week", label: "Weekrooster" },
       { id: "planner", href: "/werkgever/planner", label: "Roosterplanner" },
       { id: "agenda", href: "/werkgever/agenda", label: "Agenda" },
     ],

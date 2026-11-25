@@ -3,6 +3,6 @@
 
 import { SAMEN_GROEPEN } from "@/lib/werkgever/samen-tabs";
 
-export type PlanningTab = "kalender" | "planner" | "agenda";
+export type PlanningTab = "kalender" | "week" | "planner" | "agenda";
 
 export const PLANNING_TABS: readonly { id: PlanningTab; href: string; label: string }[] = SAMEN_GROEPEN.planning.tabs.map((t) => ({ id: t.id as PlanningTab, href: t.href, label: t.label }));

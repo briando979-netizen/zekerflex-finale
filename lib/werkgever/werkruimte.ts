@@ -55,6 +55,7 @@ export type MenuSleutel =
   | "start"
   | "klussen"
   | "kalender"
+  | "week"
   | "planner"
   | "agenda"
   /** met de vlag publiek-alleen-flexwerk: samengevoegde ingangen (lib/werkgever/samen-tabs.ts): kalender+roosterplanner+agenda,
@@ -116,7 +117,7 @@ export interface MenuOpties {
 }
 
 /** De personeelsfuncties, in de volgorde van het menu. */
-export const PERSONEEL_SLEUTELS: readonly MenuSleutel[] = ["klussen", "kalender", "planner", "uren", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten"];
+export const PERSONEEL_SLEUTELS: readonly MenuSleutel[] = ["klussen", "kalender", "week", "planner", "uren", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten"];
 
 const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (sectie ? { sleutel, sectie } : { sleutel });
 
@@ -129,7 +130,7 @@ const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "kennisbank"];
 // rapportages+bedrijf-in-kaart "Cijfers" en chat+assistent "Chat"; bovenaan die pagina's staan dan tabbladen
 // (lib/werkgever/samen-tabs.ts, components/werkgever/SamenTabs.tsx). De eerste van de leden bepaalt de plek in het menu.
 export const SAMENVOEGINGEN: readonly { sleutel: MenuSleutel; leden: readonly MenuSleutel[] }[] = [
-  { sleutel: "planning", leden: ["kalender", "planner", "agenda"] },
+  { sleutel: "planning", leden: ["kalender", "week", "planner", "agenda"] },
   { sleutel: "uren", leden: ["uren", "inchecken"] },
   { sleutel: "werkers", leden: ["favorieten", "geblokkeerd"] },
   { sleutel: "regels", leden: ["compliance", "overeenkomsten"] },
@@ -168,7 +169,7 @@ function menuVoorBasis(o: MenuOpties): MenuPlek[] {
   const bank: MenuSleutel[] = o.inApp || !BANK_AAN ? [] : ["bank"];
   return [
     { sleutel: "start" },
-    ...(["klussen", "kalender", "planner", "agenda", ...bank, "favorieten", "berichten", "assistent", "geblokkeerd"] as MenuSleutel[]).map(plek()),
+    ...(["klussen", "kalender", "week", "planner", "agenda", ...bank, "favorieten", "berichten", "assistent", "geblokkeerd"] as MenuSleutel[]).map(plek()),
     ...(o.uitzendPartner ? UITZEND_SLEUTELS.map(plek("uitzend")) : []),
     ...(["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "telefonie", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
   ];

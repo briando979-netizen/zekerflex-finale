@@ -38,6 +38,7 @@ describe("menuVoor", () => {
       { sleutel: "start" },
       { sleutel: "klussen" },
       { sleutel: "kalender" },
+      { sleutel: "week" },
       { sleutel: "planner" },
       { sleutel: "agenda" },
       // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): geen "bank"

@@ -81,6 +81,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     start: { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
     klussen: { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
     kalender: { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
+    week: { href: "/werkgever/week", label: "Weekrooster", icon: <ICalendar /> },
     planner: { href: "/werkgever/planner", label: "Roosterplanner", icon: <ICalendar /> },
     agenda: { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
     // met de vlag publiek-alleen-flexwerk: samengevoegde ingangen met tabbladen op de pagina (lib/werkgever/samen-tabs.ts)
