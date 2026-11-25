@@ -220,9 +220,9 @@ describe("de schil", () => {
     expect(css).toContain('.app-scope[data-app="werkgever"][data-theme="dark"] .wg-kop { box-shadow: none; border-bottom: 1px solid var(--app-edge); }');
   });
 
-  it("de zijbalk staat op een laptop standaard ingeklapt en onthoudt alleen een bewuste keuze", () => {
-    expect(shell).toContain("const [collapsed, setCollapsed] = useState(true);");
-    expect(shell).toContain('setCollapsed(localStorage.getItem("zf-emp-collapsed") !== "0");');
+  it("de zijbalk staat op een laptop standaard uitgeklapt (zoals YoungOnes) en onthoudt alleen een bewuste keuze", () => {
+    expect(shell).toContain("const [collapsed, setCollapsed] = useState(false);");
+    expect(shell).toContain('setCollapsed(localStorage.getItem("zf-emp-collapsed") === "1");');
   });
 
   it("op een telefoon is het een lade met namen: inklappen geldt alleen vanaf een laptop", () => {

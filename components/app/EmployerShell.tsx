@@ -28,9 +28,9 @@ import { SCHIL_INHOUD, SCHIL_KOPBALK, SCHIL_RASTER_IN, SCHIL_RASTER_UIT, SCHIL_Z
 // left untouched.
 //
 // 23 nov 2026 (eigenaar: het dashboard moet er net zo uitzien en zo zijn ingedeeld als dat van YoungOnes, in onze eigen
-// huisstijl): een smalle donkere zijbalk met alleen pictogrammen, die uitklapt naar pictogrammen met namen; een witte
-// kopbalk; een lichte, effen achtergrond. Op een laptop staat de zijbalk standaard ingeklapt (de keuze wordt onthouden); op
-// een telefoon is het een lade achter de menuknop, altijd met namen.
+// huisstijl): een donkere zijbalk met pictogrammen en namen, die inklapt naar alleen pictogrammen; een witte
+// kopbalk; een lichte, effen achtergrond. Op een laptop staat de zijbalk standaard uitgeklapt zoals bij YoungOnes
+// (eigenaar, 25 nov 2026; de keuze wordt onthouden); op een telefoon is het een lade achter de menuknop, altijd met namen.
 // Ronde 2 (zelfde dag, na het meten naast de referentie): de zijbalk is 94 px ingeklapt en 221 px uitgeklapt, de kopbalk
 // 78 px hoog met een zachte schaduw in plaats van een rand, en de inhoud staat links uitgelijnd op 32 px van de zijbalk met
 // een maximale breedte van 1192 px (de maten staan in components/werkgever/bouwstenen.ts). De zijbalk heeft twee groepen:
@@ -170,13 +170,14 @@ export function EmployerShell({
   const t = useT();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(true);
+  // standaard uitgeklapt met namen, zoals YoungOnes (eigenaar, 25 nov 2026); wie bewust inklapt, blijft ingeklapt
+  const [collapsed, setCollapsed] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
-      setCollapsed(localStorage.getItem("zf-emp-collapsed") !== "0");
+      setCollapsed(localStorage.getItem("zf-emp-collapsed") === "1");
     } catch {
       /* ignore */
     }
