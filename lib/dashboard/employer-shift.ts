@@ -26,7 +26,7 @@ export interface EmployerShiftView {
   dresscode: string | null;
   /** "Extra informatie" for the worker (where to report, parking, what to bring) */
   extraInfo: string | null;
-  vaardigheden: string[]; // veld bestaat in DB na migratie 20261125120000_shift_vaardigheden
+  vaardigheden: string[];
   branch: string;
   branchId: string;
   /** het bedrijf van de vestiging (o.a. voor de reservebank, lib/reservebank) */
@@ -128,6 +128,7 @@ export async function getEmployerShift(
       description: true,
       dresscode: true,
       extraInfo: true,
+      vaardigheden: true,
       startsAt: true,
       endsAt: true,
       breakMinutes: true,
@@ -240,7 +241,7 @@ export async function getEmployerShift(
     description: shift.description,
     dresscode: shift.dresscode,
     extraInfo: shift.extraInfo,
-    vaardigheden: [], // tijdelijk leeg tot migratie 20261125120000_shift_vaardigheden is gedraaid
+    vaardigheden: shift.vaardigheden,
     branch: shift.branch.name,
     branchId: shift.branch.id,
     tenantId: shift.branch.tenantId,
