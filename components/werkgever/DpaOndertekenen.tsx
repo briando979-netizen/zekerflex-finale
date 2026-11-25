@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface Props {
-  initieel: { ondertekend: boolean; ondertekendOp?: string; naam?: string };
+  initieel: { ondertekend: boolean; ondertekendOp?: string; naam?: string; versies?: { versie: string; ondertekendOp: string; naam: string }[] };
 }
 
 export function DpaOndertekenen({ initieel }: Props) {

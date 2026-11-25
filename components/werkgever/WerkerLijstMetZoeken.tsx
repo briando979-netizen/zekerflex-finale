@@ -75,7 +75,7 @@ export function WerkerLijstMetZoeken({ werkers, t }: { werkers: WerkerKaart[]; t
                 <Stat label={t.statCancellations} value={String(c.cancellations)} />
               </dl>
 
-              {c.note && <p className="mt-3 text-xs italic text-neutralx-500">"{c.note}"</p>}
+              {c.note && <p className="mt-3 text-xs italic text-neutralx-500">&ldquo;{c.note}&rdquo;</p>}
 
               <div className="mt-3 flex items-center gap-2 border-t border-hair pt-3">
                 <Link href="/werkgever/diensten/nieuw" className="btn-ghost px-3 py-1.5 text-xs">
