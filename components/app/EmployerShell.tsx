@@ -96,21 +96,27 @@ function RailLink({
 }) {
   const rust = rustig ? "text-white/65 hover:bg-white/10 hover:text-white" : "text-white/85 hover:bg-white/15 hover:text-white";
   return (
-    <Link
-      href={item.href}
-      onClick={onKies}
-      title={collapsed ? item.label : undefined}
-      aria-current={active ? "page" : undefined}
-      className={`${rustig ? railRijRustig : railRij} ${active ? "bg-white/15 text-white" : rust}`}
-    >
-      <span className={rustig ? railIcoonRustig : railIcoon}>
-        {item.icon}
-        {stip && <span aria-hidden className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-warn" />}
-      </span>
-      <span className={collapsed ? "lg:sr-only" : ""}>{item.label}</span>
-      {stip && stipTekst ? <span className="sr-only"> ({stipTekst})</span> : null}
-      {item.badge ? <span className={collapsed ? "ml-auto lg:absolute lg:right-1 lg:top-1 lg:ml-0" : "ml-auto"}>{item.badge}</span> : null}
-    </Link>
+    <div className="relative group/tip">
+      <Link
+        href={item.href}
+        onClick={onKies}
+        aria-current={active ? "page" : undefined}
+        className={`${rustig ? railRijRustig : railRij} ${active ? "bg-white/15 text-white" : rust}`}
+      >
+        <span className={rustig ? railIcoonRustig : railIcoon}>
+          {item.icon}
+          {stip && <span aria-hidden className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-warn" />}
+        </span>
+        <span className={collapsed ? "lg:sr-only" : ""}>{item.label}</span>
+        {stip && stipTekst ? <span className="sr-only"> ({stipTekst})</span> : null}
+        {item.badge ? <span className={collapsed ? "ml-auto lg:absolute lg:right-1 lg:top-1 lg:ml-0" : "ml-auto"}>{item.badge}</span> : null}
+      </Link>
+      {collapsed && (
+        <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white opacity-0 shadow-e2 transition-opacity group-hover/tip:opacity-100 hidden lg:block">
+          {item.label}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -129,12 +135,9 @@ export function EmployerShell({
   handleidingen = null,
   settingsHref = "/werkgever/instellingen",
   demoUitgang,
-  toonOs = true,
   profielOnvolledig = false,
   children,
 }: {
-  /** de ingang "ZekerFlex OS" onderin de zijbalk; met de vlag `publiek-alleen-flexwerk` aan alleen voor een platformbeheerder (20 nov) */
-  toonOs?: boolean;
   /**
    * een kleine stip bij "Instellingen" zolang het bedrijfsprofiel niet af is (lib/werkgever/bedrijfsprofiel.ts), zoals de rode stip bij
    * YoungOnes. De regel "Instellingen" zelf staat er voor elk bedrijf: het besluit van 20 nov (met de vlag `publiek-alleen-flexwerk` weg,
@@ -288,22 +291,6 @@ export function EmployerShell({
 
         {/* ZekerFlex OS: elk scherm als app op één bureaublad (de naam is in elke taal gelijk) */}
         {/* Een gewone link (geen <Link>): /os moet als eigen document laden, anders houdt de pagina de CSP van dit scherm (geen frame-src 'self') en blijft elk app-venster leeg. target=_top: vanuit een OS-venster zelf geen OS in de OS. */}
-        {toonOs && (
-          <div className="flex-shrink-0 border-t border-white/20 py-3">
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig voor de CSP van /os */}
-            <a href="/os" target="_top" onClick={sluitLade} title={collapsed ? "ZekerFlex OS" : undefined} className={`${railRijRustig} text-brand-mint hover:bg-white/10`}>
-              <span className={railIcoonRustig}>
-                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                  <rect x="1" y="1" width="6" height="6" rx="1.5" />
-                  <rect x="9" y="1" width="6" height="6" rx="1.5" />
-                  <rect x="1" y="9" width="6" height="6" rx="1.5" />
-                  <rect x="9" y="9" width="6" height="6" rx="1.5" />
-                </svg>
-              </span>
-              <span className={collapsed ? "lg:sr-only" : ""}>ZekerFlex OS</span>
-            </a>
-          </div>
-        )}
       </aside>
 
       {open && (

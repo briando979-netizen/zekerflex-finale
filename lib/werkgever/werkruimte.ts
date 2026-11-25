@@ -165,12 +165,10 @@ export function menuVoor(o: MenuOpties): MenuPlek[] {
 
 /** De vaste opbouw van het menu, zonder de vlag. */
 function menuVoorBasis(o: MenuOpties): MenuPlek[] {
-  // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN)
-  const bank: MenuSleutel[] = o.inApp || !BANK_AAN ? [] : ["bank"];
   return [
     { sleutel: "start" },
-    ...(["klussen", "kalender", "week", "planner", "agenda", ...bank, "favorieten", "berichten", "assistent", "geblokkeerd"] as MenuSleutel[]).map(plek()),
+    ...(["klussen", "kalender", "favorieten"] as MenuSleutel[]).map(plek()),
     ...(o.uitzendPartner ? UITZEND_SLEUTELS.map(plek("uitzend")) : []),
-    ...(["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "telefonie", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
+    ...(["bedrijf"] as MenuSleutel[]).map(plek("beheer")),
   ];
 }

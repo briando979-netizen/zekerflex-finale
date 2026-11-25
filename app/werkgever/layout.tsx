@@ -159,7 +159,6 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
         // de sterren naast de bedrijfsnaam staan er ook zonder beoordelingen (lege sterren); zonder bedrijf is rating null
         // "ZekerFlex OS" onderin de zijbalk: met de vlag aan alleen voor een platformbeheerder (een bedrijf dat personeel zoekt snapt het niet, 20 nov)
-        toonOs={!alleenFlexwerk || hasRole(principal, "PLATFORM_ADMIN")}
         // "Instellingen" onderin de zijbalk staat er voor elk bedrijf, ook met de vlag aan (eigenaar, 23 nov 2026: zoals bij YoungOnes;
         // het besluit van 20 nov "één plek voor bedrijfsgegevens" is vervangen). De stip: alleen voor wie het profiel mag aanvullen.
         profielOnvolledig={profielExtra !== null && hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") && bedrijfsprofielOnvolledig(profielExtra)}

@@ -38,26 +38,8 @@ describe("menuVoor", () => {
       { sleutel: "start" },
       { sleutel: "klussen" },
       { sleutel: "kalender" },
-      { sleutel: "week" },
-      { sleutel: "planner" },
-      { sleutel: "agenda" },
-      // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): geen "bank"
       { sleutel: "favorieten" },
-      { sleutel: "berichten" },
-      { sleutel: "assistent" },
-      { sleutel: "geblokkeerd" },
-      { sleutel: "uren", sectie: "beheer" },
-      { sleutel: "inchecken", sectie: "beheer" },
-      { sleutel: "facturen", sectie: "beheer" },
-      { sleutel: "rapportages", sectie: "beheer" },
-      { sleutel: "inkaart", sectie: "beheer" },
-      { sleutel: "compliance", sectie: "beheer" },
-      { sleutel: "overeenkomsten", sectie: "beheer" },
       { sleutel: "bedrijf", sectie: "beheer" },
-      // Telefonie (de AI-beller) blijft (eigenaar, 22 nov 2026); met de vlag aan staat hij niet in het menu
-      { sleutel: "telefonie", sectie: "beheer" },
-      { sleutel: "kennisbank", sectie: "beheer" },
-      { sleutel: "hulp", sectie: "beheer" },
     ]);
     expect(sleutels({ inApp: true })).not.toContain("bank");
   });
@@ -69,14 +51,7 @@ describe("menuVoor", () => {
         expect(menu, `${weg} (vlag ${vlag})`).not.toContain(weg);
       }
       expect(menu).toContain("klussen");
-      expect(menu).toContain("facturen");
-      expect(menu.includes("telefonie"), `telefonie (vlag ${vlag})`).toBe(!vlag);
     }
-  });
-
-  it("een vaste plek voor het hulpcentrum van bedrijven, direct na de handleidingen", () => {
-    const s = sleutels();
-    expect(s.indexOf("hulp")).toBe(s.indexOf("kennisbank") + 1);
   });
 
   it("geen dubbele onderdelen", () => {
