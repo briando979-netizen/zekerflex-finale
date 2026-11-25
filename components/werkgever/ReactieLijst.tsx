@@ -153,16 +153,28 @@ export function ReactieLijst({
   const euro = (c: number) => `€ ${nl ? (c / 100).toFixed(2).replace(".", ",") : (c / 100).toFixed(2)}`;
   const getal = (n: number, decimalen = 1) => (nl ? n.toFixed(decimalen).replace(".", ",") : n.toFixed(decimalen));
 
-  const [weergave, setWeergave] = useState<"lijst" | "kaart">("lijst");
+  const [weergave, setWeergave] = useState<"lijst" | "kaart">("kaart");
+  const [bannerGezien, setBannerGezien] = useState(true);
   useEffect(() => {
     try {
       const opgeslagen = localStorage.getItem("zf-reactie-weergave");
-      if (opgeslagen === "kaart" || opgeslagen === "lijst") setWeergave(opgeslagen);
+      if (opgeslagen === "kaart" || opgeslagen === "lijst") {
+        setWeergave(opgeslagen);
+        setBannerGezien(true);
+      } else {
+        // eerste keer: kaartweergave en banner tonen
+        setBannerGezien(false);
+      }
     } catch {}
   }, []);
   const wisselWeergave = (w: "lijst" | "kaart") => {
     setWeergave(w);
+    setBannerGezien(true);
     try { localStorage.setItem("zf-reactie-weergave", w); } catch {}
+  };
+  const sluitBanner = () => {
+    setBannerGezien(true);
+    try { localStorage.setItem("zf-reactie-weergave", weergave); } catch {}
   };
 
   const [f, setF] = useState<ReactieFilters>(LEGE_FILTERS);
@@ -275,6 +287,25 @@ export function ReactieLijst({
 
   return (
     <div>
+      {!bannerGezien && (
+        <div className="mx-5 mb-4 flex items-center justify-between gap-4 rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-800 ring-1 ring-teal-200">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white ring-1 ring-teal-200">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
+              </div>
+              <div className="flex h-8 w-16 items-center justify-center rounded-lg bg-teal-500 text-white ring-1 ring-teal-500 text-xs font-semibold gap-1">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                Kaarten
+              </div>
+            </div>
+            <span><strong>Nieuw: kaartweergave</strong> — bekijk profielen en tegenvoorstellen in één oogopslag. Wissel rechts in de balk.</span>
+          </div>
+          <button type="button" onClick={sluitBanner} aria-label="Sluiten" className="shrink-0 rounded-lg p-1 hover:bg-teal-100">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 pb-4">
         <button type="button" onClick={() => setFiltersOpen((o) => !o)} aria-expanded={filtersOpen} className="btn-ghost min-h-11 gap-2 rounded-lg text-sm">
           <Trechter maat={18} />

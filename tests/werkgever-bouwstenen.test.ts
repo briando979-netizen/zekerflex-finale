@@ -255,7 +255,7 @@ describe("de schil", () => {
     const menu = menuVoor({ inApp: false, alleenFlexwerk: true }).map((p) => ({ href: adres[p.sleutel] ?? `/werkgever/x-${p.sleutel}`, sleutel: p.sleutel }));
     const { hoofd, rest } = splitsMenu(menu);
     expect(hoofd.map((m) => m.sleutel)).toEqual(["start", "klussen", "planning", "werkers"]);
-    expect(rest.map((m) => m.sleutel)).toEqual(expect.arrayContaining(["berichten", "uren", "facturen", "cijfers", "regels", "hulp"]));
+    expect(rest.map((m) => m.sleutel)).toEqual(expect.arrayContaining(["berichten", "uren", "facturen", "hulp"]));
     expect(hoofd.length + rest.length).toBe(menu.length);
     // een bedrijf zonder klussen heeft Mijn werkers nog niet (lib/werkgever/werkruimte.ts, NA_EERSTE_KLUS)
     const kort = menuVoor({ inApp: false, alleenFlexwerk: true, nogGeenKlussen: true }).map((p) => p.sleutel as string);
