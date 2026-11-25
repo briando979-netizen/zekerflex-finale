@@ -29,6 +29,13 @@ export const POST = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (r
     targetType: "tenant",
     targetId: tenant.id,
   });
-  const notified = approved ? await notifyPendingReactions(tenant.id) : 0;
+  let notified = 0;
+  if (approved) {
+    try {
+      notified = await notifyPendingReactions(tenant.id);
+    } catch (err) {
+      // notificaties zijn best-effort: approval slaagt ook als notificaties falen
+    }
+  }
   return NextResponse.json({ ok: true, approved, notified });
 });
