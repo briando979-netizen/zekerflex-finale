@@ -27,7 +27,7 @@ import { HOOFD_ADRESSEN, perSectie, splitsMenu } from "@/lib/werkgever/menu-groe
 import { menuVoor } from "@/lib/werkgever/werkruimte";
 
 // De gedeelde bouwstenen van de werkgeversapp (eigenaar, 23 nov 2026: dezelfde rust, indeling en vormen als het dashboard van
-// YoungOnes, in de huisstijl van ZekerFlex): één kop per pagina, een kaart, een lijst als tabel, een formulier in twee kolommen,
+// YoungOnes, in de huisstijl van ZekerFlex): Ã©Ã©n kop per pagina, een kaart, een lijst als tabel, een formulier in twee kolommen,
 // een dialoog en een schakelaar. De klassen en de rekenregels staan puur in components/werkgever/bouwstenen.ts.
 
 const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
@@ -50,7 +50,7 @@ describe("de rekenregels", () => {
     expect(blokVoortgang([])).toEqual({ stap: 0, totaal: 0, pct: 100 });
   });
 
-  it("de stand van elke stap: klaar, één actieve, de rest open", () => {
+  it("de stand van elke stap: klaar, Ã©Ã©n actieve, de rest open", () => {
     expect(stapStanden([true, false, false])).toEqual(["klaar", "actief", "open"]);
     expect(stapStanden([false, true, false])).toEqual(["actief", "klaar", "open"]);
     expect(stapStanden([true, true])).toEqual(["klaar", "klaar"]);
@@ -87,7 +87,7 @@ describe("de vormen", () => {
   it("een formulier heeft twee kolommen op een laptop en staat onder elkaar op een telefoon", () => {
     expect(FORMULIER_RIJ).toContain("lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]");
     expect(FORMULIER_RIJ.split(" ")).toContain("grid");
-    // minmax(0, …): een lang veld maakt de pagina niet breder dan het scherm
+    // minmax(0, â€¦): een lang veld maakt de pagina niet breder dan het scherm
     expect(FORMULIER_RIJ).not.toMatch(/grid-cols-\[\d+fr/);
   });
 
@@ -97,7 +97,7 @@ describe("de vormen", () => {
     expect(lees("components/werkgever/LijstTabel.tsx")).not.toContain("overflow-x-auto");
   });
 
-  it("de knoppen van een dialoog: op een telefoon de hoofdknop bovenaan, op een laptop links met de hoofdknop vóór Annuleren", () => {
+  it("de knoppen van een dialoog: op een telefoon de hoofdknop bovenaan, op een laptop links met de hoofdknop vÃ³Ã³r Annuleren", () => {
     const k = DIALOOG_ACTIES.split(" ");
     expect(k).toContain("flex-col-reverse");
     // de rij is omgekeerd (in de code staat Annuleren eerst), dus justify-end is de linkerkant
@@ -124,7 +124,7 @@ describe("de onderdelen", () => {
     }
   });
 
-  it("een lege lijst is één regel tekst in dezelfde kaart", () => {
+  it("een lege lijst is Ã©Ã©n regel tekst in dezelfde kaart", () => {
     const bron = lees("components/werkgever/LijstTabel.tsx");
     expect(bron).toContain("if (rijen.length === 0) {");
     expect(bron).toContain("{leeg}");
@@ -133,7 +133,7 @@ describe("de onderdelen", () => {
     expect(lees("components/werkgever/bouwstenen.ts")).toMatch(/TABEL_KOP = "relative /);
   });
 
-  it("de dialoog is het bestaande sheet-patroon, met één formulier en geen formulier in een formulier", () => {
+  it("de dialoog is het bestaande sheet-patroon, met Ã©Ã©n formulier en geen formulier in een formulier", () => {
     const bron = lees("components/werkgever/Dialoog.tsx");
     expect(bron).toContain("<OnderSheet open={open}");
     expect(bron.match(/<form\b/g)?.length).toBe(1);
@@ -278,7 +278,7 @@ describe("de schil", () => {
   it("op een telefoon krijgt de bedrijfsnaam de ruimte: de menuknop is 44 px breed, de weergave staat in het gebruikersmenu en de hulp in de lade", () => {
     expect(shell).toContain('className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-lg border border-hairstrong text-ink lg:hidden"');
     expect(shell).toContain("line-clamp-2 min-w-0 break-words font-display text-sm font-bold leading-tight text-ink sm:line-clamp-1");
-    expect(shell).toContain("className={`${kopKnop} hidden sm:grid`}");
+    expect(shell).toContain('<div className="hidden sm:block">'); // thema-toggle weg uit kopbalk: hulp staat nu in hidden sm:block
     expect(shell).toContain('<div className="overflow-hidden rounded-lg sm:hidden">');
     expect(shell).toContain("<ThemeToggleRow theme={theme}");
     // de taalkeuze is op een laptop even hoog als de knoppen ernaast (was 17 px)
