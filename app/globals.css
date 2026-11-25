@@ -1182,3 +1182,22 @@ html:has(.app-scope[data-app="werkgever"][data-theme="dark"]) body { background-
   .app-scope[data-app="werkgever"] .btn-ghost,
   .app-scope[data-app="werkgever"] .btn-mint { min-height: 44px; }
 }
+
+/* ============================================================ WINTER (25 nov 2026, eigenaar: zoals YoungOnes)
+   Zachte sneeuw in de kopbalken tijdens de winterperiode (lib/thema/winter.ts, components/thema/WinterSneeuw.tsx).
+   IJsblauw op de lichte koppen, wit op de donkere; puur decoratief en uit bij prefers-reduced-motion. */
+.zf-vlok {
+  position: absolute;
+  top: -6px;
+  border-radius: 9999px;
+  background: rgba(125, 165, 220, 0.55);
+  animation: zf-sneeuw-val linear infinite;
+}
+.app-scope[data-theme="dark"] .zf-vlok { background: rgba(255, 255, 255, 0.55); }
+@keyframes zf-sneeuw-val {
+  from { transform: translateY(0); opacity: 0.9; }
+  to { transform: translateY(90px); opacity: 0.15; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zf-sneeuw { display: none; }
+}

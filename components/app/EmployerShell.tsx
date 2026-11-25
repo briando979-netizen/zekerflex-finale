@@ -21,6 +21,7 @@ import { THEMA_EN, THEMA_NL } from "@/lib/account/teksten";
 import { naamInitialen } from "@/lib/naam/initialen";
 import { perSectie, splitsMenu } from "@/lib/werkgever/menu-groepen";
 import { SCHIL_INHOUD, SCHIL_KOPBALK, SCHIL_RASTER_IN, SCHIL_RASTER_UIT, SCHIL_ZIJBALK_IN, SCHIL_ZIJBALK_UIT } from "@/components/werkgever/bouwstenen";
+import { WinterSneeuw } from "@/components/thema/WinterSneeuw";
 
 // ---------------------------------------------------------------------------
 // Employer workspace shell — its own chrome (org name + rating in the topbar,
@@ -303,6 +304,7 @@ export function EmployerShell({
       <div className="flex min-h-screen min-w-0 flex-col bg-paper-soft">
         {/* de kopbalk: wit, 78 px hoog op een laptop, met een zachte schaduw in plaats van een rand (.wg-kop in app/globals.css) */}
         <header className={`wg-kop sticky top-0 z-20 flex items-center gap-3 bg-white px-4 lg:px-8 ${SCHIL_KOPBALK}`}>
+          <WinterSneeuw />
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { winterActief } from "@/lib/thema/winter";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex brand mark — a squircle with a bold, forward-leaning "ZF" ligature.
@@ -6,6 +7,8 @@ import type { CSSProperties } from "react";
 //   tone="dark"  → black squircle, white ZF   (default; use on light surfaces)
 //   tone="light" → white squircle, black ZF   (use on dark surfaces)
 //   tone="bare"  → no squircle, currentColor ZF
+// In de winterperiode (lib/thema/winter.ts) draagt het logo een kerstmuts op de
+// rechterbovenhoek, zoals het app-icoon van YoungOnes (eigenaar, 25 nov 2026).
 // ---------------------------------------------------------------------------
 
 type Tone = "dark" | "light" | "bare";
@@ -33,6 +36,7 @@ export function LogoGlyph({
   style?: CSSProperties;
 }) {
   const { bg, fg } = palette(tone);
+  const muts = winterActief();
   return (
     <svg
       width={size}
@@ -59,6 +63,14 @@ export function LogoGlyph({
         {/* F — stem rises out of the Z's tail, two arms reach right */}
         <path d="M300 372 V150 H424 M300 258 H396" />
       </g>
+      {muts && (
+        // de kerstmuts: boven de letters (die beginnen op y≈127), over de rechterbovenhoek
+        <g aria-hidden>
+          <path d="M332 96 C338 32 404 4 450 26 C482 42 490 72 486 96 Z" fill="#DC2626" />
+          <circle cx="474" cy="32" r="24" fill="#F8FAFC" stroke="#0C0E12" strokeOpacity="0.15" strokeWidth="6" />
+          <rect x="316" y="86" width="184" height="36" rx="18" fill="#F8FAFC" stroke="#0C0E12" strokeOpacity="0.15" strokeWidth="6" />
+        </g>
+      )}
     </svg>
   );
 }

@@ -17,6 +17,7 @@ import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { BANK_AAN } from "@/lib/app-mode";
 import { sorteerTabs } from "@/lib/werker/tab-volgorde";
 import { schermTitelSleutel } from "@/lib/werker/schermtitel";
+import { WinterSneeuw } from "@/components/thema/WinterSneeuw";
 
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
@@ -134,6 +135,7 @@ export function FreelancerShell({
       {/* Top bar */}
       {!focused && (
         <header className="werker-kop sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hair bg-white/85 px-4 backdrop-blur-xl lg:px-8">
+          <WinterSneeuw />
           <Link href="/dashboard/klussen" className="font-display text-base font-extrabold uppercase tracking-tight text-ink">
             {title}
             {/* dezelfde groene streep als onder de paginakop (PageHeader in components/app/ui.tsx) */}

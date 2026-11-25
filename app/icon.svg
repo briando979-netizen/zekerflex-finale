@@ -4,4 +4,8 @@
     <path d="M104 150 H250 L104 372 H262"/>
     <path d="M300 372 V150 H424 M300 258 H396"/>
   </g>
+  <!-- kerstmuts (winterperiode, zie lib/thema/winter.ts): na 6 januari weer weghalen -->
+  <path d="M332 96 C338 32 404 4 450 26 C482 42 490 72 486 96 Z" fill="#DC2626"/>
+  <circle cx="474" cy="32" r="24" fill="#F8FAFC" stroke="#0C0E12" stroke-opacity="0.15" stroke-width="6"/>
+  <rect x="316" y="86" width="184" height="36" rx="18" fill="#F8FAFC" stroke="#0C0E12" stroke-opacity="0.15" stroke-width="6"/>
 </svg>
