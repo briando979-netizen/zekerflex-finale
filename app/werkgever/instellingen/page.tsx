@@ -64,13 +64,13 @@ export default async function InstellingenPage() {
   const bedrijf: Card[] = [
     { title: s.cProfileT, sub: s.cProfileS, href: "/werkgever/bedrijf", icon: <IUser />, ...(hasCover ? {} : { stip: true, stipTekst: d.shell.profileIncomplete }) },
     { title: s.cReviewsT, sub: s.cReviewsS, href: "/werkgever/reviews", icon: <IActivity /> },
-    { title: s.cContactT, sub: s.cContactS, href: "/werkgever/team", icon: <IMail /> },
+    { title: s.cContactT, sub: s.cContactS, href: "/werkgever/instellingen/contactpersonen", icon: <IMail /> },
     { title: s.cLocationsT, sub: s.cLocationsS, href: "/werkgever/locaties", icon: <IPin /> },
     { title: s.cCostT, sub: s.cCostS, href: "/werkgever/instellingen/kostenplaatsen", icon: <IHash /> },
     { title: s.cUsersT, sub: s.cUsersS, href: "/werkgever/team", icon: <IUsers /> },
     ...(alleenFlexwerk ? [] : [{ title: s.cApiT, sub: s.cApiS, href: "/werkgever/integraties", icon: <IKey /> }]),
     // de openbare tekst staat buiten de app: een gewone link, zonder voorladen
-    { title: s.cDpaT, sub: s.cDpaS, href: "/verwerkersovereenkomst", icon: <IDoc />, gewoon: true },
+    { title: s.cDpaT, sub: s.cDpaS, href: "/werkgever/instellingen/verwerkersovereenkomst", icon: <IDoc /> },
   ];
 
   const klussen: Card[] = [

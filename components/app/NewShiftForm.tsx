@@ -549,7 +549,41 @@ export function NewShiftForm({
                 {writing ? n.schrijven : description.trim() ? n.verbeter : n.schrijfVoorMij}
               </button>
             </div>
-            <textarea ref={omschrijvingRef} id="shift-description" name="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
+            <div className="mt-1 flex gap-1 rounded-t-lg border border-b-0 border-hair bg-paper-soft px-2 py-1">
+              {(
+                [
+                  { label: "V" as const, title: "Vet", open: "**", close: "**" },
+                  { label: "S" as const, title: "Schuinschrift", open: "*", close: "*" },
+                  { label: "lijst" as const, title: "Lijstitem", open: "- ", close: "" },
+                ] satisfies { label: "V" | "S" | "lijst"; title: string; open: string; close: string }[]
+              ).map((btn) => {
+                function insert() {
+                  const ta = omschrijvingRef.current;
+                  if (!ta) return;
+                  const start = ta.selectionStart;
+                  const end = ta.selectionEnd;
+                  const sel = description.slice(start, end);
+                  let next: string;
+                  let cur: number;
+                  if (btn.label === "lijst") {
+                    const lineStart = description.lastIndexOf("\n", start - 1) + 1;
+                    next = description.slice(0, lineStart) + "- " + description.slice(lineStart);
+                    cur = start + 2;
+                  } else {
+                    next = description.slice(0, start) + btn.open + sel + btn.close + description.slice(end);
+                    cur = sel ? end + btn.open.length + btn.close.length : start + btn.open.length;
+                  }
+                  setDescription(next);
+                  requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(cur, cur); });
+                }
+                return (
+                  <button key={btn.label} type="button" title={btn.title} className="min-w-[28px] rounded px-1.5 py-0.5 text-xs font-bold text-neutralx-600 hover:bg-hair" onClick={insert}>
+                    {btn.label === "V" ? <strong>V</strong> : btn.label === "S" ? <em>S</em> : "• —"}
+                  </button>
+                );
+              })}
+            </div>
+            <textarea ref={omschrijvingRef} id="shift-description" name="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input rounded-t-none" />
             {writeNote && <p className="mt-1 text-xs text-neutralx-500">{writeNote}</p>}
           </div>
           </Sectie>
