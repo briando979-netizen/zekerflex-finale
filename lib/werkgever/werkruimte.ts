@@ -59,7 +59,7 @@ export type MenuSleutel =
   | "planner"
   | "agenda"
   /** met de vlag publiek-alleen-flexwerk: samengevoegde ingangen (lib/werkgever/samen-tabs.ts): kalender+roosterplanner+agenda,
-   *  favorieten+geblokkeerd, compliance+overeenkomsten, rapportages+bedrijf-in-kaart; uren+inchecken en chat+assistent houden hun eerste sleutel */
+   *  favorieten+geblokkeerd; uren+inchecken en chat+assistent houden hun eerste sleutel; compliance/overeenkomsten/rapportages/inkaart/bedrijf vallen volledig weg */
   | "planning"
   | "werkers"
   | "regels"
@@ -123,7 +123,7 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 
 // Met de vlag `publiek-alleen-flexwerk` aan vallen Telefonie (geen flexwerk) en de losse ingang "Handleidingen" (Outline) weg:
 // het hulpcentrum (vraagteken, menu-item Hulp) linkt naar de handleidingen. De pagina's blijven bereikbaar via een directe link.
-const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "kennisbank"];
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "kennisbank", "compliance", "overeenkomsten", "rapportages", "inkaart", "bedrijf"];
 
 // Samenvoegen (20 nov, eigenaar: "voeg samen"): met de vlag aan worden kalender+roosterplanner+agenda één "Planning",
 // uren+inchecken één "Uren", favorieten+geblokkeerd "Mijn werkers", compliance+overeenkomsten "Regels en overeenkomsten",

@@ -265,7 +265,7 @@ describe("de bedrijfskant met de vlag aan", () => {
     expect(uit).not.toContain("planning");
     // met de vlag aan: zonder de losse handleidingen, en de flexwerk-functies samengevoegd (zie de volgende test)
     const aan: string[] = menuVoor({ ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
-    for (const blijft of ["klussen", "planning", "uren", "facturen", "regels", "bedrijf", "cijfers", "berichten", "werkers"]) {
+    for (const blijft of ["klussen", "planning", "uren", "facturen", "berichten", "werkers"]) {
       expect(aan, blijft).toContain(blijft);
     }
     // telefonie (de AI-beller) blijft bestaan, maar valt met de vlag aan uit het menu
@@ -275,12 +275,12 @@ describe("de bedrijfskant met de vlag aan", () => {
     }
   });
 
-  it("samenvoegen met de vlag aan: Planning, Uren, Mijn werkers, Regels, Cijfers en Chat met tabbladen; tien regels", () => {
+  it("samenvoegen met de vlag aan: Planning, Uren, Mijn werkers en Chat met tabbladen; acht regels", () => {
     const opties: MenuOpties = { inApp: false, alleenFlexwerk: true };
     const aan = menuVoor(opties).map((p) => p.sleutel);
     // de leden staan niet meer los in het menu
     for (const weg of ["kalender", "planner", "agenda", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten", "rapportages", "inkaart", "assistent"]) expect(aan, weg).not.toContain(weg);
-    expect(aan).toEqual(["start", "klussen", "planning", "werkers", "berichten", "uren", "facturen", "cijfers", "regels", "bedrijf", "hulp"]);
+    expect(aan).toEqual(["start", "klussen", "planning", "werkers", "berichten", "uren", "facturen", "hulp"]);
     // elke samenvoeging heeft tabbladen die precies de leden dekken, met de eerste als ingang
     for (const s of SAMENVOEGINGEN) {
       const groep = (Object.keys(SAMEN_GROEPEN) as (keyof typeof SAMEN_GROEPEN)[]).map((g) => SAMEN_GROEPEN[g]).find((g) => g.sleutel === s.sleutel);
@@ -331,10 +331,10 @@ describe("de bedrijfskant met de vlag aan", () => {
   it("een nieuw bedrijf zonder klus krijgt met de vlag aan een kort startmenu; na de eerste klus staat alles er weer", () => {
     const opties: MenuOpties = { inApp: false, alleenFlexwerk: true };
     const kort = menuVoor({ ...opties, nogGeenKlussen: true }).map((p) => p.sleutel);
-    expect(kort).toEqual(["start", "klussen", "planning", "berichten", "uren", "facturen", "bedrijf", "hulp"]);
+    expect(kort).toEqual(["start", "klussen", "planning", "berichten", "uren", "facturen", "hulp"]);
     // wie klussen heeft, houdt alle personeelsfuncties, samengevoegd (mail, whatsapp en wifi/vpn komen niet terug: geen flexwerk)
     const vol: string[] = menuVoor({ ...opties, nogGeenKlussen: false }).map((p) => p.sleutel);
-    for (const terug of ["werkers", "regels", "cijfers"]) expect(vol, terug).toContain(terug);
+    for (const terug of ["werkers"]) expect(vol, terug).toContain(terug);
     for (const nooit of ["mail", "whatsapp", "netwerk", "planner", "agenda", "inchecken", "assistent"]) expect(vol, nooit).not.toContain(nooit);
     // zonder de vlag verandert er niets, ook niet voor een nieuw bedrijf
     const zonderVlag = menuVoor({ ...opties, alleenFlexwerk: false, nogGeenKlussen: true }).map((p) => p.sleutel);

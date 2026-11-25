@@ -338,8 +338,8 @@ export function EmployerShell({
           <div className="flex flex-shrink-0 items-center gap-2">
             {/* de taalkeuze: even hoog als de knoppen ernaast */}
             <label className="hidden h-11 items-center rounded-lg border border-hairstrong bg-white pl-3 pr-2 text-sm text-neutralx-600 sm:flex">
-              <span className="mr-2" aria-hidden>
-                🌐
+              <span className="mr-2 text-base" aria-hidden>
+                {locale === "en" ? "🇬🇧" : "🇳🇱"}
               </span>
               <select
                 value={locale}
@@ -349,7 +349,7 @@ export function EmployerShell({
               >
                 {EMPLOYER_LOCALES.map((code) => (
                   <option key={code} value={code}>
-                    {LOCALE_LABELS[code]}
+                    {code === "nl" ? "🇳🇱 " : "🇬🇧 "}{LOCALE_LABELS[code]}
                   </option>
                 ))}
               </select>
