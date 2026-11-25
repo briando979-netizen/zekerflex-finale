@@ -185,7 +185,7 @@ export async function createShift(
             positions: input.positions,
             annuleerUren: input.annuleerUren,
             ...(input.kostenplaats ? { kostenplaats: input.kostenplaats } : {}),
-            ...(input.vaardigheden.length > 0 ? { vaardigheden: input.vaardigheden } : {}),
+            ...((input.vaardigheden ?? []).length > 0 ? { vaardigheden: input.vaardigheden } : {}),
             status: "OPEN",
             visibility: pool ? "POOL_ONLY" : "PUBLIC",
           },
