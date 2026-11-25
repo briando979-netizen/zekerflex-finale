@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { respondToOfferAction, zetReserveAction, type OfferResponse } from "@/app/werkgever/diensten/[shiftId]/actions";
 import { CandidateCardButton } from "@/components/app/CandidateCardButton";
@@ -153,6 +153,18 @@ export function ReactieLijst({
   const euro = (c: number) => `€ ${nl ? (c / 100).toFixed(2).replace(".", ",") : (c / 100).toFixed(2)}`;
   const getal = (n: number, decimalen = 1) => (nl ? n.toFixed(decimalen).replace(".", ",") : n.toFixed(decimalen));
 
+  const [weergave, setWeergave] = useState<"lijst" | "kaart">("lijst");
+  useEffect(() => {
+    try {
+      const opgeslagen = localStorage.getItem("zf-reactie-weergave");
+      if (opgeslagen === "kaart" || opgeslagen === "lijst") setWeergave(opgeslagen);
+    } catch {}
+  }, []);
+  const wisselWeergave = (w: "lijst" | "kaart") => {
+    setWeergave(w);
+    try { localStorage.setItem("zf-reactie-weergave", w); } catch {}
+  };
+
   const [f, setF] = useState<ReactieFilters>(LEGE_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortering, setSortering] = useState<{ kolom: SorteerKolom; richting: SorteerRichting } | null>(null);
@@ -278,6 +290,32 @@ export function ReactieLijst({
           {k.reset}
         </button>
         {verborgen > 0 && <span className="text-xs text-neutralx-500">{verborgen === 1 ? d.filterVerborgenEen : fmt(d.filterVerborgen, { n: verborgen })}</span>}
+        <div className="inline-flex overflow-hidden rounded-lg border border-hair bg-white" role="group" aria-label="Weergave kiezen">
+          <button
+            type="button"
+            onClick={() => wisselWeergave("lijst")}
+            aria-pressed={weergave === "lijst"}
+            className={`grid h-11 w-11 place-items-center transition-colors ${weergave === "lijst" ? "bg-brand-50 text-brand-700" : "text-neutralx-500 hover:bg-paper-soft"}`}
+            title="Lijstweergave"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </svg>
+            <span className="sr-only">Lijstweergave</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => wisselWeergave("kaart")}
+            aria-pressed={weergave === "kaart"}
+            className={`grid h-11 w-11 place-items-center border-l border-hair transition-colors ${weergave === "kaart" ? "bg-brand-50 text-brand-700" : "text-neutralx-500 hover:bg-paper-soft"}`}
+            title="Kaartweergave"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span className="sr-only">Kaartweergave</span>
+          </button>
+        </div>
         <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-hair bg-paper-soft px-3 text-sm text-ink xl:ml-auto">
           <Klok maat={16} />
           <span>
@@ -343,6 +381,97 @@ export function ReactieLijst({
 
       {rijen.length === 0 ? (
         <p className="px-5 py-8 text-sm text-neutralx-600">{k.filterNiets}</p>
+      ) : weergave === "kaart" ? (
+        <ul className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+          {rijen.map((o) => {
+            const aan = selectie.has(o.id);
+            const bod = tegenbod(o.proposedRateCents, o.listedRateCents);
+            const beslissing = { offerId: o.id, regel: o.regel };
+            return (
+              <li key={o.id} className={`relative flex flex-col rounded-xl border p-4 transition-colors ${aan ? "border-brand-400 bg-brand-50/40" : "border-hair bg-white"}`}>
+                <div className="mb-3 flex items-start gap-3">
+                  <label className="flex-shrink-0">
+                    <input type="checkbox" checked={aan} onChange={() => wissel(o.id)} className="h-5 w-5 accent-brand-600" />
+                    <span className="sr-only">{fmt(k.selecteer, { naam: o.naam })}</span>
+                  </label>
+                  <CandidateCardButton userId={o.userId} shiftId={shiftId} name={o.naam} beslissing={beslissing}>
+                    <span className="relative block h-14 w-14 flex-shrink-0">
+                      {o.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={o.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover" />
+                      ) : (
+                        <span className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-semibold text-white">{initials(o.naam)}</span>
+                      )}
+                      {o.favoriet && (
+                        <span className="absolute -left-1 -top-1 grid h-5 w-5 place-items-center rounded-full border border-hair bg-white text-money-ink">
+                          <Hart maat={12} vol />
+                        </span>
+                      )}
+                    </span>
+                  </CandidateCardButton>
+                  <div className="min-w-0 flex-1">
+                    <CandidateCardButton userId={o.userId} shiftId={shiftId} name={o.naam} beslissing={beslissing}>
+                      <span className="font-semibold text-ink group-hover:underline">{o.naam}</span>
+                    </CandidateCardButton>
+                    {o.regios.length > 0 && (
+                      <button type="button" onClick={() => setRegioVoor(o.id)} className="mt-0.5 inline-flex items-center gap-1 text-left text-xs text-neutralx-500 hover:text-ink hover:underline">
+                        {o.regios.length === 1 ? k.regioLinkEen : fmt(k.regioLink, { n: o.regios.length })}
+                        <Pijl maat={10} />
+                      </button>
+                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutralx-500">
+                      {o.reviewCount > 0 && (
+                        <span className="text-money-bright font-medium">
+                          <Ster /> <span className="text-ink">{getal(o.reviewAverage)} ({o.reviewCount})</span>
+                        </span>
+                      )}
+                      {o.attendancePct !== null && (
+                        <span>{k.kolOpkomst} <span className="font-semibold text-ink">{fmt(k.compleet, { n: o.attendancePct })}</span></span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {o.note && (
+                  <p className="mb-3 rounded-lg bg-paper-soft px-3 py-2 text-xs italic text-neutralx-600">"{o.note}"</p>
+                )}
+                {bod && (
+                  <p className={`mb-2 text-xs font-semibold ${bod === "hoger" ? "text-warn" : "text-ok"}`}>
+                    {fmt(bod === "hoger" ? k.tegenbodHoger : k.tegenbodLager, { lijst: euro(o.listedRateCents) })} ({euro(o.proposedRateCents)}/u)
+                  </p>
+                )}
+                <div className="mt-auto flex gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => { wissel(o.id); if (!selectie.has(o.id)) setVenster("accept"); }}
+                    disabled={bezig !== null}
+                    className="flex-1 rounded-lg bg-ok px-3 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-40"
+                  >
+                    {k.accepteren}
+                  </button>
+                  {bankBewerkbaar && (
+                    <button
+                      type="button"
+                      onClick={() => void voerUit("reserve", [o.id])}
+                      disabled={bezig !== null}
+                      className="rounded-lg border border-brand-400 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-40"
+                      title={k.naarReserve}
+                    >
+                      {k.naarReserve}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { wissel(o.id); if (!selectie.has(o.id)) setVenster("weiger"); }}
+                    disabled={bezig !== null}
+                    className="rounded-lg border border-crit/40 px-3 py-2 text-sm font-semibold text-crit hover:bg-crit/10 disabled:opacity-40"
+                  >
+                    {k.weigeren}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <ul className="divide-y divide-hair">
           {rijen.map((o) => {
