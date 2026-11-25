@@ -52,3 +52,11 @@ export async function zetGeenErvaring(userId: string, geen: boolean, now = new D
   await kvSet(sleutel(userId), nieuw);
   return nieuw;
 }
+
+/** Schakelaar: werkervaring tonen aan opdrachtgevers (zichtbaar: true) of verbergen (false). */
+export async function zetZichtbaar(userId: string, zichtbaar: boolean, now = new Date()): Promise<ErvaringStand> {
+  const stand = await getErvaring(userId, now);
+  const nieuw: ErvaringStand = { ...stand, zichtbaar };
+  await kvSet(sleutel(userId), nieuw);
+  return nieuw;
+}

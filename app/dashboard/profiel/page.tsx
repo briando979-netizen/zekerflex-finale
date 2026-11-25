@@ -257,7 +257,7 @@ export default async function ProfielPage() {
         )}
 
         <Panel title={t.werkervaring}>
-          <ErvaringLijst start={ervaring.items} />
+          <ErvaringLijst start={ervaring.items} startZichtbaar={ervaring.zichtbaar === true} />
         </Panel>
 
         <Panel title={dict.wie.persoon.opleiding}>

@@ -77,12 +77,12 @@ export default async function InstellingenPage() {
     { title: s.cTemplatesT, sub: s.cTemplatesS, href: "/werkgever/templates", icon: <IGrid /> },
     { title: s.cLabelsT, sub: s.cLabelsS, href: "/werkgever/favorieten/pools", icon: <IHeart /> },
     { title: s.cShiftSettingsT, sub: s.cShiftSettingsS, href: "/werkgever/instellingen/klussen", icon: <IList /> },
-    { title: s.cNotifT, sub: s.cNotifS, href: "/werkgever/bedrijf#notificaties", icon: <IBell /> },
+    { title: s.cNotifT, sub: s.cNotifS, href: "/werkgever/instellingen/notificaties", icon: <IBell /> },
   ];
 
   // met de vlag aan is er geen abonnement meer te kiezen (prijs per gewerkt uur): de kaart valt weg, de pagina blijft bereikbaar
   const facturatie: Card[] = [
-    { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/facturen#factuurgegevens", icon: <IDoc /> },
+    { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/instellingen/factuurgegevens", icon: <IDoc /> },
     ...(alleenFlexwerk ? [] : [{ title: "Abonnement en uitbreidingen", sub: "Wat je nu hebt en wat je erbij kunt nemen", href: "/werkgever/abonnement", icon: <IGrid /> }]),
   ];
 

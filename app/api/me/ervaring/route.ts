@@ -4,7 +4,7 @@ import { withAuth } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { BEDRIJF_MAX, FUNCTIE_MAX, OMSCHRIJVING_MAX } from "@/lib/werker/ervaring";
-import { getErvaring, verwijderErvaring, voegErvaringToe, zetGeenErvaring } from "@/lib/werker/ervaring-store";
+import { getErvaring, verwijderErvaring, voegErvaringToe, zetGeenErvaring, zetZichtbaar } from "@/lib/werker/ervaring-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +42,16 @@ export const POST = withAuth(async (req, { principal }) => {
   const uitslag = await voegErvaringToe(principal.userId, invoer);
   if (!uitslag.ok) throw AppError.validation(uitslag.fout);
   return NextResponse.json(uitslag.stand, { status: 201 });
+});
+
+const patchSchema = z.object({ zichtbaar: z.boolean() });
+
+// PATCH { zichtbaar } — schakelaar: werkervaring tonen aan opdrachtgevers.
+export const PATCH = withAuth(async (req, { principal }) => {
+  await enforceRateLimit({ name: "me-ervaring", identifier: principal.userId, limit: 20, windowSeconds: 300 });
+  const body = patchSchema.safeParse(await req.json().catch(() => null));
+  if (!body.success) throw AppError.validation("Controleer je invoer.");
+  return NextResponse.json(await zetZichtbaar(principal.userId, body.data.zichtbaar));
 });
 
 const deleteSchema = z.object({ id: z.string().min(1).max(64) });
