@@ -135,6 +135,7 @@ export async function getEmployerShift(
       positions: true,
       annuleerUren: true,
       kostenplaats: true,
+      vaardigheden: true,
       status: true,
       visibility: true,
       requiredSkill: { select: { name: true } },
@@ -240,7 +241,7 @@ export async function getEmployerShift(
     description: shift.description,
     dresscode: shift.dresscode,
     extraInfo: shift.extraInfo,
-    vaardigheden: [], // tijdelijk leeg tot migratie 20261125120000_shift_vaardigheden is gedraaid
+    vaardigheden: shift.vaardigheden,
     branch: shift.branch.name,
     branchId: shift.branch.id,
     tenantId: shift.branch.tenantId,

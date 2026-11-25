@@ -38,6 +38,7 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
       hourlyRateCents: true,
       positions: true,
       annuleerUren: true,
+      vaardigheden: true,
       branch: { select: { id: true, name: true, tenantId: true, kind: true } },
       assignments: { where: { cancelledAt: null }, select: { freelancer: { select: { userId: true } } } },
     },
@@ -81,7 +82,7 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
     // de herhaalde klus erft de annuleringstermijn en "favorieten automatisch accepteren" van het origineel
     annuleerUren: annuleerUrenOf(s.annuleerUren),
     autoAcceptFavorieten: await klusAutoAccept(shiftId).catch(() => false),
-    vaardigheden: [], // tijdelijk leeg tot migratie 20261125120000_shift_vaardigheden is gedraaid
+    vaardigheden: s.vaardigheden ?? [],
     ...(poolId ? { poolId } : {}),
   });
   return { shiftId: res.shiftId, invited: team.length, poolName };
