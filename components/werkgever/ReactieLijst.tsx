@@ -432,7 +432,7 @@ export function ReactieLijst({
                   </div>
                 </div>
                 {o.note && (
-                  <p className="mb-3 rounded-lg bg-paper-soft px-3 py-2 text-xs italic text-neutralx-600">"{o.note}"</p>
+                  <p className="mb-3 rounded-lg bg-paper-soft px-3 py-2 text-xs italic text-neutralx-600">&ldquo;{o.note}&rdquo;</p>
                 )}
                 {bod && (
                   <p className={`mb-2 text-xs font-semibold ${bod === "hoger" ? "text-warn" : "text-ok"}`}>

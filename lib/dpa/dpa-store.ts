@@ -36,10 +36,13 @@ export async function getDpaStand(tenantId: string): Promise<DpaStand> {
     if (versies.length === 0 && o.ondertekend === true && typeof o.ondertekendOp === "string" && typeof o.naam === "string") {
       versies.push({ versie: "1.0", ondertekendOp: o.ondertekendOp, naam: o.naam });
     }
+    const laatste = versies[versies.length - 1];
+    const ondertekendOp = typeof o.ondertekendOp === "string" ? o.ondertekendOp : laatste?.ondertekendOp;
+    const naam = typeof o.naam === "string" ? o.naam : laatste?.naam;
     return {
       ondertekend: o.ondertekend === true || versies.length > 0,
-      ondertekendOp: typeof o.ondertekendOp === "string" ? o.ondertekendOp : versies[versies.length - 1]?.ondertekendOp,
-      naam: typeof o.naam === "string" ? o.naam : versies[versies.length - 1]?.naam,
+      ...(ondertekendOp !== undefined ? { ondertekendOp } : {}),
+      ...(naam !== undefined ? { naam } : {}),
       versies,
     };
   }

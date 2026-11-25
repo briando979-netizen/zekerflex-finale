@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { requirePrincipal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
@@ -66,9 +67,9 @@ export default async function ContactpersonenPage() {
 
       <p className="mt-6 text-sm text-neutralx-500">
         Teamleden toevoegen of verwijderen kan via{" "}
-        <a href="/werkgever/team" className="text-brand-600 hover:underline">
+        <Link href="/werkgever/team" className="text-brand-600 hover:underline">
           Team
-        </a>
+        </Link>
         .
       </p>
     </>

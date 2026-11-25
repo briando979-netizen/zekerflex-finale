@@ -81,6 +81,7 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
     // de herhaalde klus erft de annuleringstermijn en "favorieten automatisch accepteren" van het origineel
     annuleerUren: annuleerUrenOf(s.annuleerUren),
     autoAcceptFavorieten: await klusAutoAccept(shiftId).catch(() => false),
+    vaardigheden: s.vaardigheden,
     ...(poolId ? { poolId } : {}),
   });
   return { shiftId: res.shiftId, invited: team.length, poolName };

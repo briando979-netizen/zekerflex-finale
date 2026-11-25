@@ -54,7 +54,7 @@ export default async function ProfielPage() {
     }),
     getFiscal(principal.userId),
   ]);
-  const ervaring = await getErvaring(principal.userId).catch(() => ({ items: [], geen: false }));
+  const ervaring = await getErvaring(principal.userId).catch((): { items: never[]; geen: boolean; zichtbaar?: true } => ({ items: [], geen: false }));
   // de opleiding staat sinds 13 nov hier, niet meer in stap 1 van de onboarding (optioneel)
   const opleiding = await leesOpleiding(principal.userId).catch(() => null);
   const [profileExtra, stats, mailPrefs, certs] = await Promise.all([

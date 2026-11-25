@@ -58,7 +58,9 @@ export default async function FavorietenPage() {
         <EmptyState title={f.emptyTitle} body={f.emptyBody} />
       ) : (
         <WerkerLijstMetZoeken
-          werkers={cards.map((c) => ({
+          werkers={cards.map((c) => {
+            const note = noteByUser.get(c.userId);
+            return {
             userId: c.userId,
             naam: namenMap.get(c.userId) ?? naamVoorMatch(c.name),
             badge: c.badgeLevel,
@@ -66,8 +68,9 @@ export default async function FavorietenPage() {
             shiftsCompleted: c.shiftsCompleted,
             attendancePct: c.attendancePct,
             cancellations: c.cancellations,
-            ...(noteByUser.get(c.userId) ? { note: noteByUser.get(c.userId) } : {}),
-          }))}
+            ...(note !== undefined ? { note } : {}),
+            };
+          })}
           t={{
             zoekPlaceholder: f.zoekPlaceholder,
             statShifts: f.statShifts,

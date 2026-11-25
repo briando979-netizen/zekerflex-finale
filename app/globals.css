@@ -977,6 +977,7 @@ body {
 .app-scope[data-theme="dark"] .border-brand-100 { border-color: rgb(var(--brand-mint-rgb) / 0.25) !important; }
 /* Dezelfde mint-tint met een dekking: bg-brand-50/40 tot /60 bleef in het donker een lichtmint vlak (over de kaart een
    middengrijs, 2:1 met de tekst erop; o.a. het ondertekenblok van de uitzendovereenkomst, contrastmeting 13 nov). */
+.app-scope[data-theme="dark"] .bg-brand-50\/30 { background-color: rgb(var(--brand-mint-rgb) / 0.04) !important; }
 .app-scope[data-theme="dark"] .bg-brand-50\/40 { background-color: rgb(var(--brand-mint-rgb) / 0.05) !important; }
 .app-scope[data-theme="dark"] .bg-brand-50\/50 { background-color: rgb(var(--brand-mint-rgb) / 0.06) !important; }
 .app-scope[data-theme="dark"] .bg-brand-50\/60 { background-color: rgb(var(--brand-mint-rgb) / 0.07) !important; }

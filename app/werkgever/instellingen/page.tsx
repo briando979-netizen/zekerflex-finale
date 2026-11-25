@@ -64,25 +64,25 @@ export default async function InstellingenPage() {
   const bedrijf: Card[] = [
     { title: s.cProfileT, sub: s.cProfileS, href: "/werkgever/bedrijf", icon: <IUser />, ...(hasCover ? {} : { stip: true, stipTekst: d.shell.profileIncomplete }) },
     { title: s.cReviewsT, sub: s.cReviewsS, href: "/werkgever/reviews", icon: <IActivity /> },
-    { title: s.cContactT, sub: s.cContactS, href: "/werkgever/instellingen/contactpersonen", icon: <IMail /> },
+    { title: s.cContactT, sub: s.cContactS, href: "/werkgever/team", icon: <IMail /> },
     { title: s.cLocationsT, sub: s.cLocationsS, href: "/werkgever/locaties", icon: <IPin /> },
     { title: s.cCostT, sub: s.cCostS, href: "/werkgever/instellingen/kostenplaatsen", icon: <IHash /> },
     { title: s.cUsersT, sub: s.cUsersS, href: "/werkgever/team", icon: <IUsers /> },
     ...(alleenFlexwerk ? [] : [{ title: s.cApiT, sub: s.cApiS, href: "/werkgever/integraties", icon: <IKey /> }]),
     // de openbare tekst staat buiten de app: een gewone link, zonder voorladen
-    { title: s.cDpaT, sub: s.cDpaS, href: "/werkgever/instellingen/verwerkersovereenkomst", icon: <IDoc /> },
+    { title: s.cDpaT, sub: s.cDpaS, href: "/verwerkersovereenkomst", icon: <IDoc />, gewoon: true },
   ];
 
   const klussen: Card[] = [
     { title: s.cTemplatesT, sub: s.cTemplatesS, href: "/werkgever/templates", icon: <IGrid /> },
     { title: s.cLabelsT, sub: s.cLabelsS, href: "/werkgever/favorieten/pools", icon: <IHeart /> },
     { title: s.cShiftSettingsT, sub: s.cShiftSettingsS, href: "/werkgever/instellingen/klussen", icon: <IList /> },
-    { title: s.cNotifT, sub: s.cNotifS, href: "/werkgever/instellingen/notificaties", icon: <IBell /> },
+    { title: s.cNotifT, sub: s.cNotifS, href: "/werkgever/bedrijf#notificaties", icon: <IBell /> },
   ];
 
   // met de vlag aan is er geen abonnement meer te kiezen (prijs per gewerkt uur): de kaart valt weg, de pagina blijft bereikbaar
   const facturatie: Card[] = [
-    { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/instellingen/factuurgegevens", icon: <IDoc /> },
+    { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/facturen#factuurgegevens", icon: <IDoc /> },
     ...(alleenFlexwerk ? [] : [{ title: "Abonnement en uitbreidingen", sub: "Wat je nu hebt en wat je erbij kunt nemen", href: "/werkgever/abonnement", icon: <IGrid /> }]),
   ];
 

@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
 // naar /os laadt de pagina niet opnieuw, dus dan blijft de CSP van het vorige
 // scherm gelden en blijft elk app-venster leeg (zo gemeld door de eigenaar, 6 nov).
 const ROOT = join(__dirname, "..");
-const SCHILLEN = ["components/admin/AdminShell.tsx", "components/app/EmployerShell.tsx", "components/app/AppShell.tsx"];
+// ZekerFlex OS is uit de werkgeversschil gehaald (eigenaar, 25 nov 2026: "niet relevant voor bedrijven")
+const SCHILLEN = ["components/admin/AdminShell.tsx", "components/app/AppShell.tsx"];
 
 describe("ingang naar ZekerFlex OS", () => {
   it.each(SCHILLEN)("%s opent /os met een volledige paginalading", (pad) => {

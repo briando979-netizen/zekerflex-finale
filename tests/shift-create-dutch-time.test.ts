@@ -64,6 +64,7 @@ describe("createShift — Nederlandse tijd op een UTC-server", () => {
       annuleerUren: 24,
       autoAcceptFavorieten: false,
       viaUitzendbureau: false,
+      vaardigheden: [],
     });
     const data = shiftCreate.mock.calls[0]?.[0].data as { startsAt: Date; endsAt: Date };
     expect(data.startsAt.toISOString()).toBe("2027-01-10T08:00:00.000Z");
@@ -84,6 +85,7 @@ describe("createShift — Nederlandse tijd op een UTC-server", () => {
       annuleerUren: 24,
       autoAcceptFavorieten: false,
       viaUitzendbureau: false,
+      vaardigheden: [],
       extraDates: ["2027-11-01", "2027-10-29"],
     });
     const starts = shiftCreate.mock.calls.map((c) => (c[0].data as { startsAt: Date }).startsAt.toISOString());
