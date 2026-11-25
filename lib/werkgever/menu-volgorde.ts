@@ -12,7 +12,7 @@ import type { MenuPlek, MenuSleutel } from "@/lib/werkgever/werkruimte";
 export type MenuDeel = "hoofd" | "beheer";
 
 /** Het bovenste deel van het menu, in de oorspronkelijke volgorde ("Jouw start" staat er altijd boven). */
-export const HOOFD_STANDAARD: readonly MenuSleutel[] = ["klussen", "kalender", "planner", "agenda", "bank", "favorieten", "berichten", "assistent", "geblokkeerd"];
+export const HOOFD_STANDAARD: readonly MenuSleutel[] = ["klussen", "kalender", "week", "planner", "agenda", "bank", "favorieten", "berichten", "assistent", "geblokkeerd"];
 
 /** Het deel onder "Beheer", in de oorspronkelijke volgorde. */
 export const BEHEER_STANDAARD: readonly MenuSleutel[] = ["uren", "inchecken", "facturen", "rapportages", "inkaart", "compliance", "overeenkomsten", "bedrijf", "telefonie", "kennisbank", "hulp"];
