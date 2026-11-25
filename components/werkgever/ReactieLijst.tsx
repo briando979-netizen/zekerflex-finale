@@ -290,33 +290,7 @@ export function ReactieLijst({
           {k.reset}
         </button>
         {verborgen > 0 && <span className="text-xs text-neutralx-500">{verborgen === 1 ? d.filterVerborgenEen : fmt(d.filterVerborgen, { n: verborgen })}</span>}
-        <div className="inline-flex overflow-hidden rounded-lg border border-hair bg-white" role="group" aria-label="Weergave kiezen">
-          <button
-            type="button"
-            onClick={() => wisselWeergave("lijst")}
-            aria-pressed={weergave === "lijst"}
-            className={`grid h-11 w-11 place-items-center transition-colors ${weergave === "lijst" ? "bg-brand-50 text-brand-700" : "text-neutralx-500 hover:bg-paper-soft"}`}
-            title="Lijstweergave"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-            </svg>
-            <span className="sr-only">Lijstweergave</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => wisselWeergave("kaart")}
-            aria-pressed={weergave === "kaart"}
-            className={`grid h-11 w-11 place-items-center border-l border-hair transition-colors ${weergave === "kaart" ? "bg-brand-50 text-brand-700" : "text-neutralx-500 hover:bg-paper-soft"}`}
-            title="Kaartweergave"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <span className="sr-only">Kaartweergave</span>
-          </button>
-        </div>
-        <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-hair bg-paper-soft px-3 text-sm text-ink xl:ml-auto">
+        <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-hair bg-paper-soft px-3 text-sm text-ink ml-auto">
           <Klok maat={16} />
           <span>
             <span className="font-semibold">{k.jouwDienst}</span> {dienst.chip}
@@ -339,7 +313,7 @@ export function ReactieLijst({
       )}
 
       {/* de kopregel: vanaf 1280 px de kolommen met sorteerknoppen, daaronder "alles selecteren" met een keuzelijst om te sorteren */}
-      <div className={`flex items-center justify-between gap-3 border-y border-hair px-5 py-2 ${RASTER}`}>
+      <div className={`flex items-center gap-3 border-y border-hair px-5 py-2 ${RASTER}`}>
         <label className="inline-flex min-h-11 items-center gap-3 text-xs font-semibold text-neutralx-500">
           <input
             type="checkbox"
@@ -377,6 +351,58 @@ export function ReactieLijst({
         <div className="hidden text-xs font-semibold text-neutralx-500 xl:block">{k.kolBeschikbaar}</div>
         <div className="hidden xl:block">{kopKnop("tarief", k.kolTarief)}</div>
         <div className="hidden xl:block" />
+        <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-hair bg-white xl:hidden" role="group" aria-label="Weergave kiezen">
+          <button
+            type="button"
+            onClick={() => wisselWeergave("lijst")}
+            aria-pressed={weergave === "lijst"}
+            className={`grid h-9 w-9 place-items-center transition-colors ${weergave === "lijst" ? "bg-brand-50 text-brand-700" : "text-neutralx-500 hover:bg-paper-soft"}`}
+            title="Lijstweergave"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </svg>
+            <span className="sr-only">Lijstweergave</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => wisselWeergave("kaart")}
+            aria-pressed={weergave === "kaart"}
+            className={`grid h-9 w-9 place-items-center border-l border-hair transition-colors ${weergave === "kaart" ? "bg-brand-50 text-brand-700" : "text-neutralx-500 hover:bg-paper-soft"}`}
+            title="Kaartweergave"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span className="sr-only">Kaartweergave</span>
+          </button>
+        </div>
+        <div className="hidden items-center gap-2 xl:flex" role="group" aria-label="Weergave kiezen">
+          <button
+            type="button"
+            onClick={() => wisselWeergave("lijst")}
+            aria-pressed={weergave === "lijst"}
+            className={`grid h-9 w-9 place-items-center rounded-l-lg border border-hair transition-colors ${weergave === "lijst" ? "bg-brand-50 text-brand-700" : "bg-white text-neutralx-500 hover:bg-paper-soft"}`}
+            title="Lijstweergave"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </svg>
+            <span className="sr-only">Lijstweergave</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => wisselWeergave("kaart")}
+            aria-pressed={weergave === "kaart"}
+            className={`grid h-9 w-9 place-items-center rounded-r-lg border border-l-0 border-hair transition-colors ${weergave === "kaart" ? "bg-brand-50 text-brand-700" : "bg-white text-neutralx-500 hover:bg-paper-soft"}`}
+            title="Kaartweergave"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span className="sr-only">Kaartweergave</span>
+          </button>
+        </div>
       </div>
 
       {rijen.length === 0 ? (
