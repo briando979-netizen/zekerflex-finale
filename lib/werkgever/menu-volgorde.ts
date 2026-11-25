@@ -23,6 +23,7 @@ const STANDAARD: Record<MenuDeel, readonly MenuSleutel[]> = { hoofd: HOOFD_STAND
 export const MENU_NAAM: Partial<Record<MenuSleutel, { naam: string; wanneer?: string }>> = {
   klussen: { naam: "Klussen" },
   kalender: { naam: "Kalender" },
+  week: { naam: "Weekrooster" },
   planner: { naam: "Roosterplanner" },
   agenda: { naam: "Agenda" },
   bank: { naam: "ZekerFlex Bank", wanneer: "Staat nu uit en is dus niet zichtbaar." },

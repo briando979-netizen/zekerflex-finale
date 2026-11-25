@@ -101,6 +101,7 @@ function RailLink({
         href={item.href}
         onClick={onKies}
         aria-current={active ? "page" : undefined}
+        title={collapsed ? item.label : undefined}
         className={`${rustig ? railRijRustig : railRij} ${active ? "bg-white/15 text-white" : rust}`}
       >
         <span className={rustig ? railIcoonRustig : railIcoon}>
