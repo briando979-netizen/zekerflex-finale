@@ -266,6 +266,8 @@ export const nl = {
     statAttendance: "Opkomst",
     statCancellations: "Afzeggingen",
     inviteForShift: "Uitnodigen voor klus",
+    zoekPlaceholder: "Zoeken op naam…",
+    emptySearch: "Geen krachten gevonden voor deze zoekopdracht.",
   },
   // Werkgever → Favorieten → groepen (/werkgever/favorieten/pools). In het Nederlands heet een pool een groep (20 nov 2026).
   pools: {

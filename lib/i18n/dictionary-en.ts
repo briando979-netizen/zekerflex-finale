@@ -251,6 +251,8 @@ export const en: Dict = {
     statAttendance: "Attendance",
     statCancellations: "Cancellations",
     inviteForShift: "Invite for a job",
+    zoekPlaceholder: "Search by name…",
+    emptySearch: "No workers found for this search.",
   },
   pools: {
     manage: "Manage pools",
