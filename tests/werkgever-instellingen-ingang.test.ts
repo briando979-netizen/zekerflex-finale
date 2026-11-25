@@ -28,12 +28,15 @@ describe("de ingang Instellingen in de zijbalk", () => {
   });
 
   it("het menu zelf is niet aangeraakt: Bedrijfsprofiel en de rest blijven staan", () => {
-    for (const alleenFlexwerk of [false, true]) {
-      const s: string[] = menuVoor({ inApp: false, alleenFlexwerk }).map((p) => p.sleutel);
-      expect(s, `vlag ${alleenFlexwerk}`).toContain("bedrijf");
-      expect(s, `vlag ${alleenFlexwerk}`).toContain("hulp");
-    }
+    // bedrijf staat altijd in het menu zonder de vlag; met alleenFlexwerk valt het weg (YoungOnes-stijl, 25 nov 2026)
+    const zonder = menuVoor({ inApp: false, alleenFlexwerk: false }).map((p) => p.sleutel);
+    expect(zonder).toContain("bedrijf");
+    expect(zonder).toContain("hulp");
+    const met = menuVoor({ inApp: false, alleenFlexwerk: true }).map((p) => p.sleutel);
+    expect(met).not.toContain("bedrijf");
+    expect(met).toContain("hulp");
   });
+
 
   it("de stip komt van één regel en past de zijbalk niet aan als het profiel af is", () => {
     expect(shell).toContain("profielOnvolledig = false");
