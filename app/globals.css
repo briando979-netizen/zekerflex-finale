@@ -1033,6 +1033,9 @@ body {
 .app-scope[data-theme="dark"] .bg-violet-50,
 .app-scope[data-theme="dark"] .bg-violet-100 { background-color: rgba(167, 139, 250, 0.14) !important; }
 .app-scope[data-theme="dark"] .bg-sky-100 { background-color: rgba(96, 165, 250, 0.14) !important; }
+.app-scope[data-theme="dark"] .bg-teal-50 { background-color: rgba(45, 212, 191, 0.12) !important; }
+.app-scope[data-theme="dark"] .text-teal-800 { color: #5eead4 !important; }
+.app-scope[data-theme="dark"] .hover\:bg-teal-100:hover { background-color: rgba(45, 212, 191, 0.18) !important; }
 
 /* Aanwijzen in het donker: hover:bg-paper-soft (±100 rijen en knoppen) maakte het vlak lichtgrijs
    onder lichte tekst, hover:text-ink maakte tekst bijna zwart. Aanwijzen wordt nu een tint lichter. */
