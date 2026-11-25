@@ -288,8 +288,8 @@ describe("de bedrijfskant met de vlag aan", () => {
       expect(groep!.tabs.map((t) => t.id), s.sleutel).toEqual([...s.leden]);
       for (const t of groep!.tabs) expect(t.href, t.id).toMatch(/^\/werkgever\//);
     }
-    expect(PLANNING_SAMEN).toEqual(["kalender", "planner", "agenda"]);
-    expect(PLANNING_TABS.map((t) => t.href)).toEqual(["/werkgever/kalender", "/werkgever/planner", "/werkgever/agenda"]);
+    expect(PLANNING_SAMEN).toEqual(["kalender", "week", "planner", "agenda"]);
+    expect(PLANNING_TABS.map((t) => t.href)).toEqual(["/werkgever/kalender", "/werkgever/week", "/werkgever/planner", "/werkgever/agenda"]);
     // en elke ledenpagina toont de tabbladen (bron-controle)
     const paginas: Record<string, string> = { kalender: "app/werkgever/kalender/page.tsx", planner: "app/werkgever/planner/page.tsx", agenda: "app/werkgever/agenda/page.tsx", uren: "app/werkgever/uren/page.tsx", inchecken: "app/werkgever/inchecken/page.tsx", favorieten: "app/werkgever/favorieten/page.tsx", geblokkeerd: "app/werkgever/geblokkeerd/page.tsx", compliance: "app/werkgever/compliance/page.tsx", overeenkomsten: "app/werkgever/overeenkomsten/page.tsx", rapportages: "app/werkgever/rapportages/page.tsx", inkaart: "app/werkgever/in-kaart/page.tsx", berichten: "app/werkgever/berichten/page.tsx", assistent: "app/werkgever/assistent/page.tsx" };
     for (const [id, pad] of Object.entries(paginas)) expect(readFileSync(pad, "utf8"), id).toMatch(/<(SamenTabs|PlanningTabs) /);
