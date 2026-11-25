@@ -457,6 +457,16 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
               <p className="mt-1 whitespace-pre-line break-words text-sm leading-relaxed text-ink">{s.dresscode}</p>
             </div>
           )}
+          {s.vaardigheden.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-bold text-ink">Vaardigheden</h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {s.vaardigheden.map((v) => (
+                  <span key={v} className="rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-700">{v}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </Kaart>
 
         {/* kaart 4: alle gegevens van de klus als blokjes; de rest achter "Toon meer klusinformatie" */}

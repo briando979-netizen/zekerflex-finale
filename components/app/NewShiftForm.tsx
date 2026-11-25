@@ -18,6 +18,7 @@ import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 import { SNEL_EN, SNEL_NL, type SnelTeksten } from "@/components/werkgever/snel-teksten";
 import type { SnelVoorinvulling } from "@/components/werkgever/SnelPlaatsen";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
+import { VaardighedenInput } from "@/components/werkgever/VaardighedenInput";
 import { BrancheEtiket, KlusBeeldVlak } from "@/components/app/KlusBeeldVlak";
 import { KostenLijst } from "@/components/app/KostenLijst";
 import { kostenBedragen } from "@/lib/klusconcept/kosten-tekst";
@@ -905,6 +906,15 @@ export function NewShiftForm({
                 {n.uitzendViaBureauLink}
               </Link>
             </p>
+          )}
+          {!edit && (
+            <div className="mt-4">
+              <span className="field-label block mb-2">
+                Vaardigheden <span className="text-neutralx-400">(optioneel)</span>
+              </span>
+              <VaardighedenInput />
+              <p className="mt-1 text-xs text-neutralx-400">Welke vaardigheden zoek je? Bijv. rijbewijs B, klantenservice, kassa.</p>
+            </div>
           )}
           </Sectie>
           )}

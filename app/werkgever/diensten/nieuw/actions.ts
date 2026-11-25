@@ -48,6 +48,10 @@ export async function createShiftAction(
     poolId: formData.get("poolId") || undefined,
     autoAcceptFavorieten: formData.get("autoAcceptFavorieten") === "on",
     kostenplaats: formData.get("kostenplaats") || undefined,
+    vaardigheden: String(formData.get("vaardigheden") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Controleer de ingevulde gegevens." };

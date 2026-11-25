@@ -71,6 +71,8 @@ export const createShiftSchema = z
   autoAcceptFavorieten: z.coerce.boolean().default(false),
   /** kostenplaats / PO-nummer voor de boekhouding (een van OrgProfileExtra.costCentres) */
   kostenplaats: z.string().trim().max(60).optional(),
+  /** vrije vaardigheidstags — max 10, elk max 60 tekens */
+  vaardigheden: z.array(z.string().trim().min(1).max(60)).max(10).default([]),
   })
   .refine((v) => Boolean(v.branchId) !== Boolean(v.adHocAddress), {
     message: "Kies een vestiging óf een eenmalige locatie (niet beide, niet geen van beide).",
@@ -183,6 +185,7 @@ export async function createShift(
             positions: input.positions,
             annuleerUren: input.annuleerUren,
             ...(input.kostenplaats ? { kostenplaats: input.kostenplaats } : {}),
+            ...(input.vaardigheden.length > 0 ? { vaardigheden: input.vaardigheden } : {}),
             status: "OPEN",
             visibility: pool ? "POOL_ONLY" : "PUBLIC",
           },

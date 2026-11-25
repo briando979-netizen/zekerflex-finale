@@ -647,6 +647,7 @@ model Shift {
   // Kostenplaats / PO-nummer van het bedrijf (uit OrgProfileExtra.costCentres), voor de boekhouding: op de klus,
   // de facturen en in de CSV-export. Leeg = geen.
   kostenplaats    String?
+  vaardigheden    String[] @default([])
 
   status ShiftStatus @default(DRAFT)
 
