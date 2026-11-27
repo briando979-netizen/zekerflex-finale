@@ -15,9 +15,11 @@ import {
   type Dienst,
   type PartnerBedrijf,
 } from "@/lib/sales-partners/model";
+import { PARTNER_TEKSTEN, partnerTaal, vulIn } from "@/lib/sales-partners/teksten";
 
 // De rekenregels van de sales partners (27 nov 2026, opdracht van de eigenaar): Model A € 1,00 per gewerkt uur de eerste
-// 6 maanden, Model B € 100 eenmalig na 40 betaalde uren. Alle datums met een zone, geen klok van de server.
+// 6 maanden, Model B € 100 eenmalig na 40 betaalde uren. Uren in de gratis eerste maand (platformfactuur € 0) leveren niets
+// op (eigenaar, 27 nov). Alle datums met een zone, geen klok van de server.
 
 const bedrijf = (extra: Partial<PartnerBedrijf> = {}): PartnerBedrijf => ({
   id: "b1",
@@ -36,7 +38,9 @@ const bedrijf = (extra: Partial<PartnerBedrijf> = {}): PartnerBedrijf => ({
   ...extra,
 });
 
-const dienst = (start: string, uren: number, betaald = true, tenantId = "t1"): Dienst => ({ tenantId, start, minuten: uren * 60, betaald });
+const dienst = (start: string, uren: number, betaald = true, tenantId = "t1"): Dienst => ({ tenantId, start, minuten: uren * 60, betaald, gratis: false });
+/** een dienst in de gratis eerste maand: de platformfactuur was € 0 */
+const gratisDienst = (start: string, uren: number): Dienst => ({ tenantId: "t1", start, minuten: uren * 60, betaald: false, gratis: true });
 
 describe("status van een geregistreerd bedrijf", () => {
   it("zonder koppeling: geregistreerd, met koppeling zonder uren: aangemeld, met uren: actief", () => {
@@ -88,6 +92,23 @@ describe("Model A: € 1,00 per gewerkt uur, de eerste 6 maanden", () => {
     expect(modelAEinde("2026-11-10T23:30:00+01:00")).toBe("2027-05-09T22:00:00.000Z");
   });
 
+  it("uren in de gratis eerste maand leveren niets op, maar de zes maanden lopen vanaf de eerste dienst", () => {
+    const u = berekenBedrijf(bedrijf(), [
+      gratisDienst("2026-11-10T09:00:00+01:00", 8), // eerste dienst, gratis maand: zes maanden tot 10 mei 2027
+      gratisDienst("2026-12-01T09:00:00+01:00", 6),
+      dienst("2026-12-15T09:00:00+01:00", 5),
+      dienst("2027-05-10T09:00:00+02:00", 9), // buiten de zes maanden
+    ]);
+    expect(u.modelAEinde).toBe("2027-05-09T22:00:00.000Z");
+    expect(u.gratisMinuten).toBe((8 + 6) * 60);
+    expect(u.perMaand["2026-11"]?.verdiendCents ?? 0).toBe(0);
+    expect(u.perMaand["2026-12"]?.verdiendCents).toBe(500);
+    expect(u.verdiendCents).toBe(500);
+    expect(u.uitbetaalbaarCents).toBe(500);
+    expect(u.betaaldeMinuten).toBe((5 + 9) * 60);
+    expect(u.minuten).toBe((8 + 6 + 5 + 9) * 60); // gewerkt blijft gewerkt
+  });
+
   it("rondt per maand af op hele centen", () => {
     expect(centenModelA(20)).toBe(33);
     expect(centenModelA(90)).toBe(150);
@@ -112,6 +133,14 @@ describe("Model B: € 100 eenmalig na 40 betaalde uren", () => {
     expect(u.verdiendCents).toBe(MODEL_B.bonusCents);
     expect(u.perMaand["2026-12"]?.verdiendCents).toBe(10_000);
     expect(u.perMaand["2026-11"]?.verdiendCents).toBe(0);
+  });
+
+  it("uren in de gratis eerste maand tellen niet voor de 40 betaalde uren", () => {
+    const u = berekenBedrijf(b, [gratisDienst("2026-11-10T09:00:00+01:00", 35), dienst("2026-12-15T09:00:00+01:00", 20)]);
+    expect(u.verdiendCents).toBe(0);
+    expect(u.betaaldeMinuten).toBe(20 * 60);
+    const later = berekenBedrijf(b, [gratisDienst("2026-11-10T09:00:00+01:00", 35), dienst("2026-12-15T09:00:00+01:00", 20), dienst("2027-01-12T09:00:00+01:00", 20)]);
+    expect(later.perMaand["2027-01"]?.verdiendCents).toBe(MODEL_B.bonusCents);
   });
 });
 
@@ -155,5 +184,42 @@ describe("maandoverzicht (CSV)", () => {
     expect(csv.startsWith("﻿")).toBe(true);
     expect(csv).toContain('"Bakkerij ""De Korst""; Zuid";12345678;A: € 1,00 per uur;Actief;8,0;8,0;€ 8,00;€ 8,00');
     expect(csv).toContain("Totaal;;;;;;€ 8,00;€ 8,00");
+  });
+
+  it("in het Engels voor een partner die Engels leest", () => {
+    const b = bedrijf();
+    const csv = maandCsv({ naam: "Kunal", email: "k@x.test" }, "2026-11", [{ bedrijf: b, uitkomst: berekenBedrijf(b, [dienst("2026-11-10T09:00:00+01:00", 8)]) }], "en");
+    expect(csv).toContain("Monthly overview sales partner November 2026");
+    expect(csv).toContain("Company;KvK;Model;Status;Hours worked;Paid hours");
+    expect(csv).toContain("Bakkerij De Korst;12345678;A: € 1.00 per hour;Active;8,0;8,0;€ 8,00;€ 8,00");
+    expect(csv).toContain("Total;;;;;;€ 8,00;€ 8,00");
+  });
+});
+
+describe("teksten van het partnerdashboard (Nederlands en Engels)", () => {
+  it("de taal volgt het cookie: Nederlands bij nl of zonder keuze, anders Engels", () => {
+    expect(partnerTaal("nl")).toBe("nl");
+    expect(partnerTaal(undefined)).toBe("nl");
+    expect(partnerTaal("en")).toBe("en");
+    expect(partnerTaal("pl")).toBe("en");
+  });
+
+  it("beide talen hebben dezelfde teksten en plaatshouders", () => {
+    const sleutels = (o: unknown, pad = ""): string[] =>
+      o && typeof o === "object" && !Array.isArray(o) ? Object.entries(o).flatMap(([k, v]) => sleutels(v, `${pad}.${k}`)) : [pad];
+    expect(sleutels(PARTNER_TEKSTEN.en)).toEqual(sleutels(PARTNER_TEKSTEN.nl));
+    expect(PARTNER_TEKSTEN.en.hoeStappen.length).toBe(PARTNER_TEKSTEN.nl.hoeStappen.length);
+    expect(PARTNER_TEKSTEN.en.regels.length).toBe(PARTNER_TEKSTEN.nl.regels.length);
+    const holders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+    for (const k of ["geregistreerdOp", "tot", "betaaldeUrenVan", "uitbetaalbaar", "gratisUren"] as const) {
+      expect(holders(PARTNER_TEKSTEN.en[k])).toEqual(holders(PARTNER_TEKSTEN.nl[k]));
+    }
+    expect(holders(PARTNER_TEKSTEN.en.kpi.commissieSub)).toEqual(holders(PARTNER_TEKSTEN.nl.kpi.commissieSub));
+  });
+
+  it("vulIn vult de plaatshouders in en laat onbekende staan", () => {
+    expect(vulIn("{naam} is geregistreerd.", { naam: "Bakkerij" })).toBe("Bakkerij is geregistreerd.");
+    expect(vulIn("{uren} of {n} paid hours", { uren: "12,0", n: 40 })).toBe("12,0 of 40 paid hours");
+    expect(vulIn("{constructor} {x}", { x: 1 })).toBe("{constructor} 1");
   });
 });

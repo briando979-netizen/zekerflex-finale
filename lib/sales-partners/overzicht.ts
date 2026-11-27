@@ -6,7 +6,8 @@ import { berekenBedrijf, partnerKpi, type BedrijfUitkomst, type Dienst, type Par
 // ---------------------------------------------------------------------------
 // Uren en commissie van sales partners (rekenregels: lib/sales-partners/model.ts). De uren komen uit de goedgekeurde
 // diensten (Timesheet APPROVED of PAID) van de gekoppelde bedrijfsaccounts, zonder testklussen; "betaald" is een dienst
-// waarvan de platformfactuur betaald is of € 0 was (de gratis eerste maand).
+// waarvan de platformfactuur (meer dan € 0) betaald is. Een factuur van € 0 (de gratis eerste maand) is "gratis" en levert
+// de partner niets op (eigenaar, 27 nov: geen resultaat, geen vergoeding).
 // ---------------------------------------------------------------------------
 
 /** De goedgekeurde diensten van deze bedrijven vanaf `sinds`. */
@@ -26,8 +27,16 @@ export async function dienstenVan(tenantIds: readonly string[], sinds: Date): Pr
     where: { type: "PLATFORM_FEE", timesheetId: { in: sheets.map((s) => s.id) } },
     select: { timesheetId: true, status: true, totalCents: true },
   });
-  const betaald = new Set(facturen.filter((f) => f.status === "PAID" || (f.totalCents === 0 && f.status === "ISSUED")).map((f) => f.timesheetId));
-  return sheets.map((s) => ({ tenantId: s.branch.tenantId, start: s.scheduledStart.toISOString(), minuten: s.billableMinutes, betaald: betaald.has(s.id) }));
+  const geldig = facturen.filter((f) => f.status !== "CANCELLED" && f.status !== "DRAFT");
+  const betaald = new Set(geldig.filter((f) => f.status === "PAID" && f.totalCents > 0).map((f) => f.timesheetId));
+  const gratis = new Set(geldig.filter((f) => f.totalCents === 0).map((f) => f.timesheetId));
+  return sheets.map((s) => ({
+    tenantId: s.branch.tenantId,
+    start: s.scheduledStart.toISOString(),
+    minuten: s.billableMinutes,
+    betaald: betaald.has(s.id),
+    gratis: gratis.has(s.id),
+  }));
 }
 
 export interface BedrijfRij {

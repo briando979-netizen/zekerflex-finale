@@ -6,8 +6,10 @@ import { amsterdamDayKey, amsterdamToUtc } from "@/lib/time/amsterdam";
 // verplicht één model:
 //   Model A: € 1,00 per gewerkt uur, de eerste 6 maanden (vanaf de eerste gewerkte dienst van dat bedrijf)
 //   Model B: € 100,00 eenmalig, zodra dat bedrijf 40 betaalde uren heeft
-// "Gewerkt" = goedgekeurde uren (Timesheet APPROVED of PAID). "Betaald" = de platformfactuur van die dienst is betaald, of
-// was € 0 (de gratis eerste maand). Alleen diensten vanaf de dag dat de partner het bedrijf registreerde tellen mee.
+// "Gewerkt" = goedgekeurde uren (Timesheet APPROVED of PAID). "Betaald" = de platformfactuur van die dienst is betaald.
+// Geen resultaat, geen vergoeding (eigenaar, 27 nov): uren met een platformfactuur van € 0 (de gratis eerste maand van een
+// bedrijf) leveren niets op, ook niet bij model B. De zes maanden van model A tellen wel vanaf de eerste dienst, gratis of
+// niet. Alleen diensten vanaf de dag dat de partner het bedrijf registreerde tellen mee.
 // Bedragen zijn excl. btw; de partner stuurt zelf zijn zzp-factuur. Opslag: lib/sales-partners/store.ts (KV, geen migratie).
 // ---------------------------------------------------------------------------
 
@@ -21,6 +23,8 @@ export const MODEL_LABEL: Record<PartnerModel, string> = {
   B: "Model B: € 100,00 eenmalige bonus (na 40 betaalde uren)",
 };
 export const MODEL_KORT: Record<PartnerModel, string> = { A: "A: € 1,00 per uur", B: "B: € 100 bonus" };
+/** de korte modelnaam in het Engels (partnerdashboard en maandoverzicht, lib/sales-partners/teksten.ts) */
+export const MODEL_KORT_EN: Record<PartnerModel, string> = { A: "A: € 1.00 per hour", B: "B: € 100 bonus" };
 
 /** zoveel bedrijven per partner (een rem op een volgelopen sleutel, ruim boven wat een mens registreert) */
 export const MAX_BEDRIJVEN = 500;
@@ -56,6 +60,12 @@ export const STATUS_UITLEG: Record<BedrijfStatus, string> = {
   actief: "Er zijn uren gewerkt bij dit bedrijf.",
   afgewezen: "Niet goedgekeurd door ZekerFlex.",
 };
+export const STATUS_LABEL_EN: Record<BedrijfStatus, string> = {
+  geregistreerd: "Registered",
+  aangemeld: "Signed up",
+  actief: "Active",
+  afgewezen: "Rejected",
+};
 
 /** Eén goedgekeurde dienst van een bedrijf. */
 export interface Dienst {
@@ -63,7 +73,10 @@ export interface Dienst {
   /** ISO, het geplande begin (de dag waarop gewerkt is) */
   start: string;
   minuten: number;
+  /** de platformfactuur van deze dienst is betaald (en was meer dan € 0) */
   betaald: boolean;
+  /** de platformfactuur was € 0 (de gratis eerste maand): telt niet mee voor de commissie */
+  gratis: boolean;
 }
 
 export interface MaandRegel {
@@ -77,6 +90,8 @@ export interface BedrijfUitkomst {
   status: BedrijfStatus;
   minuten: number;
   betaaldeMinuten: number;
+  /** gewerkte minuten met een platformfactuur van € 0: tellen niet mee */
+  gratisMinuten: number;
   verdiendCents: number;
   uitbetaalbaarCents: number;
   eersteDienst: string | null;
@@ -103,6 +118,7 @@ const leegUitkomst = (status: BedrijfStatus): BedrijfUitkomst => ({
   status,
   minuten: 0,
   betaaldeMinuten: 0,
+  gratisMinuten: 0,
   verdiendCents: 0,
   uitbetaalbaarCents: 0,
   eersteDienst: null,
@@ -123,10 +139,12 @@ export function berekenBedrijf(b: PartnerBedrijf, diensten: readonly Dienst[]): 
 
   const perMaand: Record<string, MaandRegel> = {};
   const regel = (k: string): MaandRegel => (perMaand[k] ??= { minuten: 0, betaaldeMinuten: 0, verdiendCents: 0, uitbetaalbaarCents: 0 });
+  let gratisMinuten = 0;
   for (const d of eigen) {
     const r = regel(maandVan(d.start));
     r.minuten += d.minuten;
-    if (d.betaald) r.betaaldeMinuten += d.minuten;
+    if (d.gratis) gratisMinuten += d.minuten;
+    else if (d.betaald) r.betaaldeMinuten += d.minuten;
   }
 
   let einde: string | null = null;
@@ -135,7 +153,7 @@ export function berekenBedrijf(b: PartnerBedrijf, diensten: readonly Dienst[]): 
     const eindeMs = Date.parse(einde);
     const binnen: Record<string, { minuten: number; betaald: number }> = {};
     for (const d of eigen) {
-      if (Date.parse(d.start) >= eindeMs) continue;
+      if (Date.parse(d.start) >= eindeMs || d.gratis) continue;
       const x = (binnen[maandVan(d.start)] ??= { minuten: 0, betaald: 0 });
       x.minuten += d.minuten;
       if (d.betaald) x.betaald += d.minuten;
@@ -149,7 +167,7 @@ export function berekenBedrijf(b: PartnerBedrijf, diensten: readonly Dienst[]): 
     // model B: de bonus valt in de maand van de dienst waarmee het bedrijf 40 betaalde uren haalt (in volgorde van werken)
     let betaald = 0;
     for (const d of eigen) {
-      if (!d.betaald) continue;
+      if (!d.betaald || d.gratis) continue;
       betaald += d.minuten;
       if (betaald >= MODEL_B.naBetaaldeUren * 60) {
         const r = regel(maandVan(d.start));
@@ -166,6 +184,7 @@ export function berekenBedrijf(b: PartnerBedrijf, diensten: readonly Dienst[]): 
     status: "actief",
     minuten: som((r) => r.minuten),
     betaaldeMinuten: som((r) => r.betaaldeMinuten),
+    gratisMinuten,
     verdiendCents: som((r) => r.verdiendCents),
     uitbetaalbaarCents: som((r) => r.uitbetaalbaarCents),
     eersteDienst: eerste.start,
@@ -197,10 +216,10 @@ export function partnerKpi(uitkomsten: readonly BedrijfUitkomst[]): PartnerKpi {
 export const euro = (cents: number): string => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 export const uren = (minuten: number): string => (minuten / 60).toFixed(1).replace(".", ",");
 
-/** "2026-11" → "november 2026" */
-export function maandLabel(maand: string): string {
+/** "2026-11" → "november 2026" (of "November 2026" in het Engels) */
+export function maandLabel(maand: string, taal: "nl" | "en" = "nl"): string {
   const [y = 1970, m = 1] = maand.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", month: "long", year: "numeric" });
+  return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString(taal === "en" ? "en-GB" : "nl-NL", { timeZone: "Europe/Amsterdam", month: "long", year: "numeric" });
 }
 
 /** De laatste `n` maanden tot en met die van `nu` ("2026-11", "2026-10", …). */
@@ -276,16 +295,36 @@ export interface ExportRegel {
 
 const csvVeld = (v: string): string => (/[";\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
+const CSV_TEKST = {
+  nl: {
+    kop: ["Bedrijf", "KvK", "Model", "Status", "Gewerkte uren", "Betaalde uren", "Commissie verdiend (excl. btw)", "Uitbetaalbaar: klant heeft betaald (excl. btw)"],
+    titel: "Maandoverzicht sales partner",
+    totaal: "Totaal",
+    voet: "Factureer alleen het uitbetaalbare bedrag: dat is de commissie over uren waarvan de klant de factuur al betaalde. Uren in de gratis eerste maand van een bedrijf tellen niet mee.",
+    model: MODEL_KORT,
+    status: STATUS_LABEL,
+  },
+  en: {
+    kop: ["Company", "KvK", "Model", "Status", "Hours worked", "Paid hours", "Commission earned (excl. VAT)", "Ready to invoice: client has paid (excl. VAT)"],
+    titel: "Monthly overview sales partner",
+    totaal: "Total",
+    voet: "Only invoice the amount that is ready to invoice: the commission on hours the client has already paid for. Hours in a company's free first month do not count.",
+    model: MODEL_KORT_EN,
+    status: STATUS_LABEL_EN,
+  },
+} as const;
+
 /** Het maandoverzicht van één partner als CSV (puntkomma's en komma-decimalen, zoals Excel in het Nederlands verwacht). */
-export function maandCsv(partner: { naam: string; email: string }, maand: string, regels: readonly ExportRegel[]): string {
-  const kop = ["Bedrijf", "KvK", "Model", "Status", "Gewerkte uren", "Betaalde uren", "Commissie verdiend (excl. btw)", "Uitbetaalbaar: klant heeft betaald (excl. btw)"];
+export function maandCsv(partner: { naam: string; email: string }, maand: string, regels: readonly ExportRegel[], taal: "nl" | "en" = "nl"): string {
+  const tx = CSV_TEKST[taal];
+  const kop = tx.kop;
   const rijen = regels.map(({ bedrijf, uitkomst }) => {
     const r = uitkomst.perMaand[maand] ?? { minuten: 0, betaaldeMinuten: 0, verdiendCents: 0, uitbetaalbaarCents: 0 };
     return [
       bedrijf.bedrijfsnaam,
       bedrijf.kvk ?? "",
-      MODEL_KORT[bedrijf.model],
-      STATUS_LABEL[uitkomst.status],
+      tx.model[bedrijf.model],
+      tx.status[uitkomst.status],
       uren(r.minuten),
       uren(r.betaaldeMinuten),
       euro(r.verdiendCents),
@@ -300,15 +339,15 @@ export function maandCsv(partner: { naam: string; email: string }, maand: string
     { v: 0, u: 0 },
   );
   const regelsTekst = [
-    [`Maandoverzicht sales partner ${maandLabel(maand)}`],
+    [`${tx.titel} ${maandLabel(maand, taal)}`],
     [`Partner: ${partner.naam} (${partner.email})`],
     [],
     kop,
     ...rijen,
     [],
-    ["Totaal", "", "", "", "", "", euro(totaal.v), euro(totaal.u)],
+    [tx.totaal, "", "", "", "", "", euro(totaal.v), euro(totaal.u)],
     [],
-    ["Factureer alleen het uitbetaalbare bedrag: dat is de commissie over uren waarvan de klant de factuur al betaalde."],
+    [tx.voet],
   ];
   // BOM vooraan: dan leest Excel de letters met accenten goed
   return "﻿" + regelsTekst.map((r) => r.map((v) => csvVeld(String(v))).join(";")).join("\r\n") + "\r\n";
