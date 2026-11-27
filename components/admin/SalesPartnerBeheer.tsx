@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /**
- * Beheer → Sales partners (app/admin/sales-partners): een partner toevoegen of weghalen (POST /api/admin/sales-partners)
+ * Beheer → Sales partners (app/admin/commissiepartners): een partner toevoegen of weghalen (POST /api/admin/sales-partners)
  * en een registratie koppelen aan een bedrijfsaccount, afwijzen of terugzetten (POST /api/admin/sales-partners/bedrijf).
  * Na elke actie vernieuwt de pagina, zodat alles de stand van de server toont.
  */
