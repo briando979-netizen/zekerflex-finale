@@ -201,7 +201,7 @@ export function KlusConcept({
   );
   const bedragen = kostenBedragen(cost);
   // in de gratis eerste maand (27 nov 2026): platformkosten € 0, het totaal is alleen het loon; wat het daarna kost staat eronder
-  const bedragenNu = gratisMaand ? kostenBedragen({ grossTotalCents: cost.grossTotalCents, feeTotalCents: 0 }) : bedragen;
+  const eersteMaand = kostenBedragen({ grossTotalCents: cost.grossTotalCents, feeTotalCents: 0 });
   const costOne = useMemo(
     () => conceptCost({ start, end, breakMinutes, positions: 1, rateCents: effectiveRate }),
     [start, end, breakMinutes, effectiveRate],
@@ -380,23 +380,37 @@ export function KlusConcept({
 
           {/* de chatknop rechtsonder valt niet over de bedragen (lib/marketing/chatknop-vrij.ts, 22 nov 2026); alle bedragen op de cent
               en het totaal is de som van de twee erboven (lib/klusconcept/kosten-tekst.ts, 23 nov 2026) */}
-          <KostenLijst
-            className="mt-5"
-            chatknopVrij
-            groot
-            loonLabel={`Loon kracht${people > 1 ? "en" : ""}`}
-            platformLabel={gratisMaand ? "Platformkosten, eerste maand gratis" : `Platformkosten, ${uurNl(cost.totalHours)} uur`}
-            totaalLabel={gratisMaand ? "Totaal in je eerste maand, excl. btw" : "Totaal excl. btw"}
-            loon={bedragenNu.loon}
-            platform={bedragenNu.platform}
-            totaal={bedragenNu.totaal}
-          />
           {gratisMaand ? (
-            <p className="mt-2 text-xs leading-relaxed text-neutralx-500">
-              Je eerste maand betaal je geen platformkosten, vanaf je eerste dienst. Daarna € 3,50 per gewerkt uur: voor deze klus{" "}
-              {bedragen.platform}.
-            </p>
-          ) : null}
+            <>
+              <KostenLijst
+                className="mt-5"
+                chatknopVrij
+                groot
+                loonLabel={`Loon kracht${people > 1 ? "en" : ""}`}
+                platformLabel="Platformkosten, eerste maand gratis"
+                totaalLabel="Totaal in je eerste maand, excl. btw"
+                loon={eersteMaand.loon}
+                platform={eersteMaand.platform}
+                totaal={eersteMaand.totaal}
+              />
+              <p className="mt-2 text-xs leading-relaxed text-neutralx-500">
+                Je eerste maand betaal je geen platformkosten, vanaf je eerste dienst. Daarna € 3,50 per gewerkt uur: voor deze klus{" "}
+                {bedragen.platform}.
+              </p>
+            </>
+          ) : (
+            <KostenLijst
+              className="mt-5"
+              chatknopVrij
+              groot
+              loonLabel={`Loon kracht${people > 1 ? "en" : ""}`}
+              platformLabel={`Platformkosten, ${uurNl(cost.totalHours)} uur`}
+              totaalLabel="Totaal excl. btw"
+              loon={bedragen.loon}
+              platform={bedragen.platform}
+              totaal={bedragen.totaal}
+            />
+          )}
 
           {supply ? (
             <p className="mt-5 rounded-2xl bg-mintwash p-4 text-sm text-brand-700">

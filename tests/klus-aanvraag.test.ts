@@ -4,7 +4,7 @@ import { aanvraagOntbreekt, aanvraagSamenvatting, emailGeldig, telefoonGeldig } 
 // "Liever zonder account? Wij zetten je klus voor je online" op /klus-plaatsen (27 nov 2026): een bedrijf laat alleen naam,
 // bedrijf en telefoon of e-mail achter. Er komt niets online; het wordt een verkoopaanvraag en een mail aan sales@.
 
-const m = vi.hoisted(() => ({ createLead: vi.fn(async () => ({ id: "l1" })), sendMail: vi.fn(async () => undefined) }));
+const m = vi.hoisted(() => ({ createLead: vi.fn(async (_lead: unknown) => ({ id: "l1" })), sendMail: vi.fn(async (_mail: unknown) => undefined) }));
 vi.mock("@/lib/sales/leads", () => ({ createLead: m.createLead }));
 vi.mock("@/lib/mail", () => ({ sendMail: m.sendMail, mailShell: (t: string, b: string) => `${t}${b}`, escapeHtml: (s: string) => s }));
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: vi.fn(async () => ({ ok: true })), privateRateLimitIdentifier: (s: string) => s }));
