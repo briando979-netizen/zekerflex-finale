@@ -4,6 +4,8 @@ import { Tabs } from "@/components/admin/kit-client";
 import { RegistratieActies, SalesPartnerToevoegen, SalesPartnerWeg } from "@/components/admin/SalesPartnerBeheer";
 import { MODEL_B, MODEL_KORT, STATUS_LABEL, euro, laatsteMaanden, maandLabel, uren } from "@/lib/sales-partners/model";
 import { beheerOverzicht } from "@/lib/sales-partners/overzicht";
+import { waarschuwingTekst } from "@/lib/sales/al-bekende-lead";
+import { bekendeLeadsPerBedrijf } from "@/lib/sales/al-bekende-lead-server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,8 @@ export default async function SalesPartnersBeheer() {
   const teBeoordelen = rijen.filter((r) => r.uitkomst.status === "geregistreerd").length;
   const totaal = partners.reduce((s, p) => ({ verdiend: s.verdiend + p.kpi.verdiendCents, uitbetaalbaar: s.uitbetaalbaar + p.kpi.uitbetaalbaarCents }), { verdiend: 0, uitbetaalbaar: 0 });
   const gesorteerd = [...rijen].sort((a, b) => Date.parse(b.bedrijf.aangemaaktOp) - Date.parse(a.bedrijf.aangemaaktOp));
+  // stond dit bedrijf al als eigen lead in de verkoopmotor? Een storing geeft een lege map: dan geen waarschuwing.
+  const bekend = await bekendeLeadsPerBedrijf(gesorteerd.map((r) => ({ id: r.bedrijf.id, bedrijfsnaam: r.bedrijf.bedrijfsnaam, kvk: r.bedrijf.kvk, email: r.bedrijf.email })));
 
   const partnerTab = (
     <div className="space-y-4">
@@ -118,6 +122,13 @@ export default async function SalesPartnersBeheer() {
                         Gekoppeld: {b.tenantNaam}
                       </p>
                     )}
+                    {/* Alleen een waarschuwing: het contract sluit bedrijven uit die wij al hadden, maar koppelen of
+                        afwijzen blijft een keuze van de beheerder (lib/sales/al-bekende-lead.ts). */}
+                    {(bekend.get(b.id) ?? []).map((o) => (
+                      <p key={o.lead.id} className="mt-1.5 rounded-md px-2 py-1 text-xs" style={{ background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }} role="note">
+                        {waarschuwingTekst(o)}
+                      </p>
+                    ))}
                   </td>
                   <td className="px-4 py-2.5">
                     <p>{b.contactnaam}</p>
