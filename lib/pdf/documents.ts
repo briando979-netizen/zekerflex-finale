@@ -11,6 +11,8 @@ import { overschrijvingRegels, overschrijvingVoor } from "@/lib/billing/overschr
 import { platformBankgegevens, stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
 import { KOR_VERMELDING } from "@/lib/billing/self-billing";
 import { betaaltermijnTekst } from "@/lib/billing/betaaltermijn";
+import { partijRegels, straatMetNummer, type FactuurPartij } from "@/lib/billing/factuur-partijen";
+import { platformPartij } from "@/lib/efactuur/instellingen";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
 // Every date and time in these documents is Dutch time (the server runs in UTC).
@@ -40,7 +42,9 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
     include: {
       lines: true,
       issuerTenant: { select: { name: true } },
-      recipientTenant: { select: { name: true } },
+      recipientTenant: {
+        select: { name: true, kvkNumber: true, vatNumber: true, country: true, companyRegistration: { select: { street: true, houseNumber: true, postalCode: true, city: true, country: true } } },
+      },
       recipientFreelancer: { select: { user: { select: { fullName: true } } } },
       timesheet: { select: { scheduledStart: true, branch: { select: { name: true } } } },
       payment: { select: { status: true, settledAt: true, amountCents: true } },
@@ -48,14 +52,52 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   });
   if (!inv) return null;
 
-  const recipientName = inv.recipientTenant?.name ?? inv.recipientFreelancer?.user.fullName ?? "Onbekend";
-  let issuerName = inv.issuerTenant?.name ?? "ZekerFlex";
+  // een werker met de KOR (lib/billing/self-billing.ts): vrijgesteld, niet "buiten reikwijdte"
+  const kor = inv.vatTreatment === "OUT_OF_SCOPE" && inv.lines.some((l) => l.description.includes(KOR_VERMELDING));
+
+  // Afzender en ontvanger met adres, KVK en btw-id (art. 35a Wet OB; dezelfde bron als de e-factuur, lib/efactuur/factuur.ts).
+  // Platformfacturen: de gegevens van ZekerFlex uit de omgeving (Beheer → Te doen, "efactuur-platform").
+  const rt = inv.recipientTenant;
+  const aan: FactuurPartij = rt
+    ? {
+        naam: rt.name,
+        straat: straatMetNummer(rt.companyRegistration?.street, rt.companyRegistration?.houseNumber),
+        postcode: rt.companyRegistration?.postalCode ?? undefined,
+        plaats: rt.companyRegistration?.city ?? undefined,
+        land: rt.companyRegistration?.country ?? rt.country,
+        kvk: rt.kvkNumber ?? undefined,
+        btw: rt.vatNumber ?? undefined,
+      }
+    : { naam: inv.recipientFreelancer?.user.fullName ?? "Onbekend" };
+  let van: FactuurPartij;
   if (inv.issuerFreelancerId) {
     const fp = await prisma.freelancerProfile.findUnique({
       where: { id: inv.issuerFreelancerId },
-      select: { user: { select: { fullName: true } }, kvkNumber: true, vatNumber: true },
+      select: {
+        kvkNumber: true,
+        vatNumber: true,
+        country: true,
+        homePostalCode: true,
+        user: { select: { fullName: true } },
+        companyRegistration: { select: { street: true, houseNumber: true, postalCode: true, city: true, country: true, tradeName: true, legalName: true } },
+      },
     });
-    if (fp) issuerName = `${fp.user.fullName}${fp.kvkNumber ? ` — KVK ${fp.kvkNumber}` : ""}`;
+    const reg = fp?.companyRegistration;
+    van = fp
+      ? {
+          naam: reg?.tradeName || reg?.legalName || fp.user.fullName,
+          straat: straatMetNummer(reg?.street, reg?.houseNumber),
+          postcode: reg?.postalCode ?? fp.homePostalCode,
+          plaats: reg?.city ?? undefined,
+          land: reg?.country ?? fp.country,
+          kvk: fp.kvkNumber,
+          // met de KOR rekent de werker geen btw: dan geen btw-id op de factuur
+          btw: kor ? undefined : (fp.vatNumber ?? undefined),
+        }
+      : { naam: "Onbekend" };
+  } else {
+    const p = platformPartij();
+    van = { naam: inv.issuerTenant?.name ?? p.naam, straat: p.straat, postcode: p.postcode, plaats: p.plaats, kvk: p.kvk, btw: p.btw };
   }
 
   const pdf = new SimplePdf();
@@ -68,8 +110,10 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   pdf.row("Datum", nlDate(inv.issuedAt ?? inv.createdAt));
   // werkerfactuur binnen 30 dagen, platformfactuur binnen 14 (lib/billing/betaaltermijn.ts)
   if (inv.totalCents > 0 && (inv.status === "ISSUED" || inv.status === "PAID")) pdf.row("Betaaltermijn", betaaltermijnTekst(inv));
-  pdf.row("Van", issuerName);
-  pdf.row("Aan", recipientName);
+  pdf.row("Van", van.naam);
+  for (const r of partijRegels(van)) pdf.row("", r, { size: 9.5 });
+  pdf.row("Aan", aan.naam);
+  for (const r of partijRegels(aan)) pdf.row("", r, { size: 9.5 });
   if (inv.timesheet) {
     pdf.row("Werkdag", nlDate(inv.timesheet.scheduledStart));
     pdf.row("Locatie", inv.timesheet.branch.name);
@@ -89,8 +133,6 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   pdf.rule();
 
   pdf.row("Subtotaal", euro(inv.subtotalCents));
-  // een werker met de KOR (lib/billing/self-billing.ts): vrijgesteld, niet "buiten reikwijdte"
-  const kor = inv.vatTreatment === "OUT_OF_SCOPE" && inv.lines.some((l) => l.description.includes(KOR_VERMELDING));
   pdf.row(kor ? "Btw (vrijgesteld, KOR)" : (VAT_LABEL[inv.vatTreatment] ?? "Btw"), euro(inv.vatCents));
   pdf.row("Totaal", euro(inv.totalCents), { bold: true, size: 12 });
 
@@ -132,7 +174,9 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   }
   pdf.gap(18);
   pdf.line(
-    "Deze factuur is automatisch aangemaakt door ZekerFlex (reverse billing / self-billing).",
+    inv.issuerFreelancerId
+      ? `Deze factuur is namens ${van.naam} opgemaakt door ZekerFlex, met volmacht van de opdrachtnemer (reverse billing).`
+      : "Deze factuur is automatisch aangemaakt door ZekerFlex.",
     8.5,
     { color: [0.4, 0.45, 0.42] },
   );

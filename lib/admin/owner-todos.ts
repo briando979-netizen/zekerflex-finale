@@ -1362,10 +1362,10 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     {
       id: "efactuur-platform",
       group: "Geld & bank",
-      title: "Bedrijfsgegevens voor e-facturen (UBL / Peppol) invullen",
-      why: "Elke factuur is nu ook een e-factuur die boekhoudpakketten direct inlezen. Op de platformfacturen (platformkosten, uitzendfacturen) staat ZekerFlex als verkoper: daarvoor zijn het KVK-nummer, btw-nummer en adres nodig. Zonder die gegevens werkt downloaden en mailen wel, maar verzenden via het Peppol-netwerk niet.",
+      title: "Bedrijfsgegevens op de facturen invullen (KVK, btw-nummer, adres)",
+      why: "Op elke platformfactuur (platformkosten, uitzendfacturen) staat ZekerFlex als afzender, op de pdf én in de e-factuur. Een factuur moet het adres en het btw-nummer van de afzender noemen (art. 35a Wet OB), en het KVK-nummer hoort erbij. Zolang die ontbreken staat alleen de naam erop, en kan een bedrijf de btw niet aftrekken. Verzenden via het Peppol-netwerk werkt ook pas daarna.",
       how: [
-        "Zekerflex, Inc. (Delaware) heeft geen KVK-nummer en (nog) geen Nederlands btw-nummer. Vraag eerst de accountant of er een Nederlands btw-nummer of een Nederlandse vestiging komt; pas daarna kan dit.",
+        "Op 17 december 2026 (KVK Groningen) schrijf je Zekerflex, Inc. in als buitenlandse vennootschap met een vestiging in Nederland. Je krijgt dan het KVK-nummer; de Belastingdienst stuurt daarna het btw-nummer (NL…B01) per post.",
         "Geef Claude dan het KVK-nummer (als er een Nederlandse vestiging is), het btw-nummer (NL…B01) en het vestigingsadres; die worden PLATFORM_KVK, PLATFORM_VAT, PLATFORM_STREET, PLATFORM_POSTAL_CODE en PLATFORM_CITY op de server.",
         "Wil je echt via Peppol versturen? Kies dan een Peppol-toegangspunt (zelf hosten met Oxalis/phase4 vraagt een OpenPeppol-certificaat; een Nederlandse dienst zoals eConnect, Storecove of Tradeinterop geeft een API-sleutel). Geef Claude de URL en sleutel (PEPPOL_AP_URL, PEPPOL_AP_TOKEN) en ons Peppol-adres (PEPPOL_SENDER_ID, meestal 0106:KVK-nummer).",
         "Tot die tijd gaan e-facturen per mail als UBL-bijlage; bedrijven zetten dat zelf aan onder Werkgever → Facturen → E-facturen.",
