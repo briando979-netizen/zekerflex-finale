@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { WELKOM_COOKIE, instroomBestemming } from "@/lib/welkom/slides";
+import { isSalesPartner } from "@/lib/sales-partners/store";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function StartPage(props: { searchParams: Promise<{ utm_sou
 
   if (isPlatformAdmin) redirect("/admin");
   if (hasRole(principal, "SALES")) redirect("/sales");
+  if (await isSalesPartner(principal.userId)) redirect("/partner");
   if (hasRole(principal, "HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER")) {
     redirect("/werkgever");
   }
