@@ -8,8 +8,9 @@ import {
   NA_GESPREK_SYSTEM,
   OUTREACH_STEP_SYSTEM,
   OUTREACH_SYSTEM,
-  ZEKERFLEX_PITCH,
+  zekerflexPitch,
 } from "@/lib/sales/prompts";
+import { beschikbareWerkers } from "@/lib/marketing/beschikbare-werkers";
 import type { BelUitkomst } from "@/lib/sales/bellijst";
 import { zonderIntroContacten } from "@/lib/introducties/lead";
 import { CAMPAGNE_TEKST_MODEL, invullingVoor, maakCampagneMail, type CampagneTekst } from "@/lib/sales/campagne-tekst";
@@ -103,7 +104,7 @@ export async function draftOutreach(
   let model = "self-hosted-llm";
   const draft = await chatJson<DraftShape>({
     messages: [
-      { role: "system", content: `${system}\n\nContext over ZekerFlex:\n${ZEKERFLEX_PITCH}` },
+      { role: "system", content: `${system}\n\nContext over ZekerFlex:\n${zekerflexPitch(await beschikbareWerkers().catch(() => null))}` },
       {
         role: "user",
         content: JSON.stringify({
@@ -222,7 +223,7 @@ export async function draftNaGesprek(
   let model = "self-hosted-llm";
   const draft = await chatJson<DraftShape>({
     messages: [
-      { role: "system", content: `${NA_GESPREK_SYSTEM}\n\nContext over ZekerFlex:\n${ZEKERFLEX_PITCH}` },
+      { role: "system", content: `${NA_GESPREK_SYSTEM}\n\nContext over ZekerFlex:\n${zekerflexPitch(await beschikbareWerkers().catch(() => null))}` },
       {
         role: "user",
         content: JSON.stringify({

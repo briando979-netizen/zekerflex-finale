@@ -22,7 +22,18 @@ Kernpunten (alleen dit is waar; noem niets anders):
 - Uren goedkeuren en facturen lopen via het platform (self-billing). Noem geen manier van betalen: betalen staat nog niet open.
 - Meerdere vestigingen onder één account.
 - ${PRIJS_ZIN}
-Niet beloven (bestaat nu niet): een bankrekening of tegoed bij ZekerFlex, een voorschot, snelle of directe uitbetaling, online betalen met kaart, een verzekering. Geen cijfers over aantallen werkers, klanten, reviews of resultaten: die zijn er niet.`;
+Niet beloven (bestaat nu niet): een bankrekening of tegoed bij ZekerFlex, een voorschot, snelle of directe uitbetaling, online betalen met kaart, een verzekering. Geen cijfers over klanten, reviews of resultaten: die zijn er niet.`;
+
+/**
+ * De pitch met, als we het weten, het echte aantal inhuurbare flexwerkers erbij (27 nov 2026). Dat getal komt altijd uit
+ * de database (lib/marketing/beschikbare-werkers.ts) en wordt hier alleen doorgegeven: dit bestand blijft puur, zodat het
+ * nooit prisma meesleept. Zonder getal (null) blijft de pitch zoals hij was — liever niets noemen dan iets verzinnen.
+ */
+export function zekerflexPitch(werkers: number | null): string {
+  if (werkers === null) return ZEKERFLEX_PITCH;
+  return `${ZEKERFLEX_PITCH}
+Eén cijfer dat wél klopt en genoemd mag worden (precies zo, niet afronden of mooier maken): er staan op dit moment ${werkers} flexwerkers met een gecontroleerd identiteitsbewijs klaar op het platform. Zeg er niets bij over hoeveel daarvan in de buurt van dit bedrijf wonen: dat weten we niet.`;
+}
 
 /** De eerlijkheidsregels die in élke prompt staan (los exporteerbaar voor de test). */
 export const EERLIJK_REGELS = `- Alleen wat nu echt kan: noem geen bank, tegoed, voorschot, snelle of directe uitbetaling, online betalen of verzekering.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EERLIJK_REGELS, NA_GESPREK_SYSTEM, OUTREACH_STEP_SYSTEM, OUTREACH_SYSTEM, PRIJS_ZIN, ZEKERFLEX_PITCH } from "@/lib/sales/prompts";
+import { EERLIJK_REGELS, NA_GESPREK_SYSTEM, OUTREACH_STEP_SYSTEM, OUTREACH_SYSTEM, PRIJS_ZIN, ZEKERFLEX_PITCH, zekerflexPitch } from "@/lib/sales/prompts";
 import { BASE_FEE_PER_HOUR_CENTS, VOLUME_TIERS, tierRateCents } from "@/lib/pricing/tiers";
 
 // De outreach-prompts beloven alleen wat nu echt kan (14 nov 2026): geen bank, voorschot of snelle uitbetaling, geen online
@@ -24,6 +24,24 @@ describe("outreach-prompts: alleen wat nu echt kan", () => {
     const nietBeloven = ZEKERFLEX_PITCH.split("Niet beloven")[1] ?? "";
     for (const w of ["voorschot", "directe uitbetaling", "online betalen", "verzekering"]) expect(nietBeloven).toContain(w);
     expect(ZEKERFLEX_PITCH.split("Niet beloven")[0]).not.toMatch(/voorschot|uitbetaling|verzekering/);
+  });
+
+  // 27 nov 2026: het aantal beschikbare werkers mag in de mail, maar alleen gemeten (lib/marketing/beschikbare-werkers.ts).
+  // Weten we het niet, dan staat er niets over aantallen — nooit een verzonnen of opgeleukt getal.
+  it("noemt het aantal werkers alleen als het gemeten is", () => {
+    expect(zekerflexPitch(null)).toBe(ZEKERFLEX_PITCH);
+    expect(zekerflexPitch(null)).not.toMatch(/\d+ flexwerkers/);
+    const met = zekerflexPitch(46);
+    expect(met).toContain("46 flexwerkers met een gecontroleerd identiteitsbewijs");
+    expect(met).toContain("niet afronden of mooier maken");
+    // we weten niet waar ze wonen: de mail mag geen regio-belofte doen
+    expect(met).toContain("hoeveel daarvan in de buurt");
+    expect(met.startsWith(ZEKERFLEX_PITCH)).toBe(true);
+  });
+
+  it("verbiedt nog steeds verzonnen klanten en resultaten", () => {
+    expect(ZEKERFLEX_PITCH).toContain("Geen cijfers over klanten, reviews of resultaten");
+    expect(EERLIJK_REGELS).toContain("Verzin geen cijfers, klanten, reviews");
   });
 
   it("elke prompt (los en de drie stappen) draagt de eerlijkheidsregels", () => {
