@@ -55,7 +55,8 @@ describe("werker — scherm Account", () => {
       "{ label: t.insurance,",
       "{ label: t.invoices,",
       "{ label: t.password,",
-      // "Account verwijderen" is op 25 nov 2026 van dit scherm gehaald (eigenaar, zoals YoungOnes); /account-verwijderen blijft bestaan
+      // AVG: gegevens opvragen en het account wissen staan onderaan dit scherm, zoals ook bij YoungOnes (27 nov 2026)
+      "{ label: t.delete,",
       "{ label: t.kb,",
       "{ label: t.community,",
     ].map(plek);

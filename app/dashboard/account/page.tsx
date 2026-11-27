@@ -163,6 +163,10 @@ export default async function AccountPage() {
       // tweestapsverificatie is weg (21 nov 2026, eigenaar; lib/auth/tweestap-aan.ts): een passkey is de extra beveiliging
       { label: t.passkey, href: "/dashboard/account/passkeys" },
       { label: t.privacy, href: "/privacy" },
+      // Gegevens opvragen en het account wissen zijn rechten uit de AVG en horen in de app te staan; YoungOnes heeft
+      // "Account verwijderen" ook onderaan het accountscherm (gemeten 27 nov 2026). Op 25 nov waren ze per ongeluk weg.
+      { label: t.download, href: "/api/me/gegevens/export", external: true },
+      { label: t.delete, href: "/dashboard/account/verwijderen" },
     ],
     [
       // het hulpcentrum voor werkers (lib/hulp/teksten.ts), in de taal van de werker; dezelfde plek als het vraagteken in de kopbalk
