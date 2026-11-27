@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getPrincipal } from "@/lib/auth";
+import { getPrincipal, hasRole } from "@/lib/auth";
 import { logoutAction } from "@/lib/auth/actions";
 import { getLocale } from "@/lib/i18n/server";
 import { AuthLanguage } from "@/components/auth/AuthLanguage";
@@ -16,6 +16,9 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   if (!principal) redirect("/login?callbackUrl=/partner");
   const locale = await getLocale();
   const tx = PARTNER_TEKSTEN[partnerTaal(locale)];
+  // rechtstreeks naar de eigen app: /start stuurt een partner sinds 27 nov terug naar /partner (app/start/page.tsx), dus een
+  // link naar /start zou een rondje zijn
+  const appHref = hasRole(principal, "HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER") ? "/werkgever" : "/dashboard";
 
   return (
     <div className="min-h-screen bg-paper-soft">
@@ -33,7 +36,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
           <div className="flex items-center gap-2 text-sm sm:gap-3">
             <span className="hidden text-neutralx-400 sm:inline">{principal.fullName}</span>
             <AuthLanguage locale={locale} label={tx.taal} />
-            <Link href="/start" className="flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-neutralx-600 hover:text-ink sm:px-3">
+            <Link href={appHref} className="flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-neutralx-600 hover:text-ink sm:px-3">
               {tx.naarApp}
             </Link>
             <form action={logoutAction}>
