@@ -160,19 +160,22 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
       <Panel
         flush
         title="Verwijderde accounts"
-        subtitle={`${count(weg.totaal)} in totaal${weg.afgekapt ? " (de oudste 500 hieronder)" : ""}.`}
+        subtitle={`${count(weg.totaal)} in totaal${weg.afgekapt ? " (de nieuwste 500 hieronder)" : ""}. Naam, e-mail en telefoon zijn gewist zoals de wet (AVG) vereist; wat de wet laat bewaren, zoals uren en facturen, zie je op de detailpagina.`}
       >
         <DataTable
           columns={[
             { key: "wanneer", label: "Verwijderd op" },
             { key: "wie", label: "Wat voor gebruiker" },
+            { key: "lid", label: "Lid geweest", hideOnMobile: true },
+            { key: "actief", label: "Laatst ingelogd", hideOnMobile: true },
+            { key: "diensten", label: "Diensten gewerkt", hideOnMobile: true },
             { key: "door", label: "Verwijderd door" },
+            { key: "reden", label: "Reden", hideOnMobile: true },
           ]}
           rows={wegRijen}
           searchPlaceholder="Zoek op soort, door wie of reden"
           csvName="verwijderde-accounts"
-          pageSize={5}
-          defaultSort={{ key: "wanneer", dir: "asc" }}
+          defaultSort={{ key: "wanneer", dir: "desc" }}
           filters={[
             { key: "door", label: "Door", chips: true, options: (["zelf", "beheer", "systeem"] as const).map((value) => ({ value, label: DOOR_LABEL[value] })) },
             { key: "soort", label: "Soort", options: (["flexwerker", "opdrachtgever", "beheerder", "overig"] as const).map((value) => ({ value, label: SOORT_LABEL[value] })) },
