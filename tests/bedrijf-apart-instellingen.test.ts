@@ -104,11 +104,13 @@ describe("account verwijderen laat geen bedrijf zonder beheerder achter", () => 
 });
 
 describe("de instellingen van een bedrijf", () => {
-  it("verwijderen in de app, en gegevens downloaden, privacy en feedback zoals bij werkers", () => {
+  // 25 nov 2026 (eigenaar, zoals YoungOnes): de kaarten "Account verwijderen" en "Gegevens downloaden" staan niet meer op
+  // het scherm Instellingen; de pagina's zelf (/werkgever/account/verwijderen, /api/me/gegevens/export) blijven bestaan.
+  it("privacy en feedback zoals bij werkers; verwijderen en downloaden staan niet meer op het scherm", () => {
     const s = bron("app/werkgever/instellingen/page.tsx");
-    expect(s).toContain('href: "/werkgever/account/verwijderen"');
+    expect(s).not.toContain('href: "/werkgever/account/verwijderen"');
     expect(s).not.toContain('href: "/account-verwijderen"');
-    expect(s).toContain('href: "/api/me/gegevens/export"');
+    expect(s).not.toContain('href: "/api/me/gegevens/export"');
     expect(s).toContain('href: "/privacy"');
     expect(s).toMatch(/href: "mailto:info@zekerflex\.com\?subject=Feedback/);
     // een download of mail is een gewone link: geen Link die een API-route voorlaadt

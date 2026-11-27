@@ -55,7 +55,7 @@ describe("werker — scherm Account", () => {
       "{ label: t.insurance,",
       "{ label: t.invoices,",
       "{ label: t.password,",
-      "{ label: t.delete,",
+      // "Account verwijderen" is op 25 nov 2026 van dit scherm gehaald (eigenaar, zoals YoungOnes); /account-verwijderen blijft bestaan
       "{ label: t.kb,",
       "{ label: t.community,",
     ].map(plek);
