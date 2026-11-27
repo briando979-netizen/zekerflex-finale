@@ -32,6 +32,7 @@ interface Summary {
 const FORMULIER_NAAM: Record<string, string> = {
   demo: "Demo aanvragen (/demo)",
   "klus-plaatsen": "Klus samenstellen (/klus-plaatsen)",
+  "klus-aanvraag": "Klus zonder account: wij bellen (/klus-plaatsen)",
   "register": "Aanmelden (/register)",
   "website-check": "Website-check: adres (/website-check)",
   "website-check-lead": "Website-check: contact (/website-check)",

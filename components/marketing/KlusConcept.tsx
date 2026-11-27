@@ -13,6 +13,7 @@ import { tekstOp } from "@/lib/rijschool/kleuren";
 import { Groep, Veld, useEersteGebruik } from "@/components/marketing/rekentools/Veld";
 import { KlusKaart } from "@/components/marketing/KlusKaart";
 import { KlusSimulatie } from "@/components/marketing/KlusSimulatie";
+import { KlusAanvraag } from "@/components/marketing/KlusAanvraag";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
 import type { ShiftCategoryKey } from "@/lib/shifts/category";
 
@@ -82,6 +83,7 @@ export function KlusConcept({
   cities,
   initial = {},
   via = null,
+  gratisMaand = false,
 }: {
   templates: ConceptTemplate[];
   minRateCents: number;
@@ -90,6 +92,8 @@ export function KlusConcept({
   initial?: { templateKey?: string; city?: string };
   /** de bron van de link (alleen "werker", uit /klus-plaatsen?via=werker): telt als totaal, nooit een persoon */
   via?: KlusVia | null;
+  /** de vlag eerste-maand-gratis staat aan: een nieuw bedrijf betaalt de eerste 30 dagen geen platformkosten (lib/billing/partnerdeal-vrij.ts) */
+  gratisMaand?: boolean;
 }) {
   const router = useRouter();
   const used = useEersteGebruik("klus-concept");
@@ -196,6 +200,8 @@ export function KlusConcept({
     [start, end, breakMinutes, people, effectiveRate],
   );
   const bedragen = kostenBedragen(cost);
+  // in de gratis eerste maand (27 nov 2026): platformkosten € 0, het totaal is alleen het loon; wat het daarna kost staat eronder
+  const bedragenNu = gratisMaand ? kostenBedragen({ grossTotalCents: cost.grossTotalCents, feeTotalCents: 0 }) : bedragen;
   const costOne = useMemo(
     () => conceptCost({ start, end, breakMinutes, positions: 1, rateCents: effectiveRate }),
     [start, end, breakMinutes, effectiveRate],
@@ -379,12 +385,18 @@ export function KlusConcept({
             chatknopVrij
             groot
             loonLabel={`Loon kracht${people > 1 ? "en" : ""}`}
-            platformLabel={`Platformkosten, ${uurNl(cost.totalHours)} uur`}
-            totaalLabel="Totaal excl. btw"
-            loon={bedragen.loon}
-            platform={bedragen.platform}
-            totaal={bedragen.totaal}
+            platformLabel={gratisMaand ? "Platformkosten, eerste maand gratis" : `Platformkosten, ${uurNl(cost.totalHours)} uur`}
+            totaalLabel={gratisMaand ? "Totaal in je eerste maand, excl. btw" : "Totaal excl. btw"}
+            loon={bedragenNu.loon}
+            platform={bedragenNu.platform}
+            totaal={bedragenNu.totaal}
           />
+          {gratisMaand ? (
+            <p className="mt-2 text-xs leading-relaxed text-neutralx-500">
+              Je eerste maand betaal je geen platformkosten, vanaf je eerste dienst. Daarna € 3,50 per gewerkt uur: voor deze klus{" "}
+              {bedragen.platform}.
+            </p>
+          ) : null}
 
           {supply ? (
             <p className="mt-5 rounded-2xl bg-mintwash p-4 text-sm text-brand-700">
@@ -407,6 +419,12 @@ export function KlusConcept({
                 ? "Je komt meteen bij Nieuwe dienst, met deze klus al ingevuld. Kies daar je vestiging."
                 : "Je klus wacht in deze browser. Na het aanmelden staat hij klaar bij Diensten → Nieuwe dienst. Je betaalt pas als er gewerkt is."}
           </p>
+          {employer ? null : (
+            <KlusAanvraag
+              klus={{ functie: title, plaats: city.trim(), datum: date, van: start, tot: end, aantal: people, tariefCents: effectiveRate, omschrijving: description.trim().slice(0, 1000) }}
+              bedrijfVoorstel={found?.bedrijf ?? ""}
+            />
+          )}
         </div>
       </div>
 
@@ -415,7 +433,11 @@ export function KlusConcept({
         supply={supply}
         logo={found?.logo ?? null}
         kleur={found?.kleur ?? null}
-        kosten={{ loonCents: costOne.grossTotalCents, feeCents: costOne.feeTotalCents, totaalCents: costOne.totalCents }}
+        kosten={
+          gratisMaand
+            ? { loonCents: costOne.grossTotalCents, feeCents: 0, totaalCents: costOne.grossTotalCents }
+            : { loonCents: costOne.grossTotalCents, feeCents: costOne.feeTotalCents, totaalCents: costOne.totalCents }
+        }
       />
     </div>
   );

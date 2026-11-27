@@ -41,6 +41,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/nieuwsbrief/afmelden",
     "/api/analytics/track",
     "/api/klus-plaatsen/via", // /klus-plaatsen?via=werker: alleen een telling per maand, openbaar en IP-begrensd (valt onder het voorvoegsel /api/klus-plaatsen)
+    "/api/klus-plaatsen/aanvraag", // /klus-plaatsen "wij zetten je klus online": naam + telefoon of e-mail, IP- en dagbegrensd, eigen site, botveld (lib/klusconcept/aanvraag.ts)
     "/api/analytics/taal-vraag",
     "/api/shop/products",
     "/api/shop/media/abc123",

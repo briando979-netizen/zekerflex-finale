@@ -9,6 +9,9 @@ import { leesVia } from "@/lib/klusconcept/via";
 import { CITIES } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { featureEnabled } from "@/lib/flags";
+import { EERSTE_MAAND_GRATIS_VLAG } from "@/lib/billing/partnerdeal-vrij";
+import { beschikbareWerkers } from "@/lib/marketing/beschikbare-werkers";
 
 export const metadata: Metadata = {
   title: "Klus plaatsen — zie direct wat het kost",
@@ -21,10 +24,17 @@ export const metadata: Metadata = {
 // The supply count reads the database (cached 10 min in lib/shifts/supply-map.ts).
 export const dynamic = "force-dynamic";
 
-const FAQ = [
+// De veelgestelde vragen; de gratis eerste maand alleen zolang de vlag eerste-maand-gratis aan staat (anders klopt het niet).
+const faq = (gratisMaand: boolean) => [
   {
     q: "Kost het plaatsen van een klus iets?",
-    a: "Nee. Een klus plaatsen en een account maken zijn gratis. Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is.",
+    a: `Nee. Een klus plaatsen en een account maken zijn gratis. Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is.${
+      gratisMaand ? " Je eerste maand betaal je geen platformkosten, vanaf je eerste dienst." : ""
+    }`,
+  },
+  {
+    q: "Kan het ook zonder account?",
+    a: "Ja. Laat onder de kosten je naam en je telefoonnummer of e-mailadres achter. Wij nemen binnen één werkdag contact op en zetten je klus samen met je online. Pas dan maak je een account.",
   },
   {
     q: "Wat gebeurt er met mijn klus als ik op plaatsen klik?",
@@ -38,6 +48,12 @@ const FAQ = [
 
 export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ functie?: string; plaats?: string; via?: string | string[] }> }) {
   const { functie, plaats, via: viaRuw } = await props.searchParams;
+  // bewijs bovenaan (zelfde telling als /bedrijven, lib/marketing/beschikbare-werkers.ts; null = niets tonen) en de gratis eerste maand
+  const [werkers, gratisMaand] = await Promise.all([
+    beschikbareWerkers().catch(() => null),
+    featureEnabled(EERSTE_MAAND_GRATIS_VLAG).catch(() => false),
+  ]);
+  const FAQ = faq(gratisMaand);
   // de tip van een werker (/klus-plaatsen?via=werker): alleen de bron "werker", als totaal geteld (lib/klusconcept/via.ts)
   const via = leesVia(viaRuw);
   // From a sector/city page (klusUrl): only a known template and a known city are taken over.
@@ -83,9 +99,16 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
             Stel je klus samen
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
-            Zonder account. Vul in wat je nodig hebt en zie meteen wat het kost. Bevalt het, dan zet je de klus met een
-            gratis account online.
+            Zonder account. Vul in wat je nodig hebt en zie meteen wat het kost. Zet hem daarna online met een gratis account, of
+            laat je nummer achter en wij doen het samen met je.
           </p>
+          {werkers !== null || gratisMaand ? (
+            <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-brand-mint">
+              {werkers !== null ? <li>{werkers} geverifieerde mensen, nu beschikbaar</li> : null}
+              {gratisMaand ? <li>Eerste maand geen platformkosten</li> : null}
+              <li>Je betaalt pas na het werk</li>
+            </ul>
+          ) : null}
         </div>
       </div>
 
@@ -95,7 +118,8 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
           minRateCents={MIN_SHIFT_RATE_CENTS}
           cities={cities}
           initial={{ ...(templateKey ? { templateKey } : {}), ...(city ? { city } : {}) }}
-        via={via}
+          via={via}
+          gratisMaand={gratisMaand}
         />
       </Section>
 
