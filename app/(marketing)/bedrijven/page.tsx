@@ -18,6 +18,7 @@ import { Marquee } from "@/components/marketing/Marquee";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
 import { BedrijvenVoordeur } from "@/components/marketing/BedrijvenVoordeur";
+import { beschikbareWerkers } from "@/lib/marketing/beschikbare-werkers";
 import { BedrijfsVragen } from "@/components/marketing/VraagLanding";
 import { PerBrancheEnStad } from "@/components/marketing/PerBrancheEnStad";
 import { env } from "@/lib/env";
@@ -40,11 +41,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BedrijvenHomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [v, { indeling, isConcept }, alleenFlexwerk] = await Promise.all([
+  // altijd achteraan toevoegen: de destructuring hierboven volgt deze volgorde
+  const [v, { indeling, isConcept }, alleenFlexwerk, werkers] = await Promise.all([
     getContentValues(),
     homeIndeling(searchParams),
     alleenFlexwerkAan().catch(() => false),
+    beschikbareWerkers().catch(() => null),
   ]);
+  // het harde cijfer als we het weten, anders de algemene belofte (lib/marketing/beschikbare-werkers.ts)
+  const werkersBelofte = werkers === null ? "Geverifieerde mensen" : `${werkers} geverifieerde mensen, nu beschikbaar`;
   const t = (k: string) => v[k] ?? "";
   // de blokken onder de kop, in de volgorde uit de Site-ontwerper (tabblad Homepage); zonder eigen indeling de standaard
   const zichtbaar = zichtbareSecties(indeling);
@@ -103,7 +108,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
               </Link>
             </div>
             <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white/70">
-              {["Geverifieerde mensen", "Alleen betalen voor gewerkte uren", "Jij kiest wie je inroostert"].map((p) => (
+              {[werkersBelofte, "Alleen betalen voor gewerkte uren", "Jij kiest wie je inroostert"].map((p) => (
                 <li key={p} className="flex items-center gap-2">
                   <Vink />
                   {p}
