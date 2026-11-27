@@ -156,6 +156,8 @@ const APP_ALLOWED = [
   "/i", "/terminal",
   // "verder op je telefoon": de QR-code van de ID-scan opent deze pagina, ook als de app op de telefoon staat
   "/id-scan",
+  // het partnerdashboard van sales partners (lib/sales-partners, 27 nov 2026): de knop staat in de werkers-app
+  "/partner",
 ];
 
 function isAppLaunch(req: NextRequest): boolean {

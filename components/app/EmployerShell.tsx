@@ -132,6 +132,7 @@ export function EmployerShell({
   userMeta,
   avatarUrl,
   canSwitchToFreelancer = false,
+  isSalesPartner = false,
   helpHref = "/kennis/werkgevers",
   hulp,
   handleidingen = null,
@@ -155,6 +156,8 @@ export function EmployerShell({
   userName: string;
   userMeta: string;
   canSwitchToFreelancer?: boolean;
+  /** sales partner (lib/sales-partners): een regel naar het partnerdashboard (/partner) in het gebruikersmenu */
+  isSalesPartner?: boolean;
   /** Eigen profielfoto — toont in de gebruikersknop i.p.v. de initialen. */
   avatarUrl?: string | null;
   helpHref?: string;
@@ -412,6 +415,11 @@ export function EmployerShell({
                   {canSwitchToFreelancer && (
                     <Link href="/dashboard/klussen" onClick={() => setUserMenu(false)} className={menuRij}>
                       {t.shell.menuWorkerWorkspace}
+                    </Link>
+                  )}
+                  {isSalesPartner && (
+                    <Link href="/partner" onClick={() => setUserMenu(false)} className={menuRij}>
+                      {t.shell.menuPartnerDashboard}
                     </Link>
                   )}
                   <Link href="/" onClick={() => setUserMenu(false)} className={menuRij}>

@@ -13,6 +13,7 @@ import { DemoBanner } from "@/components/app/DemoBanner";
 import { DEMO_BANNER_WERKGEVER } from "@/components/app/demo-banner-texts";
 import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
 import { EmployerShell } from "@/components/app/EmployerShell";
+import { isSalesPartner } from "@/lib/sales-partners/store";
 import { getOrgProfileExtra, getUserAvatars } from "@/lib/profile/store";
 import { bedrijfsprofielOnvolledig } from "@/lib/werkgever/bedrijfsprofiel";
 import { avatarUrlFor } from "@/lib/profile/card";
@@ -154,6 +155,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         userMeta={principal.email}
         avatarUrl={avatarUrl}
         canSwitchToFreelancer={hasRole(principal, "FREELANCER")}
+        // sales partners (lib/sales-partners): een regel naar het partnerdashboard in het gebruikersmenu
+        isSalesPartner={await isSalesPartner(principal.userId)}
         // het vraagteken: het hulpcentrum voor bedrijven, alleen de teksten in de taal van de app gaan mee (lib/hulp/werkgever-teksten.ts)
         hulp={hulpTekstenWerkgever(locale)}
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}

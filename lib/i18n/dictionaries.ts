@@ -69,6 +69,7 @@ export const nl = {
     menuPersonal: "Persoonlijke instellingen",
     menuNotifications: "Notificatievoorkeuren",
     menuWorkerWorkspace: "Werkersomgeving",
+    menuPartnerDashboard: "Partnerdashboard",
     orgFallback: "Je organisatie",
     // de stip bij Instellingen in de zijbalk (alleen voor een schermlezer: het bedrijfsprofiel is nog niet af)
     profileIncomplete: "bedrijfsprofiel nog niet af",

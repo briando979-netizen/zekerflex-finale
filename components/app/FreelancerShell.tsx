@@ -8,7 +8,7 @@ import { PushSelfHeal } from "@/components/app/PushToggle";
 import { HulpCentrum } from "@/components/app/HulpCentrum";
 import { WerkerRondleiding } from "@/components/app/WerkerRondleiding";
 import type { HulpTeksten } from "@/lib/hulp/hulpjes";
-import { IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
+import { IBriefcase, IClock, IChat, IUser, ISearch, IUsers, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
 import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
@@ -85,6 +85,7 @@ export function FreelancerShell({
   theme,
   inApp = false,
   canSwitchToEmployer = false,
+  isSalesPartner = false,
   hulp,
   handleidingen = null,
   tabVolgorde = null,
@@ -103,6 +104,8 @@ export function FreelancerShell({
   /** Android app: no Bank tab (lib/app-mode.ts) */
   inApp?: boolean;
   canSwitchToEmployer?: boolean;
+  /** sales partner (lib/sales-partners): een knop naar het partnerdashboard (/partner) */
+  isSalesPartner?: boolean;
   children: ReactNode;
 }) {
   useLocaleSync();
@@ -142,6 +145,16 @@ export function FreelancerShell({
             <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-brand-500 to-brand-mint" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
+            {isSalesPartner && (
+              <Link
+                href="/partner"
+                aria-label={ft.nav.partnerDashboard}
+                title={ft.nav.partnerDashboard}
+                className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-brand-600"
+              >
+                <IUsers />
+              </Link>
+            )}
             {canSwitchToEmployer && (
               <Link
                 href="/werkgever"

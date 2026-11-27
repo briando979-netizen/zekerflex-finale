@@ -61,6 +61,7 @@ export const en: Dict = {
     menuPersonal: "Personal settings",
     menuNotifications: "Notification preferences",
     menuWorkerWorkspace: "Worker workspace",
+    menuPartnerDashboard: "Partner dashboard",
     orgFallback: "Your organisation",
     profileIncomplete: "company profile not finished yet",
   },

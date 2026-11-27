@@ -161,6 +161,8 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/kosteloos", label: "Kosteloze accounts" },
       // sales en marketing
       { href: "/admin/sales/partners", label: "Partnercampagnes" },
+      // recruiters op commissie (27 nov 2026, lib/sales-partners)
+      { href: "/admin/sales-partners", label: "Sales partners" },
       { href: "/admin/aanbestedingen", label: "Aanbestedingen (TenderNed)" },
       { href: "/admin/offertes", label: "Offerte-AI" },
       { href: "/admin/beller", label: "AI-beller" },

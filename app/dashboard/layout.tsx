@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { getTheme } from "@/lib/theme/server";
 import { FreelancerShell } from "@/components/app/FreelancerShell";
+import { isSalesPartner } from "@/lib/sales-partners/store";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { FoutVertaler } from "@/components/app/FoutVertaler";
 import { foutenVoor } from "@/lib/i18n/fouten";
@@ -84,6 +85,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         theme={theme}
         inApp={await inAndroidApp()}
         canSwitchToEmployer={hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN")}
+        // sales partners (lib/sales-partners) krijgen een knop naar hun partnerdashboard; een storing laat hem weg
+        isSalesPartner={await isSalesPartner(principal.userId)}
         // het vraagteken: alleen de teksten in de taal van de werker gaan mee (lib/hulp/teksten.ts)
         hulp={hulpTeksten(locale)}
         // alleen met een nette naam, niet op het kale serveradres (lib/kennisbank/nette-url.ts, 22 nov 2026)
