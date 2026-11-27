@@ -1,87 +1,154 @@
-import { getPrincipal, hasRole } from "@/lib/auth";
-import { Empty, KpiStrip, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
-import { PartnerUitbetaalKnop } from "@/components/admin/PartnerUitbetaalKnop";
-import { allePartners } from "@/lib/shop/partner";
-import { PARTNER_PCT, PARTNER_UITBETALEN_VANAF_CENTS, PARTNER_VAST_NA_DAGEN, partnerTotalen } from "@/lib/shop/partner-core";
+﻿import { getSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import { PageHead, KpiStrip } from "@/components/admin/kit";
+import { fetchAllPartners } from "./actions";
+import Link from "next/link";
+import { UserRole } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
-export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Sales Partners - Admin",
+};
 
-const euro = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
-
-// Beheer → Webshop & merk → Partnerprogramma: welke bedrijven via hun partnerlinks
-// bestellingen brachten, wat vaststaat en wat er uitbetaald moet worden. Uitbetalen
-// gaat (nog) met de hand: overmaken en dan op "Uitbetaald" klikken.
-export default async function PartnersAdminPage() {
-  const principal = await getPrincipal();
-  if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
-    return <PageHead title="Geen toegang" subtitle="Het partnerprogramma is alleen voor platformbeheerders." />;
+export default async function AdminPartnersPage({
+  searchParams,
+}: {
+  searchParams: { status?: string; page?: string };
+}) {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    redirect("/auth/login");
   }
-  const partners = await allePartners().catch(() => null);
-  if (!partners) return <Notice tone="warn">Het partneroverzicht kon nu niet worden geladen. Probeer het straks opnieuw.</Notice>;
 
-  const regels = partners
-    .map((p) => ({ ...p, totaal: partnerTotalen(p.rijen) }))
-    .sort((a, b) => b.totaal.vastCents - a.totaal.vastCents || b.totaal.omzetCents - a.totaal.omzetCents);
-  const som = partnerTotalen(regels.flatMap((r) => r.rijen));
-  const teBetalen = regels.filter((r) => r.totaal.vastCents >= PARTNER_UITBETALEN_VANAF_CENTS);
+  const membership = await prisma.membership.findFirst({
+    where: {
+      userId: session.user.id,
+      role: UserRole.PLATFORM_ADMIN,
+    },
+  });
+
+  if (!membership) {
+    redirect("/werkgever");
+  }
+
+  const page = parseInt(searchParams.page || "1");
+  const { partners, total, pages } = await fetchAllPartners(
+    searchParams.status,
+    page
+  );
+
+  const stats = await Promise.all([
+    prisma.salesPartnerProfile.count({ where: { status: "ACTIVE" } }),
+    prisma.salesPartnerBusiness.count({ where: { status: "PENDING" } }),
+    prisma.salesPartnerBusiness.count({ where: { status: "APPROVED" } }),
+  ]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHead
-        title="Partnerprogramma"
-        subtitle={`Bedrijven delen links naar de webshop en krijgen ${PARTNER_PCT}% van het productbedrag zonder btw. Een vergoeding staat vast na ${PARTNER_VAST_NA_DAGEN} dagen; uitbetalen vanaf ${euro(PARTNER_UITBETALEN_VANAF_CENTS)}.`}
+        title="Sales Partners"
+        subtitle="Beheer partners en hun commissies"
       />
+
       <KpiStrip
-        items={[
-          { label: "Partners met bestellingen", value: regels.length },
-          { label: "Bestellingen", value: som.bestellingen, hint: euro(som.omzetCents) },
-          { label: "In bedenktijd", value: euro(som.verdiendCents) },
-          { label: "Uit te betalen", value: euro(som.vastCents), tone: som.vastCents > 0 ? "money" : "neutral", hint: `${teBetalen.length} boven het minimum` },
-          { label: "Uitbetaald", value: euro(som.uitbetaaldCents) },
+        kpis={[
+          {
+            label: "Actieve Partners",
+            value: stats[0].toString(),
+            icon: "👥",
+          },
+          {
+            label: "Bedrijven in wachtrij",
+            value: stats[1].toString(),
+            icon: "⏳",
+          },
+          {
+            label: "Goedgekeurd",
+            value: stats[2].toString(),
+            icon: "✅",
+          },
         ]}
       />
-      <Panel title="Per bedrijf" subtitle="Maak het bedrag over naar de rekening van de partner en klik daarna op Uitbetaald." flush>
-        {regels.length === 0 ? (
-          <Empty title="Nog geen partnerbestellingen" body="Bedrijven vinden hun links in de Websitestudio onder Verdienen." />
+
+      <div className="bg-white rounded shadow">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="font-semibold">Partners</h3>
+          <div className="flex gap-2">
+            <Link
+              href="/admin/partners/bedrijfsleads"
+              className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Bedrijfsleads beoordelen
+            </Link>
+            <Link
+              href="/admin/partners/commissie-export"
+              className="text-sm bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Commissies exporteren
+            </Link>
+          </div>
+        </div>
+
+        {partners.length === 0 ? (
+          <div className="px-6 py-8 text-center text-gray-500">
+            Geen partners gevonden
+          </div>
         ) : (
-          <div className="relative overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead>
-                <tr>
-                  <th scope="col" className="px-4 py-2.5 text-xs font-medium" style={{ color: "var(--a-mute)" }}>Bedrijf</th>
-                  <th scope="col" className="px-4 py-2.5 text-xs font-medium" style={{ color: "var(--a-mute)" }}>Rekening</th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium" style={{ color: "var(--a-mute)" }}>Bestellingen</th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium" style={{ color: "var(--a-mute)" }}>In bedenktijd</th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium" style={{ color: "var(--a-mute)" }}>Uit te betalen</th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium" style={{ color: "var(--a-mute)" }}>Uitbetaald</th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-medium" style={{ color: "var(--a-mute)" }}>
-                    <span className="sr-only">Actie</span>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr className="border-b border-gray-200">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Partner
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Bedrijven
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">
+                    Commissie Model
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {regels.map((r) => (
-                  <tr key={r.tenantId} className="align-top" style={{ borderTop: "1px solid var(--a-border)" }}>
-                    <td className="px-4 py-3">
-                      <span className="font-medium">{r.bedrijf}</span>
-                      {r.code && <span className="block font-mono text-xs" style={{ color: "var(--a-mute)" }}>{r.code}</span>}
+                {partners.map((partner) => (
+                  <tr
+                    key={partner.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <td className="px-6 py-4 text-sm font-semibold">
+                      {partner.user.fullName}
                     </td>
-                    <td className="px-4 py-3">
-                      {r.rekening ? (
-                        <>
-                          <span className="font-mono text-xs">{r.rekening.iban}</span>
-                          <span className="block text-xs" style={{ color: "var(--a-mute)" }}>{r.rekening.tenaamstelling}</span>
-                        </>
-                      ) : (
-                        <Pill tone="warn">Nog geen rekening</Pill>
-                      )}
+                    <td className="px-6 py-4 text-sm">{partner.user.email}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {partner.businessesApproved}/{partner.businessesSubmitted}
                     </td>
-                    <td className="px-4 py-3 text-right">{r.totaal.bestellingen}</td>
-                    <td className="px-4 py-3 text-right">{euro(r.totaal.verdiendCents)}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{euro(r.totaal.vastCents)}</td>
-                    <td className="px-4 py-3 text-right">{euro(r.totaal.uitbetaaldCents)}</td>
-                    <td className="px-4 py-3 text-right">
-                      {r.totaal.vastCents >= PARTNER_UITBETALEN_VANAF_CENTS && r.rekening ? <PartnerUitbetaalKnop tenantId={r.tenantId} bedrag={euro(r.totaal.vastCents)} /> : null}
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`px-3 py-1 rounded text-xs font-semibold ${
+                          partner.status === "ACTIVE"
+                            ? "bg-green-100 text-green-800"
+                            : partner.status === "PENDING"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {partner.status === "ACTIVE"
+                          ? "Actief"
+                          : partner.status === "PENDING"
+                          ? "In behandeling"
+                          : "Inactief"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {partner.commissionModel === "model_a"
+                        ? `${partner.commissionRate}%`
+                        : "Vaste Fee"}
                     </td>
                   </tr>
                 ))}
@@ -89,7 +156,7 @@ export default async function PartnersAdminPage() {
             </table>
           </div>
         )}
-      </Panel>
+      </div>
     </div>
   );
 }
