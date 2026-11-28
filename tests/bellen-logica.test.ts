@@ -25,9 +25,16 @@ const sha = (a: string[]) => createHash("sha1").update(a.join("\n")).digest("hex
 // Bijgewerkt 15 nov 2026, bewust: belscherm zoals WhatsApp (ronde knoppen, video aan midden in een spraakoproep via een lege
 // videolijn + replaceTrack, camera wisselen, signaal "media" voor camera aan/uit, knoppen verbergen bij video) en in ChatDock
 // weigeren met een bericht; daarna (zelfde dag) "end" via sendBeacon bij pagehide. Regel voor regel nagelopen met git diff; tests/bellen-whatsapp.test.ts bewaakt het nieuwe gedrag.
+//
+// Bijgewerkt 28 nov 2026, bewust: ChatDock stopt met pollen bij een verlopen sessie. Gemeten in het Caddy-log: op 23 en 24
+// november 17.494 en 15.016 keer een 401 op /api/inbox en twee andere adressen, uit 24 IP's — tabbladen die eeuwig doorvroegen
+// terwijl de gebruiker niets meer te zien kreeg. De 401 loopt nu via sessieVerlopen() (lib/app/sessie-verlopen.ts) en `available`
+// staat in de dependency-lijst van drie effecten, zodat hun timers stoppen. 4 van de 103 logicaregels verschillen, alle vier
+// nagerekend met git diff tegen 6f0a16cf5: de 401-regel en drie dependency-lijsten. De belcode (RTCPeerConnection, ICE, beltoon)
+// en de poll op binnenkomende gesprekken zijn niet aangeraakt; `available` begint op true, dus voor wie ingelogd is verandert niets.
 const VOOR_DE_VERTALING = {
   "components/chat/CallOverlay.tsx": { regels: 155, sha1: "7d264f8af5c31cb6511f3d0fee4ba895612221cb" },
-  "components/chat/ChatDock.tsx": { regels: 103, sha1: "a7908ea8d6710957e204aec888a11135c37c28fd" },
+  "components/chat/ChatDock.tsx": { regels: 103, sha1: "102f1d114cd7fdd07933d3377e40b84d97eaccbc" },
 } as const;
 
 describe("bellen: de logica is gelijk gebleven aan vóór de vertaling", () => {
