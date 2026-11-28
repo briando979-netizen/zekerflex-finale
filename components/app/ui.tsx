@@ -26,7 +26,6 @@ export function PageHeader({
         <h1 className="font-display text-[1.7rem] font-bold leading-tight tracking-tight text-ink">
           {title}
         </h1>
-        <span className="mt-2 block h-1 w-14 rounded-full bg-gradient-to-r from-brand-500 to-brand-mint" />
         {subtitle ? <p className="mt-3 text-sm text-neutralx-600">{subtitle}</p> : null}
         {children}
       </div>
