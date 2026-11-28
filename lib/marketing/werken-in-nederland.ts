@@ -5,7 +5,7 @@
 // stuurden, zonder eigen adressen): 48% heeft de browser in het Engels, daarnaast Pools, Spaans, Arabisch, Russisch.
 //
 // Eén pagina per taal, met hreflang naar elkaar (x-default = Engels), elk met een eigen adres in die taal. Alleen wat echt zo
-// werkt: alle diensten zijn in Nederland, ZekerFlex regelt geen woonruimte of reis en is geen uitzendbureau (lib/uitzend/
+// werkt: de diensten zijn in Nederland (België alleen met de vlag werk-in-belgie), ZekerFlex regelt geen woonruimte of reis en is geen uitzendbureau (lib/uitzend/
 // model.ts), freelance met een KVK- of EU-btw-nummer (lib/matching/onderneming.ts), woonplaats buiten NL kan (lib/geo/
 // thuisbasis.ts), vanaf 18. Puur bestand: de root-layout leest hier de taal van het adres voor <html lang>.
 // ---------------------------------------------------------------------------
@@ -61,7 +61,10 @@ export interface WinTekst {
   nodigKop: string;
   nodig: string[];
   eerlijkKop: string;
+  /** het eerste punt is waar de diensten zijn: alleen Nederland (vlag werk-in-belgie uit) */
   eerlijk: string[];
+  /** dat eerste punt als de vlag werk-in-belgie aan staat (lib/geo/vestiging-land.ts) */
+  plaatsMetBelgie: string;
   faqKop: string;
   faq: { q: string; a: string }[];
   slotKop: string;
@@ -108,6 +111,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Voor freelance klussen: een eigen bedrijf met een Nederlands KVK-nummer of een EU-btw-nummer.",
       "Voor uitzendklussen: een BSN. Het uitzendbureau heeft dat nodig voor je loon. Woon je niet in Nederland? Dan krijg je een BSN als je je inschrijft als niet-ingezetene (RNI) bij een van de RNI-gemeenten.",
     ],
+    plaatsMetBelgie: "De diensten zijn in Nederland, en bij sommige bedrijven in België.",
     eerlijkKop: "Goed om te weten",
     eerlijk: [
       "Alle diensten zijn in Nederland.",
@@ -124,7 +128,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       { q: "Kost het mij iets?", a: "Nee. ZekerFlex is gratis voor werkers. De opdrachtgever betaalt de platformkosten." },
       {
         q: "Kan ik me aanmelden vanuit België of een ander land?",
-        a: "Ja. Bij het aanmelden kies je je land en vul je je woonplaats in; die hoeft niet in Nederland te liggen. Het werk zelf is altijd in Nederland.",
+        a: "Ja. Bij het aanmelden kies je je land en vul je je woonplaats in; die hoeft niet in Nederland te liggen. Waar het werk is, staat bij elke dienst.",
       },
       {
         q: "Wie is mijn werkgever?",
@@ -178,6 +182,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "For freelance shifts: your own business with a Dutch KVK number or an EU VAT number.",
       "For agency shifts: a BSN (Dutch citizen service number). The agency needs it for your wages. Don't live in the Netherlands? You get a BSN when you register as a non-resident (RNI) at one of the RNI municipalities.",
     ],
+    plaatsMetBelgie: "Shifts are in the Netherlands, and with some companies in Belgium.",
     eerlijkKop: "Good to know before you come",
     eerlijk: [
       "All shifts are in the Netherlands.",
@@ -194,7 +199,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       { q: "Does it cost me anything?", a: "No. ZekerFlex is free for workers. The company pays the platform fee." },
       {
         q: "Can I sign up from another country?",
-        a: "Yes. When you sign up you choose your country and enter your home town; it does not have to be in the Netherlands. The work itself is always in the Netherlands.",
+        a: "Yes. When you sign up you choose your country and enter your home town; it does not have to be in the Netherlands. Each shift shows where the work is.",
       },
       {
         q: "Who is my employer?",
@@ -248,6 +253,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Do zleceń freelance: własna firma z holenderskim numerem KVK lub unijnym numerem VAT.",
       "Do zmian przez agencję: numer BSN (holenderski numer identyfikacyjny). Agencja potrzebuje go do wypłaty wynagrodzenia. Nie mieszkasz w Holandii? BSN dostaniesz po rejestracji jako nierezydent (RNI) w jednej z gmin RNI.",
     ],
+    plaatsMetBelgie: "Zmiany są w Holandii, a w niektórych firmach także w Belgii.",
     eerlijkKop: "Dobrze wiedzieć przed przyjazdem",
     eerlijk: [
       "Wszystkie zmiany są w Holandii.",
@@ -264,7 +270,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       { q: "Czy to coś kosztuje?", a: "Nie. ZekerFlex jest za darmo dla pracowników. Opłatę za platformę płaci firma." },
       {
         q: "Czy mogę się zarejestrować z Polski?",
-        a: "Tak. Przy rejestracji wybierasz kraj i podajesz swoją miejscowość; nie musi być w Holandii. Sama praca jest zawsze w Holandii.",
+        a: "Tak. Przy rejestracji wybierasz kraj i podajesz swoją miejscowość; nie musi być w Holandii. Przy każdej zmianie widać, gdzie jest praca.",
       },
       {
         q: "Kto jest moim pracodawcą?",
@@ -318,6 +324,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Pentru ture freelance: firmă proprie cu număr KVK olandez sau cod de TVA din UE.",
       "Pentru ture prin agenție: un BSN (numărul de identificare olandez). Agenția are nevoie de el pentru salariu. Nu locuiești în Olanda? Primești un BSN când te înregistrezi ca nerezident (RNI) la una dintre primăriile RNI.",
     ],
+    plaatsMetBelgie: "Turele sunt în Olanda, iar la unele firme și în Belgia.",
     eerlijkKop: "Bine de știut înainte să vii",
     eerlijk: [
       "Toate turele sunt în Olanda.",
@@ -334,7 +341,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       { q: "Mă costă ceva?", a: "Nu. ZekerFlex este gratuit pentru lucrători. Firma plătește taxa platformei." },
       {
         q: "Mă pot înregistra din România?",
-        a: "Da. La înregistrare alegi țara și localitatea ta; nu trebuie să fie în Olanda. Munca este însă mereu în Olanda.",
+        a: "Da. La înregistrare alegi țara și localitatea ta; nu trebuie să fie în Olanda. La fiecare tură vezi unde este munca.",
       },
       {
         q: "Cine este angajatorul meu?",
@@ -388,6 +395,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Для змін як фрилансер: власна компанія з нідерландським номером KVK або номером платника ПДВ у ЄС.",
       "Для змін через агентство: BSN (нідерландський персональний номер). Агентству він потрібен для зарплати. Живете в Нідерландах — BSN ви отримуєте під час реєстрації в муніципалітеті; не живете — після реєстрації як нерезидент (RNI).",
     ],
+    plaatsMetBelgie: "Зміни — у Нідерландах, а в деяких компаній також у Бельгії.",
     eerlijkKop: "Варто знати заздалегідь",
     eerlijk: [
       "Усі зміни — у Нідерландах.",

@@ -5,6 +5,8 @@ import { TaalStartLink } from "@/components/marketing/TaalStartLink";
 import { FOTO_MAP, paginaFoto } from "@/lib/marketing/fotos";
 import { WIN_PADEN, WIN_TALEN, WIN_TEKST, type WinTaal } from "@/lib/marketing/werken-in-nederland";
 import { breadcrumbJsonLd } from "@/lib/seo";
+import { featureEnabled } from "@/lib/flags";
+import { WERK_IN_BELGIE_VLAG } from "@/lib/geo/vestiging-land";
 import { ldJson } from "@/lib/seo/json-ld";
 
 // "Werken in Nederland" in één taal (28 nov 2026): dezelfde opbouw als /starten-als-uitzendkracht (kop met foto, drie
@@ -12,8 +14,12 @@ import { ldJson } from "@/lib/seo/json-ld";
 // blijven Nederlands; de inhoud krijgt daarom zelf een lang-attribuut. De taalkeuze bovenaan en de knoppen zijn gewone <a>'s:
 // bij een volle paginalading zet de root-layout <html lang> op de taal van het adres.
 
-export function WerkenInNederland({ taal }: { taal: WinTaal }) {
+export async function WerkenInNederland({ taal }: { taal: WinTaal }) {
   const t = WIN_TEKST[taal];
+  // Staat werken in België aan (vlag werk-in-belgie, 28 nov 2026), dan klopt "alle diensten zijn in Nederland" niet meer: dan het
+  // eerste punt met België. Bij een storing de stand van de vlag zonder override (uit).
+  const metBelgie = await featureEnabled(WERK_IN_BELGIE_VLAG).catch(() => false);
+  const eerlijk = metBelgie ? [t.plaatsMetBelgie, ...t.eerlijk.slice(1)] : t.eerlijk;
   const pad = WIN_PADEN[taal];
   const basisFoto = paginaFoto("werken-in-nederland");
   const foto = basisFoto ? { ...basisFoto, alt: t.fotoAlt } : undefined;
@@ -103,7 +109,7 @@ export function WerkenInNederland({ taal }: { taal: WinTaal }) {
           <div>
             <h2 className="font-display text-2xl font-bold text-ink">{t.eerlijkKop}</h2>
             <ul className="mt-5 space-y-3">
-              {t.eerlijk.map((n) => (
+              {eerlijk.map((n) => (
                 <li key={n} className="flex gap-3 text-[0.975rem] leading-relaxed text-neutralx-600">
                   <span aria-hidden className="mt-0.5 font-bold text-neutralx-400">•</span>
                   <span>{n}</span>

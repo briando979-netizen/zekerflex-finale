@@ -62,6 +62,9 @@ describe("werken in Nederland: vijf talen", () => {
     expect(nl.eerlijk.join(" ")).toMatch(/ZekerFlex is geen uitzendbureau/);
     expect(nl.nodig.join(" ")).toMatch(/18 jaar/);
     for (const t of WIN_TALEN) {
+      // waar het werk is: alleen Nederland, of met de vlag werk-in-belgie ook België; geen "altijd in Nederland" meer in de vragen
+      expect(WIN_TEKST[t].plaatsMetBelgie, t).toMatch(/Belgi|Бельгі/);
+      expect(WIN_TEKST[t].faq.map((f) => f.a).join(" "), t).not.toMatch(/altijd in Nederland|always in the Netherlands|zawsze w Holandii|mereu în Olanda/);
       const alles = JSON.stringify(WIN_TEKST[t]).toLowerCase();
       expect(alles, t).not.toMatch(/zekerflex bank|voorschot|advance|zaliczk|avans|аванс|sneller uitbetaald|instant payout|huisvesting geregeld/);
     }
@@ -76,6 +79,10 @@ describe("werken in Nederland: vijf talen", () => {
     expect(lees("app/layout.tsx")).toContain('winTaalVanPad(kop.get("x-pathname")) ?? (await getLocale())');
     // de knoppen zetten de taal voor het aanmelden (zelfde cookie als de taalknop)
     expect(lees("components/marketing/TaalStartLink.tsx")).toContain("onClick={() => bewaarTaalKeuze(taal)}");
+    // met de vlag werk-in-belgie aan zegt het eerste punt dat er ook diensten in België zijn
+    const scherm = lees("components/marketing/WerkenInNederland.tsx");
+    expect(scherm).toContain("await featureEnabled(WERK_IN_BELGIE_VLAG).catch(() => false)");
+    expect(scherm).toContain("metBelgie ? [t.plaatsMetBelgie, ...t.eerlijk.slice(1)] : t.eerlijk");
   });
 });
 
