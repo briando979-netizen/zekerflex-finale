@@ -131,6 +131,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/beveiliging", label: "Beveiliging" },
       { href: "/admin/prestaties", label: "Prestaties" },
       { href: "/admin/audit", label: "Auditspoor" },
+      { href: "/admin/papierwork", label: "Papierwork & Deadlines" },
       { href: "/admin/hosting", label: "Hosting & domein" },
       { href: "/admin/integraties", label: "API & integraties" },
       { href: "/admin/stripe-account", label: "Stripe-account" },
@@ -183,6 +184,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/studio", label: "Studio" },
       { href: "/admin/video", label: "Video-editor" },
       { href: "/admin/marketing-videos", label: "Marketing videos" },
+      { href: "/admin/videos/oprichter", label: "Oprichter-video script" },
       { href: "/admin/domeinen", label: "Domeinen" },
       // AI-proeven
       { href: "/admin/ai-trader", label: "AI-trader" },
