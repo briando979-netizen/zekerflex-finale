@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { BASIS_LOCALES, LOCALES } from "@/lib/i18n/config";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
@@ -38,7 +39,9 @@ describe("ID-controle die op een medewerker wacht: niet opnieuw scannen", () => 
   });
 
   it("de uitleg staat in alle vijf talen en zegt dat je niets opnieuw hoeft te doen", () => {
-    const talen = Object.keys(AUTH_DICTS);
+    // de vijf handgemaakte talen; een machinetaal krijgt het Engels (metMachineTalen), maar elke taal heeft een ingang
+    expect(Object.keys(AUTH_DICTS).sort()).toEqual([...LOCALES].sort());
+    const talen = [...BASIS_LOCALES];
     expect(talen.length).toBe(5);
     const teksten = new Set<string>();
     for (const taal of talen) {

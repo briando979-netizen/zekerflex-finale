@@ -1,7 +1,7 @@
 // De gedeelde opmaak van de ZekerFlex-mails (kader, knop, escapen), losgemaakt uit lib/mail/index.ts zodat de mails aan werkers in hun eigen
 // taal in aparte bestanden kunnen staan (lib/mail/werker/*) zonder een kringverwijzing. Puur: geen kv, geen prisma. Zonder `taal` is het
 // kader Nederlands, byte voor byte zoals het was.
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 
 /** De taal van een mail aan een werker (de app-taal, lib/i18n/worker-locale.ts). */
 export type MailTaal = Locale;
@@ -10,13 +10,13 @@ export const BRAND = "#0E5C4A";
 export const LOGO_CID = "zekerflex-logo";
 
 /** De regel onderaan elke mail, in de taal van de ontvanger. */
-export const MAIL_VOET: Record<MailTaal, string> = {
+export const MAIL_VOET: Record<MailTaal, string> = metMachineTalen({
   nl: "ZekerFlex — zeker van je werk · zekerflex.com",
   en: "ZekerFlex — certainty in your work · zekerflex.com",
   pl: "ZekerFlex — pewność w Twojej pracy · zekerflex.com",
   ro: "ZekerFlex — siguranță în munca ta · zekerflex.com",
   uk: "ZekerFlex — впевненість у твоїй роботі · zekerflex.com",
-};
+});
 
 /** Voorbeeldtekst naast het onderwerp in de inbox; onzichtbaar in de mail zelf. */
 function preheaderHtml(text: string): string {

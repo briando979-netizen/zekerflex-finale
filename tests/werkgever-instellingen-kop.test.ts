@@ -85,7 +85,7 @@ describe("de onderpagina's van Instellingen", () => {
 
   it("de pagina's met een eigen titel in het woordenboek geven die door als title", () => {
     expect(lees("app/werkgever/favorieten/pools/page.tsx")).toContain("title={t.pools.title}");
-    expect(lees("app/werkgever/locaties/page.tsx")).toContain("<BranchesBoard canManage={canManage} metBelgie={metBelgie} />");
+    expect(lees("app/werkgever/locaties/page.tsx")).toContain("<BranchesBoard canManage={canManage} landen={landen} />");
     expect(lees("components/app/BranchesBoard.tsx")).toContain("title={l.title}");
     expect(lees("app/werkgever/account/page.tsx")).toContain("<InstellingenKop title={t.titel} subtitle={t.sub} />");
   });

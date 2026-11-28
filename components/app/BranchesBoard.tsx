@@ -8,7 +8,7 @@ import { LijstTabel } from "@/components/werkgever/LijstTabel";
 import { Dialoog } from "@/components/werkgever/Dialoog";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
-import { metLand, postcodeTekst } from "@/lib/geo/vestiging-land";
+import { metLand, postcodeTekst, type LandKeuze } from "@/lib/geo/vestiging-land";
 
 // Instellingen → Locaties (23 nov 2026, zoals Locaties bij YoungOnes): de kop met "Nieuwe locatie" rechtsboven, de vestigingen als
 // eenvoudige tabel in een witte kaart (naam, straat, postcode, plaats; leeg is het één regel tekst) en toevoegen in een dialoog met
@@ -30,7 +30,7 @@ interface BranchRow {
   _count: { shifts: number; timesheets: number };
 }
 
-export function BranchesBoard({ canManage, metBelgie = false }: { canManage: boolean; /** de vlag `werk-in-belgie`: ook een werklocatie in België toevoegen */ metBelgie?: boolean }) {
+export function BranchesBoard({ canManage, landen = null }: { canManage: boolean; /** de vlag `werk-in-belgie` of `werk-in-buitenland`: de landen voor een nieuwe locatie; null = alleen Nederland */ landen?: LandKeuze[] | null }) {
   const { t, locale } = useI18n();
   const l = t.locaties;
   const [branches, setBranches] = useState<BranchRow[] | null>(null);
@@ -134,7 +134,7 @@ export function BranchesBoard({ canManage, metBelgie = false }: { canManage: boo
               <span key="straat" className="sm:whitespace-nowrap">
                 {b.addressLine}
               </span>,
-              // een Belgische werklocatie ("BE-2000", lib/geo/vestiging-land.ts): de vier cijfers, en het land achter de plaats
+              // een werklocatie buiten Nederland ("BE-2000", lib/geo/vestiging-land.ts): de postcode zonder landcode, en het land achter de plaats
               <span key="postcode" className="sm:whitespace-nowrap">
                 {postcodeTekst(b.postalCode)}
               </span>,
@@ -165,7 +165,7 @@ export function BranchesBoard({ canManage, metBelgie = false }: { canManage: boo
           key={concept?.city ?? ""}
           beginPlaats={branches?.length === 0 ? (concept?.city ?? "") : ""}
           metKostenplaats
-          metBelgie={metBelgie}
+          landen={landen}
           onOpgeslagen={async () => {
             setAdding(false);
             await refresh();

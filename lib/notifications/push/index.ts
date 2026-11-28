@@ -9,7 +9,7 @@ import {
 import { isApnsEnabled, sendApnsToUsers } from "@/lib/notifications/push/apns";
 import { WORKER_PUSH, type WorkerPushTexts } from "@/lib/i18n/worker-push";
 import { userLocale } from "@/lib/i18n/worker-locale";
-import type { Locale } from "@/lib/i18n/config";
+import { basisLocale, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Push fan-out.
@@ -91,7 +91,7 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
     .findUnique({ where: { id: offer.freelancerId }, select: { userId: true } })
     .catch(() => null);
   const locale: Locale = profiel ? await userLocale(profiel.userId).catch((): Locale => "nl") : "nl";
-  const notification = offer.teksten(WORKER_PUSH[locale], locale);
+  const notification = offer.teksten(WORKER_PUSH[basisLocale(locale)], locale);
   const data = { ...offer.data, type: "SHIFT_OFFER", shiftId: offer.shiftId };
 
   const subs = isWebPushEnabled()

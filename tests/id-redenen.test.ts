@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES, LOCALES } from "@/lib/i18n/config";
 import { ID_LABELS, ID_REDENEN, idRedenSleutel, idUitslagVoorWerker, taalVanVerzoek, vertaalIdTekst } from "@/lib/i18n/id-redenen";
 
 // De redenen van een ID-controle in vijf talen (13 nov 2026): een Poolse werker las ze in het Nederlands. De Nederlandse tekst
@@ -72,7 +72,7 @@ const WAAR: Record<keyof typeof ALLES, string> = {
 describe("het woordenboek", () => {
   it("heeft elke tekst in alle vijf talen, met dezelfde plaatshouders", () => {
     for (const [sleutel, t] of Object.entries(ALLES)) {
-      for (const taal of LOCALES) {
+      for (const taal of BASIS_LOCALES) {
         expect(t[taal].trim(), `${sleutel}/${taal}`).not.toBe("");
         expect(plaatshouders(t[taal]), `${sleutel}/${taal}`).toEqual(plaatshouders(t.nl));
       }
@@ -98,7 +98,7 @@ describe("vertaalIdTekst", () => {
 
   it("Nederlands blijft Nederlands; elke andere taal krijgt de vertaling", () => {
     expect(vertaalIdTekst(twijfel, "nl")).toBe(twijfel);
-    for (const taal of LOCALES.filter((l) => l !== "nl")) expect(vertaalIdTekst(twijfel, taal)).toBe(ID_REDENEN["gezicht.twijfel"][taal]);
+    for (const taal of BASIS_LOCALES.filter((l) => l !== "nl")) expect(vertaalIdTekst(twijfel, taal)).toBe(ID_REDENEN["gezicht.twijfel"][taal]);
   });
 
   it("een onbekende tekst valt terug op het Nederlands, in elke taal", () => {

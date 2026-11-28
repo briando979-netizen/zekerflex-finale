@@ -7,13 +7,14 @@ import { CheckInPanel } from "@/components/app/CheckInPanel";
 import { ShiftMap } from "@/components/app/ShiftMap";
 import { MessageEmployerButton } from "@/components/app/MessageEmployerButton";
 import { PageHeader } from "@/components/app/ui";
-import { getFreelancerDict } from "@/lib/i18n/server";
+import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 import { INCHECK_VOOR_MS } from "@/lib/timesheets/offline";
 import { urenIndienenOpen } from "@/lib/timesheets/indienen";
 import { incheckenVereist } from "@/lib/checkin/vereist";
 import { zonderInchecken } from "@/lib/checkin/vereist-kern";
 import { plekVoorWerker } from "@/lib/shifts/place-label";
+import { landVanVestiging, plaatsRegel } from "@/lib/geo/vestiging-land";
 
 export const dynamic = "force-dynamic";
 
@@ -112,8 +113,9 @@ export default async function IncheckKlusPage(props: { params: Promise<{ timeshe
             <Rij label={P.where}>
               <span className="block font-semibold">{plek}</span>
               <span className="block">{ts.branch.addressLine}</span>
+              {/* buiten Nederland "2000 Antwerpen, België", het land in de taal van de werker (lib/geo/vestiging-land.ts) */}
               <span className="block">
-                {ts.branch.postalCode} {ts.branch.city}
+                {landVanVestiging(ts.branch.postalCode) === "NL" ? <>{ts.branch.postalCode} {ts.branch.city}</> : plaatsRegel(ts.branch, await getLocale())}
               </span>
             </Rij>
             <Rij label={P.when}>

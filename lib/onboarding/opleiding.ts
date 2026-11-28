@@ -5,7 +5,7 @@
 // controle van wat de server bewaart (KV "werker-opleiding:<userId>").
 // ---------------------------------------------------------------------------
 
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 
 export const OPLEIDING_NIVEAUS = ["middelbaar", "mbo", "hbo", "universiteit"] as const;
 export type OpleidingNiveau = (typeof OPLEIDING_NIVEAUS)[number];
@@ -26,15 +26,15 @@ export interface Opleiding {
   richting?: OpleidingRichting;
 }
 
-export const NIVEAU_LABELS: Record<Locale, Record<OpleidingNiveau, string>> = {
+export const NIVEAU_LABELS: Record<Locale, Record<OpleidingNiveau, string>> = metMachineTalen({
   nl: { middelbaar: "Middelbare school", mbo: "MBO", hbo: "HBO", universiteit: "Universiteit" },
   en: { middelbaar: "Secondary school", mbo: "Vocational (MBO)", hbo: "University of applied sciences (HBO)", universiteit: "University" },
   pl: { middelbaar: "Szkoła średnia", mbo: "Szkoła zawodowa (MBO)", hbo: "Wyższa szkoła zawodowa (HBO)", universiteit: "Uniwersytet" },
   ro: { middelbaar: "Liceu", mbo: "Școală profesională (MBO)", hbo: "Universitate de științe aplicate (HBO)", universiteit: "Universitate" },
   uk: { middelbaar: "Середня школа", mbo: "Професійне училище (MBO)", hbo: "Прикладний університет (HBO)", universiteit: "Університет" },
-};
+});
 
-export const RICHTING_LABELS: Record<Locale, Record<OpleidingRichting, string>> = {
+export const RICHTING_LABELS: Record<Locale, Record<OpleidingRichting, string>> = metMachineTalen({
   nl: {
     gedrag: "Gedrag en Maatschappij",
     economie: "Economie, Bedrijfskunde en Management",
@@ -125,7 +125,7 @@ export const RICHTING_LABELS: Record<Locale, Record<OpleidingRichting, string>> 
     veiligheid: "Безпека",
     overig: "Інше",
   },
-};
+});
 
 export function isNiveau(v: unknown): v is OpleidingNiveau {
   return typeof v === "string" && Object.hasOwn(NIVEAU_LABELS.nl, v);

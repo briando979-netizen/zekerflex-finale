@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// De vestiging uit de werkgever-onboarding (lib/onboarding/employer.ts) in België (vlag `werk-in-belgie`, standaard uit).
-// Zonder vestigingLand is het Nederland met precies de oude postcoderegel en PDOK; met "BE" en de vlag uit dezelfde melding
-// als een ongeldige postcode, zonder iets naar buiten te sturen of een vestiging te maken.
+// De vestiging uit de werkgever-onboarding (lib/onboarding/employer.ts) buiten Nederland (vlag `werk-in-belgie` voor België,
+// `werk-in-buitenland` voor elk land; beide standaard uit). Zonder vestigingLand is het Nederland met precies de oude
+// postcoderegel en PDOK; met een land dat de vlaggen niet toestaan dezelfde melding als een ongeldige postcode, zonder iets
+// naar buiten te sturen of een vestiging te maken.
 
 const m = vi.hoisted(() => ({
   membership: vi.fn(),
@@ -37,14 +38,17 @@ vi.mock("@/lib/kvk/tegoed-opslag", () => ({ wisKvkWacht: vi.fn(), zetKvkWacht: v
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 
 const { employerOnboardingSchema, submitEmployerOnboarding } = await import("@/lib/onboarding/employer");
-const { vestigingBelgieVergeetAlles } = await import("@/lib/geo/vestiging-belgie");
+const { vestigingBuitenlandVergeetAlles } = await import("@/lib/geo/vestiging-buitenland");
+const { WERK_IN_BELGIE_VLAG, WERK_IN_BUITENLAND_VLAG } = await import("@/lib/geo/vestiging-land");
+const vlaggen = (aan: { belgie?: boolean; buitenland?: boolean }) =>
+  m.featureEnabled.mockImplementation(async (key: string) => (key === WERK_IN_BELGIE_VLAG ? aan.belgie === true : key === WERK_IN_BUITENLAND_VLAG ? aan.buitenland === true : false));
 
 const fetchMock = vi.fn();
 const nl = { branchName: "Magazijn", addressLine: "Damrak 1", postalCode: "1012 AB", houseNumber: "1", kvkNumber: "12345678" };
 const be = { branchName: "Antwerpen", addressLine: "Meir", postalCode: "2000", houseNumber: "1", kvkNumber: "12345678", vestigingLand: "BE" };
 
 beforeEach(() => {
-  vestigingBelgieVergeetAlles();
+  vestigingBuitenlandVergeetAlles();
   vi.stubGlobal("fetch", fetchMock);
   m.membership.mockResolvedValue({ id: "m1" });
   m.branchFindFirst.mockResolvedValue(null);
@@ -71,27 +75,54 @@ describe("de postcode van de vestiging in de onboarding", () => {
     expect(employerOnboardingSchema.safeParse({ ...be, postalCode: "1012 AB" }).success).toBe(false);
     expect(employerOnboardingSchema.safeParse({ ...be, postalCode: "0999" }).success).toBe(false);
   });
+
+  it("met een ander land: vrije tekst, en leeg alleen in een land zonder postcodes", () => {
+    expect(employerOnboardingSchema.safeParse({ ...be, vestigingLand: "DE", postalCode: "10115" }).success).toBe(true);
+    expect(employerOnboardingSchema.safeParse({ ...be, vestigingLand: "DE", postalCode: "" }).success).toBe(false);
+    expect(employerOnboardingSchema.safeParse({ ...be, vestigingLand: "AE", postalCode: "" }).success).toBe(true);
+    expect(employerOnboardingSchema.safeParse({ ...be, vestigingLand: "QQ", postalCode: "1234" }).success).toBe(false);
+  });
 });
 
 describe("submitEmployerOnboarding met een Belgische vestiging", () => {
-  it("vlag uit: dezelfde melding als een ongeldige postcode, niets naar OSM, geen vestiging", async () => {
-    m.featureEnabled.mockResolvedValue(false);
+  it("vlaggen uit: dezelfde melding als een ongeldige postcode, niets naar OSM, geen vestiging", async () => {
+    vlaggen({});
     await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse(be))).rejects.toMatchObject({ status: 422, message: "Gebruik een geldige postcode" });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(m.geocodePostcode).not.toHaveBeenCalled();
     expect(m.branchCreate).not.toHaveBeenCalled();
   });
 
-  it("een Nederlandse vestiging gaat zoals altijd via PDOK, ook met de vlag aan", async () => {
-    m.featureEnabled.mockResolvedValue(true);
+  it("een Nederlandse vestiging gaat zoals altijd via PDOK, ook met de vlaggen aan", async () => {
+    vlaggen({ belgie: true, buitenland: true });
     await submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse(nl));
     expect(m.geocodePostcode).toHaveBeenCalledWith("1012 AB", "1");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(m.branchCreate.mock.calls[0]?.[0].data).toMatchObject({ postalCode: "1012AB", city: "Amsterdam", latitude: 52.37 });
   });
 
+  it("alleen werk-in-belgie aan: een Duitse vestiging gaat niet", async () => {
+    vlaggen({ belgie: true });
+    await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse({ ...be, vestigingLand: "DE", postalCode: "10115" }))).rejects.toMatchObject({ status: 422, message: "Gebruik een geldige postcode" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(m.branchCreate).not.toHaveBeenCalled();
+  });
+
+  it("een land met sancties: de eigen melding, niets naar OSM, geen vestiging", async () => {
+    vlaggen({ belgie: true, buitenland: true });
+    await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse({ ...be, vestigingLand: "RU", postalCode: "101000" }))).rejects.toMatchObject({ status: 422, message: "Werken in dit land kan niet via ZekerFlex." });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(m.branchCreate).not.toHaveBeenCalled();
+  });
+
+  it("België buiten Vlaanderen: de melding over Vlaanderen, niets naar OSM", async () => {
+    vlaggen({ belgie: true });
+    await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse({ ...be, postalCode: "1000" }))).rejects.toMatchObject({ status: 422, details: { reden: "buitenland-vlaanderen" } });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("vlag aan: het adres via OpenStreetMap, bewaard met BE- voor de postcode", async () => {
-    m.featureEnabled.mockResolvedValue(true);
+    vlaggen({ belgie: true });
     fetchMock.mockImplementation(
       async () =>
         new Response(JSON.stringify([{ lat: "51.2177", lon: "4.4069", place_rank: 30, address: { road: "Meir", city: "Antwerpen", postcode: "2000", country_code: "be" } }]), { status: 200 }),
@@ -105,9 +136,9 @@ describe("submitEmployerOnboarding met een Belgische vestiging", () => {
   });
 
   it("vlag aan en OSM vindt niets: een eerlijke fout, geen vestiging in het midden van Nederland", async () => {
-    m.featureEnabled.mockResolvedValue(true);
+    vlaggen({ belgie: true });
     fetchMock.mockImplementation(async () => new Response("[]", { status: 200 }));
-    await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse(be))).rejects.toMatchObject({ status: 422, details: { reden: "belgie-niet-gevonden" } });
+    await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse(be))).rejects.toMatchObject({ status: 422, details: { reden: "buitenland-niet-gevonden" } });
     expect(m.branchCreate).not.toHaveBeenCalled();
   });
 });

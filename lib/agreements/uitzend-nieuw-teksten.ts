@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 
 // De melding "je uitzendovereenkomst is bijgewerkt" in de taal van de werker (12 nov 2026): op het scherm (boven de overeenkomst op
 // Verificatie, via GET /api/me/uitzend/contract) en als push (lib/agreements/uitzend-melding.ts). Puur bestand.
@@ -11,7 +11,7 @@ export interface UitzendNieuwTeksten {
   pushBody: string;
 }
 
-export const UITZEND_NIEUW: Record<Locale, UitzendNieuwTeksten> = {
+export const UITZEND_NIEUW: Record<Locale, UitzendNieuwTeksten> = metMachineTalen({
   nl: {
     titel: "Je uitzendovereenkomst is bijgewerkt",
     tekst: "De tekst en de gegevens van de werkgever zijn aangepast. Lees de nieuwe versie en teken opnieuw, anders kun je niet op klussen reageren.",
@@ -42,4 +42,4 @@ export const UITZEND_NIEUW: Record<Locale, UitzendNieuwTeksten> = {
     pushTitel: "Твій договір тимчасової роботи оновлено",
     pushBody: "Прочитай нову версію і підпиши ще раз, щоб відгукуватися на роботи.",
   },
-};
+});

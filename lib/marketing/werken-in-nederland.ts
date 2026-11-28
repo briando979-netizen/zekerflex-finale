@@ -5,7 +5,7 @@
 // stuurden, zonder eigen adressen): 48% heeft de browser in het Engels, daarnaast Pools, Spaans, Arabisch, Russisch.
 //
 // Eén pagina per taal, met hreflang naar elkaar (x-default = Engels), elk met een eigen adres in die taal. Alleen wat echt zo
-// werkt: de diensten zijn in Nederland (België alleen met de vlag werk-in-belgie), ZekerFlex regelt geen woonruimte of reis en is geen uitzendbureau (lib/uitzend/
+// werkt: de diensten zijn in Nederland (België of een ander land alleen met de vlag werk-in-belgie of werk-in-buitenland), ZekerFlex regelt geen woonruimte of reis en is geen uitzendbureau (lib/uitzend/
 // model.ts), freelance met een KVK- of EU-btw-nummer (lib/matching/onderneming.ts), woonplaats buiten NL kan (lib/geo/
 // thuisbasis.ts), vanaf 18. Puur bestand: de root-layout leest hier de taal van het adres voor <html lang>.
 // ---------------------------------------------------------------------------
@@ -65,6 +65,8 @@ export interface WinTekst {
   eerlijk: string[];
   /** dat eerste punt als de vlag werk-in-belgie aan staat (lib/geo/vestiging-land.ts) */
   plaatsMetBelgie: string;
+  /** dat eerste punt als de vlag werk-in-buitenland aan staat (elk land, gaat voor België) */
+  plaatsMetBuitenland: string;
   faqKop: string;
   faq: { q: string; a: string }[];
   slotKop: string;
@@ -112,6 +114,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Voor uitzendklussen: een BSN. Het uitzendbureau heeft dat nodig voor je loon. Woon je niet in Nederland? Dan krijg je een BSN als je je inschrijft als niet-ingezetene (RNI) bij een van de RNI-gemeenten.",
     ],
     plaatsMetBelgie: "De diensten zijn in Nederland, en bij sommige bedrijven in België.",
+    plaatsMetBuitenland: "De diensten zijn in Nederland, en bij sommige bedrijven in een ander land.",
     eerlijkKop: "Goed om te weten",
     eerlijk: [
       "Alle diensten zijn in Nederland.",
@@ -183,6 +186,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "For agency shifts: a BSN (Dutch citizen service number). The agency needs it for your wages. Don't live in the Netherlands? You get a BSN when you register as a non-resident (RNI) at one of the RNI municipalities.",
     ],
     plaatsMetBelgie: "Shifts are in the Netherlands, and with some companies in Belgium.",
+    plaatsMetBuitenland: "Shifts are in the Netherlands, and with some companies in another country.",
     eerlijkKop: "Good to know before you come",
     eerlijk: [
       "All shifts are in the Netherlands.",
@@ -254,6 +258,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Do zmian przez agencję: numer BSN (holenderski numer identyfikacyjny). Agencja potrzebuje go do wypłaty wynagrodzenia. Nie mieszkasz w Holandii? BSN dostaniesz po rejestracji jako nierezydent (RNI) w jednej z gmin RNI.",
     ],
     plaatsMetBelgie: "Zmiany są w Holandii, a w niektórych firmach także w Belgii.",
+    plaatsMetBuitenland: "Zmiany są w Holandii, a w niektórych firmach także w innym kraju.",
     eerlijkKop: "Dobrze wiedzieć przed przyjazdem",
     eerlijk: [
       "Wszystkie zmiany są w Holandii.",
@@ -325,6 +330,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Pentru ture prin agenție: un BSN (numărul de identificare olandez). Agenția are nevoie de el pentru salariu. Nu locuiești în Olanda? Primești un BSN când te înregistrezi ca nerezident (RNI) la una dintre primăriile RNI.",
     ],
     plaatsMetBelgie: "Turele sunt în Olanda, iar la unele firme și în Belgia.",
+    plaatsMetBuitenland: "Turele sunt în Olanda, iar la unele firme și în altă țară.",
     eerlijkKop: "Bine de știut înainte să vii",
     eerlijk: [
       "Toate turele sunt în Olanda.",
@@ -396,6 +402,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
       "Для змін через агентство: BSN (нідерландський персональний номер). Агентству він потрібен для зарплати. Живете в Нідерландах — BSN ви отримуєте під час реєстрації в муніципалітеті; не живете — після реєстрації як нерезидент (RNI).",
     ],
     plaatsMetBelgie: "Зміни — у Нідерландах, а в деяких компаній також у Бельгії.",
+    plaatsMetBuitenland: "Зміни — у Нідерландах, а в деяких компаній також в іншій країні.",
     eerlijkKop: "Варто знати заздалегідь",
     eerlijk: [
       "Усі зміни — у Нідерландах.",

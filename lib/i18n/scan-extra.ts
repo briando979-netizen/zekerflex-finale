@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Extra teksten van de ID-scan (components/app/IdScan.tsx) voor de twee routes
@@ -85,7 +85,7 @@ export interface ScanExtra {
   zelfModus: string;
 }
 
-export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
+export const SCAN_EXTRA: Record<Locale, ScanExtra> = metMachineTalen({
   nl: {
     introTitel: "Bevestig je identiteit",
     introTekst: "We vragen je je identiteitsdocument te scannen en een selfie te maken.",
@@ -456,4 +456,4 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     autoKanNiet: "Тут камера не зробить фото автоматично.",
     zelfModus: "Наведіть усе в кадр і натисніть кнопку.",
   },
-};
+});

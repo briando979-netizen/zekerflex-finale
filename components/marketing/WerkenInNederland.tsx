@@ -6,7 +6,7 @@ import { FOTO_MAP, paginaFoto } from "@/lib/marketing/fotos";
 import { WIN_PADEN, WIN_TALEN, WIN_TEKST, type WinTaal } from "@/lib/marketing/werken-in-nederland";
 import { breadcrumbJsonLd } from "@/lib/seo";
 import { featureEnabled } from "@/lib/flags";
-import { WERK_IN_BELGIE_VLAG } from "@/lib/geo/vestiging-land";
+import { WERK_IN_BELGIE_VLAG, WERK_IN_BUITENLAND_VLAG } from "@/lib/geo/vestiging-land";
 import { ldJson } from "@/lib/seo/json-ld";
 
 // "Werken in Nederland" in één taal (28 nov 2026): dezelfde opbouw als /starten-als-uitzendkracht (kop met foto, drie
@@ -16,10 +16,14 @@ import { ldJson } from "@/lib/seo/json-ld";
 
 export async function WerkenInNederland({ taal }: { taal: WinTaal }) {
   const t = WIN_TEKST[taal];
-  // Staat werken in België aan (vlag werk-in-belgie, 28 nov 2026), dan klopt "alle diensten zijn in Nederland" niet meer: dan het
-  // eerste punt met België. Bij een storing de stand van de vlag zonder override (uit).
-  const metBelgie = await featureEnabled(WERK_IN_BELGIE_VLAG).catch(() => false);
-  const eerlijk = metBelgie ? [t.plaatsMetBelgie, ...t.eerlijk.slice(1)] : t.eerlijk;
+  // Staat werken buiten Nederland aan (vlag werk-in-buitenland: elk land; werk-in-belgie: België; 28 nov 2026), dan klopt "alle
+  // diensten zijn in Nederland" niet meer: dan het eerste punt met dat land. Bij een storing uit (de stand zonder override).
+  const [metBuitenland, metBelgie] = await Promise.all([
+    featureEnabled(WERK_IN_BUITENLAND_VLAG).catch(() => false),
+    featureEnabled(WERK_IN_BELGIE_VLAG).catch(() => false),
+  ]);
+  const plaats = metBuitenland ? t.plaatsMetBuitenland : metBelgie ? t.plaatsMetBelgie : null;
+  const eerlijk = plaats ? [plaats, ...t.eerlijk.slice(1)] : t.eerlijk;
   const pad = WIN_PADEN[taal];
   const basisFoto = paginaFoto("werken-in-nederland");
   const foto = basisFoto ? { ...basisFoto, alt: t.fotoAlt } : undefined;

@@ -30,7 +30,7 @@ vi.mock("@/lib/mail", async () => {
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 import { idGeverifieerdEmail } from "@/lib/mail";
 import { WORKER_PUSH } from "@/lib/i18n/worker-push";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES } from "@/lib/i18n/config";
 
 const werker = (email: string, kyc = "VERIFIED") => ({ email, fullName: "Jan de Vries", kycStatus: kyc, disabledAt: null, memberships: [{ role: "FREELANCER" }] });
 
@@ -51,7 +51,7 @@ describe("meldIdGeverifieerd", () => {
   });
   it("gebruikt de app-taal van de werker", async () => {
     h.user = werker("jan@voorbeeld.nl");
-    for (const l of LOCALES) {
+    for (const l of BASIS_LOCALES) {
       h.kv.clear();
       h.pushes.length = 0;
       h.kv.set("werker-taal:u1", { locale: l });
@@ -76,7 +76,7 @@ describe("meldIdGeverifieerd", () => {
 
 describe("teksten", () => {
   it("push in alle vijf talen, en de mail schermt de naam af", () => {
-    for (const l of LOCALES) {
+    for (const l of BASIS_LOCALES) {
       expect(WORKER_PUSH[l].idOkTitle.length, l).toBeGreaterThan(5);
       expect(WORKER_PUSH[l].idOkBody.length, l).toBeGreaterThan(20);
     }

@@ -7,8 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { geocodePostcode, type GeocodeResult } from "@/lib/integrations/pdok";
-import { werkInBelgieAan, zoekBelgischAdres } from "@/lib/geo/vestiging-belgie";
-import { isBelgischePostcode } from "@/lib/geo/vestiging-land";
+import { werklocatieLandenVoor, zoekBuitenlandsAdres } from "@/lib/geo/vestiging-buitenland";
+import { buitenlandsePostcode, heeftPostcode, isGesanctioneerdLand, isVestigingLand, SANCTIE_MELDING } from "@/lib/geo/vestiging-land";
 import { registerTenantCompany } from "@/lib/company/registration";
 import { kvkLimietVan } from "@/lib/kvk/tegoed";
 import { wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
@@ -38,22 +38,30 @@ function controleerBedrijf(v: { land: string; kvkNumber: string; btwNummer: stri
 
 const POSTCODE_MELDING = "Gebruik een geldige postcode";
 
+/** Past de postcode bij het land van de werkplek? Nederland zoals altijd; België vier cijfers; elders 1 tot 10 tekens (of leeg zonder postcodes). */
+function postcodeVanVestigingGeldig(land: string, postcode: string): boolean {
+  if (land === "NL") return /^\s*\d{4}\s*[A-Za-z]{2}\s*$/.test(postcode);
+  if (!isVestigingLand(land)) return false;
+  const pc = buitenlandsePostcode(land, postcode);
+  return pc !== null && (pc !== "" || !heeftPostcode(land));
+}
+
 // De vestiging is de werklocatie in Nederland (postcode en geofence), ook voor een buitenlands bedrijf. 28 nov 2026: met
-// vestigingLand "BE" een werklocatie in België (vier cijfers), maar alleen als de vlag `werk-in-belgie` aan staat; dat
-// controleert submitEmployerOnboarding. Zonder vestigingLand blijft het Nederland met precies de oude postcoderegel.
+// vestigingLand (ISO-code, bijv. "BE" of "DE") een werklocatie in een ander land, maar alleen als de vlag `werk-in-belgie`
+// (België) of `werk-in-buitenland` (elk land) aan staat; dat controleert submitEmployerOnboarding. Zonder vestigingLand
+// blijft het Nederland met precies de oude postcoderegel.
 // Let op: `land` is het land van het bedrijf (KVK of btw), vestigingLand dat van de werkplek; die lopen niet door elkaar.
 export const employerOnboardingSchema = z
   .object({
     ...bedrijfVelden,
     branchName: z.string().trim().min(2).max(120),
     addressLine: z.string().trim().min(3).max(160),
-    postalCode: z.string().trim().regex(/^\s*(\d{4}\s*[A-Za-z]{2}|[1-9]\d{3})\s*$/, POSTCODE_MELDING),
+    postalCode: z.string().trim().max(40),
     houseNumber: z.string().trim().min(1).max(12),
-    vestigingLand: z.enum(["NL", "BE"]).default("NL"),
+    vestigingLand: z.string().trim().max(2).default("NL"),
   })
   .superRefine((v, ctx) => {
-    const ok = v.vestigingLand === "BE" ? isBelgischePostcode(v.postalCode) : /^\s*\d{4}\s*[A-Za-z]{2}\s*$/.test(v.postalCode);
-    if (!ok) ctx.addIssue({ code: "custom", path: ["postalCode"], message: POSTCODE_MELDING });
+    if (!postcodeVanVestigingGeldig(v.vestigingLand.toUpperCase(), v.postalCode)) ctx.addIssue({ code: "custom", path: ["postalCode"], message: POSTCODE_MELDING });
   })
   .superRefine(controleerBedrijf);
 export type EmployerOnboardingInput = z.infer<typeof employerOnboardingSchema>;
@@ -251,17 +259,19 @@ export async function koppelBedrijfsgegevens(userId: string, tenantId: string, i
 }
 
 /**
- * De werkplek als coördinaat. Nederland via PDOK, zoals altijd. België (vestigingLand "BE") alleen met de vlag
- * `werk-in-belgie`, via OpenStreetMap; vindt die niets, dan een eerlijke fout (lib/geo/vestiging-belgie.ts), nooit het midden
- * van Nederland. Staat de vlag uit, dan dezelfde melding als een ongeldige postcode, zoals vóór 28 nov 2026.
+ * De werkplek als coördinaat. Nederland via PDOK, zoals altijd. Een ander land (vestigingLand) alleen als de vlaggen dat
+ * toestaan, via OpenStreetMap; vindt die niets, dan een eerlijke fout (lib/geo/vestiging-buitenland.ts), nooit het midden
+ * van Nederland. Mag het land niet, dan dezelfde melding als een ongeldige postcode, zoals vóór 28 nov 2026.
  */
 async function geocodeVestiging(userId: string, v: EmployerOnboardingInput): Promise<GeocodeResult> {
-  if (v.vestigingLand !== "BE") return geocodePostcode(v.postalCode, v.houseNumber);
-  if (!(await werkInBelgieAan({ userId }))) throw AppError.validation(POSTCODE_MELDING);
+  const land = v.vestigingLand.toUpperCase();
+  if (land === "NL") return geocodePostcode(v.postalCode, v.houseNumber);
+  if (isGesanctioneerdLand(land)) throw AppError.validation(SANCTIE_MELDING);
+  if (!(await werklocatieLandenVoor({ userId })).includes(land)) throw AppError.validation(POSTCODE_MELDING);
   // het huisnummer staat hier in een eigen veld; zit er al een nummer in de adresregel, dan niet nog eens
   const straat = /\d/.test(v.addressLine) ? v.addressLine : `${v.addressLine} ${v.houseNumber}`;
-  const be = await zoekBelgischAdres({ straat, postcode: v.postalCode });
-  return { latitude: be.latitude, longitude: be.longitude, postalCode: be.postalCode, city: be.city || null, street: be.straat, approximate: false };
+  const a = await zoekBuitenlandsAdres({ land, straat, postcode: v.postalCode });
+  return { latitude: a.latitude, longitude: a.longitude, postalCode: a.postalCode, city: a.city || null, street: a.straat, approximate: false };
 }
 
 export async function submitEmployerOnboarding(

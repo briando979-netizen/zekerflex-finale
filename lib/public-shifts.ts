@@ -158,7 +158,13 @@ export function jobPostingJsonLd(s: PublicShift, siteUrl: string): Record<string
     jobLocation: {
       "@type": "Place",
       // het land staat in de postcode: "BE-2000" is een werklocatie in België (lib/geo/vestiging-land.ts), de rest Nederland
-      address: { "@type": "PostalAddress", addressLocality: s.city, postalCode: postcodeTekst(s.postalCode), addressCountry: landVanVestiging(s.postalCode) },
+      // (een land zonder postcodes, "AE-", krijgt geen leeg postcodeveld)
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: s.city,
+        ...(postcodeTekst(s.postalCode) ? { postalCode: postcodeTekst(s.postalCode) } : {}),
+        addressCountry: landVanVestiging(s.postalCode),
+      },
       geo: { "@type": "GeoCoordinates", latitude: s.latitude, longitude: s.longitude },
     },
     baseSalary: {

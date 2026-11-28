@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eersteIndrukStand, startStap } from "@/lib/onboarding/eerste-indruk";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES } from "@/lib/i18n/config";
 
 const feiten = (over: Partial<Parameters<typeof eersteIndrukStand>[0]> = {}) => ({ heeftFoto: false, aantalErvaringen: 0, geenErvaring: false, heeftMeldingen: false, ...over });
 
@@ -40,7 +40,7 @@ describe("startStap", () => {
 
 describe("teksten eersteIndruk", () => {
   it("staan in alle vijf talen, met 12 maanden, en bevatten geen cijfers over kansen", () => {
-    for (const l of LOCALES) {
+    for (const l of BASIS_LOCALES) {
       const t = FREELANCER_DICTS[l].eersteIndruk;
       expect(t.months, l).toHaveLength(12);
       expect(t.foto.body.length, l).toBeGreaterThan(20);
@@ -49,7 +49,7 @@ describe("teksten eersteIndruk", () => {
     }
   });
   it("de stap meldingen heeft in elke taal alle teksten, en drie stappen in de voortgang", () => {
-    for (const l of LOCALES) {
+    for (const l of BASIS_LOCALES) {
       const t = FREELANCER_DICTS[l].eersteIndruk;
       for (const [k, v] of Object.entries(t.meldingen)) expect(String(v).trim().length, `${l}: ${k}`).toBeGreaterThan(1);
       expect(t.stap(3), l).toMatch(/3\D+3/);

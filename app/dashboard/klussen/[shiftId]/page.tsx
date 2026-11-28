@@ -30,7 +30,7 @@ import { voorschottenVoorWerker } from "@/lib/payouts/voorschot-zicht";
 import { certsRequiredForShift } from "@/lib/certificates/matching";
 import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
 import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
-import { landVanVestiging, plaatsRegel } from "@/lib/geo/vestiging-land";
+import { landVanVestiging, plaatsRegel, postcodePlaats } from "@/lib/geo/vestiging-land";
 import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
@@ -339,13 +339,14 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     title: `${s.title} — ${s.company}`,
     startLocal: localStamp(s.startsAt),
     endLocal: localStamp(s.endsAt),
-    location: [s.branch, s.address, `${s.postalCode ?? ""} ${s.city}`.trim()].filter(Boolean).join(", "),
+    // buiten Nederland "2000 Antwerpen, België" (lib/geo/vestiging-land.ts); de tekst in de agenda is Nederlands
+    location: [s.branch, s.address, postcodePlaats(s, "nl").trim()].filter(Boolean).join(", "),
     description:
       `Je klus via ZekerFlex bij ${s.company}.\n` +
       `Uurtarief ${moneyExact(s.hourlyRateCents)}.\n` +
       (s.skill ? `Functie: ${s.skill}\n` : "") +
       (s.breakMinutes > 0 ? `Pauze: ${s.breakMinutes} minuten\n` : "Geen pauze\n") +
-      `Adres: ${s.address}, ${s.postalCode ?? ""} ${s.city}\n\n` +
+      `Adres: ${s.address}, ${postcodePlaats(s, "nl")}\n\n` +
       (geenInchecken ? AGENDA_ZONDER_INCHECKEN : `Bevestig je komst in de app en check op tijd in op locatie.`),
   };
 
@@ -577,8 +578,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <InfoRow icon="◎">
             {s.address}
             <br />
-            {/* een werklocatie in België ("BE-2000", lib/geo/vestiging-land.ts): "2000 Antwerpen, België", het land in de taal van de werker */}
-            {landVanVestiging(s.postalCode) === "BE" ? plaatsRegel(s, await getLocale()) : <>{s.postalCode} {s.city}</>}
+            {/* buiten Nederland ("BE-2000", lib/geo/vestiging-land.ts): "2000 Antwerpen, België", het land in de taal van de werker */}
+            {landVanVestiging(s.postalCode) === "NL" ? <>{s.postalCode} {s.city}</> : plaatsRegel(s, await getLocale())}
           </InfoRow>
           <InfoRow icon="☕">
             {s.breakMinutes > 0 ? D.breakMin(s.breakMinutes) : D.noBreak}

@@ -5,6 +5,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
+import { controleerWerklocatiePostcode } from "@/lib/geo/vestiging-buitenland";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,7 +45,9 @@ export async function GET(): Promise<NextResponse> {
 const schema = z.object({
   name: z.string().trim().min(2).max(120),
   addressLine: z.string().trim().min(3).max(200),
-  postalCode: z.string().trim().min(4).max(12),
+  // Nederland 4 tot 12 tekens zoals altijd; buiten Nederland met de landcode ervoor ("BE-2000", "AE-" zonder postcode), alleen
+  // in een land dat de vlaggen toestaan (lib/geo/vestiging-land.ts → controleerVestigingPostcode, hieronder)
+  postalCode: z.string().trim().max(16),
   city: z.string().trim().min(2).max(100),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
@@ -68,8 +71,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!parsed.success) throw AppError.validation("Controleer de ingevulde gegevens", parsed.error.flatten());
 
     const { costCenter, ...rest } = parsed.data;
+    const postalCode = await controleerWerklocatiePostcode(rest.postalCode, principal);
     const branch = await prisma.branch.create({
-      data: { ...rest, ...(costCenter ? { costCenter } : {}), tenantId, kind: "PERMANENT" },
+      data: { ...rest, postalCode, ...(costCenter ? { costCenter } : {}), tenantId, kind: "PERMANENT" },
       select: { id: true, name: true },
     });
 

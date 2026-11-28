@@ -1,6 +1,7 @@
 import { vulIn } from "@/lib/i18n/vul-in";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import type { MailInput } from "@/lib/mail";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Het voorstel van een opdrachtgever om de uren van een werker te corrigeren (lib/disputes/raise.ts), in de app-taal van de werker.
@@ -20,7 +21,7 @@ interface Tekst {
   weiger: string;
 }
 
-const TEKST: Record<MailTaal, Tekst> = {
+const TEKST: Record<MailTaal, Tekst> = metMachineTalen({
   nl: {
     dienst: "je dienst",
     subject: "Voorstel voor correctie van je uren — {dienst}",
@@ -71,7 +72,7 @@ const TEKST: Record<MailTaal, Tekst> = {
     kopieer: "Кнопка не працює? Скопіюй це посилання:",
     weiger: "Не погоджуєшся? Тоді можеш відмовитися — справа піде до ZekerFlex на незалежний розгляд.",
   },
-};
+});
 
 export function hoursCorrectionProposedEmailT(
   fullName: string,

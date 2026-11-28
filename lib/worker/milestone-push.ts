@@ -3,8 +3,8 @@ import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { userLocales } from "@/lib/i18n/worker-locale";
-import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { amsterdamYearQuarter, getWorkerMilestones } from "@/lib/worker/milestones";
+import { laadFreelancerDict } from "@/lib/i18n/freelancer-lader";
 
 // ---------------------------------------------------------------------------
 // Dagelijkse herinneringen voor administratie-mijlpalen (btw-deadline, 1.225-
@@ -38,7 +38,7 @@ export async function sweepMilestoneReminders(now = new Date()): Promise<{ users
   let sent = 0;
   for (const u of users) {
     try {
-      const data = await getWorkerMilestones(u.id, now, FREELANCER_DICTS[locales.get(u.id) ?? "nl"].milestones);
+      const data = await getWorkerMilestones(u.id, now, (await laadFreelancerDict(locales.get(u.id) ?? "nl")).milestones);
       if (!data) continue;
       for (const m of data.milestones) {
         if (m.id === "btw" && m.status === "action") {

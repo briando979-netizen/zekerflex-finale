@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { HULP_TEKSTEN, hulpTeksten } from "@/lib/hulp/teksten";
 import { SUPPORT_CHAT, heeftNieuwsOngezien, zoekVragen, type HulpTeksten } from "@/lib/hulp/hulpjes";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES, LOCALES } from "@/lib/i18n/config";
 
 // Het hulpcentrum achter het vraagteken in de werker-app (components/app/HulpCentrum.tsx).
 // De teksten gaan van de server naar een clientcomponent: dus geen functies erin. De antwoorden
@@ -72,7 +72,7 @@ describe("teksten van het hulpcentrum", () => {
   });
 
   it("noemt de menu's precies zoals de app ze noemt, in elke taal", () => {
-    for (const taal of LOCALES) {
+    for (const taal of BASIS_LOCALES) {
       const t = HULP_TEKSTEN[taal];
       const d = FREELANCER_DICTS[taal];
       const moet: [string, string][] = [

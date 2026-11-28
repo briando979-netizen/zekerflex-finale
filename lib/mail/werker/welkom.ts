@@ -5,6 +5,7 @@
 import type { MailInput } from "@/lib/mail";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 interface WelkomTekst {
   subject: string;
@@ -23,7 +24,7 @@ interface WelkomTekst {
   notitie: string;
 }
 
-const TEKST: Record<MailTaal, WelkomTekst> = {
+const TEKST: Record<MailTaal, WelkomTekst> = metMachineTalen({
   nl: {
     subject: "Welkom bij ZekerFlex",
     hoi: "Hoi {naam},",
@@ -109,7 +110,7 @@ const TEKST: Record<MailTaal, WelkomTekst> = {
     notitie:
       "ZekerFlex ще в розробці. Ми запускаємося онлайн на початку наступного року. Ти вже зараз можеш спробувати й побачити, як це виглядатиме.",
   },
-};
+});
 
 // De korte regels in de andere talen onderaan de Nederlandse mail (een Nederlandse lezer kan een andere moedertaal hebben).
 const ONTWIKKELING_TALEN: { taal: string; tekst: string }[] = [
