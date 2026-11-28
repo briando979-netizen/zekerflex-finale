@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resendStoredMail } from "@/lib/mail";
-import { listSentMessages } from "@/lib/mail/store";
+import { listSentMessages, OPNIEUW_VENSTER } from "@/lib/mail/store";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 
@@ -21,7 +21,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   const ids =
     "id" in body
       ? [body.id]
-      : (await listSentMessages(300)).filter((m) => !m.delivered && !m.suppressed && m.transport === "smtp").map((m) => m.id);
+      : (await listSentMessages(OPNIEUW_VENSTER)).filter((m) => !m.delivered && !m.suppressed && m.transport === "smtp").map((m) => m.id);
 
   let delivered = 0;
   let failed = 0;

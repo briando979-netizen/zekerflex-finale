@@ -29,8 +29,8 @@ vi.mock("@/lib/mail/smtp", () => ({
   verifySmtp: (...a: unknown[]) => verifySmtp(...a),
   sendViaSmtp: (...a: unknown[]) => sendViaSmtp(...a),
 }));
-const listSentMessages = vi.fn();
-vi.mock("@/lib/mail/store", () => ({ listSentMessages: (...a: unknown[]) => listSentMessages(...a) }));
+const listSentMessagesTo = vi.fn();
+vi.mock("@/lib/mail/store", () => ({ listSentMessagesTo: (...a: unknown[]) => listSentMessagesTo(...a) }));
 
 import { DELETE, GET, PUT } from "@/app/api/me/mailbox/route";
 import { POST as SEND } from "@/app/api/me/mailbox/send/route";
@@ -124,12 +124,14 @@ describe("sending and the ZekerFlex tab", () => {
   });
 
   it("shows only platform mail to this account, not suppressed ones", async () => {
-    listSentMessages.mockResolvedValue([
+    listSentMessagesTo.mockResolvedValue([
       { id: "1", at: "2026-10-15T08:00:00Z", to: ["Eigenaar@BakkerijBol.nl"], subject: "Factuur PF-1", text: "…", kind: "invoice" },
       { id: "2", at: "2026-10-15T07:00:00Z", to: ["iemand@anders.nl"], subject: "Niet voor jou", text: "…", kind: "x" },
       { id: "3", at: "2026-10-15T06:00:00Z", to: ["eigenaar@bakkerijbol.nl"], subject: "Afgemeld", text: "…", kind: "x", suppressed: "afgemeld" },
     ]);
     const body = await (await ZEKERFLEX()).json();
     expect(body.messages.map((m: { id: string }) => m.id)).toEqual(["1"]);
+    // de database zoekt op het adres van de ingelogde gebruiker, in kleine letters
+    expect(listSentMessagesTo.mock.calls[0]?.[0]).toBe("eigenaar@bakkerijbol.nl");
   });
 });

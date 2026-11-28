@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { kvDelete, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
+import { prisma } from "@/lib/prisma";
+import { kvDelete, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 import type { BounceSoort } from "@/lib/mail/bounce";
 
 // ---------------------------------------------------------------------------
@@ -35,22 +36,52 @@ export async function saveSentMessage(rec: SentRecord): Promise<void> {
   await kvSet(sentKey(rec.id), rec);
 }
 
+// Sorteren, zoeken en tellen gebeurt in Postgres: de postbus telt duizenden mails met hun volledige inhoud (28 nov: 3.418,
+// ±16 MB). Eerst alles ophalen en dan in JS sorteren kostte 2-3 s per bezoek aan Beheer → Mail en aan "ZekerFlex-post".
+// `at` is een ISO-tijd, dus sorteren op tekst is sorteren op tijd.
+
+/** Hoeveel recente mails "opnieuw versturen" langsloopt (app/api/admin/mail/resend); de teller "mislukt" kijkt net zo ver. */
+export const OPNIEUW_VENSTER = 300;
+
 export async function listSentMessages(limit = 100): Promise<SentRecord[]> {
-  const rows = await kvListValues<SentRecord>("mail-sent:", 5000);
-  return rows.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
+  const rows = await prisma.$queryRaw<{ value: unknown }[]>`
+    SELECT value FROM "KeyValueStore"
+    WHERE key LIKE 'mail-sent:%'
+    ORDER BY value->>'at' DESC NULLS LAST
+    LIMIT ${limit}`;
+  return rows.map((r) => r.value as SentRecord);
+}
+
+/** De nieuwste mails aan één adres (hoofdletters en spaties tellen niet), zonder afgemelde. */
+export async function listSentMessagesTo(email: string, limit = 100): Promise<SentRecord[]> {
+  const adres = email.trim().toLowerCase();
+  const rows = await prisma.$queryRaw<{ value: unknown }[]>`
+    SELECT value FROM "KeyValueStore"
+    WHERE key LIKE 'mail-sent:%'
+      AND coalesce(value->>'suppressed', '') = ''
+      AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(value->'to') AS t(adres) WHERE lower(btrim(t.adres)) = ${adres})
+    ORDER BY value->>'at' DESC NULLS LAST
+    LIMIT ${limit}`;
+  return rows.map((r) => r.value as SentRecord);
 }
 
 export async function readSentMessage(id: string): Promise<SentRecord | null> {
   return kvGet<SentRecord>(sentKey(id));
 }
 
+/** Alle mails en de afgeleverde tellen mee (niet meer afgekapt op 1000); "mislukt" telt wat de knop opnieuw kan versturen. */
 export async function mailboxStats(): Promise<{ total: number; delivered: number; failed: number }> {
-  const all = await listSentMessages(1000);
-  return {
-    total: all.length,
-    delivered: all.filter((m) => m.delivered).length,
-    failed: all.filter((m) => !m.delivered && m.transport === "smtp").length,
-  };
+  const rows = await prisma.$queryRaw<{ total: bigint; delivered: bigint; failed: bigint }[]>`
+    WITH recent AS (
+      SELECT value FROM "KeyValueStore" WHERE key LIKE 'mail-sent:%' ORDER BY value->>'at' DESC NULLS LAST LIMIT ${OPNIEUW_VENSTER}
+    )
+    SELECT
+      (SELECT count(*) FROM "KeyValueStore" WHERE key LIKE 'mail-sent:%') AS total,
+      (SELECT count(*) FROM "KeyValueStore" WHERE key LIKE 'mail-sent:%' AND value->>'delivered' = 'true') AS delivered,
+      (SELECT count(*) FROM recent
+        WHERE coalesce(value->>'delivered', 'false') <> 'true' AND value->>'transport' = 'smtp' AND coalesce(value->>'suppressed', '') = '') AS failed`;
+  const r = rows[0];
+  return { total: Number(r?.total ?? 0), delivered: Number(r?.delivered ?? 0), failed: Number(r?.failed ?? 0) };
 }
 
 // ---- verification tokens --------------------------------------------------
