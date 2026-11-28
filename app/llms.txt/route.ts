@@ -72,7 +72,7 @@ ${CITIES.map((c) => `- ${c.name}: werk ${SITE.url}/freelance-werk/${c.slug} · p
 - Personeel inhuren: ${SITE.url}/personeel-inhuren
 - For freelancers: ${SITE.url}/voor-freelancers
 - For employers: ${SITE.url}/bedrijven
-- Temp work via an affiliated staffing agency (no KVK needed): ${SITE.url}/uitzendbureau
+- Temp work via an affiliated staffing agency (no KVK needed): ${SITE.url}/starten-als-uitzendkracht
 - For staffing agencies (post temp jobs, stay the employer): ${SITE.url}/uitzendpartner
 - Pricing: ${SITE.url}/prijzen
 - About: ${SITE.url}/over-ons

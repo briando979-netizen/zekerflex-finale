@@ -7,6 +7,17 @@
 // lib/pricing/tiers.ts); anders "op aanvraag". Iets wat nog niet bestaat of op een
 // sleutel of keuze van de eigenaar wacht, hoort hier niet (nergens "binnenkort";
 // 22 nov 2026: de status "binnenkort" en zijn labels zijn weggehaald).
+//
+// 28 nov 2026: de twee netwerkpakketten (wifi op de werkvloer, veilige werkplek) en de vier
+// op-locatiemodules (portofoon in de app, toegang op kenteken, sleutelkluis, badges en labels
+// printen) staan hier niet meer. Bij de opruiming van fase C op 22 november zijn hun
+// werkgeversschermen weggehaald (/werkgever/netwerk en /werkgever/op-locatie bestaan niet meer) en
+// sturen hun pagina's /aanbod/<slug> door naar /bedrijven — maar de items bleven staan. Gemeten op
+// 28 november: op /aanbod stonden daardoor zes kaarten die je naar /bedrijven kaatsten, met een knop
+// "Aanzetten in je werkgeversomgeving" naar een scherm dat er niet meer is. Het beheermenu noemt
+// deze modules zelf al "buiten het flexwerk-platform" (/admin/op-locatie blijft, om te kijken). De
+// omleidingen in next.config.mjs blijven staan voor oude links uit Google; de foto's blijven in
+// public/aanbod, zodat dit terug te draaien is als de eigenaar ze weer wil verkopen.
 
 import type { Werkruimte } from "@/lib/werkgever/werkruimte";
 import { BTW_TEKST, STANDAARD_PRIJZEN, vanafTekst } from "@/lib/advertentie/regels";
@@ -284,133 +295,6 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     pagina: "/voor-bureaus",
     start: DEMO,
-  },
-  // Netwerkpakketten (lib/netwerk/modules.ts): op de eigen server, zonder licentiekosten bij een ander.
-  // Wifi en VPN draaien op de eigen server. Een eigen 5G-netwerk staat hier niet meer (16 nov, eigenaar: "nergens meer
-  // binnenkort"): het vraagt per terrein een frequentievergunning en apparatuur (owner-todo netwerk-5g); /aanbod/eigen-5g-netwerk
-  // stuurt door naar /aanbod (next.config.mjs).
-  {
-    slug: "wifi-op-de-werkvloer",
-    pijler: "personeel",
-    naam: "Wifi op de werkvloer",
-    kort: "Flexwerkers krijgen vanzelf wifi zodra hun dienst begint, en raken het kwijt als die eindigt.",
-    tekst:
-      "Geen gedeeld wifi-wachtwoord meer op een briefje. Iedereen logt in met een eigen naam en wachtwoord uit ZekerFlex. Een flexwerker krijgt alleen toegang op de vestiging waar hij die dag ingepland staat, van een half uur voor tot een half uur na de dienst.",
-    punten: [
-      "Geen gedeelde wifi-wachtwoorden meer",
-      "Toegang volgt het rooster: dienst begint, wifi aan",
-      "Eigen medewerkers altijd toegang met hun ZekerFlex-login",
-      "Beveiligd zoals bij grote bedrijven (WPA2/WPA3-Enterprise)",
-    ],
-    voorWie: "Kantoren, horeca, magazijnen en flexwerkplekken",
-    prijs: "€ 49 per vestiging per maand",
-    status: "beschikbaar",
-    start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
-    zoekwoorden: ["wifi voor flexwerkers", "gast wifi personeel", "wifi rooster", "radius wifi bedrijf"],
-    foto: { bestand: "campagne-scanner.jpg", alt: "Een magazijnmedewerker scant een doos tussen hoge stellingen" },
-  },
-  {
-    slug: "veilige-werkplek",
-    pijler: "personeel",
-    naam: "Veilige werkplek (VPN)",
-    kort: "Een versleutelde verbinding naar jullie eigen systemen, voor flexwerkers en medewerkers, waar ze ook zijn.",
-    tekst:
-      "Wie op afstand werkt, krijgt een eigen versleutelde tunnel naar jullie interne systemen. Elk apparaat krijgt een eenmalige toegangscode uit ZekerFlex; niets staat open op internet.",
-    punten: [
-      "Rechtstreekse, versleutelde verbindingen tussen apparaten",
-      "Toegangscodes uit ZekerFlex, eenmalig en met een vervaldatum",
-      "Zie welke apparaten verbonden zijn en zet er een af",
-      // 16 nov 2026: "geen Tailscale nodig" klopte niet helemaal: op elk apparaat komt de gratis Tailscale-app
-      "Geen abonnement bij een VPN-dienst: op elk apparaat komt alleen de gratis Tailscale-app",
-    ],
-    voorWie: "Bedrijven met mensen op afstand, ICT en wie met gevoelige gegevens werkt",
-    prijs: "€ 4 per gebruiker per maand, of € 149 per maand voor het hele bedrijf",
-    status: "beschikbaar",
-    start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
-    zoekwoorden: ["vpn voor flexwerkers", "zakelijke vpn", "veilig thuiswerken", "zero trust netwerk mkb"],
-    foto: { bestand: "campagne-bouw.jpg", alt: "Een medewerker met een witte helm onder de arm staat op een bouwplaats" },
-  },
-  // Op locatie (lib/locatie/modules.ts): vier modules voor de werkvloer, op de eigen server en zonder licentiekosten.
-  // Aanzetten kan direct onder Werkgever → Op locatie; de prijs is nog "op aanvraag" (geen verzonnen prijzen).
-  {
-    slug: "portofoon-in-de-app",
-    pijler: "personeel",
-    naam: "Portofoon in de app",
-    kort: "Druk, praat, los: je team op locatie hoort je direct, zonder losse portofoons.",
-    tekst:
-      "Een flexwerker op een evenement, bouwplaats of in een distributiecentrum houdt de knop ingedrukt en praat; iedereen in hetzelfde kanaal hoort het meteen. Elke klus en elke vestiging heeft een eigen kanaal, en wie ingepland staat zit er vanzelf in. Is iemand even niet verbonden, dan laat je een spraakbericht achter dat vanzelf afspeelt.",
-    punten: [
-      "Een kanaal per klus en per vestiging; wie ingepland staat, zit er vanzelf in",
-      "Houd de knop ingedrukt en praat; je ziet wie er luistert en wie er praat",
-      "Versleuteld, rechtstreeks tussen de telefoons, via onze eigen servers",
-      "Geen bereik? Spreek een bericht in; het speelt bij de ander vanzelf af",
-      "Op elke telefoon, in de browser of de ZekerFlex-app; geen portofoons huren",
-    ],
-    voorWie: "Evenementen, beveiliging, bouw, logistiek en magazijnen met teams die elkaar snel moeten bereiken",
-    status: "beschikbaar",
-    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
-    zoekwoorden: ["portofoon app", "push to talk app", "walkie talkie app bedrijf", "portofoon evenement personeel", "team communicatie bouwplaats"],
-    foto: { bestand: "campagne-podium.jpg", alt: "Een crewlid in een regenjack staat voor een podium in opbouw" },
-  },
-  {
-    slug: "toegang-op-kenteken",
-    pijler: "personeel",
-    naam: "Toegang op kenteken",
-    kort: "Een camera leest het kenteken; staat de bestuurder vandaag ingepland, dan gaat de slagboom open.",
-    tekst:
-      "Bij de ingang van het terrein leest een gewone IP-camera het kenteken. ZekerFlex kijkt in het rooster: staat deze flexwerker, medewerker of leverancier nu bij jullie ingepland, dan geeft de slagboom of het hek vrij. Elke aankomst staat in het logboek, de planner krijgt een melding en de flexwerker is welkom zonder te bellen of aan te melden bij de portier.",
-    punten: [
-      "Flexwerkers vullen hun kenteken één keer in; jij hoeft niets over te typen",
-      "Open alleen voor wie nu ingepland staat, of voor een bezoeker met een tijdvenster",
-      "Logboek van elke aankomst met tijd, kenteken en naam; de planner krijgt een melding",
-      "Handmatig openen vanuit je ZekerFlex-beheer, met één druk op de knop",
-      "Werkt met een gewone IP-camera (RTSP) en een klein kastje bij de slagboom",
-    ],
-    voorWie: "Bouwplaatsen, distributiecentra, evenemententerreinen en bedrijfsterreinen met een slagboom of hek",
-    status: "beschikbaar",
-    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
-    zoekwoorden: ["kentekenherkenning slagboom", "kenteken toegang bouwplaats", "automatische toegang terrein personeel", "anpr slagboom", "kentekenherkenning parkeerplaats bedrijf"],
-    foto: { bestand: "campagne-bestelbus.jpg", alt: "Een bezorger zit in de open laadruimte van een bestelbus tussen de dozen" },
-  },
-  {
-    slug: "sleutelkluis",
-    pijler: "personeel",
-    naam: "Sleutelkluis",
-    kort: "Wifi-codes, alarmcodes en inloggegevens die een flexwerker alleen ziet zolang de dienst duurt.",
-    tekst:
-      "Je legt per vestiging vast wat een flexwerker op de werkvloer nodig heeft: het wifi-wachtwoord, de alarmcode, de code van het sleutelkastje of de inlog van de kassa. Wie ingepland staat, ziet dat vanaf twee uur voor de dienst tot het einde ervan; daarna is het weg. Je ziet wie wat bekeken heeft, en krijgt een seintje als een code na een dienst beter vervangen kan worden.",
-    punten: [
-      "Versleuteld opgeslagen op onze eigen server; nooit via chat, papier of een groepsapp",
-      "Zichtbaar van twee uur vóór de dienst tot het einde; daarna automatisch ingetrokken",
-      "Per vestiging of voor het hele bedrijf; je eigen team ziet alles, een flexwerker alleen zijn dienst",
-      "Logboek: wie bekeek welke code wanneer",
-      "Een seintje als een code na een dienst beter vervangen kan worden",
-    ],
-    voorWie: "Horeca, retail, schoonmaak, beveiliging en kantoren die flexwerkers toegang geven tot panden, kassa's en systemen",
-    status: "beschikbaar",
-    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
-    zoekwoorden: ["wachtwoorden delen met personeel", "alarmcode flexwerker", "sleutelbeheer personeel", "wifi wachtwoord personeel veilig", "toegangscodes tijdelijk delen"],
-    foto: { bestand: "campagne-aanbellen.jpg", alt: "Een bezorger belt aan bij een voordeur" },
-  },
-  {
-    slug: "badges-en-labels-printen",
-    pijler: "personeel",
-    naam: "Badges en labels printen",
-    kort: "Checkt een flexwerker in, dan rolt zijn bezoekersbadge of naamsticker direct uit de printer.",
-    tekst:
-      "Zodra iemand incheckt op locatie maakt ZekerFlex een badge: naam, bedrijf, klus en een controlecode. Die gaat naar een goedkope thermische labelprinter op de werkvloer, via de computer of rechtstreeks via Bluetooth vanaf een telefoon. Ook naamstickers, verzendlabels en incheckbonnen print je zo, zonder printsoftware van een ander.",
-    punten: [
-      "Badge of naamsticker direct bij het inchecken, zonder dat iemand iets hoeft te doen",
-      "Print vanaf elke computer (ook Linux of Mac) of via Bluetooth vanaf een telefoon",
-      "Sjablonen voor bezoekersbadge, naamsticker, verzendlabel en incheckbon",
-      "Werkt met de meeste thermische labelprinters (Brother QL, Dymo, Zebra, Bluetooth-bonprinters)",
-      "Een printwachtrij per vestiging, met een logboek van wat geprint is",
-    ],
-    voorWie: "Evenementen, magazijnen, bouwplaatsen en kantoren waar bezoekers en flexwerkers herkenbaar moeten zijn",
-    status: "beschikbaar",
-    start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
-    zoekwoorden: ["bezoekersbadge printen", "naamsticker printen bij inchecken", "labelprinter personeel", "badge printer evenement", "thermische labelprinter bedrijf"],
-    foto: { bestand: "campagne-inpakken.jpg", alt: "Een medewerker plakt een kartonnen doos dicht met tape" },
   },
 
   // ── Online & klanten

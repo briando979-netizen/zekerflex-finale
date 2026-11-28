@@ -148,8 +148,15 @@ export async function OpLocatieAdmin() {
             </Link>
             ; dan kan het, zoals de netwerkpakketten, via een abonnement lopen. De apparatuur voor de eerste klant (kastje, labelprinter) staat daar ook.
           </Notice>
+          {/* 28 nov 2026: hier stond dat /aanbod/portofoon-in-de-app en de drie andere openbare pagina's bestonden. Dat is
+              sinds de opruiming van 22 november niet meer waar: die adressen sturen door naar /bedrijven en het
+              werkgeversscherm /werkgever/op-locatie is weg. Ze stonden tot vandaag nog wel als kaart op /aanbod, met een
+              dode link; dat is nu weggehaald (lib/marketing/aanbod.ts). Dit scherm blijft, om te kijken en aan/uit te zetten. */}
           <p className="mt-3 text-xs" style={{ color: "var(--a-mute)" }}>
-            Openbare pagina&apos;s: /aanbod/portofoon-in-de-app, /aanbod/toegang-op-kenteken, /aanbod/sleutelkluis, /aanbod/badges-en-labels-printen. Uit te zetten zonder uitrol via Systeem → Schakelaars (locatie-modules).
+            Deze modules staan niet meer in het openbare aanbod: hun pagina&apos;s (/aanbod/portofoon-in-de-app en de drie
+            andere) sturen sinds 22 november door naar /bedrijven en het werkgeversscherm Op locatie is weggehaald. Wil je ze
+            weer verkopen, zeg het dan: de teksten en foto&apos;s staan nog klaar. Uit te zetten zonder uitrol via Systeem →
+            Schakelaars (locatie-modules).
           </p>
         </Panel>
       </div>
