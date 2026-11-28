@@ -190,6 +190,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/about","file":"app/(marketing)/about/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/app","file":"app/(marketing)/app/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/bedrijven","file":"app/(marketing)/bedrijven/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/belgie/voorwaarden","file":"app/(marketing)/belgie/voorwaarden/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/beveiliging","file":"app/(marketing)/beveiliging/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/bezorging-personeel-inhuren","file":"app/(marketing)/bezorging-personeel-inhuren/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/bezorging-personeel-inhuren/[stad]","file":"app/(marketing)/bezorging-personeel-inhuren/[stad]/page.tsx","area":"Marketing","dynamic":true},

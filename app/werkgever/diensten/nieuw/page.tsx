@@ -16,6 +16,7 @@ import { getDict, getLocale } from "@/lib/i18n/server";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 import { werkInBelgieAan } from "@/lib/geo/vestiging-belgie";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
     where: scope.branchIds
       ? { id: { in: scope.branchIds } }
       : { tenantId: { in: scope.tenantIds } },
-    select: { id: true, name: true, city: true },
+    select: { id: true, name: true, city: true, postalCode: true },
     orderBy: { name: "asc" },
   });
 
@@ -84,7 +85,8 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   const volledig = (
     <div>
       <NewShiftForm
-        branches={branches}
+        // een werklocatie in België: het formulier vraagt het soort contract (lib/belgie/klus-kern.ts)
+        branches={branches.map((b) => ({ id: b.id, name: b.name, city: b.city, belgisch: isBelgischeKlus(b.postalCode) }))}
         templates={SHIFT_TEMPLATES}
         minRateCents={MIN_SHIFT_RATE_CENTS}
         pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}

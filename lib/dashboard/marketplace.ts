@@ -25,6 +25,8 @@ import { verborgenBedrijvenVoor } from "@/lib/admin/eigen-test-zicht";
 import { leesUitzendPartners } from "@/lib/uitzend/partners";
 import { isUitzendPartner } from "@/lib/uitzend/partners-kern";
 import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
+import { isBelgischeKlus, type BelgischContract } from "@/lib/belgie/klus-kern";
+import { leesBelgieKlusVoor } from "@/lib/belgie/klus";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -513,6 +515,11 @@ export interface ShiftDetail extends MarketplaceShift {
   seriesDays: { shiftId: string; date: string; weekday: string; seatsFree: number; mine: boolean }[];
   /** annuleringstermijn in uren vóór aanvang (lib/shifts/annuleertermijn.ts) */
   annuleerUren: number;
+  /**
+   * klus op een Belgische werklocatie (lib/belgie/klus-kern.ts): het bedrijf is de werkgever, met het soort contract dat het
+   * koos (null = nog niet gekozen). Alleen gezet als het zo is.
+   */
+  belgie?: { soort: BelgischContract | null };
 }
 
 export async function getShiftDetail(userId: string, shiftId: string): Promise<ShiftDetail | null> {
@@ -706,6 +713,9 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       ? (row.branch.matchingConfig as { agreementType: string }).agreementType
       : "VRIJE_VERVANGING";
 
+  // een klus in België: het bedrijf is de werkgever, net als een uitzendpartner (lib/belgie/klus-kern.ts)
+  const belgisch = isBelgischeKlus(row.branch.postalCode);
+  const zonderEisen = base.uitzendPartner || belgisch ? market.partner : undefined;
   return {
     ...base,
     extraInfo: row.extraInfo,
@@ -713,9 +723,9 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
     address: row.branch.addressLine,
     postalCode: row.branch.postalCode,
     geofenceRadiusMeters: row.branch.geofenceRadiusMeters,
-    // klus van een uitzendpartner: zonder de eisen van ZekerFlex als werkgever (lib/uitzend/partners-kern.ts)
-    canApply: base.uitzendPartner && market.partner ? market.partner.canApply : market.canApply,
-    blockReason: base.uitzendPartner && market.partner ? market.partner.blockReason : market.blockReason,
+    // klus van een uitzendpartner of in België: zonder de eisen van ZekerFlex als werkgever (lib/uitzend/partners-kern.ts)
+    canApply: zonderEisen ? zonderEisen.canApply : market.canApply,
+    blockReason: zonderEisen ? zonderEisen.blockReason : market.blockReason,
     alreadyApplied,
     agreement,
     agreementType,
@@ -723,5 +733,6 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
     clientName: row.branch.tenant.name,
     seriesDays: seriesDays.length > 1 ? seriesDays : [],
     annuleerUren: row.annuleerUren,
+    ...(belgisch ? { belgie: { soort: (await leesBelgieKlusVoor(row.id)).soort } } : {}),
   };
 }

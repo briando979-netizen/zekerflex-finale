@@ -18,6 +18,8 @@ export interface WorkerPushTexts {
   approvedAdvance: (amount: string, week: string) => string;
   /** klus van een uitzendpartner (lib/uitzend/partners-kern.ts): het bureau betaalt het loon */
   approvedPartner: string;
+  /** klus in België (lib/belgie/klus-kern.ts): het bedrijf is de werkgever en betaalt het loon */
+  approvedWerkgever: string;
   timeChangedTitle: (title: string) => string;
   timeChangedBody: (when: string) => string;
   cancelledTitle: (title: string) => string;
@@ -149,6 +151,7 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     approvedPayroll: (w) => `Je loon volgt met de verloning van ${w}.`,
     approvedAdvance: (a, w) => `Je voorschot van ${a} is onderweg; de rest volgt met de verloning van ${w}.`,
     approvedPartner: "Je loon krijg je van het uitzendbureau waarvoor je werkte.",
+    approvedWerkgever: "Je loon krijg je van het bedrijf waarvoor je werkte: dat is je werkgever.",
     timeChangedTitle: (t) => `Nieuwe tijd: ${t}`,
     timeChangedBody: (w) => `De opdrachtgever heeft je dienst verzet naar ${w}.`,
     cancelledTitle: (t) => `Geannuleerd: ${t}`,
@@ -260,6 +263,7 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     approvedPayroll: (w) => `Your wage follows with the payroll of ${w}.`,
     approvedAdvance: (a, w) => `Your advance of ${a} is on its way; the rest follows with the payroll of ${w}.`,
     approvedPartner: "Your wage is paid by the employment agency you worked for.",
+    approvedWerkgever: "Your wage is paid by the company you worked for: it is your employer.",
     timeChangedTitle: (t) => `New time: ${t}`,
     timeChangedBody: (w) => `The client moved your shift to ${w}.`,
     cancelledTitle: (t) => `Cancelled: ${t}`,
@@ -371,6 +375,7 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     approvedPayroll: (w) => `Wynagrodzenie otrzymasz z listą płac za ${w}.`,
     approvedAdvance: (a, w) => `Twoja zaliczka ${a} jest w drodze; reszta przyjdzie z listą płac za ${w}.`,
     approvedPartner: "Wynagrodzenie wypłaci agencja pracy, dla której pracowałeś.",
+    approvedWerkgever: "Wynagrodzenie wypłaci firma, dla której pracowałeś: to ona jest Twoim pracodawcą.",
     timeChangedTitle: (t) => `Nowa godzina: ${t}`,
     timeChangedBody: (w) => `Zleceniodawca przesunął Twoją zmianę na ${w}.`,
     cancelledTitle: (t) => `Odwołano: ${t}`,
@@ -482,6 +487,7 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     approvedPayroll: (w) => `Salariul vine cu statul de plată din ${w}.`,
     approvedAdvance: (a, w) => `Avansul tău de ${a} este pe drum; restul vine cu statul de plată din ${w}.`,
     approvedPartner: "Salariul îl primești de la agenția de muncă pentru care ai lucrat.",
+    approvedWerkgever: "Salariul îl primești de la firma pentru care ai lucrat: ea este angajatorul tău.",
     timeChangedTitle: (t) => `Oră nouă: ${t}`,
     timeChangedBody: (w) => `Clientul ți-a mutat tura la ${w}.`,
     cancelledTitle: (t) => `Anulat: ${t}`,
@@ -593,6 +599,7 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     approvedPayroll: (w) => `Зарплата надійде з розрахунком за ${w}.`,
     approvedAdvance: (a, w) => `Ваш аванс ${a} вже в дорозі; решта надійде з розрахунком за ${w}.`,
     approvedPartner: "Зарплату вам виплатить кадрова агенція, на яку ви працювали.",
+    approvedWerkgever: "Зарплату вам виплатить компанія, на яку ви працювали: вона ваш роботодавець.",
     timeChangedTitle: (t) => `Новий час: ${t}`,
     timeChangedBody: (w) => `Замовник переніс вашу зміну на ${w}.`,
     cancelledTitle: (t) => `Скасовано: ${t}`,

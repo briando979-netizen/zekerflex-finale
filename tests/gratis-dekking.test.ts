@@ -58,6 +58,8 @@ const BASISLIJN: Record<string, string> = {
   ...groep("bronvermelding of link naar wet, regel of instantie in teksten en rekentools, geen aanroep", [
     "corp.delaware.gov", "icis.corp.delaware.gov", "wetten.overheid.nl", "www.belastingdienst.nl", "www.irs.gov", "www.kvk.nl",
     "www.toelatinguitleenmarkt.nl", "zoek.officielebekendmakingen.nl",
+    // de bronnen bij een klus in België: de checklist van het bedrijf en de tabel met lonen (lib/belgie/klus-kern.ts, lonen.ts)
+    "www.socialsecurity.be", "www.student.be", "a.storyblok.com", "www.vlaanderen.be", "www.securex.be",
   ]),
   ...groep("bronvermelding op de kaart (OpenStreetMap, Protomaps, Beeldmateriaal), geen aanroep", [
     "protomaps.com", "www.openstreetmap.org", "www.beeldmateriaal.nl",

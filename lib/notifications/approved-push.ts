@@ -12,7 +12,7 @@ const euro = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ","
 export interface ApprovedSummary {
   timesheetId: string;
   billableMinutes: number;
-  track: "invoice" | "payroll" | "partner";
+  track: "invoice" | "payroll" | "partner" | "werkgever";
   payout: { amountCents: number } | null;
   payroll: { weekLabel: string } | null;
   advance: { netCents: number } | null;
@@ -26,7 +26,10 @@ export function approvedPushText(r: ApprovedSummary, shiftTitle: string, t: Work
     // klus van een uitzendpartner: het bureau betaalt het loon, ZekerFlex belooft hier geen uitbetaling
     r.track === "partner"
       ? t.approvedPartner
-      : r.track === "payroll"
+      : // klus in België (lib/belgie/klus-kern.ts): het bedrijf is de werkgever en betaalt het loon
+        r.track === "werkgever"
+        ? t.approvedWerkgever
+        : r.track === "payroll"
       ? r.advance && r.advance.netCents > 0
         ? t.approvedAdvance(euro(r.advance.netCents), week)
         : t.approvedPayroll(week)
@@ -42,7 +45,7 @@ export function approvedPushText(r: ApprovedSummary, shiftTitle: string, t: Work
  */
 export function approvedPushUrl(track: ApprovedSummary["track"]): string {
   if (track === "payroll") return ZEKERFLEX_UITZENDER ? "/dashboard/verloning" : "/dashboard/diensten";
-  return track === "partner" ? "/dashboard/diensten" : "/dashboard/uitbetalingen";
+  return track === "partner" || track === "werkgever" ? "/dashboard/diensten" : "/dashboard/uitbetalingen";
 }
 
 export async function pushHoursApproved(r: ApprovedSummary): Promise<void> {

@@ -43,7 +43,8 @@ export async function approveTimesheetAction(
     return {
       ok: true,
       message:
-        result.track === "partner"
+        // uitzendpartner of klus in België: het bedrijf of bureau is de werkgever en betaalt het loon zelf
+        result.track === "partner" || result.track === "werkgever"
           ? d.partner
           : result.track === "payroll"
           ? result.advance

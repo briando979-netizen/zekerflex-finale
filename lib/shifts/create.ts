@@ -19,6 +19,9 @@ import { ANNULEER_TERMIJNEN, isAnnuleerTermijn, STANDAARD_ANNULEER_UREN } from "
 import { zetKlusAutoAccept } from "@/lib/shifts/auto-accept";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
+import { isBelgischeKlus, type BelgischContract } from "@/lib/belgie/klus-kern";
+import { BELGIE_ONDERGRENS_CENTS, belgischLoonOordeel } from "@/lib/belgie/lonen";
+import { zetBelgieKeuzeBijPlaatsen } from "@/lib/belgie/klus";
 
 // The fixed klus-templates live in a pure module (lib/shifts/catalogus.ts) so the
 // browser forms can read them too; re-exported here for the existing imports.
@@ -36,7 +39,15 @@ export const adHocAddressSchema = z.object({
   longitude: z.number().min(-180).max(180),
 });
 
-export const createShiftSchema = z
+const minimumTekst = (cents: number) => `Het minimum uurtarief is € ${(cents / 100).toFixed(2).replace(".", ",")}`;
+
+/**
+ * Het schema van een nieuwe klus, met de ondergrens van het uurtarief als enige knop. Nederland: MIN_SHIFT_RATE_CENTS, zoals
+ * altijd (createShiftSchema). Een werklocatie in België (28 nov 2026): de Nederlandse ondergrens geldt daar niet, dus
+ * createShiftSchemaBelgie met de laagste Belgische grens (lib/belgie/lonen.ts); createShift kijkt daarna naar de soort contract.
+ */
+function maakCreateShiftSchema(minRateCents: number) {
+  return z
   .object({
     branchId: z.string().min(1).max(128).optional(),
     adHocAddress: adHocAddressSchema.optional(),
@@ -52,8 +63,8 @@ export const createShiftSchema = z
   hourlyRateCents: z.coerce
     .number()
     .int()
-    .min(env.MIN_SHIFT_RATE_CENTS, {
-      message: `Het minimum uurtarief is € ${(env.MIN_SHIFT_RATE_CENTS / 100).toFixed(2).replace(".", ",")}`,
+    .min(minRateCents, {
+      message: minimumTekst(minRateCents),
     })
     .max(20000),
   positions: z.coerce.number().int().min(1).max(50).default(1),
@@ -78,7 +89,18 @@ export const createShiftSchema = z
     message: "Kies een vestiging óf een eenmalige locatie (niet beide, niet geen van beide).",
     path: ["branchId"],
   });
+}
+
+export const createShiftSchema = maakCreateShiftSchema(env.MIN_SHIFT_RATE_CENTS);
+/** Alleen voor een klus op een Belgische werklocatie (app/werkgever/diensten/nieuw/actions.ts kiest het juiste schema). */
+export const createShiftSchemaBelgie = maakCreateShiftSchema(BELGIE_ONDERGRENS_CENTS);
 export type CreateShiftInput = z.infer<typeof createShiftSchema>;
+
+/** De keuze van het bedrijf bij een klus in België (components/werkgever/BelgieKlusKeuze.tsx). */
+export interface BelgieKlusInvoer {
+  soort: BelgischContract;
+  horeca: boolean;
+}
 
 export interface CreateShiftResult {
   shiftId: string;
@@ -89,10 +111,12 @@ export interface CreateShiftResult {
 export async function createShift(
   principal: Principal,
   input: CreateShiftInput,
+  /** alleen bij een klus in België: het soort contract; zonder (een andere weg dan het klusformulier) kiest het bedrijf het later op de kluspagina */
+  belgie?: BelgieKlusInvoer | null,
 ): Promise<CreateShiftResult> {
   const scope = await resolveEmployerScope(principal);
 
-  let branch: { id: string; name: string; matchingConfig: unknown; tenantId: string };
+  let branch: { id: string; name: string; matchingConfig: unknown; tenantId: string; postalCode: string };
   if (input.adHocAddress) {
     // One-off klus-locatie (e.g. an offsite demo): no pre-registered vestiging
     // needed. A wider default geofence than a permanent branch's 150m, since
@@ -112,7 +136,7 @@ export async function createShift(
         longitude: input.adHocAddress.longitude,
         geofenceRadiusMeters: 300,
       },
-      select: { id: true, name: true, matchingConfig: true, tenantId: true },
+      select: { id: true, name: true, matchingConfig: true, tenantId: true, postalCode: true },
     });
   } else {
     if (!input.branchId) throw AppError.validation("Kies een vestiging of een eenmalige locatie.");
@@ -121,7 +145,7 @@ export async function createShift(
       : { tenantId: { in: scope.tenantIds } };
     const found = await prisma.branch.findFirst({
       where: { AND: [{ id: input.branchId }, scopeWhere] },
-      select: { id: true, name: true, matchingConfig: true, tenantId: true },
+      select: { id: true, name: true, matchingConfig: true, tenantId: true, postalCode: true },
     });
     if (!found) throw AppError.forbidden("Je hebt geen toegang tot deze vestiging.");
     branch = found;
@@ -148,6 +172,21 @@ export async function createShift(
   const lengthProblem = shiftLengthProblem({ startsAt, endsAt, breakMinutes: input.breakMinutes, viaUitzendbureau });
   if (lengthProblem) throw AppError.validation(lengthProblem);
   if (startsAt.getTime() < Date.now() - 60_000) throw AppError.validation("De starttijd ligt in het verleden.");
+
+  // Een werklocatie in België (lib/belgie/klus-kern.ts): het uurloon volgt de Belgische regels (lib/belgie/lonen.ts), met de
+  // soort contract die het bedrijf koos. Elders blijft het Nederlandse minimum gelden, ook als iemand het Belgische schema stuurde.
+  const belgisch = isBelgischeKlus(branch.postalCode);
+  const belgieKeuze = belgisch && belgie ? belgie : null;
+  if (!belgisch && input.hourlyRateCents < env.MIN_SHIFT_RATE_CENTS) throw AppError.validation(minimumTekst(env.MIN_SHIFT_RATE_CENTS));
+  if (belgisch) {
+    const oordeel = belgischLoonOordeel({
+      soort: belgieKeuze?.soort ?? null,
+      horeca: belgieKeuze?.horeca ?? false,
+      uurloonCents: input.hourlyRateCents,
+      dag: amsterdamDayKey(startsAt),
+    });
+    if (oordeel.blokkade) throw AppError.validation(minimumTekst(oordeel.minimumCents));
+  }
 
   // Build the full set of (start, end) windows: the primary one + any extra
   // dates, each repeating the same Dutch time-of-day (also across a DST switch)
@@ -201,6 +240,14 @@ export async function createShift(
     return rows;
   });
   const shift = created[0]!;
+
+  // de soort contract van een klus in België, per dag (lib/belgie/klus.ts); een storing kost de klus niet: dan kiest het bedrijf
+  // de soort opnieuw op de kluspagina
+  if (belgieKeuze) {
+    await zetBelgieKeuzeBijPlaatsen(created.map((c) => c.id), belgieKeuze).catch((err) =>
+      logger.warn("belgie: soort contract bewaren na plaatsen mislukt", { shiftId: shift.id, error: (err as Error).message }),
+    );
+  }
 
   if (input.autoAcceptFavorieten) {
     for (const c of created) await zetKlusAutoAccept(c.id, true).catch(() => undefined);

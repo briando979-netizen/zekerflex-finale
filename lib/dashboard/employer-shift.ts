@@ -34,6 +34,8 @@ export interface EmployerShiftView {
   city: string;
   /** straat en huisnummer van de vestiging */
   address: string;
+  /** de postcode zoals bewaard: "BE-2000" is een werklocatie in België (lib/geo/vestiging-land.ts, lib/belgie/klus-kern.ts) */
+  postalCode: string;
   /** de plek van de vestiging, voor de speld op de kaart "Actieve regio's" */
   latitude: number;
   longitude: number;
@@ -139,7 +141,7 @@ export async function getEmployerShift(
       status: true,
       visibility: true,
       requiredSkill: { select: { name: true } },
-      branch: { select: { id: true, name: true, city: true, tenantId: true, addressLine: true, latitude: true, longitude: true } },
+      branch: { select: { id: true, name: true, city: true, tenantId: true, addressLine: true, postalCode: true, latitude: true, longitude: true } },
       assignments: {
         where: { cancelledAt: null },
         select: {
@@ -247,6 +249,7 @@ export async function getEmployerShift(
     tenantId: shift.branch.tenantId,
     city: shift.branch.city,
     address: shift.branch.addressLine,
+    postalCode: shift.branch.postalCode,
     latitude: shift.branch.latitude,
     longitude: shift.branch.longitude,
     startsAt: shift.startsAt,

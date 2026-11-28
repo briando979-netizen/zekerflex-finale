@@ -19,6 +19,8 @@ import { getOrgProfileExtra } from "@/lib/profile/store";
 import { dienstUren, pastBinnenMaxUren, urenBijBedrijf } from "@/lib/werkgever/max-uren";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 import { leggReactieVast, sluitEigenReactie } from "@/lib/matching/reactie";
+import { belgieKiesReden, isBelgischeKlus } from "@/lib/belgie/klus-kern";
+import { leesBelgieKlusVoor } from "@/lib/belgie/klus";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -42,6 +44,12 @@ export interface ApplyResult {
 export async function applyToShift(
   userId: string,
   shiftId: string,
+  /**
+   * doorBedrijf: het bedrijf koos deze werker zelf (respondToOfferAction). Bij een klus in België (lib/belgie/klus-kern.ts) de
+   * enige weg naar een plek: daar kiest het bedrijf als werkgever, nooit de werker zelf of een automatische regel. In Nederland
+   * verandert de optie niets.
+   */
+  opties: { doorBedrijf?: boolean } = {},
 ): Promise<ApplyResult> {
   // eerst de onboarding (12 nov, eigenaar: alles zien, alleen reageren wacht op de onboarding)
   await eisOnboardingVoorReageren(userId);
@@ -88,12 +96,23 @@ export async function applyToShift(
       visibility: true,
       title: true,
       createdAt: true,
-      branch: { select: { tenantId: true, latitude: true, longitude: true, geofenceRadiusMeters: true, tenant: { select: { name: true } } } },
+      branch: { select: { tenantId: true, postalCode: true, latitude: true, longitude: true, geofenceRadiusMeters: true, tenant: { select: { name: true } } } },
       _count: { select: { assignments: { where: { cancelledAt: null } } } },
     },
   });
   if (!shift) throw AppError.notFound("Deze dienst bestaat niet meer.").metSleutel("apply.bestaatNiet");
-  const partnerKlus = await isUitzendPartnerTenant(shift.branch.tenantId);
+  // Een klus in België: het bedrijf is de werkgever en kiest zelf, na zijn bevestiging (components/werkgever/BelgieKlusPaneel.tsx).
+  // De werker reageert gewoon; zelf een plek nemen (of een automatische regel: vaste schil, spoedoproep) kan daar niet.
+  const belgieKlus = isBelgischeKlus(shift.branch.postalCode);
+  if (belgieKlus && !opties.doorBedrijf) {
+    throw AppError.precondition("Bij een klus in België kiest het bedrijf zelf wie er werkt. Reageer op de klus; het bedrijf laat je weten of je bent gekozen.").metSleutel("apply.belgieBedrijfKiest");
+  }
+  if (belgieKlus && belgieKiesReden(await leesBelgieKlusVoor(shiftId))) {
+    throw AppError.precondition("Het bedrijf moet eerst bevestigen dat het de werkgever is en de Dimona doet.").metSleutel("apply.belgieBevestiging");
+  }
+  // Bij een uitzendpartner en bij een klus in België is het bedrijf of bureau de werkgever: dan gelden de eisen van ZekerFlex als
+  // werkgever of uitbetaler niet (KVK/btw/IBAN, BSN en de uitzendovereenkomst); de ID-controle en de aanmelding wel.
+  const partnerKlus = (await isUitzendPartnerTenant(shift.branch.tenantId)) || belgieKlus;
   if (!partnerKlus && !eligible.ok) throw nietKlaar();
   // het testwerkeraccount van de eigenaar (lib/testwerker/adres.ts) reageert alleen op testklussen, nooit op echt werk
   const eigenTest = await leesEigenTest();

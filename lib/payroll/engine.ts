@@ -11,6 +11,7 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { alBetaaldeRegels, regelSleutel } from "@/lib/payroll/al-betaald";
 import { leesUitzendPartners } from "@/lib/uitzend/partners";
 import { isUitzendPartner } from "@/lib/uitzend/partners-kern";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 import {
   buurweken,
   isoWeekBereik,
@@ -80,7 +81,7 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
         select: { id: true, userId: true, user: { select: { fullName: true, email: true } } },
       },
       assignment: { select: { shift: { select: { id: true, title: true } } } },
-      branch: { select: { name: true, tenantId: true, matchingConfig: true, tenant: { select: { name: true } } } },
+      branch: { select: { name: true, tenantId: true, postalCode: true, matchingConfig: true, tenant: { select: { name: true } } } },
     },
   });
 
@@ -98,6 +99,8 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
   for (const t of timesheets) {
     const userId = t.freelancer.userId;
     if (isUitzendPartner(partners, t.branch?.tenantId)) continue;
+    // en uren bij een klus in België verloont het bedrijf zelf, als werkgever van de student of flexi-werker (lib/belgie/klus-kern.ts)
+    if (isBelgischeKlus(t.branch?.postalCode)) continue;
     if (alBetaald.has(regelSleutel(userId, t.assignment?.shift?.id ?? t.id))) {
       overgeslagen++;
       continue;

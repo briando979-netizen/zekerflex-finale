@@ -17,6 +17,7 @@ import { sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
 import { meldUitzendcontractAanvraag } from "@/lib/uitzend/aanvraag";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 
 const moneyExact = (c: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(c / 100);
@@ -133,7 +134,7 @@ export async function counterOfferAction(
         startsAt: true,
         endsAt: true,
         viaUitzendbureau: true,
-        branch: { select: { name: true, tenantId: true, tenant: { select: { name: true } } } },
+        branch: { select: { name: true, tenantId: true, postalCode: true, tenant: { select: { name: true } } } },
       },
     });
     if (!shift) return { ok: false, message: "Deze dienst bestaat niet meer." };
@@ -145,11 +146,14 @@ export async function counterOfferAction(
     // (KVK/IBAN, of BSN en de ZekerFlex-uitzendovereenkomst) gelden dan niet, en de reactie is een aanvraag voor een
     // uitzendcontract tegen het vaste uurloon.
     const partnerKlus = await isUitzendPartnerTenant(shift.branch.tenantId);
-    if (!partnerKlus && !eligible.ok) {
+    // Klus in België (lib/belgie/klus-kern.ts): het bedrijf is de werkgever (student of flexi-job). Net als bij een uitzendpartner
+    // gelden de eisen van ZekerFlex als uitbetaler dan niet, en het loon is het geplaatste uurloon (geen tegenbod).
+    const belgieKlus = isBelgischeKlus(shift.branch.postalCode);
+    if (!partnerKlus && !belgieKlus && !eligible.ok) {
       return { ok: false, message: eligible.reason ?? "Je kunt nog niet op klussen reageren." };
     }
     // Uitzendkrachten work for the listed wage (CAO) — no counter-offers.
-    if (eligible.track === "payroll" || partnerKlus) proposedRateCents = shift.hourlyRateCents;
+    if (eligible.track === "payroll" || partnerKlus || belgieKlus) proposedRateCents = shift.hourlyRateCents;
     if (shift.viaUitzendbureau && !partnerKlus && eligible.track !== "payroll") {
       return { ok: false, message: "Deze klus loopt via een uitzendbureau; reageren kan alleen als uitzendkracht." };
     }
@@ -181,7 +185,8 @@ export async function counterOfferAction(
     if (partnerKlus) runAfter(() => meldUitzendcontractAanvraag({ workerUserId: principal.userId, shiftId }));
 
     // vaste schil (lib/pools/vaste-schil.ts): lid van een pool met "direct inplannen" en het geplaatste tarief → meteen ingepland
-    const schil = await probeerVasteSchil(offer, shift.branch.tenantId).catch(() => ({ ingepland: false as const }));
+    // (niet in België: daar kiest het bedrijf zelf, lib/matching/apply.ts)
+    const schil = belgieKlus ? { ingepland: false as const } : await probeerVasteSchil(offer, shift.branch.tenantId).catch(() => ({ ingepland: false as const }));
     if (schil.ingepland) {
       bust();
       return { ok: true, message: `Je staat direct ingepland op "${shift.title}": je hoort bij de vaste schil van ${shift.branch.name}. Je vindt de klus bij Mijn klussen.` };
@@ -197,6 +202,9 @@ export async function counterOfferAction(
     bust();
     if (partnerKlus) {
       return { ok: true, message: `Je aanvraag is verstuurd naar ${shift.branch.tenant.name}. Het uitzendbureau neemt contact met je op over het contract. Je ziet de klus terug bij Mijn klussen.` };
+    }
+    if (belgieKlus) {
+      return { ok: true, message: `Je reactie is verstuurd naar ${shift.branch.tenant.name}. Het bedrijf kiest zelf en is je werkgever. Je ziet de klus terug bij Mijn klussen.` };
     }
     return { ok: true, message: `Tegenbod van ${moneyExact(proposedRateCents)}/u verstuurd. Je ziet 'm terug bij Mijn klussen.` };
   } catch (err) {

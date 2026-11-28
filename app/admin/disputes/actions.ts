@@ -71,6 +71,8 @@ export async function resolveDisputeAction(
       extra =
         approval.track === "partner"
           ? ` Timesheet ${approval.status.toLowerCase()}, het uitzendbureau betaalt het loon (alleen platformkosten).`
+          : approval.track === "werkgever"
+          ? ` Timesheet ${approval.status.toLowerCase()}, klus in België: het bedrijf is de werkgever en betaalt het loon (alleen platformkosten).`
           : approval.track === "payroll"
           ? ` Timesheet ${approval.status.toLowerCase()}, verloning via payroll (week ${approval.payroll?.weekLabel ?? "?"}).`
           : ` Timesheet ${approval.status.toLowerCase()}, uitbetaling ${approval.payout?.status.toLowerCase() ?? "-"}.`;

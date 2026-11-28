@@ -8,6 +8,9 @@ import { getOrgProfileExtra, klusBeeldVan } from "@/lib/profile/store";
 import { amsterdamLocalInput } from "@/lib/time/amsterdam";
 import { PaginaKop } from "@/components/werkgever/PaginaKop";
 import { NewShiftForm } from "@/components/app/NewShiftForm";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
+import { leesBelgieKlusVoor } from "@/lib/belgie/klus";
+import { belgischMinimumCents } from "@/lib/belgie/lonen";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,9 @@ export default async function KlusBewerkenPage(props: { params: Promise<{ shiftI
   const tenantId = (await resolveEmployerScope(principal)).tenantIds[0];
   const extra = tenantId ? await getOrgProfileExtra(tenantId).catch(() => ({})) : {};
   const beeld = tenantId ? klusBeeldVan(tenantId, extra) : { logoUrl: null, useLogo: false };
+  // een klus in België (lib/belgie/klus-kern.ts): het Belgische minimum van zijn soort contract, niet het Nederlandse
+  const belgie = isBelgischeKlus(s.postalCode) ? await leesBelgieKlusVoor(s.id) : null;
+  const minRateCents = belgie ? belgischMinimumCents(belgie.soort, belgie.horeca) : MIN_SHIFT_RATE_CENTS;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -43,7 +49,7 @@ export default async function KlusBewerkenPage(props: { params: Promise<{ shiftI
         <NewShiftForm
           branches={[]}
           templates={SHIFT_TEMPLATES}
-          minRateCents={MIN_SHIFT_RATE_CENTS}
+          minRateCents={minRateCents}
           beeld={{ ...beeld, canChange: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") }}
           edit={{
             shiftId: s.id,

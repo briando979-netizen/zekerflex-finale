@@ -28,6 +28,7 @@ import { isEigenTestBedrijf, zonderEigenTestAccounts } from "@/lib/admin/eigen-t
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 import {
   resolveMatchingConfig,
   scoreCandidateSignals,
@@ -273,7 +274,9 @@ export async function runMatchingForShift(
     // Klus van een uitzendpartner (lib/uitzend/partners-kern.ts): iedereen mag hem zien, maar het bureau kiest zelf en sluit
     // eerst een contract. Dus scoren wel (voor "Speciaal voor jou"), maar niemand automatisch inplannen en geen aanbod dat
     // met één tik een plek geeft: de werker vraagt een uitzendcontract aan op de kluspagina.
-    const uitzendPartner = await isUitzendPartnerTenant(shift.branch.tenantId);
+    // Hetzelfde bij een klus in België (lib/belgie/klus-kern.ts): het bedrijf is daar de werkgever en kiest zelf (spec-belgie.md 3),
+    // dus geen automatische plek en geen aanbod met één tik; iedereen mag reageren.
+    const uitzendPartner = (await isUitzendPartnerTenant(shift.branch.tenantId)) || isBelgischeKlus(shift.branch.postalCode);
     const loaded = await loadCandidatePool({
       id: shift.id,
       requiredSkillId: shift.requiredSkillId,

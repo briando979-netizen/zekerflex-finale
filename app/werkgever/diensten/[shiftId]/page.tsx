@@ -36,6 +36,9 @@ import { ReactieLijst } from "@/components/werkgever/ReactieLijst";
 import { LinkKopieren } from "@/components/werkgever/LinkKopieren";
 import { InfoBlok, KlusInformatie, KlusOmschrijving, type InfoBlokje } from "@/components/werkgever/KlusInformatie";
 import { naamVoorMatch } from "@/lib/werkgever/naam";
+import { BelgieKlusPaneel } from "@/components/werkgever/BelgieKlusPaneel";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
+import { dimonaNummers, leesBelgieKlusVoor } from "@/lib/belgie/klus";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +149,19 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
   const dagVoluit = (dag: Date) => `${amsterdamDagLabel(amsterdamDayKey(dag), datumTaal)} ${amsterdamParts(dag).year}`;
   const tijden = `${amsterdamClock(s.startsAt)} - ${amsterdamClock(s.endsAt)}`;
   const dagKort = s.startsAt.toLocaleDateString(datumTaal, { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Amsterdam" });
+  // Een klus in België (lib/belgie/klus-kern.ts): het bedrijf is de werkgever. Het paneel met de soort contract, de bevestiging,
+  // de checklist, de sjablonen en de Dimona-nummers staat direct onder de klus, vóór de reacties.
+  const belgie = isBelgischeKlus(s.postalCode)
+    ? await (async () => {
+        const klus = await leesBelgieKlusVoor(s.id);
+        const dimona = await dimonaNummers(s.id, s.assigned.map((a) => a.userId));
+        return {
+          klus,
+          bevestigdOp: klus.bevestiging ? `${dagVoluit(new Date(klus.bevestiging.op))}, ${amsterdamClock(klus.bevestiging.op)}` : null,
+          werkers: s.assigned.map((a) => ({ userId: a.userId, naam: a.name, dimona: dimona.get(a.userId)?.nummer ?? null })),
+        };
+      })()
+    : null;
   const deadline = afzegDeadline(s.startsAt, s.annuleerUren);
   const deadlineTekst = `${dagVoluit(deadline)} - ${amsterdamClock(deadline)}`;
 
@@ -238,6 +254,10 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
             <InfoBlok blokje={blokPauze} />
           </dl>
         </Kaart>
+
+        {belgie && (
+          <BelgieKlusPaneel shiftId={s.id} begin={belgie.klus} bevestigdOp={belgie.bevestigdOp} soortVast={s.assigned.length > 0} werkers={belgie.werkers} />
+        )}
 
         {afzegBlok && (
           <section aria-labelledby="afzeg-reservebank" className="rounded-xl border border-warn/40 bg-warn/10 p-4">
@@ -356,7 +376,8 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         {/* hulpmiddelen bij deze klus: de eigen groep op de open markt zetten, de spoedoproep, hetzelfde team herhalen, claims */}
         {s.invitedPool && <PublishPoolShiftButton shiftId={s.id} poolName={s.invitedPool.name} />}
 
-        {seatsFree > 0 && verified && !shiftEnded && s.status !== "CANCELLED" && s.status !== "DRAFT" && <SpoedoproepPaneel shiftId={s.id} seatsFree={seatsFree} />}
+        {/* niet in België: een spoedoproep geeft de eerste die "1" antwoordt een plek, en daar kiest het bedrijf zelf */}
+        {seatsFree > 0 && verified && !shiftEnded && s.status !== "CANCELLED" && s.status !== "DRAFT" && !belgie && <SpoedoproepPaneel shiftId={s.id} seatsFree={seatsFree} />}
 
         {s.status !== "CANCELLED" && verified && <RepeatTeamButton shiftId={s.id} teamSize={s.assigned.length} />}
 

@@ -146,7 +146,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   // Uitzendvoorwaarden (loonstrook, vast loon) alleen als de klus via het uitzendbureau loopt;
   // het label volgt de klus, net als ShiftCard.
   // 10 nov (eigenaar): alleen bij een uitzendklus, niet bij elke klus van een uitzendkracht
-  const agencyTerms = s.viaUitzendbureau || partner;
+  // Klus in België (lib/belgie/klus-kern.ts, 28 nov): het bedrijf is de werkgever (student of flexi-job). Dan ook een vast uurloon
+  // en geen uitbetaling of modelovereenkomst van ZekerFlex; de werker ziet welk contract het wordt.
+  const belgie = s.belgie ?? null;
+  const metBedrijf = (tekst: string) => tekst.replaceAll("{bedrijf}", bureau);
+  const agencyTerms = s.viaUitzendbureau || partner || Boolean(belgie);
 
   // Annuleringstermijn van deze klus (24/48/72/168 uur, gekozen door het bedrijf; lib/shifts/annuleertermijn.ts).
   const cancelDeadline = afzegDeadline(start, s.annuleerUren);
@@ -392,7 +396,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               variant="detail"
             />
           </div>
-          {!assigned.replacementRequested && (
+          {!assigned.replacementRequested && !belgie && (
             <a
               href={agreementHref}
               target="_blank"
@@ -455,7 +459,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             {s.isReplacement && upcoming && (
               <span className="rounded border border-warn/40 px-2 py-0.5 text-xs font-semibold text-warn">{ft.card.invalklus}</span>
             )}
-            {agencyTerms ? (
+            {belgie ? (
+              <span className="rounded border border-hair px-2 py-0.5 text-xs font-semibold text-neutralx-700">{D.belgieLabel}</span>
+            ) : agencyTerms ? (
               // "Uitzenden" in violet, zoals de kolom in het vergelijkblok op Ontdekken (en de lila chip van YoungOnes)
               <span className="rounded border border-violet-300 bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">
                 {ft.market.uitzendLabel}
@@ -469,7 +475,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <span className="flex items-center gap-2">
             <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
             {/* de opbouw van het uurloon volgens de cao van ZekerFlex: niet bij een uitzendpartner (die heeft zijn eigen cao) */}
-            {agencyTerms && !partner && (
+            {agencyTerms && !partner && !belgie && (
               <UurloonInfo opbouw={uurloonOpbouw({ hourlyRateCents: s.hourlyRateCents, birthDate: fiscal.birthDate, op: start })} />
             )}
           </span>
@@ -479,7 +485,12 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             ✌️ ZZP bij de opdrachtgever · 💸 Uitbetaling per klus · 📋 Belasting: zelf · 💰 Tegenbod mogelijk · ⛱️ Vakantiegeld: nee;
             bij een uitzendklus de uitzendvoorwaarden (zelfde teksten als het vergelijkblok op Ontdekken) */}
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={ft.market.typeTitle}>
-          {(partner
+          {(belgie
+            ? [
+                `📄 ${belgie.soort === "student" ? D.belgieStudent : belgie.soort === "flexi" ? D.belgieFlexi : D.belgieLabel}`,
+                ...D.belgieChips.map((tekst, i) => `${["🤝", "💶", "💸", "📋"][i] ?? "•"} ${metBedrijf(tekst)}`),
+              ]
+            : partner
             ? D.partnerChips.map((tekst, i) => `${KLUS_TYPE_EMOJI.uitzenden[i] ?? "•"} ${metBureau(tekst)}`)
             : agencyTerms
               ? ft.market.typeUitzend.map((tekst, i) => `${KLUS_TYPE_EMOJI.uitzenden[i] ?? "•"} ${tekst}`)
@@ -491,6 +502,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           ))}
         </ul>
         {partner && <p className="mt-3 text-sm leading-relaxed text-neutralx-600">{metBureau(D.partnerVia)}</p>}
+        {belgie && (
+          <p className="mt-3 text-sm leading-relaxed text-neutralx-600">
+            {metBedrijf(belgie.soort === "student" ? D.belgieViaStudent : belgie.soort === "flexi" ? D.belgieViaFlexi : D.belgieViaOnbekend)}
+          </p>
+        )}
 
         {/* Snelle uitbetaling — alleen als de opdrachtgever het aanbiedt (en niet in de Android-app) */}
         {s.fastPay && !inApp && !agencyTerms && (
@@ -575,7 +591,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <InfoRow icon="⊘">
             {cancelPassed ? D.cancelPassed(fmtDay(cancelDeadline)) : D.cancelUntil(fmtDay(cancelDeadline))}
           </InfoRow>
-          {showAgreement && !assigned && (
+          {showAgreement && !assigned && !belgie && (
             <div className="flex items-start gap-3 text-sm">
               <span className="mt-0.5 grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-hairstrong text-xs text-neutralx-400">
                 📄
@@ -701,7 +717,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <div className="mt-4 divide-y divide-hair rounded-xl bg-paper-soft">
             <StatRow icon="🕐">{D.stat1}</StatRow>
             <StatRow icon="🙂">{D.stat2}</StatRow>
-            <StatRow icon="🐖">{agencyTerms ? D.stat3Agency : D.stat3}</StatRow>
+            <StatRow icon="🐖">{belgie ? D.stat3Belgie : agencyTerms ? D.stat3Agency : D.stat3}</StatRow>
           </div>
 
           <Link
@@ -739,7 +755,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </section>
         )}
 
-        <div className="mt-6 rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-500">{agencyTerms ? D.footerAgency : D.footer}</div>
+        <div className="mt-6 rounded-xl bg-paper-soft p-4 text-xs leading-relaxed text-neutralx-500">{belgie ? D.footerBelgie : agencyTerms ? D.footerAgency : D.footer}</div>
 
         {/* de chat met de opdrachtgever blijft altijd (eigenaar, 20 nov) */}
         {!settled && (
@@ -804,7 +820,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 endTime={hhmm(s.endsAt)}
                 conflict={conflict}
                 // bij een uitzendpartner sluit het bureau het contract: geen modelovereenkomst van ZekerFlex om mee in te stemmen
-                agreementHref={partner ? null : agreementHref}
+                agreementHref={partner || belgie ? null : agreementHref}
                 dresscode={dresscode}
                 otherShifts={otherShifts.map((o) => ({
                   id: o.id,

@@ -15,6 +15,7 @@ import { assertBranchAccess, type Principal } from "@/lib/auth";
 import { nextInvoiceNumber } from "@/lib/billing/numbering";
 import { buildPlatformFeeInvoice, buildReverseBillingInvoices, buildUitzendInvoice } from "@/lib/billing/self-billing";
 import { isUitzendPartnerTenant } from "@/lib/uitzend/partners";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 import { applyPendingTenantCredits } from "@/lib/billing/credits";
 import {
   isValidIban,
@@ -79,8 +80,10 @@ export interface ApproveTimesheetResult {
    * payroll run and lands on a loonstrook, not an invoice.
    * "partner" = klus van een uitzendpartner (lib/uitzend/partners-kern.ts): het bureau is de werkgever en betaalt het loon;
    * ZekerFlex stuurt het bureau alleen de PLATFORM_FEE-factuur, zonder uitbetaling en zonder loonstrook.
+   * "werkgever" = klus op een Belgische werklocatie (lib/belgie/klus-kern.ts): het bedrijf is de werkgever (student of
+   * flexi-job), doet de Dimona en betaalt het loon; hetzelfde spoor als "partner", alleen de PLATFORM_FEE-factuur.
    */
-  track: "invoice" | "payroll" | "partner";
+  track: "invoice" | "payroll" | "partner" | "werkgever";
   invoices: {
     id: string;
     number: string;
@@ -286,11 +289,18 @@ async function approveTimesheetInner(
       );
     }
 
+    // --- Klus in België (28 nov 2026, lib/belgie/klus-kern.ts): het bedrijf is de werkgever (student of flexi-job), doet de
+    // Dimona en betaalt het loon zelf. Hetzelfde spoor als een uitzendpartner hieronder: alleen de platformkosten. Een klus in
+    // Nederland komt hier nooit (de postcode heeft geen "BE-") en gaat verder zoals altijd.
+    if (isBelgischeKlus(ts.branch.postalCode)) {
+      return approveViaPartner({ ts, principal, billableMinutes, input, log, zonderCheckin, werkgever: "belgie" });
+    }
+
     // --- Uitzendpartner: het bureau is werkgever en betaalt het loon; ZekerFlex rekent alleen de platformkosten ---
     // Vóór de keuze op de werker: ook een uitzendkracht of zzp'er die bij een partner werkte, krijgt van ZekerFlex geen
     // uitbetaling, geen factuur op zijn naam en geen loonstrook (lib/payroll/engine.ts slaat deze briefjes ook over).
     if (await isUitzendPartnerTenant(ts.branch.tenantId)) {
-      return approveViaPartner({ ts, principal, billableMinutes, input, log, zonderCheckin });
+      return approveViaPartner({ ts, principal, billableMinutes, input, log, zonderCheckin, werkgever: "uitzendpartner" });
     }
 
     // --- Fork: uitzendkracht → payroll, everyone else → invoice + payout ---
@@ -598,6 +608,8 @@ async function approveTimesheetInner(
  * urenbriefje wordt goedgekeurd en het bureau krijgt alleen de PLATFORM_FEE-factuur (met dezelfde staffel, gratis
  * bedrijven, introductie- en partnerdeal-vrijstelling als het factuurspoor). Geen IBAN-controle, geen factuur op naam
  * van de werker, geen uitbetaling, geen voorschot.
+ * Hetzelfde voor een klus in België (werkgever "belgie", lib/belgie/klus-kern.ts): daar is het bedrijf zelf de werkgever
+ * van de student of flexi-werker. Alleen de tekst in het auditspoor en het spoor ("werkgever") verschillen.
  */
 async function approveViaPartner(args: {
   ts: {
@@ -614,8 +626,12 @@ async function approveViaPartner(args: {
   input: ApproveTimesheetInput;
   log: ReturnType<typeof logger.child>;
   zonderCheckin: boolean;
+  /** wie de werkgever is: een uitzendpartner, of het bedrijf zelf bij een klus in België */
+  werkgever: "uitzendpartner" | "belgie";
 }): Promise<ApproveTimesheetResult> {
   const { ts, principal, billableMinutes, input, log, zonderCheckin } = args;
+  const belgie = args.werkgever === "belgie";
+  const track = belgie ? "werkgever" : "partner";
 
   const platformTenant = await prisma.tenant.findFirst({ where: { type: "PLATFORM" }, select: { id: true } });
   if (!platformTenant) throw AppError.precondition("De platformorganisatie is niet ingesteld.");
@@ -663,7 +679,7 @@ async function approveViaPartner(args: {
     return { feeInvoice, computed };
   });
 
-  log.info("timesheet approved (uitzendpartner)", { billableMinutes, feeInvoice: feeInvoice.number });
+  log.info(belgie ? "timesheet approved (klus in België, bedrijf is werkgever)" : "timesheet approved (uitzendpartner)", { billableMinutes, feeInvoice: feeInvoice.number });
 
   await recordAudit({
     category: "TIMESHEET",
@@ -671,11 +687,13 @@ async function approveViaPartner(args: {
     actorUserId: principal.userId,
     actorLabel: "user",
     severity: input.overrideGpsCheck ? "warning" : "info",
-    summary: `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - uitzendpartner ${ts.branch.tenant.name} betaalt het loon${zonderCheckin ? ZONDER_INCHECKEN_AUDIT : ""}`,
+    summary: belgie
+      ? `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - klus in België: ${ts.branch.tenant.name} is de werkgever en betaalt het loon${zonderCheckin ? ZONDER_INCHECKEN_AUDIT : ""}`
+      : `Urenbriefje ${ts.id} goedgekeurd (${billableMinutes} min) - uitzendpartner ${ts.branch.tenant.name} betaalt het loon${zonderCheckin ? ZONDER_INCHECKEN_AUDIT : ""}`,
     targetType: "timesheet",
     targetId: ts.id,
     metadata: {
-      track: "partner",
+      track,
       billableMinutes,
       correctedBillableMinutes: input.correctedBillableMinutes ?? null,
       overrodeGpsCheck: Boolean(input.overrideGpsCheck),
@@ -686,9 +704,9 @@ async function approveViaPartner(args: {
     },
   });
 
-  recordTimesheetApproved("partner");
+  recordTimesheetApproved(track);
 
-  void dispatchWebhook("timesheet.approved", ts.branch.tenantId, { timesheetId: ts.id, billableMinutes, track: "partner" }).catch((err) =>
+  void dispatchWebhook("timesheet.approved", ts.branch.tenantId, { timesheetId: ts.id, billableMinutes, track }).catch((err) =>
     logger.warn("webhook-aflevering mislukt", { event: "timesheet.approved", tenantId: ts.branch.tenantId, error: (err as Error).message }),
   );
   void dispatchWebhook("invoice.issued", ts.branch.tenantId, {
@@ -715,7 +733,7 @@ async function approveViaPartner(args: {
     timesheetId: ts.id,
     status: TimesheetStatus.APPROVED,
     billableMinutes,
-    track: "partner",
+    track,
     invoices: [{ id: feeInvoice.id, number: feeInvoice.number, type: "PLATFORM_FEE", totalCents: computed.totalCents, vatCents: computed.vatCents }],
     payout: null,
     payroll: null,

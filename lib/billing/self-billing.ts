@@ -48,6 +48,13 @@ const round = (n: number) => Math.round(n);
  */
 export const KOR_VERMELDING = "vrijgesteld van btw op grond van de kleineondernemersregeling (KOR)";
 
+/**
+ * De vermelding op de platformfactuur aan een Belgisch bedrijf met een btw-nummer (28 nov 2026, spec-belgie.md 5.1): de btw
+ * is verlegd naar de klant, die hem in zijn eigen aangifte voldoet. De tekst is het voorstel uit de specificatie (richtlijn
+ * 2006/112/EG en het Belgische Btw-wetboek); laat een Belgische boekhouder hem nakijken voordat de eerste factuur uitgaat.
+ */
+export const BE_VERLEGD_VERMELDING = "Btw verlegd (verlegging van heffing). Art. 196 richtlijn 2006/112/EG; art. 51, §2 Btw-wetboek.";
+
 function lineTotal(line: InvoiceLineInput): number {
   return round(line.quantityHours * line.unitPriceCents);
 }
@@ -217,6 +224,9 @@ export function buildPlatformFeeInvoice(input: PlatformFeeInput): ComputedInvoic
   const discounted = feePerHourCents < env.PLATFORM_FEE_PER_HOUR_CENTS;
   const toelichting = input.platformFeeReden ? `, ${input.platformFeeReden}` : discounted ? `, staffel ${input.volumeTierName ?? "volume"}` : "";
   const feeVat = resolveVat("NL", input.recipientCountry, input.recipientVatValidForReverseCharge);
+  // een Belgisch bedrijf met een btw-nummer: de vermelding van de verlegging achter de regel (zoals KOR_VERMELDING), zodat ze
+  // op de pdf, de e-factuur en elke lijst staat. Andere landen houden alleen het label "Btw verlegd", zoals altijd.
+  const verlegd = feeVat.treatment === VatTreatment.REVERSE_CHARGE && input.recipientCountry.toUpperCase() === "BE" ? ` — ${BE_VERLEGD_VERMELDING}` : "";
   return assemble(
     {
       type: "PLATFORM_FEE",
@@ -229,7 +239,7 @@ export function buildPlatformFeeInvoice(input: PlatformFeeInput): ComputedInvoic
       {
         description: `ZekerFlex platformkosten (€ ${(feePerHourCents / 100)
           .toFixed(2)
-          .replace(".", ",")} per gewerkt uur${toelichting}) — ${input.shiftTitle}`,
+          .replace(".", ",")} per gewerkt uur${toelichting}) — ${input.shiftTitle}${verlegd}`,
         quantityHours: Number(hours.toFixed(2)),
         unitPriceCents: feePerHourCents,
       },

@@ -31,6 +31,9 @@ import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 import { BLOK_KOP } from "@/components/werkgever/bouwstenen";
+import { BelgieKlusKeuze } from "@/components/werkgever/BelgieKlusKeuze";
+import type { BelgischContract } from "@/lib/belgie/klus-kern";
+import { belgischMinimumCents } from "@/lib/belgie/lonen";
 
 const initial: NewShiftState = { error: null };
 
@@ -119,7 +122,8 @@ export function NewShiftForm({
   voorinvulling,
   metBelgie = false,
 }: {
-  branches: { id: string; name: string; city: string }[];
+  /** belgisch: de werklocatie ligt in België (lib/belgie/klus-kern.ts); dan kiest het bedrijf het soort contract */
+  branches: { id: string; name: string; city: string; belgisch?: boolean }[];
   templates: ShiftTemplate[];
   minRateCents?: number;
   pools?: { id: string; name: string; memberCount: number }[];
@@ -147,7 +151,6 @@ export function NewShiftForm({
   const kopie = edit ? undefined : voorinvulling;
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const minRateEuro = minRateCents / 100;
   const [state, formAction] = useFormState(createShiftAction, initial);
   const [useLogo, setUseLogo] = useState(beeld.useLogo && Boolean(beeld.logoUrl));
   const [beeldBezig, setBeeldBezig] = useState(false);
@@ -196,6 +199,11 @@ export function NewShiftForm({
   const [adHocBe, setAdHocBe] = useState<GevondenBelgischAdres | null>(null);
   const [adHocBeEerst, setAdHocBeEerst] = useState(false);
   const adHocBelgie = metBelgie && adHocLand === "BE";
+  // de gekozen vestiging (de keuzelijst zelf blijft ongecontroleerd) en, bij een werklocatie in België, het soort contract
+  const [branchKeuze, setBranchKeuze] = useState(() => (kopie && branches.some((b) => b.id === kopie.branchId) ? kopie.branchId : (branches[0]?.id ?? "")));
+  const [beSoort, setBeSoort] = useState<BelgischContract | null>(null);
+  const [beHorecaKeuze, setBeHorecaKeuze] = useState<boolean | null>(null);
+  const [beFout, setBeFout] = useState(false);
   const [ownTemplates, setOwnTemplates] = useState<OwnTemplate[]>([]);
   const [fromWebsite, setFromWebsite] = useState(false);
 
@@ -359,6 +367,12 @@ export function NewShiftForm({
       setAdHocBeEerst(true);
       return;
     }
+    // een klus in België zonder soort contract: eerst kiezen (de melding staat bij de keuze, role="alert")
+    if (stap !== 1 && beKlus && !beSoort) {
+      e.preventDefault();
+      setBeFout(true);
+      return;
+    }
     if (stap !== 1) return;
     e.preventDefault();
     naarStap2();
@@ -366,6 +380,11 @@ export function NewShiftForm({
 
   const hourlyRateCents = centsUitTarief(rateEuro);
   const cat = useMemo(() => shiftCategory(title || "Dienst", null), [title]);
+  // een werklocatie in België (lib/belgie/klus-kern.ts): het Belgische minimum (lib/belgie/lonen.ts) in plaats van het Nederlandse;
+  // horeca volgt de functie tot het bedrijf het zelf aan- of uitvinkt. In Nederland blijft alles zoals het was (minRate = minRateCents).
+  const beKlus = !edit && (oneOff ? adHocBelgie : Boolean(branches.find((b) => b.id === branchKeuze)?.belgisch));
+  const beHoreca = beHorecaKeuze ?? cat.key === "horeca";
+  const minRate = beKlus ? belgischMinimumCents(beSoort, beHoreca) : minRateCents;
 
   const hours = useMemo(() => {
     if (!startsAt || !endsAt) return 0;
@@ -707,7 +726,7 @@ export function NewShiftForm({
             {!oneOff ? (
               <label className="mt-2 block">
                 <span className="field-label">{n.vestiging}</span>
-                <select name="branchId" required defaultValue={kopieVestiging} className="field-input">
+                <select name="branchId" required defaultValue={kopieVestiging} onChange={(e) => setBranchKeuze(e.target.value)} className="field-input">
                   {branches.length === 0 && <option value="">{n.geenVestiging}</option>}
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -843,6 +862,25 @@ export function NewShiftForm({
           )}
           </Sectie>
 
+          {/* een werklocatie in België: het soort contract (components/werkgever/BelgieKlusKeuze.tsx) */}
+          {beKlus && (
+            <Sectie titel={dict.belgie.formSectie} kaart={metStappen}>
+              <BelgieKlusKeuze
+                soort={beSoort}
+                onSoort={(s) => {
+                  setBeSoort(s);
+                  setBeFout(false);
+                }}
+                horeca={beHoreca}
+                onHoreca={setBeHorecaKeuze}
+                uurloonCents={Number.isFinite(hourlyRateCents) ? hourlyRateCents : 0}
+                dag={startsAt.slice(0, 10) || amsterdamDayKey(new Date())}
+                taal={taal}
+                fout={beFout}
+              />
+            </Sectie>
+          )}
+
           {/* het uurtarief met de kans op invulling: een eigen sectie (bij wijzigen dezelfde velden, zonder kaart) */}
           <Sectie titel={n.sectieTarief} kaart={metStappen}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -857,16 +895,16 @@ export function NewShiftForm({
                 value={tariefWeergave(rateEuro, taal)}
                 onChange={(e) => setRateEuro(tariefInvoer(e.target.value))}
                 onBlur={() => {
-                  if (rateEuro.trim() !== "" && hourlyRateCents < minRateCents) setRateEuro(minRateEuro.toFixed(2));
+                  if (rateEuro.trim() !== "" && hourlyRateCents < minRate) setRateEuro((minRate / 100).toFixed(2));
                 }}
                 className="field-input"
               />
               <span className="mt-1 block text-xs text-neutralx-400">
-                {fmt(n.minimumTekst, { min: bedragTekst(minRateCents, taal) })}
+                {fmt(n.minimumTekst, { min: bedragTekst(minRate, taal) })}
               </span>
-              {hourlyRateCents > 0 && hourlyRateCents < minRateCents && (
+              {hourlyRateCents > 0 && hourlyRateCents < minRate && (
                 <span className="mt-1 block text-xs font-medium text-crit">
-                  {fmt(n.minimumFout, { min: bedragTekst(minRateCents, taal) })}
+                  {fmt(n.minimumFout, { min: bedragTekst(minRate, taal) })}
                 </span>
               )}
             </label>
@@ -977,7 +1015,7 @@ export function NewShiftForm({
 
           {edit ? (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <button type="submit" disabled={editBusy || hourlyRateCents < minRateCents} className="btn-primary flex-1 disabled:opacity-50">
+              <button type="submit" disabled={editBusy || hourlyRateCents < minRate} className="btn-primary flex-1 disabled:opacity-50">
                 {editBusy ? n.bezigOpslaan : n.wijzigingenOpslaan}
               </button>
               <Link href={`/werkgever/diensten/${edit.shiftId}`} className="btn-ghost text-center">
@@ -989,7 +1027,7 @@ export function NewShiftForm({
               <button type="button" onClick={() => setStap(1)} className="btn-ghost min-h-[44px] sm:flex-shrink-0">
                 {n.terug}
               </button>
-              <Submit days={totalDays} blocked={hourlyRateCents < minRateCents} />
+              <Submit days={totalDays} blocked={hourlyRateCents < minRate} />
             </div>
           )}
         </div>

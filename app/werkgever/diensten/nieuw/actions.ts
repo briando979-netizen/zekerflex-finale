@@ -4,8 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { wisConceptVoorGebruiker } from "@/lib/klusconcept/server-opslag";
-import { createShift, createShiftSchema } from "@/lib/shifts/create";
+import { createShift, createShiftSchema, createShiftSchemaBelgie, type BelgieKlusInvoer } from "@/lib/shifts/create";
 import { AppError } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
+import { isBelgischContract, isBelgischeKlus } from "@/lib/belgie/klus-kern";
+import { getDict } from "@/lib/i18n/server";
 
 export interface NewShiftState {
   error: string | null;
@@ -29,7 +32,22 @@ export async function createShiftAction(
         longitude: Number(formData.get("adHocLongitude")),
       }
     : undefined;
-  const parsed = createShiftSchema.safeParse({
+  // Een werklocatie in België (lib/belgie/klus-kern.ts): het Belgische schema (zonder de Nederlandse ondergrens) en het soort
+  // contract uit het formulier (components/werkgever/BelgieKlusKeuze.tsx). Of de vestiging van dit bedrijf is, controleert createShift.
+  const gekozenVestiging = adHocAddress ? null : String(formData.get("branchId") ?? "").trim();
+  const belgisch = adHocAddress
+    ? isBelgischeKlus(adHocAddress.postalCode)
+    : gekozenVestiging
+      ? isBelgischeKlus((await prisma.branch.findUnique({ where: { id: gekozenVestiging }, select: { postalCode: true } }).catch(() => null))?.postalCode)
+      : false;
+  const soort = formData.get("belgieContract");
+  let belgie: BelgieKlusInvoer | null = null;
+  if (belgisch) {
+    if (!isBelgischContract(soort)) return { error: (await getDict()).belgie.kiesSoort };
+    belgie = { soort, horeca: soort === "flexi" && formData.get("belgieHoreca") === "on" };
+  }
+
+  const parsed = (belgisch ? createShiftSchemaBelgie : createShiftSchema).safeParse({
     branchId: adHocAddress ? undefined : formData.get("branchId"),
     adHocAddress,
     templateKey: formData.get("templateKey") || undefined,
@@ -58,7 +76,7 @@ export async function createShiftAction(
   }
 
   try {
-    await createShift(principal, parsed.data);
+    await createShift(principal, parsed.data, belgie);
     // het klusconcept van /klus-plaatsen dat bij het aanmelden is bewaard, is nu gebruikt (lib/klusconcept/server-opslag.ts)
     await wisConceptVoorGebruiker(principal.userId).catch(() => undefined);
   } catch (err) {

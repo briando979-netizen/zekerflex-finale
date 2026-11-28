@@ -11,7 +11,7 @@ import { listCounterOffers, setOfferStatus } from "@/lib/offers/store";
 import { applyToShift } from "@/lib/matching/apply";
 import { isWerkerNietKlaar } from "@/lib/fiscal/werker-niet-klaar";
 import { getDict } from "@/lib/i18n/server";
-import { nl as nlDict } from "@/lib/i18n/dictionaries";
+import { fmt, nl as nlDict } from "@/lib/i18n/dictionaries";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
@@ -28,11 +28,17 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushWhen, pushDayMonth } from "@/lib/i18n/worker-push";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
-import { parseAmsterdamLocal } from "@/lib/time/amsterdam";
+import { amsterdamDayKey, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 import { haalVanReservebank, zetOpReservebank } from "@/lib/reservebank/store";
 import { reservebankOpen, reservebankToegang } from "@/lib/reservebank/kern";
 import { isTenantVerified } from "@/lib/company/verified";
 import { BEDRIJF_NOG_NIET_GECONTROLEERD, NOG_NIET_GECONTROLEERD_TEKST, bedrijfMagDoen } from "@/lib/company/gecontroleerd";
+import { belgieKiesReden, isBelgischeKlus } from "@/lib/belgie/klus-kern";
+import { BELGIE_ONDERGRENS_CENTS, belgischLoonOordeel, belgischMinimumCents } from "@/lib/belgie/lonen";
+import { leesBelgieKlusVoor } from "@/lib/belgie/klus";
+
+/** Een herkenbare reden: bij een klus in België kiest het bedrijf pas iemand na de soort contract en zijn bevestiging. */
+const BELGIE_EERST_BEVESTIGEN = "BELGIE_EERST_BEVESTIGEN";
 
 export interface OfferResponse {
   ok: boolean;
@@ -60,7 +66,7 @@ async function assertOwnsShift(shiftId: string) {
       hourlyRateCents: true,
       positions: true,
       viaUitzendbureau: true,
-      branch: { select: { id: true, name: true, tenantId: true } },
+      branch: { select: { id: true, name: true, tenantId: true, postalCode: true } },
       assignments: {
         where: { cancelledAt: null },
         select: { id: true, freelancer: { select: { id: true, userId: true, user: { select: { fullName: true } } } } },
@@ -92,6 +98,15 @@ const updateSchema = z.object({
     .optional(),
   positions: z.number().int().min(1).max(50).optional(),
 });
+/** Een klus in België (lib/belgie/klus-kern.ts): de Nederlandse ondergrens geldt daar niet; de Belgische regel volgt hieronder. */
+const updateSchemaBelgie = updateSchema.extend({
+  hourlyRateCents: z
+    .number()
+    .int()
+    .min(BELGIE_ONDERGRENS_CENTS, { message: `Het minimum uurtarief is € ${(BELGIE_ONDERGRENS_CENTS / 100).toFixed(2).replace(".", ",")}` })
+    .max(50000)
+    .optional(),
+});
 
 /** Employer edits an open dienst. Locked once it is filled / in progress. */
 export async function updateShiftAction(
@@ -101,7 +116,16 @@ export async function updateShiftAction(
   try {
     const p = await requirePrincipal();
     const { shift } = await assertOwnsShift(shiftId);
-    const parsed = updateSchema.parse(input);
+    const belgisch = isBelgischeKlus(shift.branch.postalCode);
+    const parsed = (belgisch ? updateSchemaBelgie : updateSchema).parse(input);
+    // een klus in België: het uurloon volgt de soort contract (lib/belgie/lonen.ts), zoals bij het plaatsen
+    if (belgisch && parsed.hourlyRateCents !== undefined) {
+      const klus = await leesBelgieKlusVoor(shift.id);
+      const oordeel = belgischLoonOordeel({ soort: klus.soort, horeca: klus.horeca, uurloonCents: parsed.hourlyRateCents, dag: amsterdamDayKey(shift.startsAt) });
+      if (oordeel.blokkade) {
+        return { ok: false, message: fmt((await getDict()).belgie.loonTeLaag, { min: eur(oordeel.minimumCents) }) };
+      }
+    }
 
     if (!["DRAFT", "OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status)) {
       return { ok: false, message: "Deze dienst kan niet meer worden aangepast (al bezet of gestart)." };
@@ -416,9 +440,20 @@ export async function respondToOfferAction(
     const scopeWhere = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
     const shift = await prisma.shift.findFirst({
       where: { AND: [{ id: offer.shiftId }, { branch: scopeWhere }] },
-      select: { id: true, title: true, hourlyRateCents: true, status: true, startsAt: true, endsAt: true, branch: { select: { tenantId: true } } },
+      select: { id: true, title: true, hourlyRateCents: true, status: true, startsAt: true, endsAt: true, branch: { select: { tenantId: true, postalCode: true } } },
     });
     if (!shift) throw AppError.forbidden("Je hebt geen toegang tot deze dienst.");
+
+    // Een klus in België (lib/belgie/klus-kern.ts): het bedrijf is de werkgever. Kiezen kan pas met een soort contract en de
+    // bevestiging dat het bedrijf de werkgever is en de Dimona doet (components/werkgever/BelgieKlusPaneel.tsx). Ook hier op de server.
+    const belgieKlus = isBelgischeKlus(shift.branch.postalCode) ? await leesBelgieKlusVoor(shift.id) : null;
+    if (decision === "accepted" && belgieKlus) {
+      const reden = belgieKiesReden(belgieKlus);
+      if (reden) {
+        const b = (await getDict().catch(() => nlDict)).belgie;
+        return { ok: false, code: BELGIE_EERST_BEVESTIGEN, message: reden === "soort" ? b.eerstSoort : b.eerstBevestigen };
+      }
+    }
 
     // Kiezen kan pas als het bedrijf is gecontroleerd (23 nov 2026): tot dan blijft de reactie gewoon openstaan en vraagt het scherm
     // om de bedrijfsgegevens. Dit staat hier op de server, niet alleen in het scherm (lib/company/gecontroleerd.ts).
@@ -436,10 +471,12 @@ export async function respondToOfferAction(
       if (overlap) return { ok: false, message: overlapMessageOther(overlap) };
     }
 
-    if (decision === "accepted" && offer.proposedRateCents < MIN_SHIFT_RATE_CENTS) {
+    // het minimum uurtarief: in België dat van de soort contract (lib/belgie/lonen.ts), elders het Nederlandse, zoals altijd
+    const minimumCents = belgieKlus ? belgischMinimumCents(belgieKlus.soort, belgieKlus.horeca) : MIN_SHIFT_RATE_CENTS;
+    if (decision === "accepted" && offer.proposedRateCents < minimumCents) {
       return {
         ok: false,
-        message: `${thisLabel} (${eur(offer.proposedRateCents)}/u) ligt onder het minimum uurtarief van ${eur(MIN_SHIFT_RATE_CENTS)}.`,
+        message: `${thisLabel} (${eur(offer.proposedRateCents)}/u) ligt onder het minimum uurtarief van ${eur(minimumCents)}.`,
       };
     }
 
@@ -458,7 +495,9 @@ export async function respondToOfferAction(
       // control left for the freelancer to click once they've already reacted,
       // so leaving it unfinished here made the shift silently vanish for them.
       try {
-        await applyToShift(offer.userId, shift.id);
+        // het bedrijf kiest: bij een klus in België de enige weg naar een plek (lib/matching/apply.ts); in Nederland zoals altijd
+        if (belgieKlus) await applyToShift(offer.userId, shift.id, { doorBedrijf: true });
+        else await applyToShift(offer.userId, shift.id);
       } catch (e) {
         // de kracht mist zelf nog gegevens (KVK/btw/KOR, rekeningnummer, ...): de reden is voor hem ("Vul ze in bij
         // Verificatie"); de werkgever leest een eigen, neutrale zin in zijn taal (lib/fiscal/werker-niet-klaar.ts)

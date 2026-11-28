@@ -12,6 +12,7 @@ import { REACTIE_KLAAR_TEKST } from "@/lib/matching/reactie";
 import { eisWerkrecht } from "@/lib/werkrecht/store";
 import { eisUitzendGegevens } from "@/lib/fiscal/eligibility";
 import { isUitzendPartnerKlus } from "@/lib/uitzend/partners";
+import { isBelgischeKlusId } from "@/lib/belgie/klus";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,10 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
 
     // aannemen pas met recht om te werken (lib/werkrecht); afslaan mag altijd
     if (decision === "ACCEPTED") {
+      // een klus in België (lib/belgie/klus-kern.ts): het bedrijf kiest zelf, een aanbod met één tik bestaat daar niet (lib/matching/engine.ts)
+      if (await isBelgischeKlusId(shiftId)) {
+        throw AppError.precondition("Bij een klus in België kiest het bedrijf zelf wie er werkt. Reageer op de klus; het bedrijf laat je weten of je bent gekozen.").metSleutel("apply.belgieBedrijfKiest");
+      }
       // eerst de onboarding (12 nov, eigenaar), dan het recht om te werken
       await eisOnboardingVoorReageren(principal.userId);
       await eisWerkrecht(principal.userId);

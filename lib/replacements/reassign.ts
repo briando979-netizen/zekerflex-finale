@@ -1,6 +1,7 @@
 import { MatchStatus, ShiftStatus, TimesheetStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { getReplacementRequest, markReplacementResolved } from "@/lib/replacements/store";
 import { sendMail } from "@/lib/mail";
@@ -79,8 +80,13 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
   // Dezelfde regel als de matching (lib/matching/geschikt.ts): een klus via het
   // uitzendbureau alleen naar een uitzendkracht; een gewone klus naar een zzp'er
   // met een geldige inschrijving of naar een uitzendkracht.
-  const dienst = await prisma.shift.findUnique({ where: { id: req.shiftId }, select: { viaUitzendbureau: true } });
+  const dienst = await prisma.shift.findUnique({ where: { id: req.shiftId }, select: { viaUitzendbureau: true, branch: { select: { postalCode: true } } } });
   if (!dienst) throw AppError.notFound("Deze dienst bestaat niet meer.");
+  // een klus in België (lib/belgie/klus-kern.ts): het bedrijf is de werkgever en kiest zelf wie er werkt (en doet voor die persoon
+  // de Dimona), dus geen overdracht van werker naar werker
+  if (isBelgischeKlus(dienst.branch?.postalCode)) {
+    throw AppError.precondition("Bij een klus in België kiest het bedrijf zelf een vervanger. Vraag het bedrijf om iemand anders te kiezen.");
+  }
   if (!(await isMatchEligibleWorker({ userId: input.substituteUserId, ...substitute }, dienst.viaUitzendbureau))) {
     throw AppError.precondition(
       dienst.viaUitzendbureau

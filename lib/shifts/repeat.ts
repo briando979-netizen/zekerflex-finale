@@ -8,6 +8,8 @@ import { klusAutoAccept } from "@/lib/shifts/auto-accept";
 import { addMember, createPool, listPools } from "@/lib/pools/store";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
+import { leesBelgieKlusVoor } from "@/lib/belgie/klus";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 
 // ---------------------------------------------------------------------------
 // "Zelfde team volgende week" — one click repeats a klus N weeks later and
@@ -39,7 +41,7 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
       positions: true,
       annuleerUren: true,
       vaardigheden: true,
-      branch: { select: { id: true, name: true, tenantId: true, kind: true } },
+      branch: { select: { id: true, name: true, tenantId: true, kind: true, postalCode: true } },
       assignments: { where: { cancelledAt: null }, select: { freelancer: { select: { userId: true } } } },
     },
   });
@@ -67,6 +69,8 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
     if (poolId) poolName = (await listPools(s.branch.tenantId)).find((p) => p.id === poolId)?.name ?? null;
   }
 
+  // een klus in België erft het soort contract (lib/belgie/klus.ts); de bevestiging van het bedrijf geldt per klus en volgt niet mee
+  const belgie = isBelgischeKlus(s.branch.postalCode) ? await leesBelgieKlusVoor(shiftId) : null;
   const res = await createShift(principal, {
     branchId: s.branch.id,
     title: s.title,
@@ -84,6 +88,6 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
     autoAcceptFavorieten: await klusAutoAccept(shiftId).catch(() => false),
     vaardigheden: s.vaardigheden ?? [],
     ...(poolId ? { poolId } : {}),
-  });
+  }, belgie?.soort ? { soort: belgie.soort, horeca: belgie.horeca } : null);
   return { shiftId: res.shiftId, invited: team.length, poolName };
 }

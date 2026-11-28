@@ -158,6 +158,8 @@ const APP_ALLOWED = [
   "/id-scan",
   // het partnerdashboard van sales partners (lib/sales-partners, 27 nov 2026): de knop staat in de werkers-app
   "/partner",
+  // de bemiddelingsvoorwaarden voor België (28 nov 2026): de link staat bij een klus in België, net als /voorwaarden een juridische pagina
+  "/belgie/voorwaarden",
 ];
 
 function isAppLaunch(req: NextRequest): boolean {

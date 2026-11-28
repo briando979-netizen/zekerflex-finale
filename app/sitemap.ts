@@ -66,6 +66,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     // voor uitzendbureaus die hun klussen op ZekerFlex zetten (21 nov 2026, lib/uitzend/partners-kern.ts)
     entry("/uitzendpartner", 0.7, "monthly"),
     entry("/uitzendpartner/voorwaarden", 0.4, "monthly"),
+    // de bemiddelingsvoorwaarden voor een klus in België (28 nov 2026, lib/belgie/klus-kern.ts)
+    entry("/belgie/voorwaarden", 0.3, "monthly"),
     entry("/partners/uitzend", 0.6, "monthly"),
     entry("/starten-als-uitzendkracht", 0.8, "monthly"),
     // Werken in Nederland in vijf talen (28 nov 2026, lib/marketing/werken-in-nederland.ts), elk met hreflang naar de andere vier

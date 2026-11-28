@@ -124,8 +124,10 @@ export const ERASABLE_KV_PREFIXES = [
  * eenmalige pushmarkeringen push-sent:<kanaal>:<klus>:<werker> (lib/notifications/push-eenmalig.ts) en
  * push-sent:geo:<klus>:<werker> (geo-push): alleen een tijd, maar de werker-id in de sleutel is een gegeven per persoon.
  * De inzage vindt ze al (exportUserKv: de userId als los segment); bij het wissen gaan ze mee via erasableKvWhere.
+ * Sinds 28 nov ook belgie-dimona:<klus>:<werker> (lib/belgie/klus.ts): het Dimona-bevestigingsnummer dat een Belgisch bedrijf
+ * bij een werker invulde (nooit een rijksregisternummer).
  */
-export const ERASABLE_KV_ACHTERAAN = ["push-sent:"] as const;
+export const ERASABLE_KV_ACHTERAAN = ["push-sent:", "belgie-dimona:"] as const;
 
 type KvWaar =
   | { key: { startsWith: string } }
