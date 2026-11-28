@@ -25,7 +25,7 @@ describe("OprichterScript", () => {
   it("clips are in chronological order", () => {
     const sorted = clipsOpVolgorde(OPRICHTER_SCRIPT);
     for (let i = 1; i < sorted.length; i++) {
-      expect(sorted[i].start).toBeGreaterThanOrEqual(sorted[i - 1].start);
+      expect(sorted[i]?.start ?? 0).toBeGreaterThanOrEqual(sorted[i - 1]?.start ?? 0);
     }
   });
 
