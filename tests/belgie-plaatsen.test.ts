@@ -23,6 +23,8 @@ vi.mock("@/lib/company/eerste-klus", () => ({ meldEersteKlusVanNieuwBedrijf: asy
 vi.mock("@/lib/worker/follows", () => ({ notifyFollowersOfShifts: async () => undefined }));
 vi.mock("@/lib/matching/job-alerts", () => ({ notifyJobAlerts: async () => undefined }));
 vi.mock("@/lib/matching/standby", () => ({ isUrgent: () => false, notifyStandby: async () => undefined }));
+// de controle van de werklocatie zelf (vlaggen, Vlaanderen) hoort bij lib/geo/vestiging-buitenland.ts en zijn eigen tests
+vi.mock("@/lib/geo/vestiging-buitenland", () => ({ controleerWerklocatiePostcode: async (postalCode: string) => postalCode }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     branch: { create: (...a: unknown[]) => branchCreate(...a), findFirst: vi.fn() },
