@@ -1,5 +1,6 @@
 import { vt } from "@/lib/i18n/site";
 import { getSiteT } from "@/lib/i18n/server";
+import { SiteTaalKiezer } from "@/components/marketing/SiteTaal";
 import { Fragment, type ReactNode } from "react";
 import { ldJson } from "@/lib/seo/json-ld";
 import { getPrincipal, hasRole } from "@/lib/auth";
@@ -89,6 +90,10 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
           {/* dezelfde foto, bewegend; laadt of speelt de video niet, dan zie je gewoon de foto. Zonder geluid, zonder knoppen, niet voor schermlezers. */}
           <KopClip src="/werk/campagne-kop.mp4" className="absolute inset-0 h-full w-full object-cover object-[50%_18%] md:object-[50%_28%]" />
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-[#0C0E12]/30 via-40% to-transparent md:bg-gradient-to-r md:via-[#0C0E12]/40 md:via-25% md:to-50%" />
+        </div>
+        {/* de taal kiezen op de telefoon en tablet: klein rechtsboven op de foto (in de tekst stond eerder een pil, die is weg) */}
+        <div className="absolute right-4 top-4 z-10 xl:hidden">
+          <SiteTaalKiezer pil />
         </div>
         <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
           <div className="max-w-xl md:max-w-sm lg:max-w-xl">

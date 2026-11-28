@@ -20,6 +20,7 @@ import {
 import { bouwNav, type Hoofdmenu } from "@/lib/ontwerp/hoofdmenu";
 import { SiteTaalKiezer, useSiteT } from "@/components/marketing/SiteTaal";
 import { KOP_TEKSTEN } from "@/lib/marketing/kop-teksten";
+import { kopHeeftRuimteNodig } from "@/lib/marketing/kop-ruimte";
 
 const STORE_KEY = "zf-audience";
 const MOBIEL_MENU_ID = "mobiel-menu";
@@ -97,6 +98,12 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
   const audience: Audience = kantVanPad(pathname) ?? stored ?? "werknemers";
 
   const knoppen = KOP_KNOPPEN[audience];
+  // lange talen (de, fr, es, …): de volle balk past pas vanaf 1600 px, en op de telefoon alleen het beeldmerk (lib/marketing/kop-ruimte.ts)
+  const ruim = kopHeeftRuimteNodig(
+    tx,
+    [...NAV.map((n) => n.label), KOP_TEKSTEN.werkers, KOP_TEKSTEN.bedrijven, KOP_KNOPPEN.werknemers.eerste.label],
+    [KOP_KNOPPEN.werknemers.tweede.label, KOP_KNOPPEN.bedrijven.tweede.label],
+  );
 
   const pick = useCallback((a: Audience) => {
     setStored(a);
@@ -135,8 +142,8 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
           <span className="transition-transform hover:rotate-6">
             <LogoGlyph size={30} tone="light" />
           </span>
-          {/* onder 380px past de naam niet naast de schakelaar Werkers | Bedrijven: dan alleen het beeldmerk */}
-          <span className="font-display text-lg font-bold tracking-tight max-[379px]:sr-only">ZekerFlex</span>
+          {/* onder 380px past de naam niet naast de schakelaar Werkers | Bedrijven: dan alleen het beeldmerk (in een lange taal onder 480px) */}
+          <span className={`font-display text-lg font-bold tracking-tight ${ruim ? "max-[479px]:sr-only" : "max-[379px]:sr-only"}`}>ZekerFlex</span>
         </Link>
 
         {/* With every label on one line the full bar needs ~1.500px. Below
@@ -148,7 +155,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
         <nav
           aria-label={tx(KOP_TEKSTEN.hoofdnavigatie)}
           ref={navRef}
-          className="ml-1 hidden items-center gap-0.5 xl:ml-2 xl:flex xl:gap-3 min-[1366px]:ml-6 min-[1366px]:gap-6"
+          className={ruim ? "ml-6 hidden items-center gap-6 min-[1600px]:flex" : "ml-1 hidden items-center gap-0.5 xl:ml-2 xl:flex xl:gap-3 min-[1366px]:ml-6 min-[1366px]:gap-6"}
         >
           {NAV.map((n) => {
             const active =
@@ -214,7 +221,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
 
         {/* audience toggle */}
         {/* de schakelaar Werkers | Bedrijven: zoals bij YoungOnes al vanaf een laptop zichtbaar (met de vlag alleen flexwerk is het menu kort genoeg) */}
-        <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 xl:flex">
+        <div className={`ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 ${ruim ? "min-[1600px]:flex" : "xl:flex"}`}>
           <Link
             href="/"
             onClick={() => pick("werknemers")}
@@ -236,7 +243,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
         </div>
 
         {/* per kant (KOP_KNOPPEN): Inloggen (altijd /login) en de ene hoofdknop van die kant (22 nov 2026) */}
-        <div className="ml-auto hidden items-center gap-2 xl:ml-0 xl:flex xl:gap-3">
+        <div className={ruim ? "ml-auto hidden items-center gap-3 min-[1600px]:ml-0 min-[1600px]:flex" : "ml-auto hidden items-center gap-2 xl:ml-0 xl:flex xl:gap-3"}>
           <SiteTaalKiezer />
           <Link
             href={knoppen.eerste.href}
@@ -254,7 +261,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
 
         {/* telefoon/tablet: de schakelaar Werkers | Bedrijven naast de menuknop (22 nov 2026, eigenaar: "niet meer te zien op
             de telefoon, alleen in het hamburgermenu"); de belangrijkste knop past daar pas vanaf 640px naast */}
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 xl:hidden">
+        <div className={ruim ? "ml-auto flex items-center gap-1.5 sm:gap-2 min-[1600px]:hidden" : "ml-auto flex items-center gap-1.5 sm:gap-2 xl:hidden"}>
           {!open && (
             <div role="group" aria-label={tx(KOP_TEKSTEN.werkersOfBedrijven)} className="flex items-center rounded-full border border-white/15 bg-white/[0.06] p-0.5">
               <Link
@@ -305,7 +312,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
         </div>
       </div>
 
-      {open && <MobileMenu id={MOBIEL_MENU_ID} nav={NAV} audience={audience} alleenFlexwerk={alleenFlexwerk} onAudience={pick} onClose={sluitMobiel} />}
+      {open && <MobileMenu id={MOBIEL_MENU_ID} nav={NAV} audience={audience} alleenFlexwerk={alleenFlexwerk} ruim={ruim} onAudience={pick} onClose={sluitMobiel} />}
     </header>
   );
 }

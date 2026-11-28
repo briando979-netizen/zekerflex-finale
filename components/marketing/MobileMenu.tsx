@@ -29,6 +29,7 @@ export function MobileMenu({
   nav,
   audience,
   alleenFlexwerk = false,
+  ruim = false,
   onAudience,
   onClose,
 }: {
@@ -37,6 +38,8 @@ export function MobileMenu({
   audience: Audience;
   /** vlag `publiek-alleen-flexwerk`: aan = alleen de flexwerk-pijlers in de Aanbod-uitklap */
   alleenFlexwerk?: boolean;
+  /** een lange taal: de kop toont de menuknop tot 1600 px (lib/marketing/kop-ruimte.ts), dus het menu ook */
+  ruim?: boolean;
   onAudience: (a: Audience) => void;
   onClose: () => void;
 }) {
@@ -98,7 +101,7 @@ export function MobileMenu({
       onClick={(e) => {
         if ((e.target as HTMLElement).closest("a")) onClose();
       }}
-      className="fixed inset-x-0 bottom-0 top-16 flex lg:top-[68px] animate-slide-up-fade flex-col border-t border-white/10 text-white xl:hidden"
+      className={`fixed inset-x-0 bottom-0 top-16 flex lg:top-[68px] animate-slide-up-fade flex-col border-t border-white/10 text-white ${ruim ? "min-[1600px]:hidden" : "xl:hidden"}`}
       style={{ background: "rgb(var(--zf-inkt-rgb, 12 14 18))", ...(boven !== null ? { top: boven } : {}) }}
     >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
