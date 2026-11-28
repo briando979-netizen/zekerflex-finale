@@ -8,6 +8,7 @@ import { LaatsteChecksVenster } from "@/components/werkgever/LaatsteChecksVenste
 import { Dialoog } from "@/components/werkgever/Dialoog";
 import { Tooltip } from "@/components/werkgever/Tooltip";
 import { RegioVenster } from "@/components/werkgever/RegioVenster";
+import { trackShiftReactionClick } from "@/lib/analytics/track-shift-reactions";
 import {
   Driehoek,
   Envelop,
@@ -227,6 +228,13 @@ export function ReactieLijst({
     const mislukt: { id: string; tekst: string }[] = [];
     let gelukt = 0;
     let poort = false;
+
+    // Track the reaction action BEFORE executing server actions
+    const trackAction = soort === "reserve" ? "RESERVE" : soort === "accepted" ? "ACCEPT" : "DECLINE";
+    for (const offerId of ids) {
+      void trackShiftReactionClick(offerId, trackAction);
+    }
+
     // een reserve die niet lukt houdt het accepteren niet tegen; de pagina toont daarna de echte stand
     for (const offerId of metReserves) await zetReserveAction(offerId, true).catch(() => undefined);
     for (const offerId of ids) {
