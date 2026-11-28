@@ -183,7 +183,6 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/verkopers", label: "Verkopers" },
       { href: "/admin/studio", label: "Studio" },
       { href: "/admin/video", label: "Video-editor" },
-      { href: "/admin/marketing-videos", label: "Marketing videos" },
       { href: "/admin/videos/oprichter", label: "Oprichter-video script" },
       { href: "/admin/domeinen", label: "Domeinen" },
       // AI-proeven
