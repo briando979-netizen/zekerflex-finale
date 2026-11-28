@@ -41,6 +41,10 @@ cat > /etc/crontabs/root <<EOF
 * * * * * wget -q -O /dev/null -T 50 "$H" "$APP/api/internal/chat/gepland"
 # elk uur: verlopen statussen in de chat weg, met hun foto (lib/messaging/status.ts)
 17 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/chat/status-opruimen"
+# elke maandag 03:50: de plaatjescache van Next opruimen (lib/ops/plaatjescache.ts). Next optimaliseert elke afbeelding een keer
+# en bewaart die voor altijd: op 28 nov 2026 stonden er 83.213 bestanden en 4,2 GB in, gegroeid sinds 2 november (+-160 MB per dag).
+# Dat was de grootste stille groeier op de schijf. Ouder dan 30 dagen weg, en daarna de oudste tot de cache onder 2 GB zit.
+50 3 * * 1 wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/onderhoud/plaatjescache"
 # KVK-controles die wachtten op tegoed of de minuutlimiet bij KVKBase opnieuw doen (lib/kvk/herkansing.ts)
 */30 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/kvk/herkansing"
 # elke 15 min: staat het live Stripe-account nog open voor betalingen? Zo niet: melding aan de eigenaar en bankcontrole op het bankafschrift (lib/billing/stripe-betalen.ts)

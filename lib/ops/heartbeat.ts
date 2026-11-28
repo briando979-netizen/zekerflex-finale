@@ -98,6 +98,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "chat-gepland", label: "Chat: geplande berichten versturen", maxAgeHours: 1 },
   // elk uur: verlopen statussen in de chat weg, met hun foto (lib/messaging/status.ts)
   { job: "chat-status-opruimen", label: "Chat: verlopen statussen opruimen", maxAgeHours: 2 },
+  // elke maandag 03:50 UTC: de plaatjescache van Next opruimen (lib/ops/plaatjescache.ts); Next ruimt daar zelf nooit iets op
+  { job: "onderhoud-plaatjescache", label: "Plaatjescache van Next opruimen", maxAgeHours: 192 },
   // elke 30 min: KVK-controles die wachtten op tegoed of de minuutlimiet (lib/kvk/herkansing.ts)
   { job: "kvk-herkansing", label: "KVK-controles opnieuw (na tegoed of limiet)", maxAgeHours: 2 },
   // elke 15 min: het live Stripe-account (betalen en uitbetalen aan?) (lib/billing/stripe-betalen.ts)
