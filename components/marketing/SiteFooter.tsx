@@ -11,6 +11,7 @@ const STEDEN_IN_VOETTEKST = 10;
 import { BEDRIJF } from "@/lib/marketing/bedrijfsgegevens";
 import { SITE } from "@/lib/seo";
 import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
+import { WIN_PADEN, WIN_TALEN, WIN_TEKST } from "@/lib/marketing/werken-in-nederland";
 
 // De kolommen en de zin onder het logo zijn te bewerken in Admin → Site-ontwerper → Menu
 // (lib/ontwerp/menu.ts); zonder eigen versie is het de standaard daar.
@@ -90,6 +91,19 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = f
           <Link href="/freelance-werk" className="font-semibold text-white/85 transition-colors hover:text-white">
             Alle steden →
           </Link>
+        </div>
+      </nav>
+
+      {/* Werken in Nederland in vijf talen (28 nov 2026, lib/marketing/werken-in-nederland.ts): zo vinden zoekmachines de
+          versies in het Engels, Pools, Roemeens en Oekraïens. Een gewone <a>, zodat <html lang> bij de taal van de pagina hoort. */}
+      <nav aria-label="Werken in Nederland in andere talen" className="border-t border-white/10">
+        <div className="shell flex flex-wrap items-baseline gap-x-4 gap-y-2 py-5 text-sm">
+          <span className="font-mono text-xs uppercase tracking-[0.16em] text-white/60">Werken in Nederland</span>
+          {WIN_TALEN.map((t) => (
+            <a key={t} href={WIN_PADEN[t]} hrefLang={t} lang={t} className="text-white/70 transition-colors hover:text-white">
+              {WIN_TEKST[t].taalNaam}
+            </a>
+          ))}
         </div>
       </nav>
 

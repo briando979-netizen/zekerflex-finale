@@ -8,6 +8,7 @@ import { FONT_PRELOADS, fontVariables } from "@/lib/fonts";
 import { FontPreloads } from "@/components/ui/FontPreloads";
 import { getLocale } from "@/lib/i18n/server";
 import { taalRichting } from "@/lib/i18n/config";
+import { winTaalVanPad } from "@/lib/marketing/werken-in-nederland";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { KonamiEasterEgg } from "@/components/ui/KonamiEasterEgg";
@@ -106,7 +107,9 @@ export default async function RootLayout({
   const brandingCss = await liveOntwerpCss().catch(() => null);
   // Feestversiering rond Nederlandse feestdagen (lib/seasons); op gewone dagen laadt er niets.
   const season = await activeSeason().catch(() => null);
-  const taal = await getLocale();
+  // Een pagina in een andere taal (Werken in Nederland, lib/marketing/werken-in-nederland.ts) krijgt die taal, ook zonder
+  // taalkeuze: zo leest een zoekmachine of schermlezer de Poolse pagina als Pools. Het pad zet de middleware (x-pathname).
+  const taal = winTaalVanPad(kop.get("x-pathname")) ?? (await getLocale());
   return (
     <html lang={taal} dir={taalRichting(taal)} className={fontVariables}>
       <body>
