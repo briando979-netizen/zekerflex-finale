@@ -6,7 +6,9 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
-import { geocodePostcode } from "@/lib/integrations/pdok";
+import { geocodePostcode, type GeocodeResult } from "@/lib/integrations/pdok";
+import { werkInBelgieAan, zoekBelgischAdres } from "@/lib/geo/vestiging-belgie";
+import { isBelgischePostcode } from "@/lib/geo/vestiging-land";
 import { registerTenantCompany } from "@/lib/company/registration";
 import { kvkLimietVan } from "@/lib/kvk/tegoed";
 import { wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
@@ -34,14 +36,24 @@ function controleerBedrijf(v: { land: string; kvkNumber: string; btwNummer: stri
   }
 }
 
-// De vestiging is de werklocatie in Nederland (postcode en geofence), ook voor een buitenlands bedrijf.
+const POSTCODE_MELDING = "Gebruik een geldige postcode";
+
+// De vestiging is de werklocatie in Nederland (postcode en geofence), ook voor een buitenlands bedrijf. 28 nov 2026: met
+// vestigingLand "BE" een werklocatie in België (vier cijfers), maar alleen als de vlag `werk-in-belgie` aan staat; dat
+// controleert submitEmployerOnboarding. Zonder vestigingLand blijft het Nederland met precies de oude postcoderegel.
+// Let op: `land` is het land van het bedrijf (KVK of btw), vestigingLand dat van de werkplek; die lopen niet door elkaar.
 export const employerOnboardingSchema = z
   .object({
     ...bedrijfVelden,
     branchName: z.string().trim().min(2).max(120),
     addressLine: z.string().trim().min(3).max(160),
-    postalCode: z.string().trim().regex(/^\s*\d{4}\s*[A-Za-z]{2}\s*$/, "Gebruik een geldige postcode"),
+    postalCode: z.string().trim().regex(/^\s*(\d{4}\s*[A-Za-z]{2}|[1-9]\d{3})\s*$/, POSTCODE_MELDING),
     houseNumber: z.string().trim().min(1).max(12),
+    vestigingLand: z.enum(["NL", "BE"]).default("NL"),
+  })
+  .superRefine((v, ctx) => {
+    const ok = v.vestigingLand === "BE" ? isBelgischePostcode(v.postalCode) : /^\s*\d{4}\s*[A-Za-z]{2}\s*$/.test(v.postalCode);
+    if (!ok) ctx.addIssue({ code: "custom", path: ["postalCode"], message: POSTCODE_MELDING });
   })
   .superRefine(controleerBedrijf);
 export type EmployerOnboardingInput = z.infer<typeof employerOnboardingSchema>;
@@ -238,6 +250,20 @@ export async function koppelBedrijfsgegevens(userId: string, tenantId: string, i
   return meldBedrijf(userId, tenantId, input);
 }
 
+/**
+ * De werkplek als coördinaat. Nederland via PDOK, zoals altijd. België (vestigingLand "BE") alleen met de vlag
+ * `werk-in-belgie`, via OpenStreetMap; vindt die niets, dan een eerlijke fout (lib/geo/vestiging-belgie.ts), nooit het midden
+ * van Nederland. Staat de vlag uit, dan dezelfde melding als een ongeldige postcode, zoals vóór 28 nov 2026.
+ */
+async function geocodeVestiging(userId: string, v: EmployerOnboardingInput): Promise<GeocodeResult> {
+  if (v.vestigingLand !== "BE") return geocodePostcode(v.postalCode, v.houseNumber);
+  if (!(await werkInBelgieAan({ userId }))) throw AppError.validation(POSTCODE_MELDING);
+  // het huisnummer staat hier in een eigen veld; zit er al een nummer in de adresregel, dan niet nog eens
+  const straat = /\d/.test(v.addressLine) ? v.addressLine : `${v.addressLine} ${v.houseNumber}`;
+  const be = await zoekBelgischAdres({ straat, postcode: v.postalCode });
+  return { latitude: be.latitude, longitude: be.longitude, postalCode: be.postalCode, city: be.city || null, street: be.straat, approximate: false };
+}
+
 export async function submitEmployerOnboarding(
   userId: string,
   tenantId: string,
@@ -256,7 +282,7 @@ export async function submitEmployerOnboarding(
     : await prisma.branch.findFirst({ where: { tenantId, kind: "PERMANENT" }, select: { id: true } });
   if (!vestiging && !bestaand) throw AppError.validation("Vul eerst het adres van je werklocatie in.");
 
-  const geo = vestiging ? await geocodePostcode(vestiging.postalCode, vestiging.houseNumber) : null;
+  const geo = vestiging ? await geocodeVestiging(userId, vestiging) : null;
   const { kvkValid, inControle, companyName, reasons, buitenlands } = await meldBedrijf(userId, tenantId, input);
 
   // First branch for the organization, only when the form asked for it; otherwise the existing one stays as it is.

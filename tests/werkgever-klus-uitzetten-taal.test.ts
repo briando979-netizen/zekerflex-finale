@@ -26,11 +26,11 @@ describe("klus uitzetten zonder vestiging", () => {
   // 22 nov 2026 (gebruikersonderzoek B14–B19): niet meer via Locaties en terug, maar het adres meteen hier in één scherm
   it("een beheerder vult het adres meteen op Klus uitzetten in", () => {
     const src = lees("app/werkgever/diensten/nieuw/page.tsx");
-    expect(src).toContain("<EersteVestiging />");
+    expect(src).toContain("<EersteVestiging metBelgie={metBelgie} />");
     expect(src).not.toContain('href="/werkgever"');
     // wie geen beheerder is kan daar niets toevoegen: die krijgt uitleg in plaats van een formulier dat geweigerd wordt
     expect(src).toContain("n.askAdmin");
-    expect(src).toMatch(/hasRole\(principal, "HQ_ADMIN", "PLATFORM_ADMIN"\)\s*\?\s*\(\s*<EersteVestiging \/>/);
+    expect(src).toMatch(/hasRole\(principal, "HQ_ADMIN", "PLATFORM_ADMIN"\)\s*\?\s*\(\s*<EersteVestiging metBelgie=\{metBelgie\} \/>/);
     const eerste = lees("components/werkgever/EersteVestiging.tsx");
     expect(eerste).toContain("{t.waarKop}");
     expect(eerste).toContain("{t.noBranches}");

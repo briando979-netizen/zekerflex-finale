@@ -29,7 +29,8 @@ import { listAdvances } from "@/lib/payouts/advances";
 import { voorschottenVoorWerker } from "@/lib/payouts/voorschot-zicht";
 import { certsRequiredForShift } from "@/lib/certificates/matching";
 import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
-import { getFreelancerDict } from "@/lib/i18n/server";
+import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
+import { landVanVestiging, plaatsRegel } from "@/lib/geo/vestiging-land";
 import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
@@ -560,7 +561,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <InfoRow icon="◎">
             {s.address}
             <br />
-            {s.postalCode} {s.city}
+            {/* een werklocatie in België ("BE-2000", lib/geo/vestiging-land.ts): "2000 Antwerpen, België", het land in de taal van de werker */}
+            {landVanVestiging(s.postalCode) === "BE" ? plaatsRegel(s, await getLocale()) : <>{s.postalCode} {s.city}</>}
           </InfoRow>
           <InfoRow icon="☕">
             {s.breakMinutes > 0 ? D.breakMin(s.breakMinutes) : D.noBreak}

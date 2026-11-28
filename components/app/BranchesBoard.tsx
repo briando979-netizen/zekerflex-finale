@@ -6,8 +6,9 @@ import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 import { InstellingenKop } from "@/components/werkgever/InstellingenKop";
 import { LijstTabel } from "@/components/werkgever/LijstTabel";
 import { Dialoog } from "@/components/werkgever/Dialoog";
-import { useT } from "@/components/i18n/I18nProvider";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { metLand, postcodeTekst } from "@/lib/geo/vestiging-land";
 
 // Instellingen → Locaties (23 nov 2026, zoals Locaties bij YoungOnes): de kop met "Nieuwe locatie" rechtsboven, de vestigingen als
 // eenvoudige tabel in een witte kaart (naam, straat, postcode, plaats; leeg is het één regel tekst) en toevoegen in een dialoog met
@@ -29,8 +30,9 @@ interface BranchRow {
   _count: { shifts: number; timesheets: number };
 }
 
-export function BranchesBoard({ canManage }: { canManage: boolean }) {
-  const l = useT().locaties;
+export function BranchesBoard({ canManage, metBelgie = false }: { canManage: boolean; /** de vlag `werk-in-belgie`: ook een werklocatie in België toevoegen */ metBelgie?: boolean }) {
+  const { t, locale } = useI18n();
+  const l = t.locaties;
   const [branches, setBranches] = useState<BranchRow[] | null>(null);
   const [adding, setAdding] = useState(false);
   // de vestiging waarvoor de vraag "verwijderen?" open staat
@@ -132,10 +134,11 @@ export function BranchesBoard({ canManage }: { canManage: boolean }) {
               <span key="straat" className="sm:whitespace-nowrap">
                 {b.addressLine}
               </span>,
+              // een Belgische werklocatie ("BE-2000", lib/geo/vestiging-land.ts): de vier cijfers, en het land achter de plaats
               <span key="postcode" className="sm:whitespace-nowrap">
-                {b.postalCode}
+                {postcodeTekst(b.postalCode)}
               </span>,
-              b.city,
+              metLand(b.city, b.postalCode, locale),
             ],
             actie:
               canManage && b._count.shifts === 0 && b._count.timesheets === 0 ? (
@@ -162,6 +165,7 @@ export function BranchesBoard({ canManage }: { canManage: boolean }) {
           key={concept?.city ?? ""}
           beginPlaats={branches?.length === 0 ? (concept?.city ?? "") : ""}
           metKostenplaats
+          metBelgie={metBelgie}
           onOpgeslagen={async () => {
             setAdding(false);
             await refresh();

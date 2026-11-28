@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
 import { ALLEEN_APP_VLAG } from "@/lib/app-vereist";
+import { WERK_IN_BELGIE_VLAG } from "@/lib/geo/vestiging-land";
 
 // ---------------------------------------------------------------------------
 // Feature flags / remote config.
@@ -158,6 +159,16 @@ FLAG_REGISTRY.push({
   label: "Boekhouding: bank automatisch ophalen",
   description:
     "Aan = de transacties van gekoppelde bankrekeningen worden automatisch opgehaald (zonder een bestand te uploaden) en gekoppeld aan facturen en bonnen. Zet dit pas aan als de sleutels van de koppeling in .env.production staan en de eigenaar bij de bank toestemming heeft gegeven (Admin, Te doen). Uit (standaard) = er wordt niets opgehaald; uploaden van een afschrift blijft werken.",
+  default: false,
+});
+
+// Werken in België (28 nov 2026, eigenaar wil naar België): een werklocatie met een Belgisch adres, opgezocht bij OpenStreetMap
+// (lib/geo/vestiging-belgie.ts). Standaard uit: geld, contracten en de Wet DBA-teksten zijn nog op Nederland gebouwd.
+FLAG_REGISTRY.push({
+  key: WERK_IN_BELGIE_VLAG,
+  label: "Werklocaties in België",
+  description:
+    "Aan = een bedrijf kan bij Locaties, Jouw start, Klus uitzetten en een eenmalige locatie bij een klus het land kiezen (Nederland of België). Voor België vult het straat en huisnummer, de postcode (vier cijfers) en de plaats in, en ZekerFlex zoekt het adres op bij OpenStreetMap; vindt die niets, dan krijgt het bedrijf een eerlijke melding. Matching op afstand, inchecken binnen het gebied en de kaart werken dan met die plek, en bij het adres staat België. Uit (standaard) = alleen Nederlandse adressen, zoals altijd. Zet dit pas aan als de fee, de facturen, de overeenkomsten en de Wet DBA-teksten voor België zijn uitgezocht: die zijn nog op Nederland gebouwd.",
   default: false,
 });
 

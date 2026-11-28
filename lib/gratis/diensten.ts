@@ -102,8 +102,8 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     hosts: ["api.pdok.nl", "nominatim.openstreetmap.org"],
     naam: "Adres naar coördinaten",
     waarvoor: "Het adres bij een vestiging of klus invullen en op de kaart zetten, en de thuisbasis van een werker",
-    nu: "PDOK Locatieserver voor Nederland, OpenStreetMap (Nominatim) voor een thuisbasis in het buitenland: allebei openbaar en gratis — er is hier nooit een Google-sleutel voor gebruikt",
-    eigen: "Dit is al van ons: het zoeken zit in lib/geo/pdok.ts (met time-out en een kleine cache) en loopt via /api/geo/search onder het adresveld. Een thuisbasis in het buitenland zoekt lib/geo/thuisbasis.ts op bij OpenStreetMap (alleen postcode, plaats en land; een aanvraag per seconde). Vindt die niets, dan krijgt de werker een eerlijke melding, nooit het midden van Nederland.",
+    nu: "PDOK Locatieserver voor Nederland, OpenStreetMap (Nominatim) voor een thuisbasis in het buitenland en een werklocatie in België: allebei openbaar en gratis — er is hier nooit een Google-sleutel voor gebruikt",
+    eigen: "Dit is al van ons: het zoeken zit in lib/geo/pdok.ts (met time-out en een kleine cache) en loopt via /api/geo/search onder het adresveld. Een thuisbasis in het buitenland zoekt lib/geo/thuisbasis.ts op bij OpenStreetMap (alleen postcode, plaats en land; een aanvraag per seconde). Een werklocatie in België (vlag werk-in-belgie, standaard uit) zoekt lib/geo/vestiging-belgie.ts daar op met alleen straat en huisnummer, postcode, plaats en land, via dezelfde wachtrij. Vindt OSM niets, dan krijgt de werker of het bedrijf een eerlijke melding, nooit het midden van Nederland.",
     status: "gratis",
   },
   {

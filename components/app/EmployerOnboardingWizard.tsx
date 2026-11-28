@@ -98,6 +98,8 @@ export function EmployerOnboardingWizard({
     vestiging?: { naam: string; adres: string } | null | undefined;
     /** blok 2: wat er al gebeurd is */
     eersteKlus: { heeftKlus: boolean; klusLive: boolean; heeftReactie: boolean; heeftIngepland: boolean };
+    /** de vlag `werk-in-belgie`: bij het adres ook België kiezen (components/werkgever/VestigingFormulier.tsx) */
+    metBelgie?: boolean | undefined;
   };
 }) {
   const t = useT();
@@ -379,6 +381,7 @@ export function EmployerOnboardingWizard({
         <VestigingFormulier
           key={concept?.city ?? ""}
           beginPlaats={concept?.city ?? ""}
+          metBelgie={initial.metBelgie === true}
           onOpgeslagen={() => {
             setAdresOpgeslagen(true);
             verderNa("adres", { adres: true });

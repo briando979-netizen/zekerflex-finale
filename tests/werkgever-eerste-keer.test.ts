@@ -100,7 +100,8 @@ describe("Jouw start: geen KVK-stap, wel het adres", () => {
     expect(wizard).toContain("beginPlaats={concept?.city ?? \"\"}");
     const start = lees("app/werkgever/page.tsx");
     expect(start).toContain('where: { tenantId, kind: "PERMANENT" }');
-    expect(start).toContain("vestiging: bestaandeVestiging ? { naam: bestaandeVestiging.name, adres: vestigingRegel(bestaandeVestiging) } : null");
+    // een Belgische werklocatie krijgt het land erachter (metLand, lib/geo/vestiging-land.ts); een Nederlandse blijft zoals hij was
+    expect(start).toContain("vestiging: bestaandeVestiging ? { naam: bestaandeVestiging.name, adres: metLand(vestigingRegel(bestaandeVestiging), bestaandeVestiging.postalCode, locale) } : null");
     // het adres telt als gedaan zodra er een vaste werklocatie is, niet meer op een KVK-nummer
     expect(start).toContain("heeftVestiging(scope.tenantIds)");
     expect(start).not.toContain("isEmployerOnboarded");

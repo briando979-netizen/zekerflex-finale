@@ -2,6 +2,7 @@ import { publicOpenShifts, type PublicShift } from "@/lib/public-shifts";
 import { isTenantVerified } from "@/lib/company/verified";
 import { prisma } from "@/lib/prisma";
 import { SITE } from "@/lib/seo";
+import { landVanVestiging, postcodeTekst } from "@/lib/geo/vestiging-land";
 
 export const revalidate = 1800;
 
@@ -58,8 +59,8 @@ export async function GET(): Promise<Response> {
     <company>${cdata(s.company)}</company>
     <sourcename>${cdata("ZekerFlex")}</sourcename>
     <city>${cdata(s.city)}</city>
-    <postalcode>${cdata(s.postalCode)}</postalcode>
-    <country>${cdata("NL")}</country>
+    <postalcode>${cdata(postcodeTekst(s.postalCode))}</postalcode>
+    <country>${cdata(landVanVestiging(s.postalCode))}</country>
     <description>${cdata(description(s))}</description>
     <salary>${cdata(`€ ${eur(s.hourlyRateCents)} per uur`)}</salary>
     <jobtype>${cdata(s.viaUitzendbureau ? "temporary" : "contract, temporary")}</jobtype>

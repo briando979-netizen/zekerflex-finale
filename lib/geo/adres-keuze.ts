@@ -6,6 +6,8 @@
 // eens typen, anders bleef "Opslaan" grijs. PDOK geeft ze al mee; die vullen we nu zelf in.
 // ---------------------------------------------------------------------------
 
+import { postcodeTekst } from "@/lib/geo/vestiging-land";
+
 export interface AdresKeuze {
   /** zoals PDOK het schrijft, bijv. "Grote Markt 1, 9712HN Groningen" */
   label: string;
@@ -26,8 +28,10 @@ export interface AdresVelden {
  */
 export function vestigingRegel(v: { addressLine: string; postalCode: string; city: string }): string {
   const regel = v.addressLine.trim();
-  const rest = `${v.postalCode} ${v.city}`.trim();
-  if (!rest || (v.postalCode.trim() && regel.replace(/\s/g, "").includes(v.postalCode.replace(/\s/g, "")))) return regel;
+  // een Belgische werklocatie ("BE-2000", lib/geo/vestiging-land.ts) zonder de landcode; een Nederlandse postcode blijft zoals hij is
+  const postcode = postcodeTekst(v.postalCode);
+  const rest = `${postcode} ${v.city}`.trim();
+  if (!rest || (postcode.trim() && regel.replace(/\s/g, "").includes(postcode.replace(/\s/g, "")))) return regel;
   return regel ? `${regel}, ${rest}` : rest;
 }
 

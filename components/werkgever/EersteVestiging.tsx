@@ -8,7 +8,7 @@ import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 // Klus uitzetten zonder adres (22 nov 2026, gebruikersonderzoek B14–B19): een beheerder vult het adres meteen hier in, in
 // één scherm, in plaats van eerst naar Locaties en terug. De plaats van een klus van /klus-plaatsen staat al klaar. Na het
 // opslaan laadt de pagina opnieuw en staat het klusformulier er, met die klus ingevuld.
-export function EersteVestiging() {
+export function EersteVestiging({ metBelgie = false }: { /** de vlag `werk-in-belgie`: ook een adres in België */ metBelgie?: boolean }) {
   const router = useRouter();
   const t = useT().newShift;
   const concept = useKlusConcept();
@@ -19,7 +19,7 @@ export function EersteVestiging() {
       </h2>
       <p className="mt-1 text-sm text-neutralx-600">{t.noBranches}</p>
       <div className="mt-5">
-        <VestigingFormulier key={concept?.city ?? ""} beginPlaats={concept?.city ?? ""} onOpgeslagen={() => router.refresh()} />
+        <VestigingFormulier key={concept?.city ?? ""} beginPlaats={concept?.city ?? ""} metBelgie={metBelgie} onOpgeslagen={() => router.refresh()} />
       </div>
     </section>
   );

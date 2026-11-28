@@ -4,6 +4,7 @@ import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus, type EigenTest } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
+import { landVanVestiging, postcodeTekst } from "@/lib/geo/vestiging-land";
 
 // ---------------------------------------------------------------------------
 // Open klussen as the public (not logged-in) web sees them: /klussen, the city
@@ -156,7 +157,8 @@ export function jobPostingJsonLd(s: PublicShift, siteUrl: string): Record<string
     hiringOrganization: { "@type": "Organization", name: s.company },
     jobLocation: {
       "@type": "Place",
-      address: { "@type": "PostalAddress", addressLocality: s.city, postalCode: s.postalCode, addressCountry: "NL" },
+      // het land staat in de postcode: "BE-2000" is een werklocatie in België (lib/geo/vestiging-land.ts), de rest Nederland
+      address: { "@type": "PostalAddress", addressLocality: s.city, postalCode: postcodeTekst(s.postalCode), addressCountry: landVanVestiging(s.postalCode) },
       geo: { "@type": "GeoCoordinates", latitude: s.latitude, longitude: s.longitude },
     },
     baseSalary: {
