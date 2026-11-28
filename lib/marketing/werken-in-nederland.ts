@@ -90,7 +90,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     fotoAlt: "Een medewerker duwt een steekkar met dozen door een magazijn",
     kenmerken: [
       { kop: "€ 0", tekst: "Gratis voor werkers. De opdrachtgever betaalt de platformkosten." },
-      { kop: "5 talen", tekst: "Nederlands, Engels, Pools, Roemeens en Oekraïens. Je wisselt wanneer je wilt in de app." },
+      { kop: "20 talen", tekst: "Nederlands, Engels, Pools, Roemeens en Oekraïens, en 15 talen automatisch vertaald, zoals Duits, Frans, Spaans en Turks. Je wisselt wanneer je wilt in de app." },
       { kop: "1 app", tekst: "Diensten, chat, uren en uitbetalingen op één plek." },
     ],
     stappenKop: "Zo werkt het",
@@ -162,7 +162,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     fotoAlt: "A worker pushes a hand truck with boxes through a warehouse",
     kenmerken: [
       { kop: "€ 0", tekst: "Free for workers. The company pays the platform fee." },
-      { kop: "5 languages", tekst: "English, Polish, Romanian, Ukrainian and Dutch. Switch any time in the app." },
+      { kop: "20 languages", tekst: "English, Polish, Romanian, Ukrainian and Dutch, plus 15 languages translated automatically, such as German, French, Spanish and Turkish. Switch any time in the app." },
       { kop: "1 app", tekst: "Shifts, chat, hours and payments in one place." },
     ],
     stappenKop: "How it works",
@@ -234,7 +234,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     fotoAlt: "Pracownik pcha wózek z kartonami przez magazyn",
     kenmerken: [
       { kop: "0 €", tekst: "Za darmo dla pracowników. Opłatę za platformę płaci firma." },
-      { kop: "5 języków", tekst: "Polski, angielski, rumuński, ukraiński i niderlandzki. Język zmienisz w każdej chwili w aplikacji." },
+      { kop: "20 języków", tekst: "Polski, angielski, rumuński, ukraiński i niderlandzki oraz 15 języków tłumaczonych automatycznie, np. niemiecki, francuski, hiszpański i turecki. Język zmienisz w każdej chwili w aplikacji." },
       { kop: "1 aplikacja", tekst: "Zmiany, czat, godziny i wypłaty w jednym miejscu." },
     ],
     stappenKop: "Jak to działa",
@@ -306,7 +306,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     fotoAlt: "Un lucrător împinge un cărucior cu cutii printr-un depozit",
     kenmerken: [
       { kop: "0 €", tekst: "Gratuit pentru lucrători. Firma plătește taxa platformei." },
-      { kop: "5 limbi", tekst: "Română, engleză, poloneză, ucraineană și neerlandeză. Schimbi limba oricând în aplicație." },
+      { kop: "20 de limbi", tekst: "Română, engleză, poloneză, ucraineană și neerlandeză, plus 15 limbi traduse automat, de exemplu germană, franceză, spaniolă și turcă. Schimbi limba oricând în aplicație." },
       { kop: "1 aplicație", tekst: "Ture, chat, ore și plăți într-un singur loc." },
     ],
     stappenKop: "Cum funcționează",
@@ -378,7 +378,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     fotoAlt: "Працівник везе візок із коробками складом",
     kenmerken: [
       { kop: "0 €", tekst: "Безкоштовно для працівників. Плату за платформу сплачує компанія." },
-      { kop: "5 мов", tekst: "Українська, англійська, польська, румунська та нідерландська. Мову можна змінити будь-коли в застосунку." },
+      { kop: "20 мов", tekst: "Українська, англійська, польська, румунська та нідерландська, а також 15 мов з автоматичним перекладом, як-от німецька, французька, іспанська й турецька. Мову можна змінити будь-коли в застосунку." },
       { kop: "1 застосунок", tekst: "Зміни, чат, години та виплати в одному місці." },
     ],
     stappenKop: "Як це працює",

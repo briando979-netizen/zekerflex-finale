@@ -56,6 +56,12 @@ describe("werken in Nederland: vijf talen", () => {
     expect(new Set(WIN_TALEN.map((t) => WIN_TEKST[t].title)).size).toBe(WIN_TALEN.length);
   });
 
+  it("het aantal talen klopt met de app: 5 met de hand plus de machinetalen (lib/i18n/config.ts)", () => {
+    const aantal = LOCALES.length;
+    expect(aantal).toBeGreaterThan(5);
+    for (const t of WIN_TALEN) expect(WIN_TEKST[t].kenmerken[1]?.kop.startsWith(`${aantal} `), `${t}: ${WIN_TEKST[t].kenmerken[1]?.kop}`).toBe(true);
+  });
+
   it("eerlijk: geen woonruimte of reis, geen uitzendbureau, vanaf 18, en geen bank, voorschot of snelle uitbetaling", () => {
     const nl = WIN_TEKST.nl;
     expect(nl.eerlijk.join(" ")).toMatch(/geen woonruimte en geen vervoer/);
