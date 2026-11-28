@@ -7,7 +7,10 @@ import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 // De balk bovenaan de werker-app toonde "Vind jouw klus" op elk scherm buiten de balk onderaan
 // (Verificatie, Profiel, Uitbetalingen, Beschikbaarheid, Administratie, Hulp). Nu heeft elk scherm
 // zijn eigen naam, in vijf talen; een onbekend scherm krijgt een neutrale titel.
-// En de paginakoppen: overal dezelfde (PageHeader: gewone letters, groene streep).
+// En de paginakoppen: overal dezelfde (PageHeader: gewone letters, geen streepje).
+// 28 nov 2026 (eigenaar: "die groene balkje bij dashboard werknemers is er niet"): het streepje met het
+// kleurverloop brand-500 -> brand-mint is weg, onder de titel en in de balk bovenaan. De bewaking blijft,
+// maar andersom: het mag niet terugkomen.
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 
@@ -80,14 +83,14 @@ describe("één kopstijl in de werker-app", () => {
     }
   });
 
-  it("de gedeelde kop is gewone letters met de groene streep; de balk bovenaan heeft dezelfde streep", () => {
+  it("de gedeelde kop is gewone letters, zonder streepje; de balk bovenaan heeft er ook geen", () => {
     const kop = bron("components/app/ui.tsx");
     const h1 = kop.match(/<h1 className="([^"]*)"/)?.[1] ?? "";
     expect(h1).toContain("font-display");
     expect(h1).not.toContain("uppercase");
-    expect(kop).toContain("from-brand-500 to-brand-mint");
+    expect(kop).not.toContain("from-brand-500 to-brand-mint");
     const shell = bron("components/app/FreelancerShell.tsx");
-    expect(shell).toContain("from-brand-500 to-brand-mint");
+    expect(shell).not.toContain("from-brand-500 to-brand-mint");
     expect(shell).not.toContain("from-crit");
   });
 });

@@ -141,8 +141,6 @@ export function FreelancerShell({
           <WinterSneeuw />
           <Link href="/dashboard/klussen" className="font-display text-base font-extrabold uppercase tracking-tight text-ink">
             {title}
-            {/* dezelfde groene streep als onder de paginakop (PageHeader in components/app/ui.tsx) */}
-            <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-brand-500 to-brand-mint" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
             {isSalesPartner && (
