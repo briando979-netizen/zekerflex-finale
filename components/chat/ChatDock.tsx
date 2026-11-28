@@ -12,6 +12,7 @@ import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
 import { BinnenkomendGesprek } from "./BinnenkomendGesprek";
+import { sessieVerlopen } from "@/lib/app/sessie-verlopen";
 import { Portal } from "./Portal";
 import { makeRingtone } from "./ringtone";
 import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
@@ -74,7 +75,9 @@ function ChatDockInner() {
   const loadThreads = useCallback(async () => {
     try {
       const r = await fetch(`/api/inbox${document.visibilityState === "visible" ? "?visible=1" : ""}`, { cache: "no-store" });
-      if (r.status === 401) return setAvailable(false);
+      // sessie verlopen: het paneel verdwijnt en we stoppen met vragen (lib/app/sessie-verlopen.ts). Zonder dat
+      // laatste bleef dit elke 8 seconden doorvragen zolang het tabblad openstond (28 nov gemeten in het Caddy-log).
+      if (sessieVerlopen(r.status)) return setAvailable(false);
       if (!r.ok) return;
       const d = await r.json();
       setMe(d.me);
@@ -211,21 +214,22 @@ function ChatDockInner() {
   }, [loadThreads]);
 
   useEffect(() => {
+    if (!available) return; // sessie verlopen (of geen chat): niet blijven vragen
     void loadThreads();
     const id = setInterval(loadThreads, 8000);
     return () => clearInterval(id);
-  }, [loadThreads]);
+  }, [loadThreads, available]);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || !available) return;
     setMessages([]);
     void loadThread(active);
     const id = setInterval(() => activeRef.current && void loadThread(activeRef.current), 3000);
     return () => clearInterval(id);
-  }, [active, loadThread]);
+  }, [active, available, loadThread]);
 
   useEffect(() => {
-    if (!active) return setTheirTyping(false);
+    if (!active || !available) return setTheirTyping(false);
     const id = setInterval(async () => {
       try {
         const r = await fetch(`/api/inbox/${active}/typing`, { cache: "no-store" });
@@ -235,7 +239,7 @@ function ChatDockInner() {
       }
     }, 2000);
     return () => clearInterval(id);
-  }, [active]);
+  }, [active, available]);
 
   // Incoming-call poll. The dock is mounted once per dashboard layout and is
   // the only place calls are handled — InboxPage asks it to start one via the

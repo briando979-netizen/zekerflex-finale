@@ -38,6 +38,7 @@ import { liveVersie } from "@/lib/bouwer/versie";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
 import { dmarcNlTodo, dmarcStappenTodo, leesDmarcRecord, type DmarcStand } from "@/lib/admin/todo-dmarc";
+import { nlDomeinTodo, type NlDomeinStand } from "@/lib/admin/todo-nl-domein";
 import { introductieTodos } from "@/lib/admin/todo-introductie";
 import { verschuldigdeBeloningen } from "@/lib/introducties/beloning";
 import { CONCEPT_WACHT_DAGEN, wachtendeConcepten } from "@/lib/admin/verkoop-wacht";
@@ -173,6 +174,25 @@ async function leesDmarc(domein: string): Promise<DmarcStand | null | undefined>
   } catch (err) {
     return geenRecord(err) ? null : undefined;
   }
+}
+
+/**
+ * De A-records van zekerflex.nl naast die van zekerflex.com (lib/admin/todo-nl-domein.ts).
+ * Zo zien we of de Nederlandse naam naar ons platform wijst, zonder een IP-adres in de code te zetten.
+ * undefined = de DNS was niet te lezen; geen A-record is wél een antwoord (een lege lijst).
+ */
+async function leesNlDomein(comDomein: string): Promise<NlDomeinStand | undefined> {
+  const r = new Resolver({ timeout: 2500, tries: 1 });
+  const adressen = async (domein: string): Promise<string[] | undefined> => {
+    try {
+      return await r.resolve4(domein);
+    } catch (err) {
+      return geenRecord(err) ? [] : undefined;
+    }
+  };
+  const [nl, com] = await Promise.all([adressen("zekerflex.nl"), adressen(comDomein)]);
+  if (nl === undefined || com === undefined) return undefined;
+  return { nl, com };
 }
 
 /** Staan de DKIM-regels van TransIP (transip-a/-b._domainkey) bij dit domein? undefined = niet te lezen. */
@@ -319,6 +339,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // DMARC in stappen (14 nov): rapporten (rua) en daarna p=quarantine; en zekerflex.nl zonder DKIM (lib/admin/todo-dmarc.ts)
   const dmarcStappen = dmarcStappenTodo(dmarcStand);
   const dmarcNl = hoofddomeinVan(base) === "zekerflex.com" ? dmarcNlTodo(await leesDmarc("zekerflex.nl"), await heeftDkim("zekerflex.nl")) : null;
+  // zekerflex.nl wijst naar de websitebouwer van Vimexx en geeft daar "Onbevoegd" (28 nov): wie de Nederlandse naam
+  // intypt komt op een foutmelding uit (lib/admin/todo-nl-domein.ts). Een leesfout van de DNS geeft geen taak.
+  const nlDomein = hoofddomeinVan(base) === "zekerflex.com" ? nlDomeinTodo(await leesNlDomein("zekerflex.com")) : null;
   // het bol-tegoed van "Introduceer een bedrijf" (17 nov, lib/introducties/beloning.ts): één taak per verschuldigde beloning;
   // afvinken = verstuurd. Een leesfout geeft geen taak (de beloning blijft staan en komt bij de volgende keer terug)
   const introductieBeloningen = introductieTodos(await verschuldigdeBeloningen().catch(() => []), manual);
@@ -357,6 +380,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(pasdienst ? [pasdienst] : []),
     ...(dmarcStappen ? [dmarcStappen] : []),
     ...(dmarcNl ? [dmarcNl] : []),
+    ...(nlDomein ? [nlDomein] : []),
     ...introductieBeloningen,
     {
       id: "llm",

@@ -20,21 +20,21 @@ queries around the Wet DBA.
 merges metadata per segment, so a root canonical makes every page a "duplicate
 of /". Each indexable page spreads `...canonical("/path")` from `lib/seo.ts`.
 
-Canonical domain: **`https://zekerflex.nl`** (no `www`). Set as the default in
+Canonical domain: **`https://zekerflex.com`** (no `www`). Set as the default in
 `lib/seo.ts`, `deploy/.env.production.example`, `infra/helm/zekerflex/values.yaml`.
 The runtime still reads `APP_BASE_URL` first — the box/cluster must set it.
 
 ## What you need to do (one-time, outside the code)
 
-1. **Set `APP_BASE_URL=https://zekerflex.nl`** (and `AUTH_URL=…`) in the
+1. **Set `APP_BASE_URL=https://zekerflex.com`** (and `AUTH_URL=…`) in the
    production env and restart the web container. Everything below depends on
    the live site serving correct canonicals.
    - Box: edit `.env.production`, then
      `docker compose -f docker-compose.prod.yml up -d --force-recreate web`
    - K8s: it's already in `values.yaml`; `helm upgrade` + `kubectl rollout restart deploy/zekerflex-web`
-   - Verify: `curl -s https://zekerflex.nl/sitemap.xml | head` shows real URLs.
+   - Verify: `curl -s https://zekerflex.com/sitemap.xml | head` shows real URLs.
 2. **Google Search Console** ([search.google.com/search-console](https://search.google.com/search-console))
-   → Add property → **URL prefix** → `https://zekerflex.nl`. Two ways to verify:
+   → Add property → **URL prefix** → `https://zekerflex.com`. Two ways to verify:
    - **HTML tag** — copy the `content="…"` value into `GOOGLE_SITE_VERIFICATION`
      in the prod env, restart, click Verify.
    - **HTML file** (no restart) — Google gives you `google<hash>.html`; drop it
@@ -44,7 +44,7 @@ The runtime still reads `APP_BASE_URL` first — the box/cluster must set it.
    → Add site → it can **import straight from Search Console** (fastest).
    Otherwise same as above with `BING_SITE_VERIFICATION` or a `BingSiteAuth.xml`
    in `public/`. Submit the sitemap there too. (Also feeds DuckDuckGo / Copilot.)
-4. After deploy, run `https://zekerflex.nl/` through the
+4. After deploy, run `https://zekerflex.com/` through the
    [Rich Results Test](https://search.google.com/test/rich-results) and
    [Schema validator](https://validator.schema.org/) — expect Organization,
    FAQ, Service and (on kennis pages) Article. Check the OG card at

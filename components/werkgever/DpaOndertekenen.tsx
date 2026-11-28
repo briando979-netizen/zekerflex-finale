@@ -77,7 +77,7 @@ export function DpaOndertekenen({ initieel }: Props) {
               Door te ondertekenen ga je namens je organisatie akkoord met de verwerkersovereenkomst van ZekerFlex,
               zoals beschreven op{" "}
               <a href="/verwerkersovereenkomst" target="_blank" rel="noopener" className="text-brand-600 hover:underline">
-                zekerflex.nl/verwerkersovereenkomst
+                zekerflex.com/verwerkersovereenkomst
               </a>
               .
             </p>

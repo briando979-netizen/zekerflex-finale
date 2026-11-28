@@ -14,8 +14,8 @@ vermeld. Lokaal lees je uit `.env` / `.env.local`; op de VPS uit
 | Variabele | Lokaal (dev) | VPS (prod) | Wat het doet |
 |---|---|---|---|
 | `NODE_ENV` | `development` | `production` 🔴 | Zet cookie-security, logging, caching |
-| `APP_BASE_URL` | `http://localhost:3000` | `https://zekerflex.nl` 🔴 | Publieke URL — links in e-mails, OAuth-redirects, KYC-callback, VAPID-audience, **en elke SEO-canonical / OG-URL / sitemap-entry** |
-| `AUTH_URL` | — | `https://zekerflex.nl` 🔴 | NextAuth base-URL (achter de tunnel) |
+| `APP_BASE_URL` | `http://localhost:3000` | `https://zekerflex.com` 🔴 | Publieke URL — links in e-mails, OAuth-redirects, KYC-callback, VAPID-audience, **en elke SEO-canonical / OG-URL / sitemap-entry** |
+| `AUTH_URL` | — | `https://zekerflex.com` 🔴 | NextAuth base-URL (achter de tunnel) |
 | `AUTH_TRUST_HOST` | `true` | `true` 🔴 | Vertrouw de `X-Forwarded-*` headers van cloudflared |
 | `AUTH_SECRET` | dev-string | 32+ random (`gen-secrets`) 🔴 | Ondertekent de sessie-JWT's |
 | `INTERNAL_CRON_TOKEN` | dev-string | 16+ random 🟡 | Beschermt de interne worker-endpoints |

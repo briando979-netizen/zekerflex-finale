@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { sessieVerlopen } from "@/lib/app/sessie-verlopen";
 
 interface RecentResponse {
   id: string;
@@ -29,11 +30,19 @@ export function RecentResponseAlert() {
 
   useEffect(() => {
     let cancelled = false;
+    // de sessie is verlopen: stoppen met vragen (lib/app/sessie-verlopen.ts). Zonder dit bleef dit scherm elke
+    // 6 seconden doorvragen — 28 nov gemeten: 17.494 keer een 401 op één dag, en de werkgever zag géén reacties.
+    let verlopen = false;
     const poll = async () => {
+      if (verlopen) return;
       try {
         const r = await fetch(`/api/werkgever/recent-responses?since=${encodeURIComponent(sinceRef.current)}`, {
           cache: "no-store",
         });
+        if (sessieVerlopen(r.status)) {
+          verlopen = true;
+          return;
+        }
         if (!r.ok || cancelled) return;
         const d = (await r.json()) as { responses: RecentResponse[]; now: string };
         sinceRef.current = d.now;
@@ -46,7 +55,13 @@ export function RecentResponseAlert() {
         /* ignore — next poll tries again */
       }
     };
-    const id = setInterval(() => void poll(), POLL_MS);
+    const id = setInterval(() => {
+      if (verlopen) {
+        clearInterval(id);
+        return;
+      }
+      void poll();
+    }, POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(id);

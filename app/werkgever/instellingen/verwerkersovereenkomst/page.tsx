@@ -81,7 +81,7 @@ export default async function VerwerkersovereenkomstPage() {
         <p className="mt-3 text-sm leading-relaxed">
           Je kunt de volledige tekst lezen op{" "}
           <a href="/verwerkersovereenkomst" target="_blank" rel="noopener" className="text-brand-600 hover:underline">
-            zekerflex.nl/verwerkersovereenkomst
+            zekerflex.com/verwerkersovereenkomst
           </a>
           . Een getekend exemplaar kun je opvragen via{" "}
           <a href="mailto:info@zekerflex.com?subject=Verwerkersovereenkomst%20getekend%20exemplaar" className="text-brand-600 hover:underline">

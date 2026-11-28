@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NOTIFICATIONS_NL, type NotificationsTexts } from "@/components/app/notifications-texts";
+import { sessieVerlopen } from "@/lib/app/sessie-verlopen";
 
 interface Item {
   id: string;
@@ -70,9 +71,17 @@ export function NotificationsBell({
   const [shift, setShift] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
+  // true zodra de sessie verlopen is: dan stoppen we met vragen (lib/app/sessie-verlopen.ts)
+  const verlopen = useRef(false);
+
   const load = useCallback(async () => {
+    if (verlopen.current) return;
     try {
       const r = await fetch(app ? `/api/me/notifications?app=${app}` : "/api/me/notifications", { cache: "no-store" });
+      if (sessieVerlopen(r.status)) {
+        verlopen.current = true;
+        return;
+      }
       if (r.ok) setItems((await r.json()).items ?? []);
     } catch {
       /* ignore */
@@ -86,7 +95,13 @@ export function NotificationsBell({
       /* ignore */
     }
     void load();
-    const id = setInterval(load, 20000);
+    const id = setInterval(() => {
+      if (verlopen.current) {
+        clearInterval(id);
+        return;
+      }
+      void load();
+    }, 20000);
     return () => clearInterval(id);
   }, [load]);
 
