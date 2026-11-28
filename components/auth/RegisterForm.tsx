@@ -9,7 +9,8 @@ import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
 import { KvkZoeker } from "@/components/kvk/KvkZoeker";
 import { kvkTekstenVoor } from "@/lib/kvk/keuze";
-import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { AUTH, AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import type { Locale } from "@/lib/i18n/config";
 import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
 import { emailDomein, isGratisMail } from "@/lib/company/eigendom";
@@ -44,6 +45,7 @@ function SubmitButton({ type, t }: { type: "freelancer" | "bedrijf"; t: (typeof 
 
 export function RegisterForm({
   locale = "nl",
+  authVooraf,
   defaultType,
   defaultWorkerKind,
   prefill,
@@ -53,6 +55,8 @@ export function RegisterForm({
   alleenFlexwerk = false,
 }: {
   locale?: Locale;
+  /** De teksten in een machinetaal, al geladen door de server (geen Engelse flits). */
+  authVooraf?: AuthDict | undefined;
   defaultType: "freelancer" | "bedrijf";
   defaultWorkerKind?: "zzp" | "flexwerker" | "uitzendkracht";
   prefill?: { company?: string; kvk?: string; email?: string; name?: string };
@@ -64,8 +68,9 @@ export function RegisterForm({
   /** vlag `publiek-alleen-flexwerk`: aan = geen productkeuze bij het aanmelden, alleen personeel/flexwerk */
   alleenFlexwerk?: boolean;
 }) {
-  const t = AUTH_DICTS[locale].register;
-  const or = AUTH_DICTS[locale].shell.or;
+  const auth = useDomein(AUTH, locale, authVooraf);
+  const t = auth.register;
+  const or = auth.shell.or;
   const [type, setType] = useState<"freelancer" | "bedrijf">(defaultType);
   // De richting (ZZP'er, flexwerker, uitzendkracht) kies je na het aanmelden, in de start van de werker-app.
   // Komt de bezoeker via een pagina die al een richting noemt, dan gaat die mee.

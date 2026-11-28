@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { installRegel } from "@/lib/app-vereist";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
+import { SITE_LADERS } from "@/lib/i18n/gen/site-index";
 
 // 23 nov 2026 (eigenaar, na het bekijken van de live site): geen woord "test" in kopjes, badges en korte regels rond het
 // installeren van de app. Het moet wel waar blijven: de app staat in de EU nog niet in de App Store (iPhone: uitnodiging via
@@ -42,7 +43,7 @@ describe("AppDownload (voorpagina, /flexwerk en /app)", () => {
 
   it("gebruikt de korte regel (ook op /app zelf) en een link naar de uitleg op /app", () => {
     expect(bron.split("installRegel({ appStore, alleenApp })")).toHaveLength(3);
-    expect(bron).toMatch(/<Link href="\/app"[^>]*>\s*zo werkt het\s*<\/Link>/);
+    expect(bron).toMatch(/<Link href="\/app"[^>]*>\s*\{tx\("zo werkt het"\)\}\s*<\/Link>/);
   });
 
   it("heeft geen woord test in de badges en de kopjes van de uitleg", () => {
@@ -52,13 +53,27 @@ describe("AppDownload (voorpagina, /flexwerk en /app)", () => {
       expect(b[1], "bovenregel van de badge").not.toMatch(TEST);
       expect(b[2], "onderregel van de badge").not.toMatch(TEST);
     }
-    const kopjes = [...bron.matchAll(/font-semibold text-white">([^<]+)<\/p>/g)].map((m) => m[1] ?? "");
+    const kopjes = [...bron.matchAll(/font-semibold text-white">([^<]+)<\/p>/g)].map((m) => (m[1] ?? "").replace(/^\{tx\("(.*)"\)\}$/, "$1"));
     expect(kopjes).toEqual(["iPhone: installeer met een uitnodiging", "Android: installeer met een uitnodiging"]);
   });
 
   it("noemt de echte productnamen wel in de uitleg-stappen", () => {
     expect(bron).toContain("Installeer de gratis app TestFlight uit de App Store.");
-    expect(bron).toContain("<em>Word tester</em>");
+    expect(bron).toContain('<em>{tx("Word tester")}</em>');
+  });
+
+  // de site in elke taal (28 nov): ook de vertaling van een badge of kopje zegt nergens "test"
+  it("ook vertaald staat het woord test niet in de badges, de kopjes en de korte link", async () => {
+    const zinnen = ["Installeren met uitnodiging", "iPhone: installeer met een uitnodiging", "Android: installeer met een uitnodiging", "zo werkt het"];
+    expect(Object.keys(SITE_LADERS).length).toBeGreaterThan(0);
+    for (const [taal, laad] of Object.entries(SITE_LADERS)) {
+      const { vertaling } = await laad();
+      for (const zin of zinnen) {
+        const v = vertaling[zin];
+        expect(v, `${taal}: ${zin}`).toBeDefined();
+        expect(v, `${taal}: ${zin}`).not.toMatch(/test|тест|τεστ/i);
+      }
+    }
   });
 
   it("zegt dat de browser kan, alleen via de vlag (niet vast), en belooft niets over bedrijven die klussen plaatsen", () => {

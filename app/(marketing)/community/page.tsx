@@ -1,3 +1,4 @@
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getPrincipal } from "@/lib/auth";
@@ -39,6 +40,7 @@ function adres(categorie: Categorie | null, sortering: Sortering, pagina = 1): s
 }
 
 export default async function CommunityPage(props: { searchParams: Promise<{ categorie?: string; sorteer?: string; pagina?: string }> }) {
+  const tx = await getSiteT();
   const sp = await props.searchParams;
   const categorie = isCategorie(sp.categorie) ? sp.categorie : null;
   const sortering: Sortering = sp.sorteer === "nieuw" ? "nieuw" : "actief";
@@ -66,17 +68,16 @@ export default async function CommunityPage(props: { searchParams: Promise<{ cat
       />
       <div className="hero-ink text-white">
         <div className="shell py-16 md:py-20">
-          <p className="eyebrow text-brand-mint">Community</p>
-          <h1 className="mt-3 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">Praat mee met werkers en bedrijven</h1>
+          <p className="eyebrow text-brand-mint">{tx("Community")}</p>
+          <h1 className="mt-3 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">{tx("Praat mee met werkers en bedrijven")}</h1>
           <p className="mt-5 max-w-xl text-lg text-white/70">
-            Stel je vraag over flexwerk, deel hoe je klus ging of geef een tip. Werkers, bedrijven en het ZekerFlex-team lezen mee. Lezen kan
-            iedereen; meedoen kan met een gratis account.
+            {tx("Stel je vraag over flexwerk, deel hoe je klus ging of geef een tip. Werkers, bedrijven en het ZekerFlex-team lezen mee. Lezen kan iedereen; meedoen kan met een gratis account.")}
           </p>
           <p className="mt-6 text-sm text-white/70">
             <Link href="/community/regels" className="font-semibold text-brand-mint underline underline-offset-4">
-              Lees de huisregels
+              {tx("Lees de huisregels")}
             </Link>{" "}
-            · respectvol, geen reclame, geen privégegevens, meld wat niet klopt.
+            {tx("· respectvol, geen reclame, geen privégegevens, meld wat niet klopt.")}
           </p>
         </div>
       </div>
@@ -95,23 +96,23 @@ export default async function CommunityPage(props: { searchParams: Promise<{ cat
             )}
           </div>
 
-          <nav aria-label="Categorieën" className="mt-10 flex flex-wrap gap-2">
+          <nav aria-label={tx("Categorieën")} className="mt-10 flex flex-wrap gap-2">
             <Link href={adres(null, sortering)} className={tab(!categorie)} aria-current={!categorie ? "page" : undefined}>
-              Alles
+              {tx("Alles")}
             </Link>
             {CATEGORIEEN.map((c) => (
               <Link key={c.sleutel} href={adres(c.sleutel, sortering)} className={tab(categorie === c.sleutel)} aria-current={categorie === c.sleutel ? "page" : undefined}>
-                {c.naam}
+                {tx(c.naam)}
               </Link>
             ))}
           </nav>
-          <nav aria-label="Volgorde" className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-neutralx-500">Volgorde:</span>
+          <nav aria-label={tx("Volgorde")} className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-neutralx-500">{tx("Volgorde:")}</span>
             <Link href={adres(categorie, "actief")} aria-current={sortering === "actief" ? "page" : undefined} className={sortering === "actief" ? "font-semibold text-ink underline underline-offset-4" : "text-neutralx-600 hover:text-ink"}>
-              Actiefste eerst
+              {tx("Actiefste eerst")}
             </Link>
             <Link href={adres(categorie, "nieuw")} aria-current={sortering === "nieuw" ? "page" : undefined} className={sortering === "nieuw" ? "font-semibold text-ink underline underline-offset-4" : "text-neutralx-600 hover:text-ink"}>
-              Nieuwste eerst
+              {tx("Nieuwste eerst")}
             </Link>
           </nav>
 
@@ -128,14 +129,14 @@ export default async function CommunityPage(props: { searchParams: Promise<{ cat
                     className="group block rounded-2xl border border-hair bg-white p-5 shadow-e1 transition hover:-translate-y-0.5 hover:border-ink/30 hover:shadow-e3 md:p-6"
                   >
                     <span className="flex flex-wrap items-center gap-2 text-xs font-semibold text-neutralx-500">
-                      {k.vastgepind && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-brand-700">Vastgepind</span>}
+                      {k.vastgepind && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-brand-700">{tx("Vastgepind")}</span>}
                       <span className="rounded-full bg-paper-200 px-2 py-0.5 text-neutralx-700">{k.categorieNaam}</span>
                       <span>
-                        {k.auteur.naam}
+                        {tx(k.auteur.naam)}
                         {k.auteur.rolLabel ? ` · ${k.auteur.rolLabel}` : ""}
                       </span>
                     </span>
-                    <h2 className="mt-2 break-words font-display text-lg font-semibold text-ink group-hover:underline group-hover:underline-offset-4">{k.titel}</h2>
+                    <h2 className="mt-2 break-words font-display text-lg font-semibold text-ink group-hover:underline group-hover:underline-offset-4">{tx(k.titel)}</h2>
                     <p className="mt-1.5 break-words text-sm leading-relaxed text-neutralx-600">{k.uittreksel}</p>
                     <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutralx-500">
                       <span>{k.aantalReacties === 1 ? "1 reactie" : `${k.aantalReacties} reacties`}</span>
@@ -150,37 +151,35 @@ export default async function CommunityPage(props: { searchParams: Promise<{ cat
           )}
 
           {(pagina > 1 || meer) && (
-            <nav aria-label="Pagina's" className="mt-8 flex flex-wrap gap-3">
+            <nav aria-label={tx("Pagina's")} className="mt-8 flex flex-wrap gap-3">
               {pagina > 1 && (
                 <Link href={adres(categorie, sortering, pagina - 1)} className="btn-ghost">
-                  ← Vorige
+                  {tx("← Vorige")}
                 </Link>
               )}
               {meer && (
                 <Link href={adres(categorie, sortering, pagina + 1)} className="btn-ghost">
-                  Volgende →
+                  {tx("Volgende →")}
                 </Link>
               )}
             </nav>
           )}
 
           <div className="mt-14 max-w-3xl rounded-2xl border border-hair bg-paper p-6 md:p-8">
-            <h2 className="font-display text-xl font-bold text-ink">Zo werkt de community</h2>
+            <h2 className="font-display text-xl font-bold text-ink">{tx("Zo werkt de community")}</h2>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-neutralx-600">
-              <li>Iedereen kan lezen. Met een gratis account start je een onderwerp, reageer je en deel je foto&apos;s, als werker of als bedrijf.</li>
+              <li>{tx("Iedereen kan lezen. Met een gratis account start je een onderwerp, reageer je en deel je foto's, als werker of als bedrijf.")}</li>
               <li>
-                Bij een bericht staan je voornaam, de eerste letter van je achternaam, je profielfoto en of je werker of bedrijf bent. Nooit je
-                achternaam, e-mailadres of telefoonnummer.
+                {tx("Bij een bericht staan je voornaam, de eerste letter van je achternaam, je profielfoto en of je werker of bedrijf bent. Nooit je achternaam, e-mailadres of telefoonnummer.")}
               </li>
-              <li>Uit foto&apos;s halen we de locatie en andere gegevens voordat ze online komen.</li>
+              <li>{tx("Uit foto's halen we de locatie en andere gegevens voordat ze online komen.")}</li>
               <li>
-                Zie je iets wat niet klopt? Klik op Melden bij dat bericht, ook zonder account. Na meldingen van drie verschillende mensen verdwijnt
-                een bericht vanzelf tot wij het hebben bekeken.
+                {tx("Zie je iets wat niet klopt? Klik op Melden bij dat bericht, ook zonder account. Na meldingen van drie verschillende mensen verdwijnt een bericht vanzelf tot wij het hebben bekeken.")}
               </li>
             </ul>
             <p className="mt-4 text-sm">
               <Link href="/community/regels" className="font-semibold text-ink underline underline-offset-4">
-                Alle huisregels en hoe melden werkt
+                {tx("Alle huisregels en hoe melden werkt")}
               </Link>
             </p>
           </div>

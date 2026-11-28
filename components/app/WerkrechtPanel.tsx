@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/i18n/I18nProvider";
-import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import { AUTH, type AuthDict } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import { WERK_LANDEN, landNaam, type WerkrechtStand } from "@/lib/werkrecht/landen";
 
 // ---------------------------------------------------------------------------
@@ -174,7 +175,7 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
 
 export function WerkrechtPanel() {
   const { locale } = useI18n();
-  const t = AUTH_DICTS[locale].page.werkrecht;
+  const t = useDomein(AUTH, locale).page.werkrecht;
   const kiesId = useId();
   const vraagId = useId();
   // de landkeuze staat dicht tot iemand aangeeft dat hij die nodig heeft

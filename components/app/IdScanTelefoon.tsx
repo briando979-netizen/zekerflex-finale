@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { AUTH } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import type { Locale } from "@/lib/i18n/config";
 import { IdScan, type ScanAfronden } from "@/components/app/IdScan";
 
@@ -32,7 +33,7 @@ function vergeet() {
 }
 
 export function IdScanTelefoon({ locale }: { locale: Locale }) {
-  const t = AUTH_DICTS[locale].onb;
+  const t = useDomein(AUTH, locale).onb;
   const [stand, setStand] = useState<Stand>("laden");
   const [bezig, setBezig] = useState(false);
 

@@ -17,7 +17,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { SCAN_EXTRA } from "@/lib/i18n/scan-extra";
 import { verderKaart } from "@/lib/onboarding/verder-kaart";
 import Link from "next/link";
-import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
+import { AUTH, fill, type AuthDict } from "@/lib/i18n/auth";
 import { vertaalIdTekst } from "@/lib/i18n/id-redenen";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
@@ -167,7 +167,7 @@ function AanmeldingKlaar({
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
   const locale = await getLocale();
-  const pt = AUTH_DICTS[locale].page;
+  const pt = (await AUTH.laad(locale)).page;
   const fd = await getFreelancerDict();
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);

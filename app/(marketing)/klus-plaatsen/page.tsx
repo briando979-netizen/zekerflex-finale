@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, FaqList } from "@/components/marketing/primitives";
@@ -14,9 +16,9 @@ import { EERSTE_MAAND_GRATIS_VLAG } from "@/lib/billing/partnerdeal-vrij";
 import { beschikbareWerkers } from "@/lib/marketing/beschikbare-werkers";
 
 export const metadata: Metadata = {
-  title: "Klus plaatsen — zie direct wat het kost",
+  title: vt("Klus plaatsen — zie direct wat het kost"),
   description:
-    "Stel zonder account een klus samen en zie meteen wat het kost en hoeveel krachten er in de buurt wonen. Plaatsen is gratis; je betaalt pas na het werk.",
+    vt("Stel zonder account een klus samen en zie meteen wat het kost en hoeveel krachten er in de buurt wonen. Plaatsen is gratis; je betaalt pas na het werk."),
   keywords: ["klus plaatsen", "personeel aanvragen", "flexkracht aanvragen", "dienst plaatsen", "zzp'er inhuren", "uitzendkracht aanvragen"],
   ...canonical("/klus-plaatsen"),
 };
@@ -27,26 +29,27 @@ export const dynamic = "force-dynamic";
 // De veelgestelde vragen; de gratis eerste maand alleen zolang de vlag eerste-maand-gratis aan staat (anders klopt het niet).
 const faq = (gratisMaand: boolean) => [
   {
-    q: "Kost het plaatsen van een klus iets?",
+    q: vt("Kost het plaatsen van een klus iets?"),
     a: `Nee. Een klus plaatsen en een account maken zijn gratis. Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is.${
       gratisMaand ? " Je eerste maand betaal je geen platformkosten, vanaf je eerste dienst." : ""
     }`,
   },
   {
-    q: "Kan het ook zonder account?",
-    a: "Ja. Laat onder de kosten je naam en je telefoonnummer of e-mailadres achter. Wij nemen binnen één werkdag contact op en zetten je klus samen met je online. Pas dan maak je een account.",
+    q: vt("Kan het ook zonder account?"),
+    a: vt("Ja. Laat onder de kosten je naam en je telefoonnummer of e-mailadres achter. Wij nemen binnen één werkdag contact op en zetten je klus samen met je online. Pas dan maak je een account."),
   },
   {
-    q: "Wat gebeurt er met mijn klus als ik op plaatsen klik?",
-    a: "Je klus wordt in je eigen browser bewaard. Na het aanmelden staat hij klaar bij Diensten → Nieuwe dienst. Daar kies je nog je vestiging en controleer je alles voordat de klus echt online gaat.",
+    q: vt("Wat gebeurt er met mijn klus als ik op plaatsen klik?"),
+    a: vt("Je klus wordt in je eigen browser bewaard. Na het aanmelden staat hij klaar bij Diensten → Nieuwe dienst. Daar kies je nog je vestiging en controleer je alles voordat de klus echt online gaat."),
   },
   {
-    q: "Hoe komen jullie aan het aantal krachten in de buurt?",
-    a: "We tellen anoniem hoeveel mensen met een ZekerFlex-profiel in de omgeving wonen, in vakken van zo'n 16 kilometer. We tonen het pas als het er genoeg zijn, en nooit iemands adres.",
+    q: vt("Hoe komen jullie aan het aantal krachten in de buurt?"),
+    a: vt("We tellen anoniem hoeveel mensen met een ZekerFlex-profiel in de omgeving wonen, in vakken van zo'n 16 kilometer. We tonen het pas als het er genoeg zijn, en nooit iemands adres."),
   },
 ];
 
 export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ functie?: string; plaats?: string; via?: string | string[] }> }) {
+  const tx = await getSiteT();
   const { functie, plaats, via: viaRuw } = await props.searchParams;
   // bewijs bovenaan (zelfde telling als /bedrijven, lib/marketing/beschikbare-werkers.ts; null = niets tonen) en de gratis eerste maand
   const [werkers, gratisMaand] = await Promise.all([
@@ -91,22 +94,21 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
         <div className="shell py-8 md:py-20">
           <p className="eyebrow text-brand-mint">
             <Link href="/bedrijven" className="hover:underline">
-              Voor bedrijven
+              {tx("Voor bedrijven")}
             </Link>{" "}
-            · klus plaatsen
+            {tx("· klus plaatsen")}
           </p>
           <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">
-            Stel je klus samen
+            {tx("Stel je klus samen")}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
-            Zonder account. Vul in wat je nodig hebt en zie meteen wat het kost. Zet hem daarna online met een gratis account, of
-            laat je nummer achter en wij doen het samen met je.
+            {tx("Zonder account. Vul in wat je nodig hebt en zie meteen wat het kost. Zet hem daarna online met een gratis account, of laat je nummer achter en wij doen het samen met je.")}
           </p>
           {werkers !== null || gratisMaand ? (
             <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-brand-mint">
               {werkers !== null ? <li>{werkers} geverifieerde mensen, nu beschikbaar</li> : null}
-              {gratisMaand ? <li>Eerste maand geen platformkosten</li> : null}
-              <li>Je betaalt pas na het werk</li>
+              {gratisMaand ? <li>{tx("Eerste maand geen platformkosten")}</li> : null}
+              <li>{tx("Je betaalt pas na het werk")}</li>
             </ul>
           ) : null}
         </div>
@@ -124,9 +126,9 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
       </Section>
 
       <Section tone="paper">
-        <SectionHead eyebrow="Veelgestelde vragen" title="Over een klus plaatsen" />
+        <SectionHead eyebrow={tx("Veelgestelde vragen")} title={tx("Over een klus plaatsen")} />
         <div className="mt-10">
-          <FaqList items={FAQ} />
+          <FaqList items={FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
         </div>
       </Section>
     </>

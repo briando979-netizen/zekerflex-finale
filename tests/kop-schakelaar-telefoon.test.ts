@@ -13,11 +13,14 @@ describe("de schakelaar Werkers | Bedrijven op de telefoon", () => {
   it("staat in de bovenbalk naast de menuknop (onder 1280px, ook op een kleine laptop), met allebei de kanten", () => {
     expect(mobiel.length).toBeGreaterThan(0);
     const blok = mobiel.slice(0, mobiel.indexOf("ref={burgerRef}"));
-    expect(blok).toContain('aria-label="Werkers of bedrijven"');
+    // de teksten staan sinds 28 nov in lib/marketing/kop-teksten.ts en gaan via tx() door de vertaling
+    expect(blok).toContain("aria-label={tx(KOP_TEKSTEN.werkersOfBedrijven)}");
     expect(blok).toContain('href="/"');
     expect(blok).toContain('href="/bedrijven"');
-    expect(blok).toContain("Werkers");
-    expect(blok).toContain("Bedrijven");
+    expect(blok).toContain("{tx(KOP_TEKSTEN.werkers)}");
+    expect(blok).toContain("{tx(KOP_TEKSTEN.bedrijven)}");
+    const teksten = readFileSync(path.join(process.cwd(), "lib/marketing/kop-teksten.ts"), "utf8");
+    for (const regel of ['werkersOfBedrijven: vt("Werkers of bedrijven")', 'werkers: vt("Werkers")', 'bedrijven: vt("Bedrijven")']) expect(teksten).toContain(regel);
   });
 
   it("de hoofdknop past er pas vanaf 640px naast, en onder 380px wijkt alleen de naam (het beeldmerk blijft)", () => {

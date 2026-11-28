@@ -16,7 +16,7 @@ describe("de voorpagina na het gebruikersonderzoek", () => {
     expect(home).toContain("Zo ziet de app eruit");
     expect(home).not.toContain("/voorbeeld/werker");
     expect(home).not.toMatch(/voorbeeldaccount met verzonnen/);
-    expect(home).toContain('<Link href="/app" className="btn-mint text-base">Bekijk de app</Link>');
+    expect(home).toContain('<Link href="/app" className="btn-mint text-base">{tx("Bekijk de app")}</Link>');
   });
 
   it("onder de kop één regel voor bedrijven: Personeel nodig? Plaats een klus", () => {

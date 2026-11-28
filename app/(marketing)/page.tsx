@@ -1,3 +1,4 @@
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,6 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export const revalidate = 60;
 
 export default async function WerkHomePage() {
+  const tx = await getSiteT();
   // vlag `publiek-alleen-flexwerk`: de voorpagina blijft, maar de knop "Bekijk klussen" en de "Bezorgen"-chip (→ /klussen,
   // nu verborgen) vallen weg; de bezoeker gaat via "Maak gratis je profiel" naar het aanmelden.
   const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
@@ -62,7 +64,7 @@ export default async function WerkHomePage() {
         <div className="absolute inset-x-0 top-0 -z-10 h-[22rem] md:inset-y-0 md:left-auto md:h-auto md:w-[40%]">
           <Image
             src={WERK_HERO.foto}
-            alt={WERK_HERO.fotoAlt}
+            alt={tx(WERK_HERO.fotoAlt)}
             fill
             priority
             sizes="(min-width: 768px) 40vw, 100vw"
@@ -76,19 +78,19 @@ export default async function WerkHomePage() {
         <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
           <div className="max-w-xl md:max-w-sm lg:max-w-xl">
             {/* de pil "Ben je een bedrijf? Ik zoek personeel" staat hier niet meer (21 nov, eigenaar); de schakelaar in de kopbalk doet dat */}
-            <p className="eyebrow text-brand-mint">{WERK_HERO.eyebrow}</p>
+            <p className="eyebrow text-brand-mint">{tx(WERK_HERO.eyebrow)}</p>
             <h1 className="fluid-hero mt-3 text-balance font-display font-bold">
-              {WERK_HERO.kop}{" "}
-              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">{WERK_HERO.kopAccent}</span>
+              {tx(WERK_HERO.kop)}{" "}
+              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">{tx(WERK_HERO.kopAccent)}</span>
             </h1>
-            <p className="fluid-lead mt-4 max-w-lg text-white/75">{WERK_HERO.lead}</p>
+            <p className="fluid-lead mt-4 max-w-lg text-white/75">{tx(WERK_HERO.lead)}</p>
             <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
               <Link href={WERK_AANMELDEN} className="btn-mint text-base">
-                {WERK_HERO.knop}
+                {tx(WERK_HERO.knop)}
               </Link>
               {!alleenFlexwerk && (
                 <Link href="/klussen" className="btn-ghost-invert text-base">
-                  {WERK_HERO.knop2}
+                  {tx(WERK_HERO.knop2)}
                 </Link>
               )}
             </div>
@@ -96,15 +98,15 @@ export default async function WerkHomePage() {
               {WERK_HERO.punten.map((p) => (
                 <li key={p} className="flex items-center gap-2">
                   <Vink />
-                  {p}
+                  {tx(p)}
                 </li>
               ))}
             </ul>
             {/* bedrijven vonden in het eerste scherm niets voor hen (gebruikersonderzoek 22 nov 2026, punt 10): één regel */}
             <p className="mt-5 text-sm text-white/70">
-              Personeel nodig?{" "}
+              {tx("Personeel nodig?")}{" "}
               <Link href="/klus-plaatsen" className="font-semibold text-brand-mint underline-offset-4 hover:underline">
-                Plaats een klus →
+                {tx("Plaats een klus →")}
               </Link>
             </p>
           </div>
@@ -122,21 +124,21 @@ export default async function WerkHomePage() {
         <div className="aurora" aria-hidden />
         <div className="shell-4k relative py-8 md:py-10 lg:py-12">
           <Reveal>
-            <p className="eyebrow text-brand-mint">Zo werkt het</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">In drie stappen aan het werk</h2>
+            <p className="eyebrow text-brand-mint">{tx("Zo werkt het")}</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">{tx("In drie stappen aan het werk")}</h2>
           </Reveal>
           <ol className="mt-6 grid gap-3 md:grid-cols-3 md:gap-4">
             {WERK_STAPPEN.map((s, i) => (
               <Reveal key={s.titel} as="li" delay={i * 100} className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur md:p-5">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-mint font-display text-base font-bold text-ink">{i + 1}</span>
-                <h3 className="mt-3 font-display text-lg font-semibold">{s.titel}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-white/70">{s.tekst}</p>
+                <h3 className="mt-3 font-display text-lg font-semibold">{tx(s.titel)}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-white/70">{tx(s.tekst)}</p>
               </Reveal>
             ))}
           </ol>
           <Reveal delay={200} className="mt-6">
             <Link href={WERK_AANMELDEN} className="btn-mint text-base">
-              {WERK_HERO.knop}
+              {tx(WERK_HERO.knop)}
             </Link>
           </Reveal>
         </div>
@@ -146,10 +148,10 @@ export default async function WerkHomePage() {
       <section className="bg-paper">
         <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal>
-            <p className="eyebrow">Voor wie</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Werk dat past bij jouw leven</h2>
+            <p className="eyebrow">{tx("Voor wie")}</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">{tx("Werk dat past bij jouw leven")}</h2>
           </Reveal>
-          <VoorWieKaarten items={WERK_GROEPEN} />
+          <VoorWieKaarten items={WERK_GROEPEN.map((g) => ({ ...g, titel: tx(g.titel), tekst: tx(g.tekst), alt: tx(g.alt) }))} />
         </div>
       </section>
 
@@ -157,8 +159,8 @@ export default async function WerkHomePage() {
       <section className="bg-paper">
         <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal>
-            <p className="eyebrow">Waarom ZekerFlex</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Eerlijk werk, op jouw voorwaarden</h2>
+            <p className="eyebrow">{tx("Waarom ZekerFlex")}</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">{tx("Eerlijk werk, op jouw voorwaarden")}</h2>
           </Reveal>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
             {WERK_VOORDELEN.map((v, i) => (
@@ -166,8 +168,8 @@ export default async function WerkHomePage() {
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
                   <Icoon naam={v.icoon} />
                 </span>
-                <h3 className="mt-3 font-display text-base font-semibold md:text-lg">{v.titel}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{v.tekst}</p>
+                <h3 className="mt-3 font-display text-base font-semibold md:text-lg">{tx(v.titel)}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{tx(v.tekst)}</p>
               </Reveal>
             ))}
           </ul>
@@ -181,14 +183,14 @@ export default async function WerkHomePage() {
       <section className="bg-paper-soft">
         <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal className="rounded-3xl border border-hair bg-white p-6 shadow-sm md:p-10">
-            <p className="eyebrow">Zie het zelf</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Zo ziet de app eruit</h2>
+            <p className="eyebrow">{tx("Zie het zelf")}</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">{tx("Zo ziet de app eruit")}</h2>
             <p className="fluid-lead mt-4 max-w-2xl text-neutralx-600">
-              Je vindt klussen bij jou in de buurt, checkt in met je telefoon en ziet je uren en uitbetalingen op één plek.
+              {tx("Je vindt klussen bij jou in de buurt, checkt in met je telefoon en ziet je uren en uitbetalingen op één plek.")}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/app" className="btn-mint text-base">Bekijk de app</Link>
-              <Link href={WERK_AANMELDEN} className="btn-ghost text-base">Of maak gratis je profiel</Link>
+              <Link href="/app" className="btn-mint text-base">{tx("Bekijk de app")}</Link>
+              <Link href={WERK_AANMELDEN} className="btn-ghost text-base">{tx("Of maak gratis je profiel")}</Link>
             </div>
           </Reveal>
         </div>
@@ -201,11 +203,11 @@ export default async function WerkHomePage() {
       <section className="bg-paper">
         <div className="shell-4k grid gap-6 py-8 md:py-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12 lg:py-12">
           <Reveal>
-            <p className="eyebrow">Veelgestelde vragen</p>
-            <h2 className="fluid-h2 mt-3 font-display font-bold">Goed om te weten</h2>
+            <p className="eyebrow">{tx("Veelgestelde vragen")}</p>
+            <h2 className="fluid-h2 mt-3 font-display font-bold">{tx("Goed om te weten")}</h2>
           </Reveal>
           <Reveal delay={120}>
-            <FaqList items={WERK_FAQ} />
+            <FaqList items={WERK_FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
           </Reveal>
         </div>
       </section>
@@ -216,15 +218,15 @@ export default async function WerkHomePage() {
         <div className="shell-4k relative py-8 md:py-10 lg:py-12">
           <Reveal className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
-              <h2 className="fluid-h2 text-balance font-display font-bold">{WERK_SLOT.kop}</h2>
-              <p className="fluid-lead mt-3 text-white/70">{WERK_SLOT.lead}</p>
+              <h2 className="fluid-h2 text-balance font-display font-bold">{tx(WERK_SLOT.kop)}</h2>
+              <p className="fluid-lead mt-3 text-white/70">{tx(WERK_SLOT.lead)}</p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-3">
               <Link href={WERK_AANMELDEN} className="btn-mint text-base">
-                {WERK_HERO.knop}
+                {tx(WERK_HERO.knop)}
               </Link>
               <Link href={BEDRIJVEN_HOME} className="btn-ghost-invert text-base">
-                {WERK_HERO.wissel.knop}
+                {tx(WERK_HERO.wissel.knop)}
               </Link>
             </div>
           </Reveal>

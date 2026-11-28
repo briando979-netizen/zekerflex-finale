@@ -3,6 +3,7 @@ import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { GEN_LADERS } from "@/lib/i18n/gen";
 import { OVERRIDE_LADERS } from "@/lib/i18n/overrides";
 import type { DiepDeels } from "@/lib/i18n/talen-motor";
+import { voegSamen } from "@/lib/i18n/samenvoegen";
 
 // ---------------------------------------------------------------------------
 // De lader van het werker-woordenboek (talen-motor, 13 nov 2026). De vijf handgemaakte talen staan in FREELANCER_DICTS;
@@ -12,18 +13,7 @@ import type { DiepDeels } from "@/lib/i18n/talen-motor";
 // Puur en zonder prisma/kv: ook client-bestanden (useFT) importeren dit.
 // ---------------------------------------------------------------------------
 
-/** Legt `laag` over `basis`: tekst, lijst en functie worden vervangen als het type klopt, objecten diep samengevoegd. */
-export function voegSamen<T>(basis: T, laag: DiepDeels<T> | undefined): T {
-  if (laag === undefined || laag === null) return basis;
-  if (typeof basis !== typeof laag) return basis;
-  if (Array.isArray(basis) || typeof basis !== "object" || basis === null) return laag as unknown as T;
-  const uit: Record<string, unknown> = { ...(basis as Record<string, unknown>) };
-  for (const [k, v] of Object.entries(laag as Record<string, unknown>)) {
-    if (!Object.hasOwn(uit, k)) continue; // een sleutel die niet (meer) in de bron bestaat doet niet mee
-    uit[k] = voegSamen<unknown>(uit[k], v);
-  }
-  return uit as T;
-}
+export { voegSamen };
 
 const cache = new Map<string, FreelancerDict>();
 

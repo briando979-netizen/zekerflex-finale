@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { ThuisbasisVelden, controleerThuisbasisVooraf, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
-import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import { AUTH, type AuthDict } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanRoute, type ScanUitslag, type ScanWijze } from "@/components/app/IdScan";
 import { WieBenJijKop } from "@/components/app/WieBenJijKop";
 import { WieBenJijPersoon, type PersoonStand } from "@/components/app/WieBenJijPersoon";
@@ -87,7 +88,7 @@ export function OnboardingForm({
   /** Eerder opgeslagen gegevens: iemand die later terugkomt, begint niet opnieuw. */
   initial?: { kvkNumber?: string; vatNumber?: string; postalCode?: string };
 }) {
-  const t = AUTH_DICTS[useI18n().locale].onb;
+  const t = useDomein(AUTH, useI18n().locale).onb;
   const ft = useFT();
   const thuisbasisFout = useThuisbasisFout();
   const [biz, setBiz] = useState<"kvk" | "vat">(initial?.vatNumber && !initial.kvkNumber ? "vat" : "kvk");

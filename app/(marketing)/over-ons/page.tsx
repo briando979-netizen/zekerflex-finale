@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Fragment, type ReactNode } from "react";
@@ -16,6 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function OverOnsPage() {
+  const tx = await getSiteT();
   // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
   const tekst = await getContentMap(contentKeys("oo."));
   const v = (k: string) => tekst[k] ?? "";
@@ -34,27 +37,27 @@ export default async function OverOnsPage() {
     oprichter: (
       <Section tone="paper">
         <div id="oprichter" className="scroll-mt-24" />
-        <SectionHead eyebrow={v("oo.opr.eyebrow")} title={v("oo.opr.title")} cms={{ eyebrow: "oo.opr.eyebrow", title: "oo.opr.title" }} />
+        <SectionHead eyebrow={v("oo.opr.eyebrow")} title={v("oo.opr.title")} cms={{ eyebrow: vt("oo.opr.eyebrow"), title: vt("oo.opr.title") }} />
         {/* 22 nov 2026, eigenaar: "gooi mijn foto bij over ons bij Briando van Essen" (zijn zakelijke portret, ook op Facebook) */}
         <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-12">
           <figure className="flex items-center gap-4 lg:order-last lg:flex-col lg:items-stretch lg:rounded-xl2 lg:border lg:border-hair lg:bg-white lg:p-5 lg:shadow-sm">
             <Image
               src="/team/briando-van-essen.webp"
-              alt="Briando van Essen, oprichter van ZekerFlex"
+              alt={tx("Briando van Essen, oprichter van ZekerFlex")}
               width={400}
               height={400}
               sizes="(max-width: 1024px) 96px, 220px"
               className="h-24 w-24 shrink-0 rounded-full object-cover lg:h-auto lg:w-full lg:rounded-2xl"
             />
             <figcaption>
-              <span className="block font-display text-lg font-semibold text-ink">Briando van Essen</span>
-              <span className="block text-sm text-neutralx-600">Oprichter en directeur</span>
+              <span className="block font-display text-lg font-semibold text-ink">{tx("Briando van Essen")}</span>
+              <span className="block text-sm text-neutralx-600">{tx("Oprichter en directeur")}</span>
             </figcaption>
           </figure>
           <div className="max-w-2xl space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
             <p>
-              ZekerFlex is opgebouwd, bedacht en zelf geschreven door{" "}
-              <strong className="text-ink">Briando van Essen</strong>, van het eerste idee tot de code die je nu
+              {tx("ZekerFlex is opgebouwd, bedacht en zelf geschreven door")}{" "}
+              <strong className="text-ink">{tx("Briando van Essen")}</strong>, van het eerste idee tot de code die je nu
               gebruikt. Geen team van investeerders, geen overgenomen platform: één persoon die het hele systeem van de
               grond af heeft neergezet, omdat het eerlijker en simpeler kon.
             </p>
@@ -66,7 +69,7 @@ export default async function OverOnsPage() {
     uitgangspunten: (
       <Section tone="soft">
         <div id="uitgangspunten" className="scroll-mt-24" />
-        <SectionHead eyebrow={v("oo.punten.eyebrow")} title={v("oo.punten.title")} cms={{ eyebrow: "oo.punten.eyebrow", title: "oo.punten.title" }} />
+        <SectionHead eyebrow={v("oo.punten.eyebrow")} title={v("oo.punten.title")} cms={{ eyebrow: vt("oo.punten.eyebrow"), title: vt("oo.punten.title") }} />
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {[
             { t: "Onafhankelijk", b: "Geen tussenpartijen die aan beide kanten verdienen. Eén transparante fee, verder niets." },
@@ -88,7 +91,7 @@ export default async function OverOnsPage() {
           eyebrow={v("oo.werk.eyebrow")}
           title={v("oo.werk.title")}
           intro={v("oo.werk.intro")}
-          cms={{ eyebrow: "oo.werk.eyebrow", title: "oo.werk.title", intro: "oo.werk.intro" }}
+          cms={{ eyebrow: vt("oo.werk.eyebrow"), title: vt("oo.werk.title"), intro: vt("oo.werk.intro") }}
         />
         <div className="mt-10 max-w-2xl">
           <OpenApplicationForm />
@@ -101,7 +104,7 @@ export default async function OverOnsPage() {
         body={v("oo.cta.body")}
         primaryLabel={v("oo.cta.primary")}
         secondaryLabel={v("oo.cta.secondary")}
-        cms={{ title: "oo.cta.title", body: "oo.cta.body", primary: "oo.cta.primary", secondary: "oo.cta.secondary" }}
+        cms={{ title: vt("oo.cta.title"), body: vt("oo.cta.body"), primary: "oo.cta.primary", secondary: "oo.cta.secondary" }}
       />
     ),
   };

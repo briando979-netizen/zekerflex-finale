@@ -4,6 +4,8 @@ import { nl, type Dict } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { laadFreelancerDict } from "@/lib/i18n/freelancer-lader";
+import { maakSiteT, type SiteT } from "@/lib/i18n/site";
+import { laadSiteVertaling } from "@/lib/i18n/site-lader";
 
 // Employer/shop pages have no PL/RO/UK translation (nor any machine language) — those readers get English.
 const DICTS: Record<BasisLocale, Dict> = { nl, en, pl: en, ro: en, uk: en };
@@ -31,4 +33,12 @@ export function clientDict(locale: Locale): Dict | undefined {
 /** The freelancer-app dictionary for the current locale (server components). */
 export async function getFreelancerDict(): Promise<FreelancerDict> {
   return laadFreelancerDict(await getLocale());
+}
+
+/**
+ * De vertaalfunctie voor de openbare site (lib/i18n/site.ts): `const tx = await getSiteT()` en dan `tx("Nederlandse zin")`.
+ * Zonder taalcookie (en dus voor Google) is het Nederlands.
+ */
+export async function getSiteT(): Promise<SiteT> {
+  return maakSiteT(await laadSiteVertaling(await getLocale()));
 }

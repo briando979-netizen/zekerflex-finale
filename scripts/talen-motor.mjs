@@ -48,17 +48,37 @@ const max = Number(waarde("max", "0")) || 0; // proefdraai op de eerste N tekste
 const motor = await import("../lib/i18n/talen-motor.ts");
 const { TAAL_META, MAX_LOAD_START, MAX_LOAD_STOP, STEEKPROEF_DREMPEL } = await import("../lib/i18n/config.ts");
 const { FREELANCER_DICTS } = await import("../lib/i18n/freelancer.ts");
+// --domein site (28 nov 2026): de zinnen van de openbare site (scripts/site-teksten.mjs, lib/i18n/site.ts) in plaats van het
+// werker-woordenboek. Voor de site bestaat geen handgemaakte vertaling: ook en, pl, ro en uk komen dan uit de motor. De bestanden
+// krijgen het voorvoegsel "site-" (site-bron-01.json, <taal>/site-vertaling-01.json, …) en het resultaat is lib/i18n/gen/site.<taal>.ts.
+const domein = waarde("domein", "werker");
+const isSite = domein === "site";
+// Een domein met de vijf handgemaakte talen (lib/i18n/domein.ts): waar de tabel staat en welk type het gegenereerde bestand krijgt.
+// Bestanden: <domein>-bron-01.json, <taal>/<domein>-vertaling-01.json, …; resultaat lib/i18n/gen/<domein>.<taal>.ts + <domein>-index.ts.
+const DOMEINEN = {
+  auth: { bron: "../lib/i18n/auth.ts", tabel: "AUTH_DICTS", info: { naam: "auth", laders: "AUTH_LADERS", typeNaam: "AuthDict", typeBron: "@/lib/i18n/auth" } },
+};
+const domeinDef = Object.hasOwn(DOMEINEN, domein) ? DOMEINEN[domein] : null;
+if (domein !== "werker" && !isSite && !domeinDef) {
+  console.error(`Onbekend domein: ${domein} (werker, site of ${Object.keys(DOMEINEN).join(", ")})`);
+  process.exit(1);
+}
+const voor = isSite ? "site-" : domeinDef ? `${domein}-` : "";
+const domeinTabel = domeinDef ? (await import(domeinDef.bron))[domeinDef.tabel] : null;
 
 for (const t of talen) {
-  if (!Object.hasOwn(TAAL_META, t) || !TAAL_META[t].machinaal) {
+  if (!Object.hasOwn(TAAL_META, t) || t === "nl" || (!isSite && !TAAL_META[t].machinaal)) {
     console.error(`Onbekende of niet-machinale taal: ${t}`);
     process.exit(1);
   }
 }
 
-const alle = motor.bladeren(FREELANCER_DICTS.nl);
-const juridisch = alle.filter((b) => motor.isJuridisch(b.pad, b.bron));
-const teVertalen = alle.filter((b) => !motor.isJuridisch(b.pad, b.bron) && motor.moetVertaald(b.bron)).slice(0, max || undefined);
+// voor de site is de "plek" de zin zelf: juridisch kijkt daar alleen naar de tekst (anders blijft elke zin met "privacy" erin staan)
+const { siteZinnen } = isSite ? await import("./site-teksten.mjs") : { siteZinnen: null };
+const alle = isSite ? siteZinnen(root).zinnen.map((z) => ({ pad: [z], bron: z })) : motor.bladeren(domeinTabel ? domeinTabel.nl : FREELANCER_DICTS.nl);
+const isJur = (b) => (isSite ? motor.isJuridisch([], b.bron) : motor.isJuridisch(b.pad, b.bron));
+const juridisch = alle.filter(isJur);
+const teVertalen = alle.filter((b) => !isJur(b) && motor.moetVertaald(b.bron)).slice(0, max || undefined);
 const batches = motor.maakBatches(teVertalen);
 console.log(`Teksten in het NL-woordenboek: ${alle.length}`);
 console.log(`Juridisch of identiteit (niet vertaald, blijft NL/EN): ${juridisch.length}`);
@@ -82,15 +102,16 @@ if (exportMap) {
   for (let i = 0; i < items.length; i += STUK) {
     n++;
     const stuk = items.slice(i, i + STUK);
-    writeFileSync(join(exportMap, `bron-${String(n).padStart(2, "0")}.json`), JSON.stringify(Object.fromEntries(stuk), null, 1) + "\n");
+    writeFileSync(join(exportMap, `${voor}bron-${String(n).padStart(2, "0")}.json`), JSON.stringify(Object.fromEntries(stuk), null, 1) + "\n");
     // de handgemaakte Engelse tekst op dezelfde plek, als hulp bij de betekenis (de bron blijft het Nederlands)
+    if (isSite) continue;
     const engels = stuk.map(([k]) => {
       const b = teVertalen.find((x) => motor.padSleutel(x.pad) === k);
-      let v = FREELANCER_DICTS.en;
+      let v = domeinTabel ? domeinTabel.en : FREELANCER_DICTS.en;
       for (const d of b?.pad ?? []) v = v?.[d];
       return [k, typeof v === "string" ? v : ""];
     });
-    writeFileSync(join(exportMap, `en-${String(n).padStart(2, "0")}.json`), JSON.stringify(Object.fromEntries(engels), null, 1) + "\n");
+    writeFileSync(join(exportMap, `${voor}en-${String(n).padStart(2, "0")}.json`), JSON.stringify(Object.fromEntries(engels), null, 1) + "\n");
   }
   console.log(`Geexporteerd: ${items.length} teksten in ${n} stukken naar ${exportMap}`);
   process.exit(0);
@@ -117,7 +138,7 @@ if (bronMap) {
     console.log(`\n== ${taal} (${TAAL_META[taal].naam}), vertaling uit ${bronMap}/${taal} ==`);
     const map = join(bronMap, taal);
     const vertaald = {};
-    for (const f of existsSync(map) ? readdirSync(map).filter((x) => /^vertaling-\d+\.json$/.test(x)).sort() : []) {
+    for (const f of existsSync(map) ? readdirSync(map).filter((x) => new RegExp(`^${voor}vertaling-`).test(x) && /vertaling-\d+\.json$/.test(x)).sort() : []) {
       Object.assign(vertaald, JSON.parse(readFileSync(join(map, f), "utf8")));
     }
     // dezelfde controle als vertaalBladeren: plaatshouders, merknaam, geen gelekte JSON, niet absurd lang
@@ -138,11 +159,11 @@ if (bronMap) {
       const sleutels = [...kandidaten.keys()].filter((k) => bron.has(k));
       const gekozen = motor.trekSteekproef(sleutels, undefined, vastToeval(taal));
       const vraag = Object.fromEntries(gekozen.map((k, i) => [String(i + 1), gelukt.get(k)]));
-      writeFileSync(join(map, "steekproef-vraag.json"), JSON.stringify(vraag, null, 1) + "\n");
-      console.log(`Steekproef getrokken: ${gekozen.length} zinnen in ${join(map, "steekproef-vraag.json")} (zonder Nederlands)`);
+      writeFileSync(join(map, `${voor}steekproef-vraag.json`), JSON.stringify(vraag, null, 1) + "\n");
+      console.log(`Steekproef getrokken: ${gekozen.length} zinnen in ${join(map, `${voor}steekproef-vraag.json`)} (zonder Nederlands)`);
       continue;
     }
-    const terugPad = join(map, "steekproef-terug.json");
+    const terugPad = join(map, `${voor}steekproef-terug.json`);
     if (!existsSync(terugPad)) {
       console.log(`Geen ${terugPad}: eerst --trek en de blinde terugvertaling.`);
       continue;
@@ -151,8 +172,8 @@ if (bronMap) {
     // De beoordelaar (rechter), zoals de motor hem bedoelde: iemand die alleen de paren ziet (A = het Nederlandse origineel,
     // B = de blinde terugvertaling) en per paar zegt of ze hetzelfde betekenen. --paren schrijft die paren; zijn oordeel
     // staat daarna in steekproef-oordeel.json. Zonder oordeel beslist de woordvergelijking (lijktOpElkaar).
-    const parenPad = join(map, "steekproef-paren.json");
-    const oordeelPad = join(map, "steekproef-oordeel.json");
+    const parenPad = join(map, `${voor}steekproef-paren.json`);
+    const oordeelPad = join(map, `${voor}steekproef-oordeel.json`);
     let rechter;
     if (vlag("paren")) {
       rechter = async (paren) => {
@@ -177,6 +198,23 @@ if (bronMap) {
       continue;
     }
     const meta = { taal, gemaakt: new Date().toISOString(), model: bronModel, bladeren: alle.length, vertaald: gelukt.size, steekproef: { gekozen: s.gekozen, klopt: s.klopt, percentage: s.percentage } };
+    if (domeinDef) {
+      const info = domeinDef.info;
+      const dict = motor.bouwDeelsWoordenboek(domeinTabel.nl, gelukt);
+      writeFileSync(join(root, "lib/i18n/gen", `${info.naam}.${taal}.ts`), motor.renderDomeinBestand(info, meta, dict));
+      const patroon = new RegExp(`^${info.naam}\\.(\\w+)\\.ts$`);
+      const talenNu = readdirSync(join(root, "lib/i18n/gen")).map((f) => patroon.exec(f)?.[1]).filter(Boolean);
+      writeFileSync(join(root, "lib/i18n/gen", `${info.naam}-index.ts`), motor.renderDomeinIndex(info, talenNu));
+      console.log(`Geschreven: lib/i18n/gen/${info.naam}.${taal}.ts`);
+      continue;
+    }
+    if (isSite) {
+      writeFileSync(join(root, "lib/i18n/gen", `site.${taal}.ts`), motor.renderSiteBestand(meta, Object.fromEntries(gelukt)));
+      const sites = readdirSync(join(root, "lib/i18n/gen")).map((f) => /^site\.(\w+)\.ts$/.exec(f)?.[1]).filter(Boolean);
+      writeFileSync(join(root, "lib/i18n/gen/site-index.ts"), motor.renderSiteIndex(sites));
+      console.log(`Geschreven: lib/i18n/gen/site.${taal}.ts`);
+      continue;
+    }
     const dict = motor.bouwDeelsWoordenboek(FREELANCER_DICTS.nl, gelukt);
     writeFileSync(join(root, "lib/i18n/gen", `freelancer.${taal}.ts`), motor.renderGenBestand(meta, dict));
     const aanwezig = readdirSync(join(root, "lib/i18n/gen")).map((f) => /^freelancer\.(\w+)\.ts$/.exec(f)?.[1]).filter(Boolean);

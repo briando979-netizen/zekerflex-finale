@@ -9,7 +9,8 @@ import {
   type CodeState,
 } from "@/app/verifieer-email/actions";
 
-import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
+import { AUTH, fill } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import type { Locale } from "@/lib/i18n/config";
 import { mailProviderFor } from "@/lib/auth/mail-providers";
 
@@ -38,7 +39,7 @@ export function ResendVerification({
   devLink: string | null;
   devCode?: string | null;
 }) {
-  const t = AUTH_DICTS[locale].verify;
+  const t = useDomein(AUTH, locale).verify;
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);

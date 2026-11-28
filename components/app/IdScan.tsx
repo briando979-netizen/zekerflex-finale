@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Portal } from "@/components/chat/Portal";
-import { type AuthDict } from "@/lib/i18n/auth";
+import { AUTH, type AuthDict } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import { DocumentLezing, goedGelezen, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
 import { useDialog } from "@/components/app/useDialog";
 import { useFT } from "@/components/i18n/useFT";
@@ -1016,6 +1017,7 @@ export function IdScan({
   // twee beelden, dus de fotopagina dient ook als tweede.
   const zonderAchter = !heeftAchterkant(soort);
   const { locale } = useI18n();
+  const authT = useDomein(AUTH, locale);
   const [tipsOpen, setTipsOpen] = useState(false);
   // de bewegingscontrole (tweede selfie met een gedraaid hoofd) alleen op de laptop: de telefoon stuurt de foto's door en daar beslist altijd een medewerker
   const metBeweging = modus !== "telefoon";
@@ -1409,7 +1411,7 @@ export function IdScan({
               </button>
             ) : (
               route === "eu" ? (
-              <AuthLanguage locale={locale} label={AUTH_DICTS[locale].lang} />
+              <AuthLanguage locale={locale} label={authT.lang} />
             ) : (
               <span className={`font-display text-sm font-bold ${donker ? "text-white" : "text-ink"}`}>ZekerFlex</span>
             )

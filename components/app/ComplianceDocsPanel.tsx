@@ -3,7 +3,8 @@
 import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
-import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
+import { AUTH, fill, type AuthDict } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { ibanKlopt } from "@/lib/onboarding/velden";
 import { useEffect, useRef, useState } from "react";
@@ -388,7 +389,7 @@ function BankLoginSlot({
 }
 
 export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean } = {}) {
-  const t = AUTH_DICTS[useI18n().locale].page;
+  const t = useDomein(AUTH, useI18n().locale).page;
   const [d, setD] = useState<Data | null>(null);
   // kan de werker zijn rekening via de bank bevestigen? (BankLoginSlot vraagt het na; tot dan de uitleg zonder bank)
   const [bankLoginAan, setBankLoginAan] = useState(false);

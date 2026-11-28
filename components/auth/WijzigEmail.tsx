@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { changeEmailAction, type ChangeEmailState } from "@/app/verifieer-email/actions";
-import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
+import { AUTH, fill } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import type { Locale } from "@/lib/i18n/config";
 
 // Op /verifieer-email: de tip om in de spammap te kijken, en een verkeerd
@@ -23,7 +24,7 @@ function Opslaan({ label, busy }: { label: string; busy: string }) {
 }
 
 export function WijzigEmail({ locale = "nl" }: { locale?: Locale }) {
-  const t = AUTH_DICTS[locale].verify;
+  const t = useDomein(AUTH, locale).verify;
   const router = useRouter();
   const [state, formAction] = useFormState(changeEmailAction, begin);
 

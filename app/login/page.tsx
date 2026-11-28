@@ -12,11 +12,12 @@ import { opPasskeyHost, passkeyBron } from "@/lib/auth/passkey/omgeving";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { getLocale } from "@/lib/i18n/server";
-import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { AUTH } from "@/lib/i18n/auth";
 import { inIosApp } from "@/lib/app-mode-server";
 import { WELKOM_DICTS } from "@/lib/i18n/welkom";
 import { welkomTerug } from "@/lib/welkom/terug";
 import { canonical } from "@/lib/seo";
+import { isMachineLocale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
 // E?n canonieke /login: Google zag 45 varianten met ?callbackUrl=? als dubbele pagina's (Search Console, 22 nov 2026).
@@ -53,7 +54,7 @@ export default async function LoginPage(
   const bron = passkeyBron(env.APP_BASE_URL);
   const passkeyEnabled = bron !== null && opPasskeyHost(await headers(), bron);
   const locale = await getLocale();
-  const t = AUTH_DICTS[locale].login;
+  const t = (await AUTH.laad(locale)).login;
   // terug van Google of Apple met tweestapsverificatie aan: meteen de codestap (lib/auth/oauth-tweestap.ts)
   const codeStap = searchParams.stap === "code" ? await leesOauthUitdaging() : null;
   const fout = searchParams.error ?? (searchParams.stap === "code" && !codeStap ? "TweeStap" : undefined);
@@ -76,6 +77,7 @@ export default async function LoginPage(
     >
       <LoginForm
         locale={locale}
+        {...(isMachineLocale(locale) ? { authVooraf: await AUTH.laad(locale) } : {})}
         callbackUrl={safePath(searchParams.callbackUrl)}
         googleEnabled={googleEnabled}
         appleEnabled={appleEnabled}

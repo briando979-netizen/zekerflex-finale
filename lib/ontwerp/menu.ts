@@ -1,3 +1,4 @@
+import { vt } from "@/lib/i18n/site";
 import { veiligeLink } from "@/lib/ontwerp/paginas";
 
 // ---------------------------------------------------------------------------
@@ -23,68 +24,68 @@ export interface Voettekst {
   kolommen: VoettekstKolom[];
 }
 
-export const STANDAARD_SLOGAN =
-  "Zeker van je werk, zeker van je mensen. Het onafhankelijke Nederlandse platform voor flexibel werk en voor je hele bedrijf. Bekijk ons privacybeleid voor informatie over gegevensverwerking en betrokken dienstverleners.";
+export const STANDAARD_SLOGAN = vt(
+  "Zeker van je werk, zeker van je mensen. Het onafhankelijke Nederlandse platform voor flexibel werk en voor je hele bedrijf. Bekijk ons privacybeleid voor informatie over gegevensverwerking en betrokken dienstverleners.");
 
 export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
   {
-    titel: "Platform",
+    titel: vt("Platform"),
     links: [
-      { href: "/aanbod", label: "Het hele aanbod" },
-      { href: "/aanbod/horeca", label: "Horecasoftware" },
-      { href: "/aanbod/website", label: "Website laten maken" },
-      { href: "/klussen", label: "Open klussen" },
-      { href: "/open-diensten", label: "Open diensten op de kaart" },
-      { href: "/freelance-werk", label: "Freelance werk per stad" },
-      { href: "/bijbaan", label: "Bijbaan per stad" },
-      { href: "/personeel-inhuren", label: "Personeel inhuren" },
-      { href: "/voor-freelancers", label: "Voor freelancers" },
-      { href: "/leren/klussen-krijgen", label: "Leren: zo krijg je klussen" },
+      { href: "/aanbod", label: vt("Het hele aanbod") },
+      { href: "/aanbod/horeca", label: vt("Horecasoftware") },
+      { href: "/aanbod/website", label: vt("Website laten maken") },
+      { href: "/klussen", label: vt("Open klussen") },
+      { href: "/open-diensten", label: vt("Open diensten op de kaart") },
+      { href: "/freelance-werk", label: vt("Freelance werk per stad") },
+      { href: "/bijbaan", label: vt("Bijbaan per stad") },
+      { href: "/personeel-inhuren", label: vt("Personeel inhuren") },
+      { href: "/voor-freelancers", label: vt("Voor freelancers") },
+      { href: "/leren/klussen-krijgen", label: vt("Leren: zo krijg je klussen") },
       // 21 nov: "Werken via uitzendbureau" weg (eigenaar: geen aparte pagina; uitzendklussen staan in de app)
-      { href: "/uitzendpartner", label: "Voor uitzendbureaus" },
+      { href: "/uitzendpartner", label: vt("Voor uitzendbureaus") },
       // 22 nov 2026: /voor-bedrijven is samengevoegd in /bedrijven
-      { href: "/bedrijven", label: "Voor bedrijven" },
-      { href: "/leren/personeel-krijgen", label: "Leren: zo krijg je goede mensen" },
-      { href: "/voor-bureaus", label: "Voor bureaus (white-label)" },
-      { href: "/sales-partner", label: "Word sales-partner (commissie)" },
-      { href: "/prijzen", label: "Prijzen" },
-      { href: "/tarieven-overzicht", label: "Tarievenoverzicht" },
-      { href: "/app", label: "Download de app" },
-      { href: "/status", label: "Systeemstatus" },
-      { href: "/developers", label: "API voor ontwikkelaars" },
+      { href: "/bedrijven", label: vt("Voor bedrijven") },
+      { href: "/leren/personeel-krijgen", label: vt("Leren: zo krijg je goede mensen") },
+      { href: "/voor-bureaus", label: vt("Voor bureaus (white-label)") },
+      { href: "/sales-partner", label: vt("Word sales-partner (commissie)") },
+      { href: "/prijzen", label: vt("Prijzen") },
+      { href: "/tarieven-overzicht", label: vt("Tarievenoverzicht") },
+      { href: "/app", label: vt("Download de app") },
+      { href: "/status", label: vt("Systeemstatus") },
+      { href: "/developers", label: vt("API voor ontwikkelaars") },
     ],
   },
   {
-    titel: "Kennis",
+    titel: vt("Kennis"),
     links: [
-      { href: "/kennis", label: "Informatie" },
-      { href: "/uitleg", label: "Uitleg in het kort" },
-      { href: "/kennis#kennisbank", label: "Kennisbank" },
-      { href: "/kennis/wet-dba", label: "Wet DBA" },
+      { href: "/kennis", label: vt("Informatie") },
+      { href: "/uitleg", label: vt("Uitleg in het kort") },
+      { href: "/kennis#kennisbank", label: vt("Kennisbank") },
+      { href: "/kennis/wet-dba", label: vt("Wet DBA") },
       // 22 nov 2026: de functiepagina's (lib/seo-functies.ts); de kolom Platform zit op het maximum (MAX_LINKS)
-      { href: "/werken-als", label: "Werken als: per functie" },
-      { href: "/kennis/werkgevers", label: "Helpcentrum werkgevers" },
+      { href: "/werken-als", label: vt("Werken als: per functie") },
+      { href: "/kennis/werkgevers", label: vt("Helpcentrum werkgevers") },
       // 22 nov 2026: korte antwoorden voor bedrijven (lib/seo-vragen.ts); de kolom Kennis had nog ruimte (MAX_LINKS)
-      { href: "/vragen", label: "Vragen van bedrijven" },
-      { href: "/kennis/whitepapers", label: "Whitepapers" },
-      { href: "/rekentools", label: "Gratis rekentools" },
-      { href: "/nieuws", label: "Nieuwsroom" },
+      { href: "/vragen", label: vt("Vragen van bedrijven") },
+      { href: "/kennis/whitepapers", label: vt("Whitepapers") },
+      { href: "/rekentools", label: vt("Gratis rekentools") },
+      { href: "/nieuws", label: vt("Nieuwsroom") },
       // 22 nov 2026: de community op de site zelf (lib/community)
-      { href: "/community", label: "Community" },
-      { href: "/kennis/blog", label: "Blog" },
-      { href: "/kennis/faq", label: "Veelgestelde vragen" },
+      { href: "/community", label: vt("Community") },
+      { href: "/kennis/blog", label: vt("Blog") },
+      { href: "/kennis/faq", label: vt("Veelgestelde vragen") },
     ],
   },
   {
-    titel: "Bedrijf",
+    titel: vt("Bedrijf"),
     // 22 nov 2026 (gebruikersonderzoek): de telefoon en info@ staan al in de regel met de bedrijfsgegevens onderaan, en
     // /status stond er drie keer; hier dus alleen nog "Systeemstatus" in Platform
     links: [
-      { href: "/over-ons", label: "Over ZekerFlex" },
-      { href: "/contact", label: "Contact" },
-      { href: "/demo", label: "Vraag een demo aan" },
-      { href: "/over-ons#werken-bij", label: "Werken bij ons" },
-      { href: "/login", label: "Inloggen" },
+      { href: "/over-ons", label: vt("Over ZekerFlex") },
+      { href: "/contact", label: vt("Contact") },
+      { href: "/demo", label: vt("Vraag een demo aan") },
+      { href: "/over-ons#werken-bij", label: vt("Werken bij ons") },
+      { href: "/login", label: vt("Inloggen") },
     ],
   },
 ];

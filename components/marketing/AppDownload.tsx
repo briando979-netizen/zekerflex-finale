@@ -1,9 +1,11 @@
+import { getSiteT } from "@/lib/i18n/server";
 import Link from "next/link";
 import { InstallAppButton } from "@/components/marketing/InstallAppButton";
 import { TelefoonDemo } from "@/components/marketing/TelefoonDemo";
 import { featureEnabled } from "@/lib/flags";
 import { TesterWordenForm } from "@/components/marketing/TesterWordenForm";
 import { ALLEEN_APP_VLAG, installRegel } from "@/lib/app-vereist";
+import { vulInMet } from "@/lib/i18n/site";
 
 // De Android-app (com.zekerflex.app) staat in een besloten groep op Google Play (nog geen gewone openbare vermelding). De link
 // werkt alleen voor Gmail-adressen die ZekerFlex op de lijst heeft gezet; het formulier hieronder regelt dat.
@@ -18,7 +20,8 @@ const APPSTORE_URL = "https://apps.apple.com/nl/app/zekerflex/id6832775836";
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
 // 21 nov 2026: aanmelden voor Android gaat met een formulier (components/marketing/TesterWordenForm.tsx), niet met een mail
 
-function PlayBadge() {
+async function PlayBadge() {
+  const tx = await getSiteT();
   return (
     <a
       href={PLAY_TEST_URL}
@@ -33,14 +36,15 @@ function PlayBadge() {
         <path d="m4.2 22.4 8.9-5.1 2-1.3-2.7-2.9-9.1 9.4c.3.1.6.1.9-.1Z" fill="currentColor" opacity=".5" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">Android</span>
-        <span className="block text-sm font-bold">Installeren met uitnodiging</span>
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{tx("Android")}</span>
+        <span className="block text-sm font-bold">{tx("Installeren met uitnodiging")}</span>
       </span>
     </a>
   );
 }
 
-function AppleBadge({ store }: { store: boolean }) {
+async function AppleBadge({ store }: { store: boolean }) {
+  const tx = await getSiteT();
   const inhoud = (
     <>
       <svg width="20" height="22" viewBox="0 0 24 24" aria-hidden fill="currentColor">
@@ -48,7 +52,7 @@ function AppleBadge({ store }: { store: boolean }) {
       </svg>
       <span className="text-left leading-tight">
         <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{store ? "Download in de" : "iPhone"}</span>
-        <span className="block text-sm font-bold">{store ? "App Store" : "Installeren met uitnodiging"}</span>
+        <span className="block text-sm font-bold">{store ? "App Store" : tx("Installeren met uitnodiging")}</span>
       </span>
     </>
   );
@@ -64,55 +68,64 @@ function AppleBadge({ store }: { store: boolean }) {
   );
 }
 
-function IphoneNotice() {
+async function IphoneNotice() {
+  const tx = await getSiteT();
   return (
     <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
-      <p className="font-semibold text-white">iPhone: installeer met een uitnodiging</p>
+      <p className="font-semibold text-white">{tx("iPhone: installeer met een uitnodiging")}</p>
       <p className="mt-1">
-        In de EU staat de app nog niet in de App Store. Je zet hem op je iPhone met een uitnodiging, via TestFlight: de
-        installatiedienst van Apple.
+        {tx("In de EU staat de app nog niet in de App Store. Je zet hem op je iPhone met een uitnodiging, via TestFlight: de installatiedienst van Apple.")}
       </p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
-        <li>Installeer de gratis app TestFlight uit de App Store.</li>
+        <li>{tx("Installeer de gratis app TestFlight uit de App Store.")}</li>
         <li>
-          Open op je iPhone{" "}
-          <a href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-mint underline">
-            deze link
-          </a>{" "}
-          en tik op <em>Accepteren</em> en dan <em>Installeren</em>.
+          {vulInMet(tx("Open op je iPhone {link} en tik op {accepteren} en dan {installeren}."), {
+            link: (
+              <a href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-mint underline">
+                {tx("deze link")}
+              </a>
+            ),
+            accepteren: <em>{tx("Accepteren")}</em>,
+            installeren: <em>{tx("Installeren")}</em>,
+          })}
         </li>
       </ol>
     </div>
   );
 }
 
-function AndroidNotice() {
+async function AndroidNotice() {
+  const tx = await getSiteT();
   return (
     <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
-      <p className="font-semibold text-white">Android: installeer met een uitnodiging</p>
-      <p className="mt-1">De Android-app staat in een besloten groep op Google Play. Meld je aan voor die groep, dan kun je hem installeren.</p>
+      <p className="font-semibold text-white">{tx("Android: installeer met een uitnodiging")}</p>
+      <p className="mt-1">{tx("De Android-app staat in een besloten groep op Google Play. Meld je aan voor die groep, dan kun je hem installeren.")}</p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
         <li>
-          Vul je Gmail-adres in: het adres waarmee je in de Play Store bent ingelogd. Wij zetten je op de lijst.
+          {tx("Vul je Gmail-adres in: het adres waarmee je in de Play Store bent ingelogd. Wij zetten je op de lijst.")}
           <TesterWordenForm />
         </li>
         <li>
-          Open daarna op je Android-telefoon{" "}
-          <a href={PLAY_TEST_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-mint underline">
-            deze link
-          </a>{" "}
-          en tik op <em>Word tester</em> en dan <em>Installeren</em>.
+          {vulInMet(tx("Open daarna op je Android-telefoon {link} en tik op {tester} en dan {installeren}."), {
+            link: (
+              <a href={PLAY_TEST_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-mint underline">
+                {tx("deze link")}
+              </a>
+            ),
+            tester: <em>{tx("Word tester")}</em>,
+            installeren: <em>{tx("Installeren")}</em>,
+          })}
         </li>
       </ol>
       <p className="mt-3 text-xs text-white/55">
-        Zie je &ldquo;app niet beschikbaar&rdquo;? Dan staat je adres nog niet op de lijst — probeer het een paar uur later. Liever
-        niet wachten? Met &ldquo;Installeer de app&rdquo; hierboven zet je ZekerFlex direct vanuit je browser op je telefoon.
+        {tx("Zie je “app niet beschikbaar”? Dan staat je adres nog niet op de lijst — probeer het een paar uur later. Liever niet wachten? Met “Installeer de app” hierboven zet je ZekerFlex direct vanuit je browser op je telefoon.")}
       </p>
     </div>
   );
 }
 
 export async function AppDownload({ standalone = false }: { standalone?: boolean }) {
+  const tx = await getSiteT();
   // vlag `iphone-appstore` (standaard uit): de echte App Store-knop, zodra de app in Nederland in de App Store staat
   const appStore = await featureEnabled("iphone-appstore").catch(() => false);
   // vlag "werker-omgeving alleen in de app" (standaard uit sinds 22 nov 2026: eerst de browser, dan de app)
@@ -125,29 +138,28 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             {/* op /app zelf staat de kop al boven dit blok ("De flexwerk-app …"): daar geen tweede kop (22 nov 2026) */}
             {!standalone && (
               <>
-                <p className="eyebrow text-brand-mint">De app</p>
+                <p className="eyebrow text-brand-mint">{tx("De app")}</p>
                 <h2 className="mt-2 max-w-md text-balance font-display text-2xl font-bold leading-tight md:text-[1.75rem]">
-                  Neem ZekerFlex mee in je zak
+                  {tx("Neem ZekerFlex mee in je zak")}
                 </h2>
               </>
             )}
             <p className={`${standalone ? "" : "mt-4 "}max-w-md text-white/70`}>
-              Reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen — alles vanaf je
-              telefoon, met meldingen die kloppen.
+              {tx("Reageer op klussen, check in op locatie, dien je uren in en volg je uitbetalingen — alles vanaf je telefoon, met meldingen die kloppen.")}
             </p>
             {/* 21 nov 2026: wie al een account heeft (vaak via de site gemaakt), ziet dat hier meteen, vóór het installeren */}
             {standalone && (
               <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                 <span>
-                  Al een account?{" "}
+                  {tx("Al een account?")}{" "}
                   <Link href="/login" className="font-semibold text-brand-mint underline">
-                    Log in
+                    {tx("Log in")}
                   </Link>
                 </span>
                 <span>
-                  Nieuw?{" "}
+                  {tx("Nieuw?")}{" "}
                   <Link href="/register" className="font-semibold text-brand-mint underline">
-                    Maak een account
+                    {tx("Maak een account")}
                   </Link>
                 </span>
               </p>
@@ -168,7 +180,7 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
               <p className="mt-3 text-xs text-white/65">
                 {installRegel({ appStore, alleenApp })} —{" "}
                 <Link href="/app" className="underline hover:text-white/80">
-                  zo werkt het
+                  {tx("zo werkt het")}
                 </Link>
                 .
               </p>
@@ -176,15 +188,19 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             {/* "alleen in de app" staat sinds 22 nov achter een vlag (lib/app-vereist.ts, standaard uit: eerst de browser). Een
                 account aanmaken kan altijd hier, en bedrijven loggen in via de website. */}
             <p className="mt-4 text-xs text-white/65">
-              {alleenApp ? "Je werkersomgeving gebruik je in de app. " : ""}Nog geen account?{" "}
-              <Link href="/register" className="underline hover:text-white/80">
-                Maak er een aan
-              </Link>
-              . Een bedrijf?{" "}
-              <Link href="/login" className="underline hover:text-white/80">
-                Log in via de website
-              </Link>
-              .
+              {alleenApp ? `${tx("Je werkersomgeving gebruik je in de app.")} ` : ""}
+              {vulInMet(tx("Nog geen account? {aanmaken}. Een bedrijf? {inloggen}."), {
+                aanmaken: (
+                  <Link href="/register" className="underline hover:text-white/80">
+                    {tx("Maak er een aan")}
+                  </Link>
+                ),
+                inloggen: (
+                  <Link href="/login" className="underline hover:text-white/80">
+                    {tx("Log in via de website")}
+                  </Link>
+                ),
+              })}
             </p>
           </div>
 

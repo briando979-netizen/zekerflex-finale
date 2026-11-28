@@ -365,3 +365,82 @@ export function renderGenIndex(talen: readonly string[]): string {
   ].join("\n");
   return `${GEN_KOP}\n// inhoud-hash: ${inhoudHash(inhoud)}\n${inhoud}`;
 }
+
+// --- de openbare site (28 nov 2026) ----------------------------------------------------------------------------------
+// Dezelfde motor, een ander soort bron: een platte lijst Nederlandse zinnen (de sleutel is de zin zelf, lib/i18n/site.ts)
+// in plaats van het geneste werker-woordenboek. Het bestand per taal is lib/i18n/gen/site.<taal>.ts; de index
+// lib/i18n/gen/site-index.ts laadt elke taal als eigen stuk, en alleen de server laadt ze (lib/i18n/site-lader.ts).
+
+/** De tekst van lib/i18n/gen/site.<taal>.ts. Gesorteerd op sleutel, zodat een nieuwe zin een kleine wijziging geeft. */
+export function renderSiteBestand(meta: GenMeta, vertaling: Readonly<Record<string, string>>): string {
+  const gesorteerd = Object.fromEntries(Object.entries(vertaling).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+  const lichaam = [
+    `import type { SiteVertaling } from "@/lib/i18n/site";`,
+    "",
+    `export const meta = ${JSON.stringify(meta, null, 2)} as const;`,
+    "",
+    `export const vertaling: SiteVertaling = ${JSON.stringify(gesorteerd, null, 1)};`,
+    "",
+  ].join("\n");
+  return `${GEN_KOP}\n// inhoud-hash: ${inhoudHash(lichaam)}\n${lichaam}`;
+}
+
+/** lib/i18n/gen/site-index.ts: één dynamische import per taal. */
+export function renderSiteIndex(talen: readonly string[]): string {
+  const regels = [...talen].sort().map((t) => `  ${JSON.stringify(t)}: () => import("./site.${t}"),`);
+  const inhoud = [
+    `import type { SiteVertaling } from "@/lib/i18n/site";`,
+    "",
+    `export type SiteLader = () => Promise<{ vertaling: SiteVertaling }>;`,
+    "",
+    `/** Per taal een eigen stuk; alleen de server laadt ze (lib/i18n/site-lader.ts). */`,
+    `export const SITE_LADERS: Readonly<Record<string, SiteLader>> = {`,
+    ...regels,
+    `};`,
+    "",
+  ].join("\n");
+  return `${GEN_KOP}\n// inhoud-hash: ${inhoudHash(inhoud)}\n${inhoud}`;
+}
+
+// --- domeinen (28 nov 2026): inloggen, chat, hulpcentrum, … -------------------------------------------------------------
+// Dezelfde vorm als het werker-bestand, voor elke tabel met de vijf handgemaakte talen (lib/i18n/domein.ts). Per domein een
+// bestand per taal (lib/i18n/gen/<domein>.<taal>.ts) en een index (lib/i18n/gen/<domein>-index.ts) met één lazy import per taal.
+
+export interface DomeinInfo {
+  /** bestandsnaam, bv. "auth" */
+  naam: string;
+  /** de naam van de export in de index, bv. "AUTH_LADERS" */
+  laders: string;
+  /** het type van één taal, bv. "AuthDict", en waar het vandaan komt */
+  typeNaam: string;
+  typeBron: string;
+}
+
+export function renderDomeinBestand(info: DomeinInfo, meta: GenMeta, dict: unknown): string {
+  const lichaam = [
+    `import type { ${info.typeNaam} } from "${info.typeBron}";`,
+    `import type { DiepDeels } from "@/lib/i18n/talen-motor";`,
+    "",
+    `export const meta = ${JSON.stringify(meta, null, 2)} as const;`,
+    "",
+    `/** Juridisch staat hier niet: ${JURIDISCH_REGEL} */`,
+    `export const dict: DiepDeels<${info.typeNaam}> = ${JSON.stringify(dict, null, 1)};`,
+    "",
+  ].join("\n");
+  return `${GEN_KOP}\n// inhoud-hash: ${inhoudHash(lichaam)}\n${lichaam}`;
+}
+
+export function renderDomeinIndex(info: DomeinInfo, talen: readonly string[]): string {
+  const regels = [...talen].sort().map((t) => `  ${JSON.stringify(t)}: () => import("./${info.naam}.${t}"),`);
+  const inhoud = [
+    `import type { ${info.typeNaam} } from "${info.typeBron}";`,
+    `import type { DomeinLader } from "@/lib/i18n/domein";`,
+    "",
+    `/** Per taal een eigen lazy chunk (lib/i18n/domein.ts). */`,
+    `export const ${info.laders}: Readonly<Record<string, DomeinLader<${info.typeNaam}>>> = {`,
+    ...regels,
+    `};`,
+    "",
+  ].join("\n");
+  return `${GEN_KOP}\n// inhoud-hash: ${inhoudHash(inhoud)}\n${inhoud}`;
+}

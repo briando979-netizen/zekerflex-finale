@@ -41,7 +41,7 @@ describe("interne links naar de branche- en stadspagina's", () => {
   });
 
   it("de bijbaanpagina's krijgen links: voettekst, /voor-freelancers, de werkerkant per branche en per stad", () => {
-    expect(lees("lib/ontwerp/menu.ts")).toContain('{ href: "/bijbaan", label: "Bijbaan per stad" }');
+    expect(lees("lib/ontwerp/menu.ts")).toContain('{ href: "/bijbaan", label: vt("Bijbaan per stad") }');
     expect(lees("components/marketing/PerBrancheEnStad.tsx")).toContain('{ href: "/bijbaan", label: "Bijbaan per stad" }');
     expect(lees("components/marketing/SectorLanding.tsx")).toContain('{ href: "/bijbaan", label: "Bijbaan" }');
     expect(lees("lib/seo-stad-pagina.ts")).toContain("{ href: `/bijbaan/${c.slug}`, label: `Bijbaan in ${c.name}` }");

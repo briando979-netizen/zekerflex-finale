@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { AuthLanguage } from "@/components/auth/AuthLanguage";
-import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { AUTH } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
 
-export function AuthShell({
+export async function AuthShell({
   title,
   subtitle,
   children,
@@ -32,7 +32,7 @@ export function AuthShell({
    */
   mobile?: { title: string; subtitle: string; back: string; backHref: string };
 }) {
-  const a = AUTH_DICTS[locale ?? "nl"];
+  const a = await AUTH.laad(locale ?? "nl");
   const POINTS = a.shell.points;
 
   if (mobile) {
