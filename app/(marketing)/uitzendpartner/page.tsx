@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
@@ -26,54 +28,55 @@ export const metadata: Metadata = {
 const euro = (cent: number) => `€ ${(cent / 100).toFixed(2).replace(".", ",")}`;
 
 const STAPPEN = [
-  { titel: "Maak een bedrijfsaccount aan", tekst: "Gratis en in een paar minuten. Je vult je bedrijfsgegevens in, net als elk ander bedrijf op ZekerFlex." },
+  { titel: vt("Maak een bedrijfsaccount aan"), tekst: vt("Gratis en in een paar minuten. Je vult je bedrijfsgegevens in, net als elk ander bedrijf op ZekerFlex.") },
   {
-    titel: "Wij zetten je account op uitzendpartner",
-    tekst: "Mail ons je KVK-nummer, je inschrijvingen als uitlener en dat je akkoord gaat met de partnervoorwaarden. Na een korte controle staat je account op uitzendpartner.",
+    titel: vt("Wij zetten je account op uitzendpartner"),
+    tekst: vt("Mail ons je KVK-nummer, je inschrijvingen als uitlener en dat je akkoord gaat met de partnervoorwaarden. Na een korte controle staat je account op uitzendpartner."),
   },
   {
-    titel: "Plaats je uitzendklussen",
-    tekst: "Je klussen staan in de app als uitzendklus, onder de naam van je bureau. Werkers zien meteen dat jij de werkgever bent.",
+    titel: vt("Plaats je uitzendklussen"),
+    tekst: vt("Je klussen staan in de app als uitzendklus, onder de naam van je bureau. Werkers zien meteen dat jij de werkgever bent."),
   },
   {
-    titel: "Werkers melden zich aan",
-    tekst: "Een werker ziet je dienst in de app en meldt zich aan. Jij krijgt zijn gegevens, neemt hem aan op je eigen uitzendcontract en betaalt het loon.",
+    titel: vt("Werkers melden zich aan"),
+    tekst: vt("Een werker ziet je dienst in de app en meldt zich aan. Jij krijgt zijn gegevens, neemt hem aan op je eigen uitzendcontract en betaalt het loon."),
   },
 ];
 
 const VERDELING = [
-  { wie: "Jouw bureau", punten: ["Is de werkgever van de uitzendkracht", "Tekent het uitzendcontract", "Betaalt het loon en regelt de verloning", "Volgt de cao en de regels voor uitleners"] },
-  { wie: "ZekerFlex", punten: ["Zet je klussen in de app, onder jouw naam", "Laat ze zien aan werkers die erbij passen", "Controleert de identiteit van elke werker", "Regelt het inchecken en de urenregistratie"] },
+  { wie: "Jouw bureau", punten: [vt("Is de werkgever van de uitzendkracht"), vt("Tekent het uitzendcontract"), vt("Betaalt het loon en regelt de verloning"), vt("Volgt de cao en de regels voor uitleners")] },
+  { wie: "ZekerFlex", punten: [vt("Zet je klussen in de app, onder jouw naam"), vt("Laat ze zien aan werkers die erbij passen"), vt("Controleert de identiteit van elke werker"), vt("Regelt het inchecken en de urenregistratie")] },
 ];
 
 const FAQ = [
   {
-    q: "Wie is de werkgever van de uitzendkracht?",
-    a: "Jouw bureau. Bij een klus van een uitzendpartner tekent de werker zijn uitzendcontract met jou en betaal jij het loon. ZekerFlex is geen werkgever en geen uitlener bij die klussen.",
+    q: vt("Wie is de werkgever van de uitzendkracht?"),
+    a: vt("Jouw bureau. Bij een klus van een uitzendpartner tekent de werker zijn uitzendcontract met jou en betaal jij het loon. ZekerFlex is geen werkgever en geen uitlener bij die klussen."),
   },
   {
-    q: "Wat kost het?",
+    q: vt("Wat kost het?"),
     a: `${euro(BASE_FEE_PER_HOUR_CENTS)} per gewerkt uur, alleen als er echt gewerkt is. Geen abonnement en geen plaatsingskosten.`,
   },
   {
-    q: "Moet mijn bureau een toelating hebben?",
-    a: "Je bent zelf de uitlener, dus je hebt de inschrijvingen die daarbij horen. Vanaf 2027 geldt de Wet toelating terbeschikkingstelling arbeidskrachten (Wtta). We vragen naar je inschrijving voordat je account uitzendpartner wordt.",
+    q: vt("Moet mijn bureau een toelating hebben?"),
+    a: vt("Je bent zelf de uitlener, dus je hebt de inschrijvingen die daarbij horen. Vanaf 2027 geldt de Wet toelating terbeschikkingstelling arbeidskrachten (Wtta). We vragen naar je inschrijving voordat je account uitzendpartner wordt."),
   },
   {
-    q: "Welke gegevens van een werker krijg ik?",
-    a: "Als een werker zich voor je dienst aanmeldt, geeft hij toestemming om zijn contactgegevens met je bureau te delen. Daarmee neem je contact op over het contract en de voorwaarden.",
+    q: vt("Welke gegevens van een werker krijg ik?"),
+    a: vt("Als een werker zich voor je dienst aanmeldt, geeft hij toestemming om zijn contactgegevens met je bureau te delen. Daarmee neem je contact op over het contract en de voorwaarden."),
   },
   {
-    q: "Welke regels gelden er, en wat als een bureau zich er niet aan houdt?",
-    a: "Alles staat in de partnervoorwaarden: wie partner kan worden, de regels voor klussen en voor de gegevens van werkers, de kosten, de boetes en hoe ZekerFlex handhaaft (eerst een waarschuwing, dan een schorsing, dan het einde van de samenwerking; bij ernstige overtredingen direct).",
+    q: vt("Welke regels gelden er, en wat als een bureau zich er niet aan houdt?"),
+    a: vt("Alles staat in de partnervoorwaarden: wie partner kan worden, de regels voor klussen en voor de gegevens van werkers, de kosten, de boetes en hoe ZekerFlex handhaaft (eerst een waarschuwing, dan een schorsing, dan het einde van de samenwerking; bij ernstige overtredingen direct)."),
   },
   {
-    q: "Kan ik ook freelance klussen plaatsen?",
-    a: "Een uitzendpartner plaatst uitzendklussen. Wil je ook freelance klussen plaatsen, dan kan dat met een gewoon bedrijfsaccount.",
+    q: vt("Kan ik ook freelance klussen plaatsen?"),
+    a: vt("Een uitzendpartner plaatst uitzendklussen. Wil je ook freelance klussen plaatsen, dan kan dat met een gewoon bedrijfsaccount."),
   },
 ];
 
-export default function UitzendpartnerPage() {
+export default async function UitzendpartnerPage() {
+  const tx = await getSiteT();
   const vragen = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) };
   return (
     <>
@@ -86,33 +89,33 @@ export default function UitzendpartnerPage() {
         <HeroMetFoto foto={paginaFoto("uitzendpartner")}>
           <SectionHead
             kop="h1"
-            eyebrow="Voor uitzendbureaus"
-            title="Zet je uitzendklussen op ZekerFlex"
-            intro="Je diensten staan in de ZekerFlex-app onder de naam van je bureau. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. ZekerFlex brengt de werkers."
+            eyebrow={tx("Voor uitzendbureaus")}
+            title={tx("Zet je uitzendklussen op ZekerFlex")}
+            intro={tx("Je diensten staan in de ZekerFlex-app onder de naam van je bureau. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. ZekerFlex brengt de werkers.")}
           />
           <div className="mt-10 flex flex-wrap gap-3">
             <Link href="/register?type=bedrijf" className="btn-primary">
-              Meld je bureau aan
+              {tx("Meld je bureau aan")}
             </Link>
             <a href="mailto:uitzendbureau@zekerflex.com?subject=Uitzendpartner%20worden" className="btn-ghost">
-              Mail ons
+              {tx("Mail ons")}
             </a>
             <Link href={PARTNER_VOORWAARDEN_PAD} className="btn-ghost">
-              Lees de partnervoorwaarden
+              {tx("Lees de partnervoorwaarden")}
             </Link>
           </div>
         </HeroMetFoto>
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Zo werkt het" title="In vier stappen uitzendpartner" />
+        <SectionHead eyebrow={tx("Zo werkt het")} title={tx("In vier stappen uitzendpartner")} />
         <ol className="mt-10 grid gap-6 md:grid-cols-2">
           {STAPPEN.map((s, i) => (
             <li key={s.titel} className="flex gap-4">
               <span className="num flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-500 font-mono text-sm text-white">{i + 1}</span>
               <div>
-                <h3 className="font-display text-lg font-semibold">{s.titel}</h3>
-                <p className="mt-1 text-[0.95rem] leading-relaxed text-neutralx-600">{s.tekst}</p>
+                <h3 className="font-display text-lg font-semibold">{tx(s.titel)}</h3>
+                <p className="mt-1 text-[0.95rem] leading-relaxed text-neutralx-600">{tx(s.tekst)}</p>
               </div>
             </li>
           ))}
@@ -120,7 +123,7 @@ export default function UitzendpartnerPage() {
       </Section>
 
       <Section>
-        <SectionHead eyebrow="Wie doet wat" title="Jij de werkgever, wij de app" />
+        <SectionHead eyebrow={tx("Wie doet wat")} title={tx("Jij de werkgever, wij de app")} />
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           {VERDELING.map((v) => (
             <div key={v.wie} className="rounded-2xl border border-hair bg-white p-6">
@@ -141,30 +144,30 @@ export default function UitzendpartnerPage() {
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title="Uitzendpartner worden" />
+        <SectionHead eyebrow={tx("Veelgestelde vragen")} title={tx("Uitzendpartner worden")} />
         <div className="mt-8 max-w-3xl">
-          <FaqList items={FAQ} />
+          <FaqList items={FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
         </div>
         <p className="mt-8 text-sm text-neutralx-500">
-          De regels, de boetes en het beleid staan in de{" "}
+          {tx("De regels, de boetes en het beleid staan in de")}{" "}
           <Link href={PARTNER_VOORWAARDEN_PAD} className="text-brand-600 underline">
-            partnervoorwaarden voor uitzendbureaus
+            {tx("partnervoorwaarden voor uitzendbureaus")}
           </Link>
           . Vragen? Mail{" "}
           <a href="mailto:uitzendbureau@zekerflex.com" className="text-brand-600 underline">
-            uitzendbureau@zekerflex.com
+            {tx("uitzendbureau@zekerflex.com")}
           </a>
           .
         </p>
       </Section>
 
       <CtaBand
-        title="Zet je eerste uitzendklus op ZekerFlex"
-        body="Maak een bedrijfsaccount aan en mail ons je KVK-nummer. Wij zetten je account op uitzendpartner."
+        title={tx("Zet je eerste uitzendklus op ZekerFlex")}
+        body={tx("Maak een bedrijfsaccount aan en mail ons je KVK-nummer. Wij zetten je account op uitzendpartner.")}
         primaryHref="/register?type=bedrijf"
-        primaryLabel="Meld je bureau aan"
+        primaryLabel={tx("Meld je bureau aan")}
         secondaryHref="/starten-als-uitzendkracht"
-        secondaryLabel="Werken als uitzendkracht"
+        secondaryLabel={tx("Werken als uitzendkracht")}
       />
     </>
   );

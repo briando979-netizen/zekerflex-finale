@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
@@ -16,14 +18,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const FAQ = [
-  { q: "Zijn er verborgen kosten?", a: "Nee. Voor freelancers is meedoen gratis. Voor bedrijven zijn er alleen de platformkosten van € 3,50 per gewerkt uur. Btw wordt regulier toegepast." },
-  { q: "Wanneer wordt de fee voor bedrijven berekend?", a: "Op het moment dat goedgekeurde uren tot een uitbetaling leiden. Geen werk, geen fee." },
-  { q: "Krijg ik korting bij veel uren?", a: "Ja. De platformkosten dalen met je volume deze maand: vanaf 500 uur € 3,25, vanaf 2.000 uur € 3,00, vanaf 10.000 uur € 2,75 en vanaf 50.000 uur € 2,50 per uur. Je ziet je staffel live in je werkgeversomgeving." },
-  { q: "Betaalt een freelancer iets voor de uitbetaling?", a: "Alleen als je sneller wilt dan de reguliere termijn. Gratis wachten tot de opdrachtgever binnen 30 dagen afrekent, of eerder tegen een fee: betaalopdracht direct indienen 4% van de factuur of binnen 3 werkdagen indienen 2%." },
-  { q: "Kan ik een offerte op maat krijgen?", a: "Voor grotere organisaties met veel vestigingen kijken we naar volumeafspraken. Neem contact op via sales@zekerflex.com." },
+  { q: vt("Zijn er verborgen kosten?"), a: vt("Nee. Voor freelancers is meedoen gratis. Voor bedrijven zijn er alleen de platformkosten van € 3,50 per gewerkt uur. Btw wordt regulier toegepast.") },
+  { q: vt("Wanneer wordt de fee voor bedrijven berekend?"), a: vt("Op het moment dat goedgekeurde uren tot een uitbetaling leiden. Geen werk, geen fee.") },
+  { q: vt("Krijg ik korting bij veel uren?"), a: vt("Ja. De platformkosten dalen met je volume deze maand: vanaf 500 uur € 3,25, vanaf 2.000 uur € 3,00, vanaf 10.000 uur € 2,75 en vanaf 50.000 uur € 2,50 per uur. Je ziet je staffel live in je werkgeversomgeving.") },
+  { q: vt("Betaalt een freelancer iets voor de uitbetaling?"), a: vt("Alleen als je sneller wilt dan de reguliere termijn. Gratis wachten tot de opdrachtgever binnen 30 dagen afrekent, of eerder tegen een fee: betaalopdracht direct indienen 4% van de factuur of binnen 3 werkdagen indienen 2%.") },
+  { q: vt("Kan ik een offerte op maat krijgen?"), a: vt("Voor grotere organisaties met veel vestigingen kijken we naar volumeafspraken. Neem contact op via sales@zekerflex.com.") },
 ];
 
 export default async function PrijzenPage() {
+  const tx = await getSiteT();
   // teksten uit de Site-ontwerper (Teksten); bedragen en staffel blijven uit lib/pricing/tiers.ts
   const tekst = await getContentMap(contentKeys("pr."));
   const v = (k: string) => tekst[k] ?? "";
@@ -34,7 +37,7 @@ export default async function PrijzenPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div id="freelancers" className="card flex scroll-mt-24 flex-col p-8">
             <p className="eyebrow" data-cms-key="pr.fl.label">{v("pr.fl.label")}</p>
-            <div className="mt-4 font-display text-5xl font-bold">Gratis</div>
+            <div className="mt-4 font-display text-5xl font-bold">{tx("Gratis")}</div>
             <p className="mt-2 text-sm text-neutralx-600" data-cms-key="pr.fl.sub">{v("pr.fl.sub")}</p>
             <ul className="mt-6 flex-1 space-y-3 text-[0.95rem] text-neutralx-600">
               {[
@@ -61,7 +64,7 @@ export default async function PrijzenPage() {
             <p className="eyebrow" data-cms-key="pr.bv.label">{v("pr.bv.label")}</p>
             <div className="mt-4 flex items-baseline gap-2">
               <span className="num font-display text-5xl font-bold">€ 3,50</span>
-              <span className="text-sm text-neutralx-500">per gewerkt uur</span>
+              <span className="text-sm text-neutralx-500">{tx("per gewerkt uur")}</span>
             </div>
             <p className="mt-2 text-sm text-neutralx-600" data-cms-key="pr.bv.sub" data-cms-ml="1">
               {v("pr.bv.sub")}
@@ -76,7 +79,7 @@ export default async function PrijzenPage() {
               ].map(([p, h]) => (
                 <span key={h} className="rounded-lg border border-hair px-1 py-1.5">
                   <span className="num block font-semibold text-ink">{p}</span>
-                  <span className="block text-neutralx-500">{h}/mnd</span>
+                  <span className="block text-neutralx-500">{h}{tx("/mnd")}</span>
                 </span>
               ))}
             </div>
@@ -101,21 +104,19 @@ export default async function PrijzenPage() {
         </div>
 
         <p className="mt-8 text-center text-sm text-neutralx-500">
-          Alle bedragen exclusief btw. Uitbetalingen verlopen via SEPA. Wachten op de
-          reguliere termijn is gratis; sneller uitbetalen kan tegen een fee (4% bij
-          urengoedkeuring, 2% bij indiening binnen 3 werkdagen, of direct).
+          {tx("Alle bedragen exclusief btw. Uitbetalingen verlopen via SEPA. Wachten op de reguliere termijn is gratis; sneller uitbetalen kan tegen een fee (4% bij urengoedkeuring, 2% bij indiening binnen 3 werkdagen, of direct).")}
         </p>
         <PlatformFeeEstimate />
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
           <Link href="/tarieven-overzicht" className="btn-ghost">
-            Bekijk tarieven
+            {tx("Bekijk tarieven")}
           </Link>
-          <p className="text-sm text-neutralx-500">Het richttarief per functie en branche, ook als pdf.</p>
+          <p className="text-sm text-neutralx-500">{tx("Het richttarief per functie en branche, ook als pdf.")}</p>
         </div>
         <p className="mt-5 text-center text-sm text-neutralx-600">
-          Benieuwd wat je bespaart ten opzichte van een uitzendbureau?{" "}
+          {tx("Benieuwd wat je bespaart ten opzichte van een uitzendbureau?")}{" "}
           <Link href="/rekentools/kosten-uitzendkracht-berekenen" className="font-semibold text-brand-600 underline">
-            Vergelijk de kosten per uur
+            {tx("Vergelijk de kosten per uur")}
           </Link>
         </p>
       </Section>
@@ -124,9 +125,9 @@ export default async function PrijzenPage() {
     faq: (
       <Section tone="paper">
         <div id="faq" className="scroll-mt-24" />
-        <SectionHead eyebrow={v("pr.faq.eyebrow")} title={v("pr.faq.title")} cms={{ eyebrow: "pr.faq.eyebrow", title: "pr.faq.title" }} />
+        <SectionHead eyebrow={v("pr.faq.eyebrow")} title={v("pr.faq.title")} cms={{ eyebrow: vt("pr.faq.eyebrow"), title: vt("pr.faq.title") }} />
         <div className="mt-10">
-          <FaqList items={FAQ} />
+          <FaqList items={FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
         </div>
       </Section>
     ),
@@ -136,7 +137,7 @@ export default async function PrijzenPage() {
         body={v("pr.cta.body")}
         primaryLabel={v("pr.cta.primary")}
         secondaryLabel={v("pr.cta.secondary")}
-        cms={{ title: "pr.cta.title", body: "pr.cta.body", primary: "pr.cta.primary", secondary: "pr.cta.secondary" }}
+        cms={{ title: vt("pr.cta.title"), body: vt("pr.cta.body"), primary: "pr.cta.primary", secondary: "pr.cta.secondary" }}
       />
     ),
   };

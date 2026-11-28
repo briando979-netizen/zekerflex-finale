@@ -1,3 +1,4 @@
+import { vt } from "@/lib/i18n/site";
 import { AANBOD, aanbodHref, PIJLERS, type PijlerSleutel } from "@/lib/marketing/aanbod";
 import { NIET_FLEXWERK_NAV_KEYS, zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
 import { SECTORS, type Sector } from "@/lib/seo-sectors";
@@ -33,8 +34,8 @@ export interface NavEntry {
 }
 
 // de hoofdknop per doelgroep, overal dezelfde tekst (22 nov 2026, gebruikersonderzoek punt 8; zie HOOFDKNOP hieronder)
-export const CTA_WN = { label: "Maak gratis je profiel", href: "/register" };
-export const CTA_BV = { label: "Plaats een klus", href: "/klus-plaatsen" };
+export const CTA_WN = { label: vt("Maak gratis je profiel"), href: "/register" };
+export const CTA_BV = { label: vt("Plaats een klus"), href: "/klus-plaatsen" };
 
 /**
  * Bij welke kant een pagina hoort (21 nov 2026, eigenaar: "bij bedrijven moet inloggen via het web blijven"). Op een
@@ -83,7 +84,7 @@ export interface KopKnop {
 // is één hoofdknop met één tekst (werker: "Maak gratis je profiel" naar /register, bedrijf: "Plaats een klus" naar
 // /klus-plaatsen). "Ga naar de app" is weg: "Download de app" staat één keer in het menu (de tegel).
 export const HOOFDKNOP: Record<Audience, KopKnop> = { werknemers: CTA_WN, bedrijven: CTA_BV };
-const INLOGGEN: KopKnop = { label: "Inloggen", href: "/login" };
+const INLOGGEN: KopKnop = { label: vt("Inloggen"), href: "/login" };
 
 export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; mobiel: KopKnop }> = {
   werknemers: { eerste: INLOGGEN, tweede: HOOFDKNOP.werknemers, mobiel: INLOGGEN },
@@ -91,34 +92,34 @@ export const KOP_KNOPPEN: Record<Audience, { eerste: KopKnop; tweede: KopKnop; m
 };
 
 const OVER_ITEMS: MenuItem[] = [
-  { title: "Ons verhaal", desc: "Waarom ZekerFlex bestaat en wat we anders doen.", href: "/over-ons#verhaal" },
+  { title: vt("Ons verhaal"), desc: vt("Waarom ZekerFlex bestaat en wat we anders doen."), href: "/over-ons#verhaal" },
   // 21 nov 2026 (eigenaar): "Drie uitgangspunten" uit het menu
-  { title: "Werken bij ons", desc: "Stuur een open sollicitatie — goede mensen zijn altijd welkom.", href: "/over-ons#werken-bij" },
+  { title: vt("Werken bij ons"), desc: vt("Stuur een open sollicitatie — goede mensen zijn altijd welkom."), href: "/over-ons#werken-bij" },
   // 22 nov 2026: de community op de site zelf (lib/community); hier en niet onder Kennis, want Kennis bij werkers blijft kort (21 nov)
-  { title: "Community", desc: "Praat mee met werkers en bedrijven: vragen, ervaringen en tips.", href: "/community" },
-  { title: "Contact", desc: "Vragen of samenwerken? Mail info@zekerflex.com.", href: "mailto:info@zekerflex.com" },
+  { title: vt("Community"), desc: vt("Praat mee met werkers en bedrijven: vragen, ervaringen en tips."), href: "/community" },
+  { title: vt("Contact"), desc: vt("Vragen of samenwerken? Mail info@zekerflex.com."), href: "mailto:info@zekerflex.com" },
 ];
 // 21 nov 2026 (eigenaar): Kennis bij werknemers alleen Informatie, Kennisbank, Blogs en FAQ (zoals YoungOnes)
 const KENNIS_WN: MenuItem[] = [
-  { title: "Informatie", desc: "De basis in één oogopslag: wat, voor wie, wat kost het.", href: "/kennis#informatie" },
-  { title: "Kennisbank", desc: "Uitgelegde onderwerpen: Wet DBA, StiPP, uitbetaling en meer.", href: "/kennis#kennisbank" },
-  { title: "Blogs", desc: "Achtergrond over flexibel werk en het platform.", href: "/kennis/blog" },
-  { title: "FAQ", desc: "Kort antwoord op de vragen die we het vaakst krijgen.", href: "/kennis/faq" },
+  { title: vt("Informatie"), desc: vt("De basis in één oogopslag: wat, voor wie, wat kost het."), href: "/kennis#informatie" },
+  { title: vt("Kennisbank"), desc: vt("Uitgelegde onderwerpen: Wet DBA, StiPP, uitbetaling en meer."), href: "/kennis#kennisbank" },
+  { title: vt("Blogs"), desc: vt("Achtergrond over flexibel werk en het platform."), href: "/kennis/blog" },
+  { title: vt("FAQ"), desc: vt("Kort antwoord op de vragen die we het vaakst krijgen."), href: "/kennis/faq" },
 ];
 const KENNIS_ITEMS: MenuItem[] = [
-  { title: "Informatie", desc: "De basis in één oogopslag: wat, voor wie, wat kost het.", href: "/kennis#informatie" },
-  { title: "Kennisbank", desc: "Uitgelegde onderwerpen: Wet DBA, StiPP, uitbetaling en meer.", href: "/kennis#kennisbank" },
-  { title: "Wet DBA voor bedrijven", desc: "Schijnzelfstandigheid, gezag en handhaving — helder uitgelegd.", href: "/kennis/wet-dba" },
-  { title: "Whitepapers", desc: "Belasting, administratie en verzekering — als pdf om te bewaren.", href: "/kennis/whitepapers" },
-  { title: "Rekentools", desc: "Uurtarief, kosten van een flexkracht en de Wet DBA-check — gratis.", href: "/rekentools" },
-  { title: "Nieuwsroom", desc: "Het laatste nieuws over werk, regels en ondernemen, kort uitgelegd.", href: "/nieuws" },
-  { title: "Blogs", desc: "Achtergrond over flexibel werk en het platform.", href: "/kennis/blog" },
-  { title: "FAQ", desc: "Kort antwoord op de vragen die we het vaakst krijgen.", href: "/kennis/faq" },
+  { title: vt("Informatie"), desc: vt("De basis in één oogopslag: wat, voor wie, wat kost het."), href: "/kennis#informatie" },
+  { title: vt("Kennisbank"), desc: vt("Uitgelegde onderwerpen: Wet DBA, StiPP, uitbetaling en meer."), href: "/kennis#kennisbank" },
+  { title: vt("Wet DBA voor bedrijven"), desc: vt("Schijnzelfstandigheid, gezag en handhaving — helder uitgelegd."), href: "/kennis/wet-dba" },
+  { title: vt("Whitepapers"), desc: vt("Belasting, administratie en verzekering — als pdf om te bewaren."), href: "/kennis/whitepapers" },
+  { title: vt("Rekentools"), desc: vt("Uurtarief, kosten van een flexkracht en de Wet DBA-check — gratis."), href: "/rekentools" },
+  { title: vt("Nieuwsroom"), desc: vt("Het laatste nieuws over werk, regels en ondernemen, kort uitgelegd."), href: "/nieuws" },
+  { title: vt("Blogs"), desc: vt("Achtergrond over flexibel werk en het platform."), href: "/kennis/blog" },
+  { title: vt("FAQ"), desc: vt("Kort antwoord op de vragen die we het vaakst krijgen."), href: "/kennis/faq" },
   // 21 nov 2026 (eigenaar: "Prijzen weg, tarievenoverzicht bij de vragen, de rekenhulp een plekje geven")
-  { title: "Tarievenoverzicht", desc: "Richttarief per functie en branche, ook als pdf.", href: "/tarieven-overzicht" },
-  { title: "Platformkosten berekenen", desc: "Wat je per maand betaalt bij jouw aantal uren.", href: "/rekentools/platformkosten-berekenen" },
+  { title: vt("Tarievenoverzicht"), desc: vt("Richttarief per functie en branche, ook als pdf."), href: "/tarieven-overzicht" },
+  { title: vt("Platformkosten berekenen"), desc: vt("Wat je per maand betaalt bij jouw aantal uren."), href: "/rekentools/platformkosten-berekenen" },
   // 22 nov 2026: korte antwoorden voor bedrijven (lib/seo-vragen.ts)
-  { title: "Vragen van bedrijven", desc: "Wat kost een flexwerker, platform of uitzendbureau, en de Wet DBA.", href: "/vragen" },
+  { title: vt("Vragen van bedrijven"), desc: vt("Wat kost een flexwerker, platform of uitzendbureau, en de Wet DBA."), href: "/vragen" },
 ];
 
 // Branches (21 nov 2026, eigenaar: "bij werknemers een menu Branches, zoals YoungOnes"): de branchepagina's uit lib/seo-sectors.ts.
@@ -128,17 +129,17 @@ const brancheNaam = (s: Sector): string => (Object.hasOwn(BRANCHE_NAAM, s.key) ?
 // 22 nov 2026: daaronder de functiepagina's (/werken-als, lib/seo-functies.ts), voor wie op een functie zoekt
 const BRANCHES_WN: MenuItem[] = [
   ...SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.workerSlug}` })),
-  { title: "Per functie", desc: "Werken als orderpicker, barista, schoonmaker …", href: "/werken-als" },
+  { title: vt("Per functie"), desc: vt("Werken als orderpicker, barista, schoonmaker …"), href: "/werken-als" },
 ];
 const BRANCHES_BV: MenuItem[] = SECTORS.map((s) => ({ title: brancheNaam(s), desc: s.rolesShort, href: `/${s.slug}` }));
 
 // 22 nov 2026: "Apps & spelletjes" en de pagina /online zijn weg (geen flexwerk), dus ook hun menu-items
 const AANBOD_MENU: MenuVariant = {
-  eyebrow: "Alles onder één dak",
-  cta: { label: "Het hele aanbod", href: "/aanbod" },
+  eyebrow: vt("Alles onder één dak"),
+  cta: { label: vt("Het hele aanbod"), href: "/aanbod" },
   items: [
     ...PIJLERS.map((p) => ({ title: p.naam, desc: p.kort, href: `/aanbod#${p.sleutel}` })),
-    { title: "Ik zoek werk", desc: "Als flexwerker, uitzendkracht of zzp'er. Meedoen is gratis.", href: "/voor-freelancers" },
+    { title: vt("Ik zoek werk"), desc: vt("Als flexwerker, uitzendkracht of zzp'er. Meedoen is gratis."), href: "/voor-freelancers" },
   ],
 };
 
@@ -148,7 +149,7 @@ export const NAV: NavEntry[] = [
     // lib/marketing/aanbod.ts; uitzenden is daar één onderdeel van.
     key: "aanbod",
     href: "/aanbod",
-    label: "Aanbod",
+    label: vt("Aanbod"),
     match: "/aanbod",
     overzicht: "Het hele aanbod",
     mega: true,
@@ -157,34 +158,34 @@ export const NAV: NavEntry[] = [
   {
     key: "hoe",
     href: "/#hoe-het-werkt",
-    label: "Hoe het werkt",
+    label: vt("Hoe het werkt"),
     match: "hoe-het-werkt",
     overzicht: "Zo werkt het",
     menu: {
       werknemers: {
-        eyebrow: "Zo werkt ZekerFlex",
+        eyebrow: vt("Zo werkt ZekerFlex"),
         cta: CTA_WN,
         items: [
-          { title: "Vind werk", desc: "Diensten die matchen op je vak, je reistijd en je beschikbaarheid.", href: "/freelance-werk" },
-          { title: "Starten als freelancer", desc: "Van aanmelding tot je eerste dienst — alles geregeld behalve het werk zelf.", href: "/voor-freelancers" },
+          { title: vt("Vind werk"), desc: vt("Diensten die matchen op je vak, je reistijd en je beschikbaarheid."), href: "/freelance-werk" },
+          { title: vt("Starten als freelancer"), desc: vt("Van aanmelding tot je eerste dienst — alles geregeld behalve het werk zelf."), href: "/voor-freelancers" },
           // 21 nov (eigenaar: "YoungOnes heeft dat bij workers onder Hoe het werkt, zet die ook bij ZekerFlex neer")
-          { title: "Starten als uitzendkracht", desc: "Werken zonder KVK, op contract bij een uitzendbureau.", href: "/starten-als-uitzendkracht" },
+          { title: vt("Starten als uitzendkracht"), desc: vt("Werken zonder KVK, op contract bij een uitzendbureau."), href: "/starten-als-uitzendkracht" },
           // 22 nov 2026 (eigenaar: "dooie klik"): /voor-freelancers heeft geen #verzekering; de uitleg staat in de whitepaper
-          { title: "Verzekeren", desc: "Welke verzekering je als zzp'er of flexwerker zelf regelt.", href: "/kennis/whitepapers/verzekering" },
+          { title: vt("Verzekeren"), desc: vt("Welke verzekering je als zzp'er of flexwerker zelf regelt."), href: "/kennis/whitepapers/verzekering" },
         ],
       },
       bedrijven: {
-        eyebrow: "Zo werkt ZekerFlex voor bedrijven",
+        eyebrow: vt("Zo werkt ZekerFlex voor bedrijven"),
         cta: CTA_BV,
         items: [
           // 22 nov 2026: /voor-bedrijven is samengevoegd in /bedrijven (de bedrijvenkant), en geen belofte van "direct de beste
           // kandidaten" meer (gebruikersonderzoek punt 2). "Matching & toewijzing" wees naar een anker op de oude pagina: weg.
-          { title: "Voor bedrijven", desc: "Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert.", href: "/bedrijven" },
+          { title: vt("Voor bedrijven"), desc: vt("Je klus komt bij geverifieerde werkers in de buurt; jij kiest wie je inroostert."), href: "/bedrijven" },
           // 21 nov 2026 (eigenaar): "GPS check-in & urengoedkeuring" en "Facturatie & Wet DBA-monitor" uit het menu
-          { title: "Helpcentrum voor opdrachtgevers", desc: "Account, PO-nummers, diensten plaatsen en uren goedkeuren — stap voor stap.", href: "/kennis/werkgevers" },
+          { title: vt("Helpcentrum voor opdrachtgevers"), desc: vt("Account, PO-nummers, diensten plaatsen en uren goedkeuren — stap voor stap."), href: "/kennis/werkgevers" },
           // 21 nov 2026: uitzendbureaus zetten hun klussen op ZekerFlex en blijven zelf werkgever (lib/uitzend/partners-kern.ts)
-          { title: "Voor uitzendbureaus", desc: "Zet je uitzendklussen op ZekerFlex, onder je eigen naam.", href: "/uitzendpartner" },
-          { title: "Vraag een demo aan", desc: "30 minuten, vrijblijvend — we laten zien hoe het platform werkt.", href: "/demo" },
+          { title: vt("Voor uitzendbureaus"), desc: vt("Zet je uitzendklussen op ZekerFlex, onder je eigen naam."), href: "/uitzendpartner" },
+          { title: vt("Vraag een demo aan"), desc: vt("30 minuten, vrijblijvend — we laten zien hoe het platform werkt."), href: "/demo" },
         ],
       },
     },
@@ -192,26 +193,26 @@ export const NAV: NavEntry[] = [
   {
     key: "prijzen",
     href: "/prijzen",
-    label: "Prijzen",
+    label: vt("Prijzen"),
     match: "/prijzen",
     overzicht: "Alle prijzen",
     menu: {
       werknemers: {
-        eyebrow: "Eerlijk en voorspelbaar",
+        eyebrow: vt("Eerlijk en voorspelbaar"),
         cta: CTA_WN,
         items: [
-          { title: "Gratis voor werknemers", desc: "Voor altijd. Meedoen kost je niets.", href: "/prijzen#freelancers" },
-          { title: "Sneller uitbetalen", desc: "Direct indienen, binnen 3 werkdagen indienen of gratis wachten — jij kiest per keer.", href: "/kennis/uitbetaling-en-facturen" },
-          { title: "Veelgestelde vragen", desc: "Verborgen kosten, wanneer de fee telt, en meer.", href: "/prijzen#faq" },
+          { title: vt("Gratis voor werknemers"), desc: vt("Voor altijd. Meedoen kost je niets."), href: "/prijzen#freelancers" },
+          { title: vt("Sneller uitbetalen"), desc: vt("Direct indienen, binnen 3 werkdagen indienen of gratis wachten — jij kiest per keer."), href: "/kennis/uitbetaling-en-facturen" },
+          { title: vt("Veelgestelde vragen"), desc: vt("Verborgen kosten, wanneer de fee telt, en meer."), href: "/prijzen#faq" },
         ],
       },
       bedrijven: {
-        eyebrow: "Eerlijk en voorspelbaar",
+        eyebrow: vt("Eerlijk en voorspelbaar"),
         cta: CTA_BV,
         items: [
           // 21 nov 2026 (eigenaar): "die 3,50 kan weg" en "personeel zonder abonnement ook weg"
-          { title: "Tarievenoverzicht", desc: "Richttarief per functie en branche, ook als pdf.", href: "/tarieven-overzicht" },
-          { title: "Veelgestelde vragen", desc: "Wanneer de fee telt, offerte op maat, btw.", href: "/prijzen#faq" },
+          { title: vt("Tarievenoverzicht"), desc: vt("Richttarief per functie en branche, ook als pdf."), href: "/tarieven-overzicht" },
+          { title: vt("Veelgestelde vragen"), desc: vt("Wanneer de fee telt, offerte op maat, btw."), href: "/prijzen#faq" },
         ],
       },
     },
@@ -219,35 +220,35 @@ export const NAV: NavEntry[] = [
   {
     key: "branches",
     href: "/voor-freelancers#branches",
-    label: "Branches",
+    label: vt("Branches"),
     match: "-vacatures",
     overzicht: "Alle branches",
     menu: {
-      werknemers: { eyebrow: "Branches uitgelicht", cta: CTA_WN, items: BRANCHES_WN },
-      bedrijven: { eyebrow: "Personeel per branche", cta: CTA_BV, items: BRANCHES_BV },
+      werknemers: { eyebrow: vt("Branches uitgelicht"), cta: CTA_WN, items: BRANCHES_WN },
+      bedrijven: { eyebrow: vt("Personeel per branche"), cta: CTA_BV, items: BRANCHES_BV },
     },
   },
   // 22 nov 2026: de knoppen Shop en Apps & spelletjes zijn weg, met de webshop en de apps-pagina's
   {
     key: "over",
     href: "/over-ons",
-    label: "Over ons",
+    label: vt("Over ons"),
     match: "/over-ons",
     overzicht: "Over ZekerFlex",
     menu: {
-      werknemers: { eyebrow: "Waar we voor staan", cta: CTA_WN, items: OVER_ITEMS },
-      bedrijven: { eyebrow: "Waar we voor staan", cta: CTA_BV, items: OVER_ITEMS },
+      werknemers: { eyebrow: vt("Waar we voor staan"), cta: CTA_WN, items: OVER_ITEMS },
+      bedrijven: { eyebrow: vt("Waar we voor staan"), cta: CTA_BV, items: OVER_ITEMS },
     },
   },
   {
     key: "kennis",
     href: "/kennis",
-    label: "Kennis",
+    label: vt("Kennis"),
     match: "/kennis",
     overzicht: "Alle kennis",
     menu: {
-      werknemers: { eyebrow: "Kennis & informatie", cta: CTA_WN, items: KENNIS_WN },
-      bedrijven: { eyebrow: "Kennis & informatie", cta: CTA_BV, items: KENNIS_ITEMS },
+      werknemers: { eyebrow: vt("Kennis & informatie"), cta: CTA_WN, items: KENNIS_WN },
+      bedrijven: { eyebrow: vt("Kennis & informatie"), cta: CTA_BV, items: KENNIS_ITEMS },
     },
   },
 ];
@@ -294,19 +295,19 @@ export interface SnelleActie {
 }
 export const SNELLE_ACTIES: Record<Audience, SnelleActie[]> = {
   werknemers: [
-    { label: "Open klussen", sub: "Bij jou in de buurt", href: "/klussen", icoon: "zoek" },
-    { label: "Klussen op de kaart", sub: "Zie waar werk is", href: "/open-diensten", icoon: "kaart" },
+    { label: vt("Open klussen"), sub: vt("Bij jou in de buurt"), href: "/klussen", icoon: "zoek" },
+    { label: vt("Klussen op de kaart"), sub: vt("Zie waar werk is"), href: "/open-diensten", icoon: "kaart" },
     // 21 nov: "Via het uitzendbureau" weg (eigenaar: geen aparte pagina, uitzendklussen staan gewoon in de app)
-    { label: "Starten als freelancer", sub: "Zo begin je", href: "/voor-freelancers", icoon: "loon" },
-    { label: "Download de app", sub: "Diensten en uren", href: "/app", icoon: "app" },
+    { label: vt("Starten als freelancer"), sub: vt("Zo begin je"), href: "/voor-freelancers", icoon: "loon" },
+    { label: vt("Download de app"), sub: vt("Diensten en uren"), href: "/app", icoon: "app" },
   ],
   bedrijven: [
-    { label: "Plaats een klus", sub: "Zonder account, zie de kosten", href: "/klus-plaatsen", icoon: "plus" },
-    { label: "Personeel inhuren", sub: "Per stad en branche", href: "/personeel-inhuren", icoon: "team" },
+    { label: vt("Plaats een klus"), sub: vt("Zonder account, zie de kosten"), href: "/klus-plaatsen", icoon: "plus" },
+    { label: vt("Personeel inhuren"), sub: vt("Per stad en branche"), href: "/personeel-inhuren", icoon: "team" },
     // 22 nov 2026 (gebruikersonderzoek, KAN WEG): het Tarievenoverzicht stond hier én onder Kennis (waar de eigenaar het op
     // 21 nov zette); hier nu de overzichtspagina, die eerst een losse link "Alles voor bedrijven →" onder de tegels was
-    { label: "Alles voor bedrijven", sub: "Hoe het werkt, wat het kost", href: "/bedrijven", icoon: "web" },
-    { label: "Vraag een demo aan", sub: "30 minuten, vrijblijvend", href: "/demo", icoon: "demo" },
+    { label: vt("Alles voor bedrijven"), sub: vt("Hoe het werkt, wat het kost"), href: "/bedrijven", icoon: "web" },
+    { label: vt("Vraag een demo aan"), sub: vt("30 minuten, vrijblijvend"), href: "/demo", icoon: "demo" },
   ],
 };
 

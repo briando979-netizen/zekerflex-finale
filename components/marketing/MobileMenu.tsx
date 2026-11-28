@@ -14,6 +14,9 @@ import {
   type SnelIcoon,
 } from "@/lib/marketing/site-nav";
 import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
+import { SiteTaalKiezer, useSiteT } from "@/components/marketing/SiteTaal";
+import { KOP_TEKSTEN } from "@/lib/marketing/kop-teksten";
+import { vulInMet } from "@/lib/i18n/site";
 
 // Het mobiele menu (onder 1280 px; laptops en groter krijgen de hoofdnavigatie in de kopbalk). Eerst wat je het vaakst komt doen (snelle
 // acties per doelgroep), dan de onderdelen als uitklapbare lijsten, en de knoppen
@@ -37,6 +40,7 @@ export function MobileMenu({
   onAudience: (a: Audience) => void;
   onClose: () => void;
 }) {
+  const tx = useSiteT();
   const aanbodKolommen = zichtbareAanbodKolommen(alleenFlexwerk);
   // eigen keuze in het menu; de URL bepaalt alleen de beginstand
   const [doel, setDoel] = useState<Audience>(audience);
@@ -89,7 +93,7 @@ export function MobileMenu({
       ref={panelRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Menu"
+      aria-label={tx(KOP_TEKSTEN.menu)}
       // een link naar dezelfde pagina (of een anker) verandert de route niet: dan zelf sluiten
       onClick={(e) => {
         if ((e.target as HTMLElement).closest("a")) onClose();
@@ -99,7 +103,7 @@ export function MobileMenu({
     >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="shell py-4">
-          <div role="group" aria-label="Ik ben op zoek als" className="flex rounded-full border border-white/15 bg-white/[0.06] p-1">
+          <div role="group" aria-label={tx(KOP_TEKSTEN.ikZoekAls)} className="flex rounded-full border border-white/15 bg-white/[0.06] p-1">
             {(["werknemers", "bedrijven"] as const).map((a) => (
               <button
                 key={a}
@@ -127,8 +131,8 @@ export function MobileMenu({
                     <SnelIcon icoon={s.icoon} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold leading-snug text-white">{s.label}</span>
-                    <span className="mt-0.5 block text-xs leading-snug text-white/55">{s.sub}</span>
+                    <span className="block text-sm font-semibold leading-snug text-white">{tx(s.label)}</span>
+                    <span className="mt-0.5 block text-xs leading-snug text-white/55">{tx(s.sub)}</span>
                   </span>
                 </Link>
               </li>
@@ -137,7 +141,7 @@ export function MobileMenu({
           {/* geen losse "Alles voor werknemers →" meer: dat was dezelfde pagina als de tegel Starten als freelancer (22 nov 2026);
               bij bedrijven is "Alles voor bedrijven" een tegel */}
 
-          <nav aria-label="Onderdelen" className="mt-4 border-t border-white/10">
+          <nav aria-label={tx(KOP_TEKSTEN.onderdelen)} className="mt-4 border-t border-white/10">
             {nav.map((n) => {
               const variant = n.menu?.[doel];
               const open = sectie === n.key;
@@ -147,7 +151,7 @@ export function MobileMenu({
                 return (
                   <div key={n.key} className="border-b border-white/10">
                     <MenuLink href={n.href} className="flex w-full items-center justify-between gap-3 py-3.5 text-[15px] font-semibold text-white">
-                      {n.label}
+                      {tx(n.label)}
                       <span aria-hidden className="text-white/50">→</span>
                     </MenuLink>
                   </div>
@@ -162,7 +166,7 @@ export function MobileMenu({
                     onClick={() => setSectie(open ? null : n.key)}
                     className="flex w-full items-center justify-between gap-3 py-3.5 text-left text-[15px] font-semibold text-white"
                   >
-                    {n.label}
+                    {tx(n.label)}
                     <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden className={`flex-shrink-0 text-white/50 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
                       <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -173,12 +177,12 @@ export function MobileMenu({
                         <div className="space-y-4">
                           {aanbodKolommen.map((k) => (
                             <div key={k.sleutel}>
-                              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">{k.naam}</p>
+                              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">{tx(k.naam)}</p>
                               <ul className="mt-1.5">
                                 {k.items.map((it) => (
                                   <li key={it.href}>
                                     <Link href={it.href} className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-white/80 hover:text-white">
-                                      <span className="min-w-0">{it.naam}</span>
+                                      <span className="min-w-0">{tx(it.naam)}</span>
                                     </Link>
                                   </li>
                                 ))}
@@ -187,13 +191,13 @@ export function MobileMenu({
                           ))}
                           {eigenLinks(n, doel).length > 0 && <SubLijst items={eigenLinks(n, doel)} />}
                           <div>
-                            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">Ik zoek werk</p>
+                            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">{tx(KOP_TEKSTEN.ikZoekWerk)}</p>
                             <ul className="mt-1.5">
                               <li>
-                                <Link href="/klussen" className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">Open klussen</Link>
+                                <Link href="/klussen" className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">{tx(KOP_TEKSTEN.openKlussen)}</Link>
                               </li>
                               <li>
-                                <Link href="/voor-freelancers" className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">Starten als freelancer</Link>
+                                <Link href="/voor-freelancers" className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">{tx(KOP_TEKSTEN.startenAlsFreelancer)}</Link>
                               </li>
                             </ul>
                           </div>
@@ -202,7 +206,7 @@ export function MobileMenu({
                         <SubLijst items={variant?.items ?? []} />
                       )}
                       <MenuLink href={n.href} className="mt-2 inline-flex py-1 text-sm font-semibold text-brand-mint hover:underline">
-                        {n.overzicht ?? `Naar ${n.label}`} →
+                        {n.overzicht ? tx(n.overzicht) : tx(KOP_TEKSTEN.naar, { naam: tx(n.label) })} →
                       </MenuLink>
                     </div>
                   )}
@@ -211,16 +215,24 @@ export function MobileMenu({
             })}
           </nav>
 
+          {/* de taal van de site (28 nov 2026): in het menu, want op een telefoon en tablet staat hij niet in de balk */}
+          <div className="mt-5">
+            <SiteTaalKiezer breed />
+          </div>
+
           <p className="mt-5 text-sm leading-relaxed text-white/55">
-            Vragen? Mail{" "}
-            <a href="mailto:info@zekerflex.com" className="font-semibold text-white/85 underline-offset-2 hover:underline">
-              info@zekerflex.com
-            </a>{" "}
-            of kijk bij{" "}
-            <Link href="/contact" className="font-semibold text-white/85 underline-offset-2 hover:underline">
-              contact
-            </Link>
-            .
+            {vulInMet(tx(KOP_TEKSTEN.vragen), {
+              mail: (
+                <a href="mailto:info@zekerflex.com" className="font-semibold text-white/85 underline-offset-2 hover:underline">
+                  info@zekerflex.com
+                </a>
+              ),
+              contact: (
+                <Link href="/contact" className="font-semibold text-white/85 underline-offset-2 hover:underline">
+                  {tx(KOP_TEKSTEN.contact)}
+                </Link>
+              ),
+            })}
           </p>
           {/* geen losse "Download de app →" meer: de tegel bovenaan is genoeg (22 nov 2026, gebruikersonderzoek) */}
         </div>
@@ -230,10 +242,10 @@ export function MobileMenu({
       <div className="border-t border-white/10 bg-black/25 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <div className="shell flex gap-2.5">
           <Link href={KOP_KNOPPEN[doel].eerste.href} className="flex-none rounded-full bg-white px-5 py-3 text-center text-sm font-bold text-ink transition hover:bg-white/90">
-            {KOP_KNOPPEN[doel].eerste.label}
+            {tx(KOP_KNOPPEN[doel].eerste.label)}
           </Link>
           <Link href={KOP_KNOPPEN[doel].tweede.href} className="min-w-0 flex-1 rounded-full bg-brand-mint px-4 py-3 text-center text-sm font-bold text-ink transition hover:brightness-105">
-            {KOP_KNOPPEN[doel].tweede.label}
+            {tx(KOP_KNOPPEN[doel].tweede.label)}
           </Link>
         </div>
       </div>
@@ -255,13 +267,14 @@ function MenuLink({ href, className, children }: { href: string; className: stri
 }
 
 function SubLijst({ items }: { items: MenuItem[] }) {
+  const tx = useSiteT();
   return (
     <ul className="space-y-0.5">
       {items.map((m) => (
         <li key={m.href + m.title}>
           <MenuLink href={m.href} className="block rounded-lg py-2 hover:bg-white/[0.04]">
-            <span className="block text-sm font-medium text-white/90">{m.title}</span>
-            {m.desc ? <span className="block text-xs leading-snug text-white/50">{m.desc}</span> : null}
+            <span className="block text-sm font-medium text-white/90">{tx(m.title)}</span>
+            {m.desc ? <span className="block text-xs leading-snug text-white/50">{tx(m.desc)}</span> : null}
           </MenuLink>
         </li>
       ))}

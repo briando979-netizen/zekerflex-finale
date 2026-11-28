@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
@@ -33,51 +35,51 @@ const euro = (cent: number) => `€ ${(cent / 100).toFixed(2).replace(".", ",")}
 
 const VOORDELEN = [
   {
-    titel: "Meer kandidaten",
-    tekst: "Je klussen staan in de app tussen het werk dat flexwerkers elke dag bekijken. Zo bereik je mensen die je via een vacaturesite niet ziet.",
+    titel: vt("Meer kandidaten"),
+    tekst: vt("Je klussen staan in de app tussen het werk dat flexwerkers elke dag bekijken. Zo bereik je mensen die je via een vacaturesite niet ziet."),
   },
   {
-    titel: "Onder je eigen naam",
-    tekst: "Op elke klus staat de naam van je bureau. De werker weet vanaf het begin dat hij een uitzendcontract bij jou krijgt.",
+    titel: vt("Onder je eigen naam"),
+    tekst: vt("Op elke klus staat de naam van je bureau. De werker weet vanaf het begin dat hij een uitzendcontract bij jou krijgt."),
   },
   {
-    titel: "Werkers met een gecontroleerd ID",
-    tekst: "Werkers laten hun identiteitsbewijs in de app controleren. Je ziet wie er reageert voordat je een contract maakt.",
+    titel: vt("Werkers met een gecontroleerd ID"),
+    tekst: vt("Werkers laten hun identiteitsbewijs in de app controleren. Je ziet wie er reageert voordat je een contract maakt."),
   },
   {
-    titel: "Geen eigen app nodig",
-    tekst: "De app, het matchen, het inchecken en de urenregistratie regelt ZekerFlex. Jij doet waar je goed in bent: het contract en de verloning.",
+    titel: vt("Geen eigen app nodig"),
+    tekst: vt("De app, het matchen, het inchecken en de urenregistratie regelt ZekerFlex. Jij doet waar je goed in bent: het contract en de verloning."),
   },
 ];
 
 const STAPPEN = [
-  { titel: "Kennismaken", tekst: "Een kort gesprek: wat voor werk je hebt, in welke regio en hoe je nu aan kandidaten komt." },
-  { titel: "Je account wordt uitzendpartner", tekst: "Je maakt een gratis bedrijfsaccount aan. Na een korte controle van je inschrijving als uitlener zetten wij het op uitzendpartner." },
-  { titel: "Je plaatst je eerste klus", tekst: "De klus staat in de app als uitzendklus, onder de naam van je bureau, en wordt getoond aan werkers die erbij passen." },
-  { titel: "Werkers melden zich aan", tekst: "Een werker ziet je dienst in de app en meldt zich aan. Jij krijgt zijn naam, e-mailadres en telefoonnummer per mail, belt hem en neemt hem aan op je eigen uitzendcontract." },
+  { titel: vt("Kennismaken"), tekst: vt("Een kort gesprek: wat voor werk je hebt, in welke regio en hoe je nu aan kandidaten komt.") },
+  { titel: vt("Je account wordt uitzendpartner"), tekst: vt("Je maakt een gratis bedrijfsaccount aan. Na een korte controle van je inschrijving als uitlener zetten wij het op uitzendpartner.") },
+  { titel: vt("Je plaatst je eerste klus"), tekst: vt("De klus staat in de app als uitzendklus, onder de naam van je bureau, en wordt getoond aan werkers die erbij passen.") },
+  { titel: vt("Werkers melden zich aan"), tekst: vt("Een werker ziet je dienst in de app en meldt zich aan. Jij krijgt zijn naam, e-mailadres en telefoonnummer per mail, belt hem en neemt hem aan op je eigen uitzendcontract.") },
 ];
 
 const VERDELING = [
-  { wie: "Jouw bureau", punten: ["Is de werkgever van de uitzendkracht", "Tekent het uitzendcontract", "Betaalt het loon en regelt de verloning", "Volgt de cao en de regels voor uitleners"] },
-  { wie: "ZekerFlex", punten: ["Zet je klussen in de app, onder jouw naam", "Laat ze zien aan werkers die erbij passen", "Controleert de identiteit van werkers", "Regelt het inchecken en de urenregistratie"] },
+  { wie: "Jouw bureau", punten: [vt("Is de werkgever van de uitzendkracht"), vt("Tekent het uitzendcontract"), vt("Betaalt het loon en regelt de verloning"), vt("Volgt de cao en de regels voor uitleners")] },
+  { wie: "ZekerFlex", punten: [vt("Zet je klussen in de app, onder jouw naam"), vt("Laat ze zien aan werkers die erbij passen"), vt("Controleert de identiteit van werkers"), vt("Regelt het inchecken en de urenregistratie")] },
 ];
 
 const FAQ = [
   {
-    q: "Wat kost het?",
+    q: vt("Wat kost het?"),
     a: `${euro(BASE_FEE_PER_HOUR_CENTS)} per gewerkt uur, alleen als er echt gewerkt is. Geen abonnement, geen plaatsingskosten en geen kosten om te beginnen.`,
   },
   {
-    q: "Wie is de werkgever?",
-    a: "Jouw bureau. De werker tekent zijn uitzendcontract bij jou en jij betaalt het loon. ZekerFlex is bij deze klussen geen werkgever en geen uitlener.",
+    q: vt("Wie is de werkgever?"),
+    a: vt("Jouw bureau. De werker tekent zijn uitzendcontract bij jou en jij betaalt het loon. ZekerFlex is bij deze klussen geen werkgever en geen uitlener."),
   },
   {
-    q: "Zit ik ergens aan vast?",
+    q: vt("Zit ik ergens aan vast?"),
     a: `Nee. Je kunt de samenwerking altijd opzeggen, met een opzegtermijn van ${TERMIJN.opzegMaanden} maand. De afspraken staan in de partnervoorwaarden.`,
   },
   {
-    q: "Welke gegevens van een werker krijg ik?",
-    a: "Als een werker zich voor je dienst aanmeldt, geeft hij toestemming om zijn naam, e-mailadres en telefoonnummer met je bureau te delen. Daarmee neem je contact op.",
+    q: vt("Welke gegevens van een werker krijg ik?"),
+    a: vt("Als een werker zich voor je dienst aanmeldt, geeft hij toestemming om zijn naam, e-mailadres en telefoonnummer met je bureau te delen. Daarmee neem je contact op."),
   },
 ];
 
@@ -96,6 +98,7 @@ async function liveCijfers(): Promise<{ werkers: number; metId: number } | null>
 }
 
 export default async function PartnersUitzendPage() {
+  const tx = await getSiteT();
   const cijfers = await liveCijfers();
   const vragen = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) };
   return (
@@ -109,60 +112,60 @@ export default async function PartnersUitzendPage() {
         <HeroMetFoto foto={paginaFoto("uitzendpartner")}>
           <SectionHead
             kop="h1"
-            eyebrow="Uitnodiging voor uitzendbureaus"
-            title="Laten we samenwerken"
-            intro="Zet je diensten in de ZekerFlex-app, onder de naam van je bureau. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. Wij leveren de app, de werkers en het matchen."
+            eyebrow={tx("Uitnodiging voor uitzendbureaus")}
+            title={tx("Laten we samenwerken")}
+            intro={tx("Zet je diensten in de ZekerFlex-app, onder de naam van je bureau. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. Wij leveren de app, de werkers en het matchen.")}
           />
           <div className="mt-10 flex flex-wrap gap-3">
             <a href="mailto:uitzendbureau@zekerflex.com?subject=Kennismaking%20uitzendpartner" className="btn-primary">
-              Plan een kennismaking
+              {tx("Plan een kennismaking")}
             </a>
             <Link href="/register?type=bedrijf" className="btn-ghost">
-              Maak een gratis account
+              {tx("Maak een gratis account")}
             </Link>
           </div>
-          <p className="mt-4 text-sm text-neutralx-500">Mail ons wie we kunnen bellen en wanneer het uitkomt. We bellen je terug.</p>
+          <p className="mt-4 text-sm text-neutralx-500">{tx("Mail ons wie we kunnen bellen en wanneer het uitkomt. We bellen je terug.")}</p>
         </HeroMetFoto>
       </Section>
 
       {cijfers && cijfers.werkers >= 10 && (
         <Section tone="soft">
-          <SectionHead eyebrow="Nu op ZekerFlex" title="Werkers die je klussen kunnen zien" />
+          <SectionHead eyebrow={tx("Nu op ZekerFlex")} title={tx("Werkers die je klussen kunnen zien")} />
           <dl className="mt-8 grid gap-5 sm:grid-cols-2">
             <div className="rounded-2xl border border-hair bg-white p-6">
-              <dt className="text-sm text-neutralx-600">Werkers met een profiel</dt>
+              <dt className="text-sm text-neutralx-600">{tx("Werkers met een profiel")}</dt>
               <dd className="num mt-1 font-display text-4xl font-bold text-ink">{cijfers.werkers}</dd>
             </div>
             <div className="rounded-2xl border border-hair bg-white p-6">
-              <dt className="text-sm text-neutralx-600">Met een gecontroleerd ID</dt>
+              <dt className="text-sm text-neutralx-600">{tx("Met een gecontroleerd ID")}</dt>
               <dd className="num mt-1 font-display text-4xl font-bold text-ink">{cijfers.metId}</dd>
             </div>
           </dl>
-          <p className="mt-4 text-sm text-neutralx-500">Deze cijfers komen rechtstreeks uit ZekerFlex en groeien elke week.</p>
+          <p className="mt-4 text-sm text-neutralx-500">{tx("Deze cijfers komen rechtstreeks uit ZekerFlex en groeien elke week.")}</p>
         </Section>
       )}
 
       <Section>
-        <SectionHead eyebrow="Wat het je oplevert" title="Meer kandidaten, zonder eigen app" />
+        <SectionHead eyebrow={tx("Wat het je oplevert")} title={tx("Meer kandidaten, zonder eigen app")} />
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           {VOORDELEN.map((v) => (
             <div key={v.titel} className="rounded-2xl border border-hair bg-white p-6">
-              <h3 className="font-display text-lg font-semibold text-ink">{v.titel}</h3>
-              <p className="mt-2 text-[0.95rem] leading-relaxed text-neutralx-600">{v.tekst}</p>
+              <h3 className="font-display text-lg font-semibold text-ink">{tx(v.titel)}</h3>
+              <p className="mt-2 text-[0.95rem] leading-relaxed text-neutralx-600">{tx(v.tekst)}</p>
             </div>
           ))}
         </div>
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Zo begin je" title="In vier stappen je eerste uitzendklus" />
+        <SectionHead eyebrow={tx("Zo begin je")} title={tx("In vier stappen je eerste uitzendklus")} />
         <ol className="mt-10 grid gap-6 md:grid-cols-2">
           {STAPPEN.map((s, i) => (
             <li key={s.titel} className="flex gap-4">
               <span className="num flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-500 font-mono text-sm text-white">{i + 1}</span>
               <div>
-                <h3 className="font-display text-lg font-semibold">{s.titel}</h3>
-                <p className="mt-1 text-[0.95rem] leading-relaxed text-neutralx-600">{s.tekst}</p>
+                <h3 className="font-display text-lg font-semibold">{tx(s.titel)}</h3>
+                <p className="mt-1 text-[0.95rem] leading-relaxed text-neutralx-600">{tx(s.tekst)}</p>
               </div>
             </li>
           ))}
@@ -170,7 +173,7 @@ export default async function PartnersUitzendPage() {
       </Section>
 
       <Section>
-        <SectionHead eyebrow="Wie doet wat" title="Jij de werkgever, wij de app" />
+        <SectionHead eyebrow={tx("Wie doet wat")} title={tx("Jij de werkgever, wij de app")} />
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           {VERDELING.map((v) => (
             <div key={v.wie} className="rounded-2xl border border-hair bg-white p-6">
@@ -191,30 +194,30 @@ export default async function PartnersUitzendPage() {
       </Section>
 
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
+        <SectionHead eyebrow={tx("Veelgestelde vragen")} title={tx("Goed om te weten")} />
         <div className="mt-8 max-w-3xl">
-          <FaqList items={FAQ} />
+          <FaqList items={FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
         </div>
         <p className="mt-8 text-sm text-neutralx-500">
-          Alle afspraken staan in de{" "}
+          {tx("Alle afspraken staan in de")}{" "}
           <Link href={PARTNER_VOORWAARDEN_PAD} className="text-brand-600 underline">
-            partnervoorwaarden voor uitzendbureaus
+            {tx("partnervoorwaarden voor uitzendbureaus")}
           </Link>
           . Meer uitleg over hoe het werkt:{" "}
           <Link href="/uitzendpartner" className="text-brand-600 underline">
-            uitzendpartner worden
+            {tx("uitzendpartner worden")}
           </Link>
           .
         </p>
       </Section>
 
       <CtaBand
-        title="Zullen we even bellen?"
-        body="Mail ons wie we kunnen bellen en wanneer het uitkomt. In een kwartier weet je of het bij je bureau past."
+        title={tx("Zullen we even bellen?")}
+        body={tx("Mail ons wie we kunnen bellen en wanneer het uitkomt. In een kwartier weet je of het bij je bureau past.")}
         primaryHref="mailto:uitzendbureau@zekerflex.com?subject=Kennismaking%20uitzendpartner"
-        primaryLabel="Plan een kennismaking"
+        primaryLabel={tx("Plan een kennismaking")}
         secondaryHref="/register?type=bedrijf"
-        secondaryLabel="Maak een gratis account"
+        secondaryLabel={tx("Maak een gratis account")}
       />
     </>
   );

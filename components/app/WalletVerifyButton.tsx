@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { ThuisbasisVelden, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
-import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { AUTH } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 
 interface WalletCheck {
   label: string;
@@ -43,7 +44,7 @@ type Stage =
  */
 export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean }) {
   const router = useRouter();
-  const pt = AUTH_DICTS[useI18n().locale].page;
+  const pt = useDomein(AUTH, useI18n().locale).page;
   const ft = useFT();
   const rt = ft.restTaal;
   // adres in het buitenland niet gevonden: het formulier blijft staan, met de melding erin

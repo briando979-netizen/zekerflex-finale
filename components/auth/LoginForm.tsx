@@ -7,7 +7,8 @@ import { loginAction, googleLoginAction, appleLoginAction, type LoginState } fro
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
 import { PasskeyLogin } from "@/components/auth/PasskeyLogin";
-import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
+import { AUTH, fill, type AuthDict } from "@/lib/i18n/auth";
+import { useDomein } from "@/components/i18n/useDomein";
 import type { Locale } from "@/lib/i18n/config";
 
 const initial: LoginState = { error: null };
@@ -50,6 +51,7 @@ function EyeIcon({ off }: { off: boolean }) {
 
 export function LoginForm({
   locale = "nl",
+  authVooraf,
   callbackUrl,
   googleEnabled,
   appleEnabled = false,
@@ -59,6 +61,8 @@ export function LoginForm({
   codeStap,
 }: {
   locale?: Locale;
+  /** De teksten in een machinetaal, al geladen door de server (geen Engelse flits). */
+  authVooraf?: AuthDict | undefined;
   callbackUrl: string;
   googleEnabled: boolean;
   /** inloggen met Apple staat aan (lib/auth/apple.ts) */
@@ -73,8 +77,9 @@ export function LoginForm({
   const [state, formAction] = useFormState(loginAction, codeStap ? { error: null, needsCode: true, challenge: codeStap.challenge, email: codeStap.email, remember: false } : initial);
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
-  const t = AUTH_DICTS[locale].login;
-  const or = AUTH_DICTS[locale].shell.or;
+  const auth = useDomein(AUTH, locale, authVooraf);
+  const t = auth.login;
+  const or = auth.shell.or;
   const banner = state.error ?? (errorCode ? (ERROR_COPY[errorCode] ?? t.failed) : null);
   const oauth = googleEnabled || appleEnabled;
 

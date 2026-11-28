@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -37,9 +39,9 @@ import {
 // vlag `publiek-alleen-flexwerk`: deze proefversie is dicht voor Google (noindex) zolang de echte voorpagina de flexwerk-home is
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "Flexwerk, uitzendwerk en zzp-klussen | ZekerFlex",
+    title: vt("Flexwerk, uitzendwerk en zzp-klussen | ZekerFlex"),
     description:
-      "Kies zelf je klussen bij jou in de buurt. Je ziet vooraf wat je verdient, je checkt in met je telefoon en je geld komt op je eigen rekening. Gratis voor werkers, in vijf talen.",
+      vt("Kies zelf je klussen bij jou in de buurt. Je ziet vooraf wat je verdient, je checkt in met je telefoon en je geld komt op je eigen rekening. Gratis voor werkers, in vijf talen."),
     ...(await robotsVerborgen("/flexwerk")),
   };
 }
@@ -47,7 +49,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // De gekozen achtergrond komt uit de opslag: zonder dit zou hij bij het bouwen worden vastgelegd (toen is er geen database).
 export const revalidate = 60;
 
-export default function FlexwerkPage() {
+export default async function FlexwerkPage() {
+  const tx = await getSiteT();
   return (
     <>
       <script
@@ -64,7 +67,7 @@ export default function FlexwerkPage() {
         <div className="absolute inset-x-0 top-0 -z-10 h-[22rem] md:inset-y-0 md:left-auto md:h-auto md:w-[40%]">
           <Image
             src={WERK_HERO.foto}
-            alt={WERK_HERO.fotoAlt}
+            alt={tx(WERK_HERO.fotoAlt)}
             fill
             priority
             sizes="(min-width: 768px) 40vw, 100vw"
@@ -81,17 +84,17 @@ export default function FlexwerkPage() {
               href={BEDRIJVEN_HOME}
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur transition hover:bg-white/15"
             >
-              {WERK_HERO.wissel.vraag} <span className="text-brand-mint">{WERK_HERO.wissel.knop} →</span>
+              {tx(WERK_HERO.wissel.vraag)} <span className="text-brand-mint">{tx(WERK_HERO.wissel.knop)} →</span>
             </Link>
-            <p className="eyebrow mt-5 text-brand-mint">{WERK_HERO.eyebrow}</p>
+            <p className="eyebrow mt-5 text-brand-mint">{tx(WERK_HERO.eyebrow)}</p>
             <h1 className="fluid-hero mt-3 text-balance font-display font-bold">
-              {WERK_HERO.kop}{" "}
+              {tx(WERK_HERO.kop)}{" "}
               <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">{WERK_HERO.kopAccent}</span>
             </h1>
-            <p className="fluid-lead mt-4 max-w-lg text-white/75">{WERK_HERO.lead}</p>
+            <p className="fluid-lead mt-4 max-w-lg text-white/75">{tx(WERK_HERO.lead)}</p>
             <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
               <Link href={WERK_AANMELDEN} className="btn-mint text-base">
-                {WERK_HERO.knop}
+                {tx(WERK_HERO.knop)}
               </Link>
               <Link href="/klussen" className="btn-ghost-invert text-base">
                 {WERK_HERO.knop2}
@@ -110,7 +113,7 @@ export default function FlexwerkPage() {
       </section>
 
       {/* ───────────────────────────────────────────────── schuivende strook: de soorten werk (alleen CSS; staat stil bij "minder beweging") */}
-      <nav aria-label="Soorten werk" className="overflow-hidden border-y border-white/10 bg-[#0C0E12] py-3">
+      <nav aria-label={tx("Soorten werk")} className="overflow-hidden border-y border-white/10 bg-[#0C0E12] py-3">
         <ul className="marquee gap-3 pr-3">
           {[0, 1, 2, 3].map((ronde) =>
             WERK_STROOK.map((s) => (
@@ -120,7 +123,7 @@ export default function FlexwerkPage() {
                   tabIndex={ronde > 0 ? -1 : undefined}
                   className="inline-block whitespace-nowrap rounded-full border border-white/15 px-4 py-1.5 font-display text-sm font-semibold text-white/85 transition hover:border-brand-mint hover:text-brand-mint"
                 >
-                  {s.naam}
+                  {tx(s.naam)}
                 </Link>
               </li>
             )),
@@ -138,21 +141,21 @@ export default function FlexwerkPage() {
         <div className="aurora" aria-hidden />
         <div className="shell-4k relative py-8 md:py-10 lg:py-12">
           <Reveal>
-            <p className="eyebrow text-brand-mint">Zo werkt het</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">In drie stappen aan het werk</h2>
+            <p className="eyebrow text-brand-mint">{tx("Zo werkt het")}</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">{tx("In drie stappen aan het werk")}</h2>
           </Reveal>
           <ol className="mt-6 grid gap-3 md:grid-cols-3 md:gap-4">
             {WERK_STAPPEN.map((s, i) => (
               <Reveal key={s.titel} as="li" delay={i * 100} className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur md:p-5">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-mint font-display text-base font-bold text-ink">{i + 1}</span>
-                <h3 className="mt-3 font-display text-lg font-semibold">{s.titel}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-white/70">{s.tekst}</p>
+                <h3 className="mt-3 font-display text-lg font-semibold">{tx(s.titel)}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-white/70">{tx(s.tekst)}</p>
               </Reveal>
             ))}
           </ol>
           <Reveal delay={200} className="mt-6">
             <Link href={WERK_AANMELDEN} className="btn-mint text-base">
-              {WERK_HERO.knop}
+              {tx(WERK_HERO.knop)}
             </Link>
           </Reveal>
         </div>
@@ -162,8 +165,8 @@ export default function FlexwerkPage() {
       <section className="bg-paper">
         <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal>
-            <p className="eyebrow">Voor wie</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Werk dat past bij jouw leven</h2>
+            <p className="eyebrow">{tx("Voor wie")}</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">{tx("Werk dat past bij jouw leven")}</h2>
           </Reveal>
           <VoorWieKaarten items={WERK_GROEPEN} />
         </div>
@@ -173,8 +176,8 @@ export default function FlexwerkPage() {
       <section className="bg-paper">
         <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal>
-            <p className="eyebrow">Waarom ZekerFlex</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Eerlijk werk, op jouw voorwaarden</h2>
+            <p className="eyebrow">{tx("Waarom ZekerFlex")}</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">{tx("Eerlijk werk, op jouw voorwaarden")}</h2>
           </Reveal>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
             {WERK_VOORDELEN.map((v, i) => (
@@ -182,8 +185,8 @@ export default function FlexwerkPage() {
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
                   <Icoon naam={v.icoon} />
                 </span>
-                <h3 className="mt-3 font-display text-base font-semibold md:text-lg">{v.titel}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{v.tekst}</p>
+                <h3 className="mt-3 font-display text-base font-semibold md:text-lg">{tx(v.titel)}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{tx(v.tekst)}</p>
               </Reveal>
             ))}
           </ul>
@@ -199,11 +202,11 @@ export default function FlexwerkPage() {
       <section className="bg-paper">
         <div className="shell-4k grid gap-6 py-8 md:py-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12 lg:py-12">
           <Reveal>
-            <p className="eyebrow">Veelgestelde vragen</p>
-            <h2 className="fluid-h2 mt-3 font-display font-bold">Goed om te weten</h2>
+            <p className="eyebrow">{tx("Veelgestelde vragen")}</p>
+            <h2 className="fluid-h2 mt-3 font-display font-bold">{tx("Goed om te weten")}</h2>
           </Reveal>
           <Reveal delay={120}>
-            <FaqList items={WERK_FAQ} />
+            <FaqList items={WERK_FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
           </Reveal>
         </div>
       </section>
@@ -214,15 +217,15 @@ export default function FlexwerkPage() {
         <div className="shell-4k relative py-8 md:py-10 lg:py-12">
           <Reveal className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
-              <h2 className="fluid-h2 text-balance font-display font-bold">{WERK_SLOT.kop}</h2>
-              <p className="fluid-lead mt-3 text-white/70">{WERK_SLOT.lead}</p>
+              <h2 className="fluid-h2 text-balance font-display font-bold">{tx(WERK_SLOT.kop)}</h2>
+              <p className="fluid-lead mt-3 text-white/70">{tx(WERK_SLOT.lead)}</p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-3">
               <Link href={WERK_AANMELDEN} className="btn-mint text-base">
-                {WERK_HERO.knop}
+                {tx(WERK_HERO.knop)}
               </Link>
               <Link href={BEDRIJVEN_HOME} className="btn-ghost-invert text-base">
-                {WERK_HERO.wissel.knop}
+                {tx(WERK_HERO.wissel.knop)}
               </Link>
             </div>
           </Reveal>

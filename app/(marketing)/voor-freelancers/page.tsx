@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
@@ -35,46 +37,46 @@ export async function generateMetadata(): Promise<Metadata> {
 // "nog niet overtuigd?", vragen en een donkere slotband met de telefoon. Alleen wat de app nu echt doet.
 
 const KENMERKEN = [
-  { kop: "€ 0", tekst: "Gratis voor werkers. De opdrachtgever betaalt de platformkosten." },
-  { kop: "5 talen", tekst: "De app in het Nederlands, Engels, Pools, Roemeens en Oekraïens." },
-  { kop: "1 app", tekst: "Klussen, chat, uren en facturen op één plek." },
+  { kop: "€ 0", tekst: vt("Gratis voor werkers. De opdrachtgever betaalt de platformkosten.") },
+  { kop: vt("5 talen"), tekst: vt("De app in het Nederlands, Engels, Pools, Roemeens en Oekraïens.") },
+  { kop: vt("1 app"), tekst: vt("Klussen, chat, uren en facturen op één plek.") },
 ];
 
 const STAPPEN: { titel: string; tekst: string; scherm: FreelanceScherm; app?: boolean }[] = [
   {
-    titel: "Download de app",
-    tekst: "Installeer ZekerFlex op je telefoon. Je klussen, je chat met de opdrachtgever en je uren heb je dan altijd bij de hand.",
+    titel: vt("Download de app"),
+    tekst: vt("Installeer ZekerFlex op je telefoon. Je klussen, je chat met de opdrachtgever en je uren heb je dan altijd bij de hand."),
     scherm: "lijst",
     app: true,
   },
   {
-    titel: "Maak je profiel compleet",
-    tekst: "Kies zzp'er of flexwerker, vul je KVK-nummer in en doe de ID-check in de app. Zo weten opdrachtgevers wie er komt.",
+    titel: vt("Maak je profiel compleet"),
+    tekst: vt("Kies zzp'er of flexwerker, vul je KVK-nummer in en doe de ID-check in de app. Zo weten opdrachtgevers wie er komt."),
     scherm: "profiel",
   },
   {
-    titel: "Vind je eerste klus",
-    tekst: "Kies je branches en zie klussen bij jou in de buurt, met de reistijd erbij. Past er een? Tik op Reageer op deze klus, of doe een tegenbod.",
+    titel: vt("Vind je eerste klus"),
+    tekst: vt("Kies je branches en zie klussen bij jou in de buurt, met de reistijd erbij. Past er een? Tik op Reageer op deze klus, of doe een tegenbod."),
     scherm: "klus",
   },
   {
-    titel: "Werk en krijg je geld",
-    tekst: "Doe je klus, vul na afloop je uren in en kies hoe snel je wordt uitbetaald. De factuur maakt ZekerFlex voor je.",
+    titel: vt("Werk en krijg je geld"),
+    tekst: vt("Doe je klus, vul na afloop je uren in en kies hoe snel je wordt uitbetaald. De factuur maakt ZekerFlex voor je."),
     scherm: "uren",
   },
 ];
 
 const FUNCTIES = [
-  { icoon: "📍", titel: "Klussen in de buurt", tekst: "Bij elke klus zie je hoe lang je erover doet met de fiets, de auto of het ov." },
-  { icoon: "💬", titel: "Chat met de opdrachtgever", tekst: "Vraag het direct in de app, vóór en na je klus." },
-  { icoon: "🤝", titel: "Doe een tegenbod", tekst: "Vind je het tarief te laag? Bij freelance klussen stel je zelf een ander uurtarief voor." },
+  { icoon: "📍", titel: vt("Klussen in de buurt"), tekst: vt("Bij elke klus zie je hoe lang je erover doet met de fiets, de auto of het ov.") },
+  { icoon: "💬", titel: vt("Chat met de opdrachtgever"), tekst: vt("Vraag het direct in de app, vóór en na je klus.") },
+  { icoon: "🤝", titel: vt("Doe een tegenbod"), tekst: vt("Vind je het tarief te laag? Bij freelance klussen stel je zelf een ander uurtarief voor.") },
   // 21 nov 2026 (eigenaar): inchecken alleen met een geprinte QR-code die de werker scant; geen kastjes, tablets of NFC
-  { icoon: "📱", titel: "Inchecken met een QR-code", tekst: "Hangt de opdrachtgever een QR-code op, dan scan je die bij aankomst met je telefoon. Zo kloppen je uren." },
-  { icoon: "⏱️", titel: "Uren in een paar tikken", tekst: "Na je klus vul je je uren in. De opdrachtgever keurt ze goed in de app." },
-  { icoon: "🧾", titel: "Geen facturen maken", tekst: "ZekerFlex maakt je factuur automatisch, met de juiste btw." },
-  { icoon: "💸", titel: "Kies hoe snel je geld komt", tekst: "Gratis wachten tot de opdrachtgever betaalt (binnen 30 dagen), of sneller tegen een kleine fee." },
-  { icoon: "⭐", titel: "Bouw je reputatie op", tekst: "Goede beoordelingen en betrouwbaar werk brengen je meer en beter werk." },
-  { icoon: "🛡️", titel: "Afspraken vastgelegd", tekst: "Per opdrachtgever liggen de afspraken vast, en je ziet het als je veel uren bij één opdrachtgever maakt." },
+  { icoon: "📱", titel: vt("Inchecken met een QR-code"), tekst: vt("Hangt de opdrachtgever een QR-code op, dan scan je die bij aankomst met je telefoon. Zo kloppen je uren.") },
+  { icoon: "⏱️", titel: vt("Uren in een paar tikken"), tekst: vt("Na je klus vul je je uren in. De opdrachtgever keurt ze goed in de app.") },
+  { icoon: "🧾", titel: vt("Geen facturen maken"), tekst: vt("ZekerFlex maakt je factuur automatisch, met de juiste btw.") },
+  { icoon: "💸", titel: vt("Kies hoe snel je geld komt"), tekst: vt("Gratis wachten tot de opdrachtgever betaalt (binnen 30 dagen), of sneller tegen een kleine fee.") },
+  { icoon: "⭐", titel: vt("Bouw je reputatie op"), tekst: vt("Goede beoordelingen en betrouwbaar werk brengen je meer en beter werk.") },
+  { icoon: "🛡️", titel: vt("Afspraken vastgelegd"), tekst: vt("Per opdrachtgever liggen de afspraken vast, en je ziet het als je veel uren bij één opdrachtgever maakt.") },
 ];
 
 const BRANCHE_FOTO: Record<string, string> = {
@@ -88,15 +90,16 @@ const BRANCHE_FOTO: Record<string, string> = {
 };
 
 const FAQ = [
-  { q: "Wat heb ik nodig om te beginnen?", a: "Een KVK-inschrijving (als zzp'er of flexwerker) en een identiteitsbewijs voor de ID-check. Verder een rekeningnummer voor je uitbetalingen." },
-  { q: "Kan ik ook zonder KVK werken?", a: "Ja, als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is dan je werkgever. Hoe dat werkt, lees je op zekerflex.com/starten-als-uitzendkracht." },
-  { q: "Kost het mij iets?", a: "Nee. Meedoen als freelancer is volledig gratis. De platformfee wordt bij de opdrachtgever in rekening gebracht." },
-  { q: "Wanneer krijg ik precies betaald?", a: "Dat bepaal je zelf per dienst. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder je geld, dan kies je een snellere uitbetaling tegen een fee: betaalopdracht direct indienen (4% van de factuur) of binnen 3 werkdagen indienen (2%)." },
-  { q: "Vanaf welke leeftijd kan ik werken?", a: "Vanaf 18 jaar. Ben je 16 of 17? Laat dan je e-mailadres achter op zekerflex.com/nog-geen-18, dan krijg je bericht zodra je bij ons aan de slag kunt." },
-  { q: "Wat als er een geschil is over mijn uren?", a: "Dan wordt de betaling voor die dienst aangehouden tot een dispuutmanager ernaar heeft gekeken. Je check-in, de goedgekeurde planning en de afspraken in de chat wegen daarin mee." },
+  { q: vt("Wat heb ik nodig om te beginnen?"), a: vt("Een KVK-inschrijving (als zzp'er of flexwerker) en een identiteitsbewijs voor de ID-check. Verder een rekeningnummer voor je uitbetalingen.") },
+  { q: vt("Kan ik ook zonder KVK werken?"), a: vt("Ja, als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is dan je werkgever. Hoe dat werkt, lees je op zekerflex.com/starten-als-uitzendkracht.") },
+  { q: vt("Kost het mij iets?"), a: vt("Nee. Meedoen als freelancer is volledig gratis. De platformfee wordt bij de opdrachtgever in rekening gebracht.") },
+  { q: vt("Wanneer krijg ik precies betaald?"), a: vt("Dat bepaal je zelf per dienst. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder je geld, dan kies je een snellere uitbetaling tegen een fee: betaalopdracht direct indienen (4% van de factuur) of binnen 3 werkdagen indienen (2%).") },
+  { q: vt("Vanaf welke leeftijd kan ik werken?"), a: vt("Vanaf 18 jaar. Ben je 16 of 17? Laat dan je e-mailadres achter op zekerflex.com/nog-geen-18, dan krijg je bericht zodra je bij ons aan de slag kunt.") },
+  { q: vt("Wat als er een geschil is over mijn uren?"), a: vt("Dan wordt de betaling voor die dienst aangehouden tot een dispuutmanager ernaar heeft gekeken. Je check-in, de goedgekeurde planning en de afspraken in de chat wegen daarin mee.") },
 ];
 
 export default async function VoorFreelancersPage() {
+  const tx = await getSiteT();
   // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
   const tekst = await getContentMap(contentKeys("vf."));
   const v = (k: string) => tekst[k] ?? "";
@@ -107,8 +110,8 @@ export default async function VoorFreelancersPage() {
         <div className="grid gap-5 sm:grid-cols-3">
           {KENMERKEN.map((k) => (
             <div key={k.kop} className="rounded-2xl border border-hair bg-white p-6 text-center">
-              <p className="font-display text-4xl font-bold text-brand-600">{k.kop}</p>
-              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{k.tekst}</p>
+              <p className="font-display text-4xl font-bold text-brand-600">{tx(k.kop)}</p>
+              <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{tx(k.tekst)}</p>
             </div>
           ))}
         </div>
@@ -117,19 +120,19 @@ export default async function VoorFreelancersPage() {
     stappen: (
       <Section tone="paper">
         <div id="stappen" className="scroll-mt-24">
-          <SectionHead eyebrow={v("vf.how.eyebrow")} title={v("vf.how.title")} cms={{ eyebrow: "vf.how.eyebrow", title: "vf.how.title" }} />
+          <SectionHead eyebrow={v("vf.how.eyebrow")} title={v("vf.how.title")} cms={{ eyebrow: vt("vf.how.eyebrow"), title: vt("vf.how.title") }} />
         </div>
         <ol className="mt-12 space-y-16">
           {STAPPEN.map((s, i) => (
             <li key={s.titel} className="grid items-center gap-8 md:grid-cols-2">
               <div className={i % 2 === 1 ? "md:order-2" : ""}>
                 <span className="num inline-grid h-10 w-10 place-items-center rounded-full bg-brand-500 font-mono text-base text-white">{i + 1}</span>
-                <h3 className="mt-3 font-display text-2xl font-bold text-ink">{s.titel}</h3>
-                <p className="mt-2 max-w-xl text-[1.02rem] leading-relaxed text-neutralx-600">{s.tekst}</p>
+                <h3 className="mt-3 font-display text-2xl font-bold text-ink">{tx(s.titel)}</h3>
+                <p className="mt-2 max-w-xl text-[1.02rem] leading-relaxed text-neutralx-600">{tx(s.tekst)}</p>
                 {s.app && (
                   <div className="mt-5 flex flex-wrap gap-3">
                     <Link href="/app" className="btn-primary">
-                      Naar de app
+                      {tx("Naar de app")}
                     </Link>
                   </div>
                 )}
@@ -144,7 +147,7 @@ export default async function VoorFreelancersPage() {
     ),
     voordelen: (
       <Section tone="soft">
-        <SectionHead eyebrow={v("vf.got.eyebrow")} title={v("vf.got.title")} cms={{ eyebrow: "vf.got.eyebrow", title: "vf.got.title" }} />
+        <SectionHead eyebrow={v("vf.got.eyebrow")} title={v("vf.got.title")} cms={{ eyebrow: vt("vf.got.eyebrow"), title: vt("vf.got.title") }} />
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FUNCTIES.map((f) => (
             // op de telefoon het pictogram links van de tekst (kaarten half zo hoog), vanaf sm erboven
@@ -153,8 +156,8 @@ export default async function VoorFreelancersPage() {
                 {f.icoon}
               </span>
               <div>
-                <h3 className="font-display text-lg font-semibold text-ink sm:mt-4">{f.titel}</h3>
-                <p className="mt-1 text-[0.95rem] leading-relaxed text-neutralx-600 sm:mt-1.5">{f.tekst}</p>
+                <h3 className="font-display text-lg font-semibold text-ink sm:mt-4">{tx(f.titel)}</h3>
+                <p className="mt-1 text-[0.95rem] leading-relaxed text-neutralx-600 sm:mt-1.5">{tx(f.tekst)}</p>
               </div>
             </div>
           ))}
@@ -164,7 +167,7 @@ export default async function VoorFreelancersPage() {
     branches: (
       <Section tone="paper">
         <div id="branches" className="scroll-mt-24">
-          <SectionHead eyebrow="Branches" title="Werk in de branche die bij je past" />
+          <SectionHead eyebrow={tx("Branches")} title={tx("Werk in de branche die bij je past")} />
         </div>
         <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
           {SECTORS.map((s) => (
@@ -178,7 +181,7 @@ export default async function VoorFreelancersPage() {
               />
               <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" aria-hidden />
               <span className="absolute inset-x-0 bottom-0 p-4 text-white">
-                <span className="block font-display text-lg font-bold md:text-xl">{s.label}</span>
+                <span className="block font-display text-lg font-bold md:text-xl">{tx(s.label)}</span>
                 <span className="mt-0.5 block text-xs text-white/80">{s.rolesShort}</span>
               </span>
             </Link>
@@ -187,8 +190,8 @@ export default async function VoorFreelancersPage() {
             href="/klussen"
             className="flex aspect-[4/3] flex-col justify-end rounded-2xl bg-brand-500 p-4 text-white transition hover:bg-brand-600"
           >
-            <span className="font-display text-lg font-bold md:text-xl">Alle klussen</span>
-            <span className="mt-0.5 text-xs text-white/85">Bekijk wat er nu open staat →</span>
+            <span className="font-display text-lg font-bold md:text-xl">{tx("Alle klussen")}</span>
+            <span className="mt-0.5 text-xs text-white/85">{tx("Bekijk wat er nu open staat →")}</span>
           </Link>
         </div>
         {/* 22 nov 2026: ook per stad (de branches staan er al als foto's hierboven) */}
@@ -199,21 +202,20 @@ export default async function VoorFreelancersPage() {
       <Section tone="soft">
         <div className="grid items-center gap-10 md:grid-cols-2">
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
-            <Image src={`${FOTO_MAP}/campagne-barista.jpg`} alt="Een barista zet koffie achter de bar" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
+            <Image src={`${FOTO_MAP}/campagne-barista.jpg`} alt={tx("Een barista zet koffie achter de bar")} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
           </div>
           <div>
-            <p className="eyebrow">Vrijheid</p>
-            <h2 className="mt-3 font-display text-3xl font-bold leading-tight text-ink md:text-4xl">Nog niet overtuigd?</h2>
+            <p className="eyebrow">{tx("Vrijheid")}</p>
+            <h2 className="mt-3 font-display text-3xl font-bold leading-tight text-ink md:text-4xl">{tx("Nog niet overtuigd?")}</h2>
             <p className="mt-4 text-[1.02rem] leading-relaxed text-neutralx-600">
-              Jij bepaalt waar en wanneer je werkt. Een dag, een avond of elke zaterdag: je kiest alleen klussen die in je agenda passen. Geen vast contract en
-              geen verplichtingen. Je eigen uurtarief bepaal je zelf, en elke klus maakt je profiel sterker.
+              {tx("Jij bepaalt waar en wanneer je werkt. Een dag, een avond of elke zaterdag: je kiest alleen klussen die in je agenda passen. Geen vast contract en geen verplichtingen. Je eigen uurtarief bepaal je zelf, en elke klus maakt je profiel sterker.")}
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/klussen" className="btn-primary">
-                Bekijk klussen
+                {tx("Bekijk klussen")}
               </Link>
               <Link href="/rekentools/zzp-uurtarief-berekenen" className="btn-ghost">
-                Bereken je uurtarief
+                {tx("Bereken je uurtarief")}
               </Link>
             </div>
           </div>
@@ -222,9 +224,9 @@ export default async function VoorFreelancersPage() {
     ),
     faq: (
       <Section tone="paper">
-        <SectionHead eyebrow={v("vf.faq.eyebrow")} title={v("vf.faq.title")} cms={{ eyebrow: "vf.faq.eyebrow", title: "vf.faq.title" }} />
+        <SectionHead eyebrow={v("vf.faq.eyebrow")} title={v("vf.faq.title")} cms={{ eyebrow: vt("vf.faq.eyebrow"), title: vt("vf.faq.title") }} />
         <div className="mt-10 max-w-3xl">
-          <FaqList items={FAQ} />
+          <FaqList items={FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
         </div>
       </Section>
     ),
@@ -253,11 +255,11 @@ export default async function VoorFreelancersPage() {
                 {v("vf.cta.primary")}
               </Link>
               <Link href="/app" className="btn-ghost-invert">
-                Download de app
+                {tx("Download de app")}
               </Link>
             </div>
             <p className="mt-6 text-sm text-white/60">
-              Ben je een bedrijf?{" "}
+              {tx("Ben je een bedrijf?")}{" "}
               <Link href="/bedrijven" className="font-semibold text-white underline" data-cms-key="vf.cta.secondary">
                 {v("vf.cta.secondary")}
               </Link>
@@ -297,7 +299,7 @@ export default async function VoorFreelancersPage() {
             <Photo name="freelancer" fallback={<SceneWork />} className="shadow-lift" />
             <p className="absolute -bottom-4 left-4 rounded-2xl bg-white px-4 py-3 text-ink shadow-lift md:-left-6">
               <span className="block font-display text-2xl font-bold text-brand-600">€ 0</span>
-              <span className="block text-xs text-neutralx-600">kosten voor jou als werker</span>
+              <span className="block text-xs text-neutralx-600">{tx("kosten voor jou als werker")}</span>
             </p>
           </div>
         </div>

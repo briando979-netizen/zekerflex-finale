@@ -1,4 +1,6 @@
 import { metMachineTalen, type Locale } from "@/lib/i18n/config";
+import { maakDomein } from "@/lib/i18n/domein";
+import { AUTH_LADERS } from "@/lib/i18n/gen/auth-index";
 import { SCAN_EXTRA, type ScanExtra } from "@/lib/i18n/scan-extra";
 
 // ---------------------------------------------------------------------------
@@ -2519,6 +2521,13 @@ const uk: AuthDict = {
 };
 
 export const AUTH_DICTS: Record<Locale, AuthDict> = metMachineTalen({ nl, en, pl, ro, uk });
+
+/**
+ * Inloggen en aanmelden in elke taal (28 nov 2026, lib/i18n/domein.ts): de vijf handgemaakte talen direct, een machinetaal uit
+ * zijn eigen bestand (lib/i18n/gen/auth.<taal>.ts) zodra iemand hem kiest. Server: `await AUTH.laad(locale)`; client:
+ * `useDomein(AUTH, locale)`. AUTH_DICTS[locale] blijft werken, maar geeft een machinetaal het Engels.
+ */
+export const AUTH = maakDomein(AUTH_DICTS, AUTH_LADERS);
 
 export function fill(s: string, vars: Record<string, string>): string {
   return s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);

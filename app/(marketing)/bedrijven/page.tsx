@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import { Fragment, type ReactNode } from "react";
 import { ldJson } from "@/lib/seo/json-ld";
 import { getPrincipal, hasRole } from "@/lib/auth";
@@ -41,6 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BedrijvenHomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const tx = await getSiteT();
   // altijd achteraan toevoegen: de destructuring hierboven volgt deze volgorde
   const [v, { indeling, isConcept }, alleenFlexwerk, werkers] = await Promise.all([
     getContentValues(),
@@ -61,7 +64,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
     <>
       {isConcept ? (
         <div className="bg-amber-100 px-4 py-2 text-center text-sm font-semibold text-amber-900" role="status">
-          Concept-voorbeeld van de homepage-indeling: alleen jij ziet dit.
+          {tx("Concept-voorbeeld van de homepage-indeling: alleen jij ziet dit.")}
         </div>
       ) : null}
       <script
@@ -77,7 +80,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
         <div className="absolute inset-x-0 top-0 -z-10 h-[22rem] md:inset-y-0 md:left-auto md:h-auto md:w-[40%]">
           <Image
             src="/werk/campagne-kop.jpg"
-            alt="Een lachende jonge vrouw in de deuropening van een café, klaar voor haar dienst"
+            alt={tx("Een lachende jonge vrouw in de deuropening van een café, klaar voor haar dienst")}
             fill
             priority
             sizes="(min-width: 768px) 40vw, 100vw"
@@ -90,21 +93,21 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
         <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
           <div className="max-w-xl md:max-w-sm lg:max-w-xl">
             {/* de pil "Op zoek naar werk?" staat hier niet meer (21 nov, eigenaar); de schakelaar in de kopbalk doet dat */}
-            <p className="eyebrow text-brand-mint">Voor bedrijven</p>
+            <p className="eyebrow text-brand-mint">{tx("Voor bedrijven")}</p>
             <h1 className="fluid-hero mt-3 text-balance font-display font-bold">
-              Personeel nodig?{" "}
-              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">Zeker van je mensen.</span>
+              {tx("Personeel nodig?")}{" "}
+              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">{tx("Zeker van je mensen.")}</span>
             </h1>
             <p className="fluid-lead mt-4 max-w-lg text-white/75">
               {/* eerlijk (22 nov 2026): geen belofte over snelheid of de beste mensen; de klus komt bij werkers in de buurt en het bedrijf kiest */}
-              Plaats je klus: hij komt bij geverifieerde werkers in de buurt en jij kiest wie je inroostert. Inchecken, uren goedkeuren en facturen lopen in één omgeving.
+              {tx("Plaats je klus: hij komt bij geverifieerde werkers in de buurt en jij kiest wie je inroostert. Inchecken, uren goedkeuren en facturen lopen in één omgeving.")}
             </p>
             <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
               <Link href="/klus-plaatsen" className="btn-mint text-base">
-                Plaats een klus
+                {tx("Plaats een klus")}
               </Link>
               <Link href="#hoe-het-werkt" className="btn-ghost-invert text-base">
-                Hoe het werkt
+                {tx("Hoe het werkt")}
               </Link>
             </div>
             <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white/70">
@@ -178,8 +181,8 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
                       <span className="hidden h-px flex-1 bg-gradient-to-r from-brand-300/70 to-transparent md:block" />
                     )}
                   </div>
-                  <h3 className="mt-6 font-display text-2xl font-semibold" data-cms-key={`how.s${s.n}.title`}>{s.title}</h3>
-                  <p className="mt-3 text-[1.02rem] leading-relaxed text-neutralx-600" data-cms-key={`how.s${s.n}.body`} data-cms-ml="1">{s.body}</p>
+                  <h3 className="mt-6 font-display text-2xl font-semibold" data-cms-key={`how.s${s.n}.title`}>{tx(s.title)}</h3>
+                  <p className="mt-3 text-[1.02rem] leading-relaxed text-neutralx-600" data-cms-key={`how.s${s.n}.body`} data-cms-ml="1">{tx(s.body)}</p>
                 </div>
               </Reveal>
             ))}
@@ -192,7 +195,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
       <ShowcaseSplit
         reverse
         tone="ink"
-        keys={{ eyebrow: "emp.eyebrow", title: "emp.title", body: "emp.body" }}
+        keys={{ eyebrow: vt("emp.eyebrow"), title: vt("emp.title"), body: vt("emp.body") }}
         eyebrow={t("emp.eyebrow")}
         title={t("emp.title")}
         body={t("emp.body")}
@@ -315,9 +318,9 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
                 href={tool.href}
                 className="card group flex flex-col p-7 transition-shadow hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
               >
-                <span className="font-display text-xl font-semibold text-ink">{tool.title}</span>
-                <span className="mt-2 flex-1 text-[0.975rem] leading-relaxed text-neutralx-600">{tool.body}</span>
-                <span className="mt-5 text-sm font-semibold text-brand-600 group-hover:underline">{tool.knop} →</span>
+                <span className="font-display text-xl font-semibold text-ink">{tx(tool.title)}</span>
+                <span className="mt-2 flex-1 text-[0.975rem] leading-relaxed text-neutralx-600">{tx(tool.body)}</span>
+                <span className="mt-5 text-sm font-semibold text-brand-600 group-hover:underline">{tx(tool.knop)} →</span>
               </Link>
             ))}
           </div>
@@ -334,7 +337,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
             <h2 className="fluid-h2 mt-4 font-display font-bold" data-cms-key="faq.title">{t("faq.title")}</h2>
           </Reveal>
           <Reveal delay={120}>
-            <FaqList items={FAQ} />
+            <FaqList items={FAQ.map((f) => ({ q: tx(f.q), a: tx(f.a) }))} />
             {/* 22 nov 2026: de antwoordpagina's voor bedrijven (lib/seo-vragen.ts) */}
             <BedrijfsVragen />
           </Reveal>
@@ -483,21 +486,21 @@ function ShowcaseSplit({
 const TOOLS = [
   {
     href: "/rekentools/kosten-uitzendkracht-berekenen",
-    title: "Wat kost een flexkracht?",
-    body: "Zet een uitzendbureau naast een zzp'er via ZekerFlex, met jouw uurloon en het aantal uren.",
-    knop: "Naar de rekentool",
+    title: vt("Wat kost een flexkracht?"),
+    body: vt("Zet een uitzendbureau naast een zzp'er via ZekerFlex, met jouw uurloon en het aantal uren."),
+    knop: vt("Naar de rekentool"),
   },
   {
     href: "/rekentools/wet-dba-check",
-    title: "Wet DBA-check",
-    body: "Tien vragen over hoe je met een zzp'er samenwerkt. Je ziet meteen waar het op loondienst lijkt.",
-    knop: "Naar de rekentool",
+    title: vt("Wet DBA-check"),
+    body: vt("Tien vragen over hoe je met een zzp'er samenwerkt. Je ziet meteen waar het op loondienst lijkt."),
+    knop: vt("Naar de rekentool"),
   },
   {
     href: "/tarieven-overzicht",
-    title: "Wat kost een functie per uur?",
-    body: "Per functie een richttarief per uur, en hoe de platformkosten dalen als je meer uren laat werken.",
-    knop: "Bekijk tarieven",
+    title: vt("Wat kost een functie per uur?"),
+    body: vt("Per functie een richttarief per uur, en hoe de platformkosten dalen als je meer uren laat werken."),
+    knop: vt("Bekijk tarieven"),
   },
 ];
 
@@ -513,15 +516,15 @@ const FEATURES = [
 // De vragen van bedrijven (14 nov: deze pagina is alleen voor bedrijven). De FAQ-gegevens voor zoekmachines
 // (faqPagina, bovenaan) volgen precies deze lijst.
 const FAQ_BASIS = [
-  { q: "Wat kost personeel via ZekerFlex?", a: "Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is. Bij meer uren daalt de platformfee volgens een vaste staffel. Voor personeel is er geen abonnement en zijn er geen opstartkosten." },
-  { q: "Hoe plaats ik een klus?", a: "Via Klus plaatsen stel je zonder account een klus samen: functie, plaats, tijden, aantal mensen en tarief. Je ziet meteen wat het kost. Bevalt het, dan zet je de klus met een gratis account online en zoekt ZekerFlex passende, geverifieerde mensen in de buurt." },
-  { q: "Werk ik met zzp'ers of met uitzendkrachten?", a: "Allebei kan. Zzp'ers werken met hun eigen KVK-inschrijving, die we controleren tegen het Handelsregister. Uitzendkrachten werken via een aangesloten uitzendbureau: dat bureau is hun werkgever en regelt het contract, het loon en de verloning volgens zijn cao." },
+  { q: vt("Wat kost personeel via ZekerFlex?"), a: vt("Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is. Bij meer uren daalt de platformfee volgens een vaste staffel. Voor personeel is er geen abonnement en zijn er geen opstartkosten.") },
+  { q: vt("Hoe plaats ik een klus?"), a: vt("Via Klus plaatsen stel je zonder account een klus samen: functie, plaats, tijden, aantal mensen en tarief. Je ziet meteen wat het kost. Bevalt het, dan zet je de klus met een gratis account online en zoekt ZekerFlex passende, geverifieerde mensen in de buurt.") },
+  { q: vt("Werk ik met zzp'ers of met uitzendkrachten?"), a: vt("Allebei kan. Zzp'ers werken met hun eigen KVK-inschrijving, die we controleren tegen het Handelsregister. Uitzendkrachten werken via een aangesloten uitzendbureau: dat bureau is hun werkgever en regelt het contract, het loon en de verloning volgens zijn cao.") },
   // 22 nov 2026: de twee vragen van /voor-bedrijven die hier nog niet stonden (die pagina is hierin opgegaan)
-  { q: "Hoe snel kan ik iemand hebben?", a: "Zodra je klus online staat, zien geverifieerde werkers in de buurt hem en kunnen ze reageren. Je ziet de reacties binnenkomen; hoe snel je iemand hebt, hangt af van wie er beschikbaar is." },
-  { q: "Moet ik zelf facturen maken?", a: "Nee. Zodra je de uren hebt goedgekeurd, maakt ZekerFlex de facturen automatisch aan, met de juiste btw-behandeling." },
-  { q: "Kan ik meerdere vestigingen beheren?", a: "Ja. Je zet al je locaties in één account, geeft een collega per locatie toegang en houdt zelf het overzicht over alles." },
-  { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Zulke hulpmiddelen geven geen garantie over de arbeidsrelatie: de Belastingdienst kijkt ook naar hoe er in de praktijk wordt gewerkt." },
-  { q: "Is mijn data veilig?", a: "Voor diensten zoals betalingen, e-mail en verificatie gebruiken we gespecialiseerde aanbieders. Gevoelige gegevens worden waar nodig versleuteld opgeslagen; belangrijke handelingen komen in een auditspoor." },
+  { q: vt("Hoe snel kan ik iemand hebben?"), a: vt("Zodra je klus online staat, zien geverifieerde werkers in de buurt hem en kunnen ze reageren. Je ziet de reacties binnenkomen; hoe snel je iemand hebt, hangt af van wie er beschikbaar is.") },
+  { q: vt("Moet ik zelf facturen maken?"), a: vt("Nee. Zodra je de uren hebt goedgekeurd, maakt ZekerFlex de facturen automatisch aan, met de juiste btw-behandeling.") },
+  { q: vt("Kan ik meerdere vestigingen beheren?"), a: vt("Ja. Je zet al je locaties in één account, geeft een collega per locatie toegang en houdt zelf het overzicht over alles.") },
+  { q: vt("Hoe ondersteunt ZekerFlex bij de Wet DBA?"), a: vt("ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Zulke hulpmiddelen geven geen garantie over de arbeidsrelatie: de Belastingdienst kijkt ook naar hoe er in de praktijk wordt gewerkt.") },
+  { q: vt("Is mijn data veilig?"), a: vt("Voor diensten zoals betalingen, e-mail en verificatie gebruiken we gespecialiseerde aanbieders. Gevoelige gegevens worden waar nodig versleuteld opgeslagen; belangrijke handelingen komen in een auditspoor.") },
 ];
 
 /** Zonder de vlag noemt het kostenantwoord ook de software-abonnementen (horeca, rijschool); met de vlag aan alleen personeel. */

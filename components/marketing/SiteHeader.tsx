@@ -18,6 +18,8 @@ import {
   type MenuVariant,
 } from "@/lib/marketing/site-nav";
 import { bouwNav, type Hoofdmenu } from "@/lib/ontwerp/hoofdmenu";
+import { SiteTaalKiezer, useSiteT } from "@/components/marketing/SiteTaal";
+import { KOP_TEKSTEN } from "@/lib/marketing/kop-teksten";
 
 const STORE_KEY = "zf-audience";
 const MOBIEL_MENU_ID = "mobiel-menu";
@@ -28,6 +30,7 @@ const MOBIEL_MENU_ID = "mobiel-menu";
  * prijzen) en de pijlers online/branche vallen weg.
  */
 export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofdmenu?: Hoofdmenu | null; alleenFlexwerk?: boolean }) {
+  const tx = useSiteT();
   const NAV = zichtbareNav(bouwNav(hoofdmenu), alleenFlexwerk);
   const aanbodKolommen = zichtbareAanbodKolommen(alleenFlexwerk);
   const pathname = usePathname() || "/";
@@ -143,7 +146,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
             Windows scrollbar; the audience still follows the URL and the last
             choice). */}
         <nav
-          aria-label="Hoofdnavigatie"
+          aria-label={tx(KOP_TEKSTEN.hoofdnavigatie)}
           ref={navRef}
           className="ml-1 hidden items-center gap-0.5 xl:ml-2 xl:flex xl:gap-3 min-[1366px]:ml-6 min-[1366px]:gap-6"
         >
@@ -167,7 +170,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
                     active || menu === n.key ? "text-brand-mint" : "text-white/75 hover:text-white"
                   }`}
                 >
-                  {n.label}
+                  {tx(n.label)}
                 </Link>
                 {hasMenu && (
                   // Separate tap target from the label link above: on a touch
@@ -177,7 +180,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
                   <button
                     type="button"
                     onClick={() => toggleMenu(n.key)}
-                    aria-label={`${n.label} submenu`}
+                    aria-label={tx(KOP_TEKSTEN.submenu, { naam: tx(n.label) })}
                     aria-expanded={menu === n.key}
                     className="ml-0.5 grid h-9 w-7 flex-shrink-0 place-items-center rounded-full xl:w-9 text-white/60 transition hover:bg-white/10 hover:text-white"
                   >
@@ -219,7 +222,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
               audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
             }`}
           >
-            Werkers
+            {tx(KOP_TEKSTEN.werkers)}
           </Link>
           <Link
             href="/bedrijven"
@@ -228,23 +231,24 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
               audience === "bedrijven" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
             }`}
           >
-            Bedrijven
+            {tx(KOP_TEKSTEN.bedrijven)}
           </Link>
         </div>
 
         {/* per kant (KOP_KNOPPEN): Inloggen (altijd /login) en de ene hoofdknop van die kant (22 nov 2026) */}
         <div className="ml-auto hidden items-center gap-2 xl:ml-0 xl:flex xl:gap-3">
+          <SiteTaalKiezer />
           <Link
             href={knoppen.eerste.href}
             className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-[13px] font-bold text-ink transition hover:bg-white/90 xl:px-4 xl:text-sm"
           >
-            {knoppen.eerste.label}
+            {tx(knoppen.eerste.label)}
           </Link>
           <Link
             href={knoppen.tweede.href}
             className="whitespace-nowrap rounded-full bg-brand-mint px-3 py-2 text-[13px] font-bold text-ink transition hover:brightness-105 xl:px-4 xl:text-sm"
           >
-            {knoppen.tweede.label}
+            {tx(knoppen.tweede.label)}
           </Link>
         </div>
 
@@ -252,7 +256,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
             de telefoon, alleen in het hamburgermenu"); de belangrijkste knop past daar pas vanaf 640px naast */}
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2 xl:hidden">
           {!open && (
-            <div role="group" aria-label="Werkers of bedrijven" className="flex items-center rounded-full border border-white/15 bg-white/[0.06] p-0.5">
+            <div role="group" aria-label={tx(KOP_TEKSTEN.werkersOfBedrijven)} className="flex items-center rounded-full border border-white/15 bg-white/[0.06] p-0.5">
               <Link
                 href="/"
                 onClick={() => pick("werknemers")}
@@ -261,7 +265,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
                   audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
                 }`}
               >
-                Werkers
+                {tx(KOP_TEKSTEN.werkers)}
               </Link>
               <Link
                 href="/bedrijven"
@@ -271,7 +275,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
                   audience === "bedrijven" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
                 }`}
               >
-                Bedrijven
+                {tx(KOP_TEKSTEN.bedrijven)}
               </Link>
             </div>
           )}
@@ -280,7 +284,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
               href={knoppen.mobiel.href}
               className="hidden whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-sm font-bold text-ink transition hover:bg-white/90 sm:inline-block"
             >
-              {knoppen.mobiel.label}
+              {tx(knoppen.mobiel.label)}
             </Link>
           )}
           <button
@@ -288,7 +292,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
             type="button"
             onClick={() => setOpen((v) => !v)}
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 transition-colors hover:bg-white/10"
-            aria-label="Menu"
+            aria-label={tx(KOP_TEKSTEN.menu)}
             aria-expanded={open}
             aria-controls={MOBIEL_MENU_ID}
           >
@@ -309,6 +313,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
 /* ───────────────────────────────────────────── uitklappers (desktop) */
 
 function GewoneUitklap({ variant }: { variant: MenuVariant }) {
+  const tx = useSiteT();
   return (
     <>
       <p className="px-3 pb-1.5 pt-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">
@@ -320,8 +325,8 @@ function GewoneUitklap({ variant }: { variant: MenuVariant }) {
             <>
               <span className="mt-0.5 text-brand-mint transition-transform group-hover:translate-x-0.5">→</span>
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-white">{m.title}</span>
-                <span className="block text-xs leading-snug text-white/55">{m.desc}</span>
+                <span className="block text-sm font-semibold text-white">{tx(m.title)}</span>
+                <span className="block text-xs leading-snug text-white/55">{tx(m.desc)}</span>
               </span>
             </>
           );
@@ -338,12 +343,12 @@ function GewoneUitklap({ variant }: { variant: MenuVariant }) {
         })}
       </ul>
       <div className="mt-1 flex items-center justify-between gap-3 border-t border-white/10 px-3 py-3">
-        <span className="text-xs text-white/55">Klaar om te beginnen?</span>
+        <span className="text-xs text-white/55">{tx(KOP_TEKSTEN.klaar)}</span>
         <Link
           href={variant.cta.href}
           className="rounded-full bg-brand-mint px-3.5 py-1.5 text-xs font-bold text-ink transition hover:brightness-105"
         >
-          {variant.cta.label}
+          {tx(variant.cta.label)}
         </Link>
       </div>
     </>
@@ -353,6 +358,7 @@ function GewoneUitklap({ variant }: { variant: MenuVariant }) {
 // "Aanbod": per pijler direct de producten, zodat je in één klik op de juiste
 // pagina bent (eerst was het pijler → overzicht → product).
 function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: MenuItem[] }) {
+  const tx = useSiteT();
   return (
     <>
       <p className="px-3 pb-1 pt-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">
@@ -362,7 +368,7 @@ function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: Menu
         {kolommen.map((k) => (
           <div key={k.sleutel} className="min-w-0 rounded-xl p-3">
             <Link href={k.href} className="block text-sm font-bold text-white hover:text-brand-mint">
-              {k.naam}
+              {tx(k.naam)}
             </Link>
             <p className="mt-1 text-xs leading-snug text-white/50">{k.kort}</p>
             <ul className="mt-3 space-y-0.5 border-t border-white/10 pt-2.5">
@@ -372,7 +378,7 @@ function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: Menu
                     href={it.href}
                     className="group flex items-center gap-1.5 rounded-lg py-1 text-[13px] text-white/80 transition-colors hover:text-white"
                   >
-                    <span className="min-w-0">{it.naam}</span>
+                    <span className="min-w-0">{tx(it.naam)}</span>
                   </Link>
                 </li>
               ))}
@@ -386,9 +392,9 @@ function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: Menu
           {extra.map((m) => (
             <li key={m.href + m.title}>
               {isExternal(m.href) ? (
-                <a href={m.href} className="text-[13px] font-semibold text-white/85 hover:text-brand-mint">{m.title}</a>
+                <a href={m.href} className="text-[13px] font-semibold text-white/85 hover:text-brand-mint">{tx(m.title)}</a>
               ) : (
-                <Link href={m.href} className="text-[13px] font-semibold text-white/85 hover:text-brand-mint">{m.title}</Link>
+                <Link href={m.href} className="text-[13px] font-semibold text-white/85 hover:text-brand-mint">{tx(m.title)}</Link>
               )}
             </li>
           ))}

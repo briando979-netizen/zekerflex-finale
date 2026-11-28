@@ -1,3 +1,5 @@
+import { vt } from "@/lib/i18n/site";
+import { getSiteT } from "@/lib/i18n/server";
 import Link from "next/link";
 import { Reveal } from "@/components/marketing/Reveal";
 import { SECTORS } from "@/lib/seo-sectors";
@@ -15,14 +17,14 @@ interface Branch {
 // Ingang per branche. Geen verzonnen waarderingen of richtprijzen: alleen het
 // echte minimum-uurtarief dat een opdrachtgever mag instellen (env.MIN_SHIFT_RATE_CENTS).
 const BRANCHES: Branch[] = [
-  { key: "logistiek", label: "Logistiek", photo: "/shifts/campagne-logistiek.jpg", blurb: "Orderpicken, magazijn, inpakken en sorteren.", sector: "logistiek" },
-  { key: "retail", label: "Retail", photo: "/shifts/campagne-retail.jpg", blurb: "Vakkenvullen, kassa en verkoop op de winkelvloer.", sector: "retail" },
-  { key: "horeca", label: "Horeca", photo: "/shifts/campagne-horeca.jpg", blurb: "Bediening, bar, keuken en catering.", sector: "horeca" },
-  { key: "evenement", label: "Evenement", photo: "/shifts/campagne-evenement.jpg", blurb: "Festivals, beurzen, hosting en crew.", sector: "evenementen" },
-  { key: "schoonmaak", label: "Schoonmaak", photo: "/shifts/campagne-schoonmaak.jpg", blurb: "Housekeeping, glasbewassing en oplevering.", sector: "schoonmaak" },
-  { key: "zorg", label: "Zorg", photo: "/shifts/campagne-zorg.jpg", blurb: "Ondersteuning, begeleiding en welzijn." },
-  { key: "kantoor", label: "Kantoor", photo: "/shifts/campagne-kantoor.jpg", blurb: "Receptie, administratie en klantenservice." },
-  { key: "bouw", label: "Bouw & techniek", photo: "/shifts/campagne-bouw.jpg", blurb: "Montage, installatie, grond- en sloopwerk." },
+  { key: "logistiek", label: vt("Logistiek"), photo: "/shifts/campagne-logistiek.jpg", blurb: "Orderpicken, magazijn, inpakken en sorteren.", sector: "logistiek" },
+  { key: "retail", label: vt("Retail"), photo: "/shifts/campagne-retail.jpg", blurb: "Vakkenvullen, kassa en verkoop op de winkelvloer.", sector: "retail" },
+  { key: "horeca", label: vt("Horeca"), photo: "/shifts/campagne-horeca.jpg", blurb: "Bediening, bar, keuken en catering.", sector: "horeca" },
+  { key: "evenement", label: vt("Evenement"), photo: "/shifts/campagne-evenement.jpg", blurb: "Festivals, beurzen, hosting en crew.", sector: "evenementen" },
+  { key: "schoonmaak", label: vt("Schoonmaak"), photo: "/shifts/campagne-schoonmaak.jpg", blurb: "Housekeeping, glasbewassing en oplevering.", sector: "schoonmaak" },
+  { key: "zorg", label: vt("Zorg"), photo: "/shifts/campagne-zorg.jpg", blurb: "Ondersteuning, begeleiding en welzijn." },
+  { key: "kantoor", label: vt("Kantoor"), photo: "/shifts/campagne-kantoor.jpg", blurb: "Receptie, administratie en klantenservice." },
+  { key: "bouw", label: vt("Bouw & techniek"), photo: "/shifts/campagne-bouw.jpg", blurb: "Montage, installatie, grond- en sloopwerk." },
 ];
 
 const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
@@ -34,7 +36,8 @@ function kaartHref(b: Branch, voor: Voor): string {
   return voor === "werkers" ? `/${s.workerSlug}` : `/${s.slug}`;
 }
 
-function Card({ b, minRateCents, t, voor }: { b: Branch; minRateCents: number; t: (typeof TEKST)[Voor]; voor: Voor }) {
+async function Card({ b, minRateCents, t, voor }: { b: Branch; minRateCents: number; t: (typeof TEKST)[Voor]; voor: Voor }) {
+  const tx = await getSiteT();
   return (
     <Link
       href={kaartHref(b, voor)}
@@ -44,14 +47,14 @@ function Card({ b, minRateCents, t, voor }: { b: Branch; minRateCents: number; t
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={b.photo}
-          alt={b.label}
+          alt={tx(b.label)}
           loading="lazy"
           decoding="async"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <span className="absolute inset-0 bg-gradient-to-t from-ink/55 via-transparent to-transparent" />
         <span className="absolute bottom-3 left-3 font-display text-lg font-bold uppercase tracking-wide text-white drop-shadow">
-          {b.label}
+          {tx(b.label)}
         </span>
       </div>
 
@@ -61,7 +64,7 @@ function Card({ b, minRateCents, t, voor }: { b: Branch; minRateCents: number; t
           <p>
             <span className="text-xs text-neutralx-400">{t.vanaf} </span>
             <span className="num font-display text-lg font-bold text-ink">{euro(minRateCents)}</span>
-            <span className="text-xs font-medium text-neutralx-400"> /uur</span>
+            <span className="text-xs font-medium text-neutralx-400"> {tx("/uur")}</span>
           </p>
           <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-600">
             {t.kaartKnop}
@@ -79,25 +82,25 @@ function Card({ b, minRateCents, t, voor }: { b: Branch; minRateCents: number; t
 type Voor = "werkers" | "bedrijven";
 const TEKST = {
   werkers: {
-    titel: "Werk in de branche die bij je past",
-    lead: "Van magazijn tot bediening. Elke klus met foto, reistijd en een helder uurtarief — zodat je precies weet waar je aan toe bent voordat je reageert.",
+    titel: vt("Werk in de branche die bij je past"),
+    lead: vt("Van magazijn tot bediening. Elke klus met foto, reistijd en een helder uurtarief — zodat je precies weet waar je aan toe bent voordat je reageert."),
     vanaf: "minimaal",
     kaartHref: "/freelance-werk",
     kaartKnop: "Bekijk klussen",
     knopHref: "/freelance-werk",
-    knop: "Bekijk alle klussen",
+    knop: vt("Bekijk alle klussen"),
     noot: "Gratis aanmelden — je zit nergens aan vast.",
     stedenKop: "Werk per stad",
     stadHref: (slug: string) => `/freelance-werk/${slug}`,
   },
   bedrijven: {
-    titel: "Personeel in jouw branche",
-    lead: "Van magazijn tot bediening: zet je klus uit met datum, plek en uurtarief, en zie meteen wat hij kost.",
+    titel: vt("Personeel in jouw branche"),
+    lead: vt("Van magazijn tot bediening: zet je klus uit met datum, plek en uurtarief, en zie meteen wat hij kost."),
     vanaf: "uurtarief vanaf",
     kaartHref: "/klus-plaatsen",
     kaartKnop: "Klus plaatsen",
     knopHref: "/klus-plaatsen",
-    knop: "Klus plaatsen",
+    knop: vt("Klus plaatsen"),
     noot: "Samenstellen zonder account — je betaalt alleen voor gewerkte uren.",
     stedenKop: "Personeel per stad",
     stadHref: (slug: string) => `/personeel-inhuren/${slug}`,
@@ -111,15 +114,16 @@ const STEDEN_IN_RIJ = 10;
  * steden: de rij links per stad onder de branches. Op de voorpagina staat die sinds 22 nov 2026 niet meer (gebruikersonderzoek:
  * tien knoppen die afleiden); de voettekst heeft de rij "Werk per stad". /bedrijven houdt hem (de standaard).
  */
-export function BranchShowcase({ minRateCents, voor = "werkers", steden = true }: { minRateCents: number; voor?: Voor; steden?: boolean }) {
+export async function BranchShowcase({ minRateCents, voor = "werkers", steden = true }: { minRateCents: number; voor?: Voor; steden?: boolean }) {
+  const tx = await getSiteT();
   const t = TEKST[voor];
   return (
     <section className="relative bg-paper-soft">
       <div className="shell-4k py-8 md:py-10 lg:py-12">
         <Reveal>
-          <p className="eyebrow">Branches</p>
-          <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">{t.titel}</h2>
-          <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">{t.lead}</p>
+          <p className="eyebrow">{tx("Branches")}</p>
+          <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">{tx(t.titel)}</h2>
+          <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">{tx(t.lead)}</p>
         </Reveal>
 
         {/* Telefoon: één rij om door te vegen (acht kaarten onder elkaar waren vier
@@ -138,12 +142,12 @@ export function BranchShowcase({ minRateCents, voor = "werkers", steden = true }
         </div>
 
         <p className="mt-2 text-xs text-neutralx-500 sm:hidden" aria-hidden>
-          {BRANCHES.length} branches · veeg voor meer →
+          {tx("{n} branches · veeg voor meer →", { n: BRANCHES.length })}
         </p>
         <Reveal delay={120}>
           <div className="mt-8 flex flex-wrap items-center gap-4 sm:mt-12">
             <Link href={t.knopHref} className="btn-primary">
-              {t.knop}
+              {tx(t.knop)}
             </Link>
             <span className="text-sm text-neutralx-500">{t.noot}</span>
           </div>
@@ -161,7 +165,7 @@ export function BranchShowcase({ minRateCents, voor = "werkers", steden = true }
               ))}
               <li>
                 <Link href={voor === "werkers" ? "/freelance-werk" : "/personeel-inhuren"} className="inline-block px-1 py-1 text-sm font-semibold text-brand-600 hover:underline">
-                  Alle steden →
+                  {tx("Alle steden →")}
                 </Link>
               </li>
             </ul>

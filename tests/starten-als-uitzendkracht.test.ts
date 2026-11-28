@@ -23,7 +23,7 @@ describe("/starten-als-uitzendkracht", () => {
   });
 
   it("zes stappen, met de app op de telefoon bij het filter, de klus en de lijst", () => {
-    expect(bron.match(/\n    titel: "/g)).toHaveLength(6);
+    expect(bron.match(/\n    titel: vt\("/g)).toHaveLength(6);
     for (const scherm of ['scherm: "filter"', 'scherm: "klus"', 'scherm: "lijst"']) expect(bron, scherm).toContain(scherm);
     expect(bron).toContain('bijschrift="Voorbeeld uit de app"');
   });

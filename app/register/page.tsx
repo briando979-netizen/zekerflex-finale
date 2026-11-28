@@ -6,12 +6,13 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { RegisterBewaard } from "@/components/auth/RegisterBewaard";
 import { getLocale } from "@/lib/i18n/server";
-import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { AUTH } from "@/lib/i18n/auth";
 import { inIosApp } from "@/lib/app-mode-server";
 import { WELKOM_DICTS } from "@/lib/i18n/welkom";
 import { welkomTerug } from "@/lib/welkom/terug";
 import { AANMELDEN_PER_DASHBOARD, dashboardUitParam } from "@/lib/auth/aanmelden-dashboard";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { isMachineLocale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
 // Niet in Google (22 nov 2026): elke knop "Aanmelden" linkt met een eigen ?type=, en een voorstel of uitnodiging zet er ook
@@ -49,7 +50,7 @@ export default async function RegisterPage(
   // "disallowed_useragent"). Apple werkt daar wel en is dan de enige aanbieder (App Store 4.8).
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) && !(await inIosApp());
   const locale = await getLocale();
-  const t = AUTH_DICTS[locale].register;
+  const t = (await AUTH.laad(locale)).register;
   // vlag `publiek-alleen-flexwerk`: dan bij het aanmelden geen productkeuze (webshop, website, horeca, rijschool), alleen personeel
   const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
 
@@ -80,6 +81,7 @@ export default async function RegisterPage(
       <RegisterBewaard type={defaultType} klusText={t.savedKlus} reagerenText={t.savedReageren} />
       <RegisterForm
         locale={locale}
+        {...(isMachineLocale(locale) ? { authVooraf: await AUTH.laad(locale) } : {})}
         defaultType={defaultType}
         {...(defaultWorkerKind ? { defaultWorkerKind } : {})}
         {...(prefill ? { prefill } : {})}

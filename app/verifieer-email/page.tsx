@@ -10,7 +10,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { ResendVerification } from "@/components/auth/ResendVerification";
 import { WijzigEmail } from "@/components/auth/WijzigEmail";
 import { getLocale } from "@/lib/i18n/server";
-import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
+import { AUTH, fill } from "@/lib/i18n/auth";
 import { heeftHardeBounce } from "@/lib/mail/bounce-opslag";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function VerifieerEmailPage(
 ) {
   const searchParams = await props.searchParams;
   const locale = await getLocale();
-  const t = AUTH_DICTS[locale].verify;
+  const t = (await AUTH.laad(locale)).verify;
   // Token in the URL: confirm and route on.
   if (searchParams.token) {
     const result = await confirmVerificationToken(searchParams.token);
