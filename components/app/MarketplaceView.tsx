@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { SHIFT_CATEGORIES, shiftCategory, type ShiftCategoryKey } from "@/lib/shifts/category";
-import { ShiftMiniMap } from "@/components/app/ShiftMiniMap";
 import { ShiftCard, ShiftStatusButton } from "@/components/app/ShiftCard";
 import { LocationSheet, type LocFilter } from "@/components/app/LocationSheet";
 import { hiddenEmployers } from "@/components/app/ShiftMenu";
@@ -105,7 +104,6 @@ export function MarketplaceView({
   void defaultMaxTravel;
   const t = useFT();
   const mk = t.market;
-  const [view, setView] = useState<"list" | "map">("list");
   const [sort, setSort] = useState<Sort>(home ? "match" : "soonest");
   const [q, setQ] = useState(initialQuery);
   const [minRate, setMinRate] = useState<number>(defaultMinRateCents ? Math.round(defaultMinRateCents / 100) : 0);
@@ -320,16 +318,6 @@ export function MarketplaceView({
               <span className="rounded-full bg-brand-500 px-1.5 text-[10px] text-white">{savedCount}</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setView((v) => (v === "map" ? "list" : "map"))}
-            disabled={!home}
-            className={`flex-shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold disabled:opacity-40 ${
-              view === "map" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
-            }`}
-          >
-            {view === "map" ? mk.list : mk.map}
-          </button>
         </div>
 
         {openChip && (
@@ -468,16 +456,7 @@ export function MarketplaceView({
         )}
       </div>
 
-      {view === "map" && home ? (
-        <div className="space-y-4">
-          <ShiftMiniMap
-            home={home}
-            height={380}
-            points={filtered.map((s) => ({ id: s.id, lat: s.branchLat, lng: s.branchLng, score: s.match?.score ?? 0.5, label: s.title, km: s.match?.distanceKm ?? 0 }))}
-          />
-          <p className="text-center text-xs text-neutralx-400">{mk.mapHint}</p>
-        </div>
-      ) : shifts.length === 0 && leeg ? (
+      {shifts.length === 0 && leeg ? (
         <div className="card">
           <div className="px-5 py-14 text-center">
             <p className="font-medium text-ink">{leeg.titel}</p>
