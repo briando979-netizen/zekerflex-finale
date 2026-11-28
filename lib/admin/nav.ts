@@ -131,6 +131,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/beveiliging", label: "Beveiliging" },
       { href: "/admin/prestaties", label: "Prestaties" },
       { href: "/admin/audit", label: "Auditspoor" },
+      { href: "/admin/papierwork", label: "Papierwork & Deadlines" },
       { href: "/admin/hosting", label: "Hosting & domein" },
       { href: "/admin/integraties", label: "API & integraties" },
       { href: "/admin/stripe-account", label: "Stripe-account" },
