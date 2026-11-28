@@ -111,7 +111,9 @@ describe("de wizard en het voorbeeld gebruiken het hulpje (bron-controle)", () =
     expect(form).toContain("bedrag: bedragTekst(hourlyRateCents, taal)");
     expect(form).toContain("u: urenTekst(hours, taal)");
     expect(form).toContain("geldTekst(grossPerSeat, taal)");
-    expect(form).toContain("min: bedragTekst(minRateCents, taal)");
+    // het minimum: in Nederland minRateCents, bij een werklocatie in België het Belgische (minRate, lib/belgie/lonen.ts)
+    expect(form).toContain("min: bedragTekst(minRate, taal)");
+    expect(form).toContain("const minRate = beKlus ? belgischMinimumCents(beSoort, beHoreca) : minRateCents;");
     // geen eigen opmaak meer: geen komma-hulpje, geen hele euro's, geen ruwe getallen in de tekst
     expect(form).not.toContain("komma(");
     expect(form).not.toContain(".toFixed(0)");

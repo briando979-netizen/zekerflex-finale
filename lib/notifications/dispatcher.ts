@@ -14,6 +14,7 @@ import { mailKlusVoorstel } from "@/lib/notifications/klus-mail";
 import { mayPingNow } from "@/lib/notifications/timing";
 import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
+import { isBelgischeKlus } from "@/lib/belgie/klus-kern";
 import { myOfferForShift } from "@/lib/offers/store";
 import { leggReactieVast } from "@/lib/matching/reactie";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
@@ -442,7 +443,7 @@ export async function recordOfferResponse(
 
     const shift = await tx.shift.findUniqueOrThrow({
       where: { id: shiftId },
-      include: { branch: { select: { tenantId: true } } },
+      include: { branch: { select: { tenantId: true, postalCode: true } } },
     });
     if (!(await isTenantVerified(shift.branch.tenantId))) {
       // Een bedrijf dat nog niet is gecontroleerd (23 nov 2026): de reactie gaat niet verloren. De match blijft staan als
@@ -489,7 +490,9 @@ export async function recordOfferResponse(
       select: { userId: true },
     });
     const offer = fp ? await myOfferForShift(fp.userId, shiftId) : null;
-    await ensureModelAgreement(tx, {
+    // Niet bij een klus in België (lib/belgie/klus-kern.ts): daar is de werker werknemer van het bedrijf (student of flexi-job),
+    // met een Belgisch contract van het bedrijf; een Nederlandse modelovereenkomst voor een zzp'er zou het tegendeel zeggen.
+    if (!isBelgischeKlus(shift.branch.postalCode)) await ensureModelAgreement(tx, {
       freelancerId,
       tenantId: shift.branch.tenantId,
       branchId: shift.branchId,

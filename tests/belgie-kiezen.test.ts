@@ -124,6 +124,8 @@ describe("de andere wegen naar een plek (bron)", () => {
     expect(lees("app/api/shifts/[shiftId]/offer/route.ts")).toContain('metSleutel("apply.belgieBedrijfKiest")');
     expect(lees("lib/replacements/reassign.ts")).toContain("isBelgischeKlus(dienst.branch?.postalCode)");
     expect(lees("app/werkgever/diensten/[shiftId]/page.tsx")).toContain("!belgie && <SpoedoproepPaneel");
+    // geen Nederlandse modelovereenkomst (zzp, Wet DBA) bij een werknemer van een Belgisch bedrijf
+    expect(lees("lib/notifications/dispatcher.ts")).toContain("if (!isBelgischeKlus(shift.branch.postalCode)) await ensureModelAgreement(tx, {");
     // de loonrun van ZekerFlex slaat uren in België over
     expect(lees("lib/payroll/engine.ts")).toContain("if (isBelgischeKlus(t.branch?.postalCode)) continue;");
   });
