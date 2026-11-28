@@ -1,6 +1,7 @@
 import { vulIn } from "@/lib/i18n/vul-in";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import type { MailInput } from "@/lib/mail";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Uren goedkeuren lukt niet: de werker heeft geen geldig KVK- of btw-nummer en geen KOR (lib/timesheets/approve.ts). Naast de
@@ -18,7 +19,7 @@ interface Tekst {
   kopieer: string;
 }
 
-const TEKST: Record<MailTaal, Tekst> = {
+const TEKST: Record<MailTaal, Tekst> = metMachineTalen({
   nl: {
     subject: "Je uren staan klaar: vul je bedrijfsgegevens in",
     titel: "Je uren wachten op je bedrijfsgegevens",
@@ -69,7 +70,7 @@ const TEKST: Record<MailTaal, Tekst> = {
     knop: "Ввести дані",
     kopieer: "Кнопка не працює? Скопіюй це посилання:",
   },
-};
+});
 
 /** De mail "vul je bedrijfsgegevens in" bij uren die op goedkeuren wachten; `link` gaat naar Verificatie. */
 export function urenBedrijfMistEmailT(fullName: string, link: string, taal: MailTaal): MailInput {

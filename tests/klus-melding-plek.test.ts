@@ -30,7 +30,7 @@ vi.mock("@/lib/metrics", () => ({ recordShiftOffer: () => undefined }));
 
 import { isEenmaligeLocatie, plekVoorWerker } from "@/lib/shifts/place-label";
 import { WORKER_PUSH, pushRate } from "@/lib/i18n/worker-push";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES } from "@/lib/i18n/config";
 import { sendShiftOffer } from "@/lib/notifications/push";
 
 beforeEach(() => {
@@ -50,7 +50,7 @@ describe("de plek in een melding", () => {
 
 describe("het klusvoorstel", () => {
   it("heeft in alle vijf talen een titel en een tekst met plek, stad, tarief en reistijd", () => {
-    for (const l of LOCALES) {
+    for (const l of BASIS_LOCALES) {
       const t = WORKER_PUSH[l];
       expect(t.offerTitle("Kok"), l).toContain("Kok");
       const body = t.offerBody("Bakkerij De Vries", "Haarle", pushRate(t, 1750), 22);

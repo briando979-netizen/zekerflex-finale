@@ -41,7 +41,7 @@ import { idMeldingVolgende, stapNaam } from "@/lib/onboarding/id-melding-volgend
 import { idGeverifieerdEmailT } from "@/lib/mail/werker/id-geverifieerd";
 import { WORKER_PUSH } from "@/lib/i18n/worker-push";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES } from "@/lib/i18n/config";
 
 const af: WerkerPoortFeiten = {
   soortGekozen: true,
@@ -75,7 +75,7 @@ describe("idMeldingVolgende: de eerste open stap", () => {
 
 describe("de teksten, in vijf talen", () => {
   it("de stapnaam is die van de wizard, met een kleine letter", () => {
-    for (const taal of LOCALES) {
+    for (const taal of BASIS_LOCALES) {
       const naam = FREELANCER_DICTS[taal].start.gegevensStep;
       expect(stapNaam("gegevens", taal)).toBe(naam.charAt(0).toLocaleLowerCase(taal) + naam.slice(1));
     }
@@ -83,7 +83,7 @@ describe("de teksten, in vijf talen", () => {
     expect(stapNaam("identiteit", "nl")).toBe("je ID");
   });
   it("de push noemt de stap en het aantal, en past in een melding", () => {
-    for (const taal of LOCALES) {
+    for (const taal of BASIS_LOCALES) {
       const een = WORKER_PUSH[taal].idOkVolgende(stapNaam("foto", taal), 1);
       const drie = WORKER_PUSH[taal].idOkVolgende(stapNaam("branches", taal), 3);
       expect(een, taal).toContain(stapNaam("foto", taal));
@@ -96,7 +96,7 @@ describe("de teksten, in vijf talen", () => {
     expect(WORKER_PUSH.nl.idOkVolgende("je gegevens", 2)).toBe("Nog 2 stappen, eerst: je gegevens.");
   });
   it("de mail met een open stap: de zin en een knop naar die stap; zonder: zoals hij was", () => {
-    for (const taal of LOCALES) {
+    for (const taal of BASIS_LOCALES) {
       const zin = WORKER_PUSH[taal].idOkVolgende(stapNaam("gegevens", taal), 2);
       const m = idGeverifieerdEmailT("Anna Kowalska", "https://zekerflex.com/", false, taal, { zin, pad: "/dashboard/verificatie" });
       expect(m.text, taal).toContain(zin);

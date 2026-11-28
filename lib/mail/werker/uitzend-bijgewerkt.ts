@@ -5,6 +5,7 @@
 import type { MailInput } from "@/lib/mail";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 interface Tekst {
   subject: string;
@@ -15,7 +16,7 @@ interface Tekst {
   slot: string;
 }
 
-const TEKST: Record<MailTaal, Tekst> = {
+const TEKST: Record<MailTaal, Tekst> = metMachineTalen({
   nl: {
     subject: "Je uitzendovereenkomst is bijgewerkt",
     hoi: "Hoi {naam},",
@@ -56,7 +57,7 @@ const TEKST: Record<MailTaal, Tekst> = {
     knop: "Прочитати й підписати договір",
     slot: "Твій старий договір залишається саме таким, яким ти його підписав(-ла); його можна знайти на тій самій сторінці.",
   },
-};
+});
 
 export function uitzendBijgewerktEmailT(fullName: string, appUrl: string, taal: MailTaal): MailInput {
   const t = TEKST[taal];

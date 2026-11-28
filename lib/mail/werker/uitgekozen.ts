@@ -1,6 +1,7 @@
 import { vulIn } from "@/lib/i18n/vul-in";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import type { MailInput } from "@/lib/mail";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 // Mail aan een werker als hij/zij is uitgekozen (ingepland) voor een klus, in zijn/haar app-taal.
 // Machine-assisted translations: native-speaker review recommended.
@@ -14,7 +15,7 @@ interface Tekst {
   tip: string;
 }
 
-const TEKST: Record<MailTaal, Tekst> = {
+const TEKST: Record<MailTaal, Tekst> = metMachineTalen({
   nl: {
     subject: "Je bent uitgekozen voor: {title}",
     titel: "Je bent uitgekozen!",
@@ -55,7 +56,7 @@ const TEKST: Record<MailTaal, Tekst> = {
     knop: "Переглянути роботу",
     tip: "Додай роботу до календаря, щоб не пропустити.",
   },
-};
+});
 
 export function uitgekozenEmailT(
   input: {

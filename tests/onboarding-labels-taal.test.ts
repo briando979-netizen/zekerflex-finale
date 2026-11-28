@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES } from "@/lib/i18n/config";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
 // Bewaker (13 nov 2026, opdracht ae): de stappenlijst uit getFreelancerOverview (lib/dashboard/freelancer.ts, `onboarding`)
@@ -52,7 +52,7 @@ describe("stappenlijst van de werker in de app-taal", () => {
   it("elk stap-id uit de overview heeft een vertaling in alle vijf talen", () => {
     const ids = [...new Set([...lees("lib/dashboard/freelancer.ts").matchAll(/\{\s*id:\s*"(\w+)",\s*label:/g)].map((m) => m[1]!))];
     expect(ids.length).toBeGreaterThanOrEqual(6);
-    for (const taal of LOCALES) {
+    for (const taal of BASIS_LOCALES) {
       const stappen = FREELANCER_DICTS[taal].profiel.stappen as Record<string, string | undefined>;
       for (const id of ids) expect(stappen[id]?.trim(), `${taal}: ${id}`).toBeTruthy();
     }

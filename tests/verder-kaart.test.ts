@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { verderKaart } from "@/lib/onboarding/verder-kaart";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { SCAN_EXTRA } from "@/lib/i18n/scan-extra";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES } from "@/lib/i18n/config";
 import { isMeetcode } from "@/lib/admin/werker-trechter-kern";
 import type { WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 
@@ -37,7 +37,7 @@ describe("verderKaart", () => {
   });
 
   it("in vijf talen, zonder overgebleven plaatshouders", () => {
-    for (const taal of LOCALES) {
+    for (const taal of BASIS_LOCALES) {
       const k = verderKaart({ ...af, branchesGekozen: false }, FREELANCER_DICTS[taal].start, SCAN_EXTRA[taal].volgendeKnop);
       expect(k?.knop, taal).toContain(FREELANCER_DICTS[taal].start.brancheStep);
       expect(`${k?.teller} ${k?.knop}`, taal).not.toMatch(/[{}]/);

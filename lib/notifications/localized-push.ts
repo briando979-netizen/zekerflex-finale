@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { basisLocale, type Locale } from "@/lib/i18n/config";
 import { prisma } from "@/lib/prisma";
 import { userLocales } from "@/lib/i18n/worker-locale";
 import { WORKER_PUSH, type WorkerPushTexts } from "@/lib/i18n/worker-push";
@@ -22,7 +22,7 @@ export async function sendLocalizedPush(
     groups.set(l, [...(groups.get(l) ?? []), id]);
   }
   let reached = 0;
-  for (const [locale, group] of groups) reached += await sendUserPush(group, build(WORKER_PUSH[locale], locale));
+  for (const [locale, group] of groups) reached += await sendUserPush(group, build(WORKER_PUSH[basisLocale(locale)], locale));
   return reached;
 }
 

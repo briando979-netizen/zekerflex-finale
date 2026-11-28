@@ -1,6 +1,7 @@
 import { vulIn } from "@/lib/i18n/vul-in";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import type { MailInput } from "@/lib/mail";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Het klusvoorstel per mail aan een werker (lib/notifications/klus-mail.ts), in de app-taal van de werker. Puur: `when` en `rate`
@@ -23,7 +24,7 @@ interface Tekst {
   tipHtml: string;
 }
 
-const TEKST: Record<MailTaal, Tekst> = {
+const TEKST: Record<MailTaal, Tekst> = metMachineTalen({
   nl: {
     subject: "Er is een klus voor je: {title} in {city}",
     titel: "Er is een klus voor je",
@@ -89,7 +90,7 @@ const TEKST: Record<MailTaal, Tekst> = {
     knop: "Переглянути роботу",
     tipHtml: "Хто відгукнеться першим, у того більше шансів. Хочеш відтепер одразу бачити це на телефоні? Увімкни сповіщення в застосунку.",
   },
-};
+});
 
 export function klusVoorstelEmailT(
   input: {

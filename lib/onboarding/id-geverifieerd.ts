@@ -10,6 +10,7 @@ import { kanReagerenOpKlussen } from "@/lib/onboarding/kan-reageren";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { idMeldingVolgende, stapNaam } from "@/lib/onboarding/id-melding-volgende";
 import { WORKER_PUSH } from "@/lib/i18n/worker-push";
+import { basisLocale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // De melding aan een werker zodra zijn ID geverifieerd is (11 nov 2026): een push in zijn
@@ -68,7 +69,7 @@ export async function meldIdGeverifieerd(userId: string, now = new Date()): Prom
     let mail = false;
     if (!isReservedTestAddress(user.email)) {
       const taal = await mailTaalVoorWerker(userId);
-      const naarStap = volgende.sleutel ? { zin: WORKER_PUSH[taal].idOkVolgende(stapNaam(volgende.sleutel, taal), volgende.open), pad: volgende.pad } : undefined;
+      const naarStap = volgende.sleutel ? { zin: WORKER_PUSH[basisLocale(taal)].idOkVolgende(stapNaam(volgende.sleutel, taal), volgende.open), pad: volgende.pad } : undefined;
       const r = await sendMail({ ...idGeverifieerdEmailT(user.fullName, env.APP_BASE_URL, reageren.ok, taal, naarStap), to: user.email }).catch(() => null);
       mail = Boolean(r?.delivered);
     }
