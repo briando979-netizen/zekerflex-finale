@@ -217,7 +217,7 @@ export function FreelancerShell({
                   href={t.href}
                   aria-current={active ? "page" : undefined}
                   data-rondleiding={t.key}
-                  className={`flex flex-col items-center gap-0.5 px-0.5 py-2.5 text-[11px] font-medium transition lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2.5 ${
+                  className={`relative flex flex-col items-center gap-0.5 px-0.5 py-2.5 text-[11px] font-medium transition lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2.5 ${
                     active
                       ? "text-brand-600 lg:bg-ink lg:text-white"
                       : "text-neutralx-400 hover:text-neutralx-600 lg:hover:bg-paper-soft"
@@ -237,6 +237,13 @@ export function FreelancerShell({
                     )}
                   </span>
                   <span className={`max-w-full truncate whitespace-nowrap ${active ? "" : "lg:hidden"}`}>{ft.nav[t.key]}</span>
+                  {/* Dezelfde turquoise streep als onder het actieve tabblad bij Mijn klussen
+                      (MyKlussenView, kleur #14D9C9). Opdracht van de eigenaar, 28 nov 2026: de streep
+                      schuift mee naar het scherm waar je bent, ook onderin. aria-hidden: welk scherm
+                      actief is zegt aria-current al. */}
+                  {active && (
+                    <span aria-hidden className="absolute inset-x-2 bottom-0.5 h-0.5 rounded-full bg-[#14D9C9] lg:inset-x-4 lg:bottom-1" />
+                  )}
                 </Link>
               </li>
             );
