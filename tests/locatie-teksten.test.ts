@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BASIS_LOCALES, LOCALES } from "@/lib/i18n/config";
 import { LOCATIE_TEKSTEN, locatieTeksten, vulAantal, vulIn } from "@/lib/locatie/teksten";
 
 // De pagina's van Op locatie draaien op de server en geven deze teksten door aan
@@ -23,7 +24,9 @@ describe("teksten van Op locatie", () => {
   });
 
   it("heeft alle vijf talen en valt terug op Nederlands", () => {
-    expect(Object.keys(LOCATIE_TEKSTEN).sort()).toEqual(["en", "nl", "pl", "ro", "uk"]);
+    // de vijf handgemaakte talen, en elke machinetaal een ingang (met het Engels, metMachineTalen)
+    for (const l of BASIS_LOCALES) expect(Object.hasOwn(LOCATIE_TEKSTEN, l), l).toBe(true);
+    expect(Object.keys(LOCATIE_TEKSTEN).sort()).toEqual([...LOCALES].sort());
     expect(locatieTeksten("nl").portofoon.titel).toBe("Portofoon");
   });
 

@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 import { SCAN_EXTRA, type ScanExtra } from "@/lib/i18n/scan-extra";
 
 // ---------------------------------------------------------------------------
@@ -2518,7 +2518,7 @@ const uk: AuthDict = {
   },
 };
 
-export const AUTH_DICTS: Record<Locale, AuthDict> = { nl, en, pl, ro, uk };
+export const AUTH_DICTS: Record<Locale, AuthDict> = metMachineTalen({ nl, en, pl, ro, uk });
 
 export function fill(s: string, vars: Record<string, string>): string {
   return s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);

@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Teksten van de mobiele welkomstflow (/welkom) en de kop van de mobiele
@@ -180,4 +180,4 @@ const uk: WelkomDict = {
   registerHero: { title: "Створити акаунт", subtitle: "Для працівників безкоштовно." },
 };
 
-export const WELKOM_DICTS: Record<Locale, WelkomDict> = { nl, en, pl, ro, uk };
+export const WELKOM_DICTS: Record<Locale, WelkomDict> = metMachineTalen({ nl, en, pl, ro, uk });

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { BASIS_LOCALES, LOCALES } from "@/lib/i18n/config";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SCAN_EXTRA } from "@/lib/i18n/scan-extra";
@@ -47,8 +48,9 @@ describe("ID-scan: automatisch of zelf, zonder bestandskeuze", () => {
   });
 
   it("de teksten staan in alle vijf de talen en beloven geen knop in de automatische stand", () => {
-    const talen = Object.keys(SCAN_EXTRA);
-    expect(talen.length).toBe(5);
+    // de vijf handgemaakte talen zijn er; een machinetaal heeft een ingang met het Engels (metMachineTalen)
+    for (const l of BASIS_LOCALES) expect(Object.hasOwn(SCAN_EXTRA, l), l).toBe(true);
+    expect(Object.keys(SCAN_EXTRA).sort()).toEqual([...LOCALES].sort());
     for (const [taal, x] of Object.entries(SCAN_EXTRA)) {
       for (const k of ["zelfWissel", "zelfWisselKnop", "autoKanNiet", "zelfModus"] as const) expect(x[k].length, `${taal} ${k}`).toBeGreaterThan(5);
     }

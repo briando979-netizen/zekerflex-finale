@@ -3,6 +3,7 @@
 import type { MailInput } from "@/lib/mail";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 interface Teksten {
   onderwerp: string;
@@ -22,7 +23,7 @@ interface Teksten {
   preheaderZonder: string;
 }
 
-const T: Record<MailTaal, Teksten> = {
+const T: Record<MailTaal, Teksten> = metMachineTalen({
   nl: {
     onderwerp: "Je ZekerFlex-bevestigingscode",
     onderwerpMetCode: "Je ZekerFlex-bevestigingscode: {code}",
@@ -113,7 +114,7 @@ const T: Record<MailTaal, Teksten> = {
     preheaderCode: "Твій код: {code}. Або натисни кнопку, щоб активувати акаунт (дійсний 24 години).",
     preheaderZonder: "Натисни кнопку, щоб активувати акаунт (дійсний 24 години).",
   },
-};
+});
 
 export function verificationEmailT(fullName: string, link: string, code: string | undefined, taal: MailTaal): MailInput {
   const t = T[taal];

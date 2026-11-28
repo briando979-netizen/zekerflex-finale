@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 import type { AnswerAt, BundleId, NumberKind, OptionId } from "@/lib/telephony/plans";
 import type { LineStatus } from "@/lib/telephony/lines";
 
@@ -482,4 +482,4 @@ const UK: TelefonieTeksten = {
   terug: "← Назад",
 };
 
-export const TELEFONIE_TEKSTEN: Record<Locale, TelefonieTeksten> = { nl: TELEFONIE_NL, en: EN, pl: PL, ro: RO, uk: UK };
+export const TELEFONIE_TEKSTEN: Record<Locale, TelefonieTeksten> = metMachineTalen({ nl: TELEFONIE_NL, en: EN, pl: PL, ro: RO, uk: UK });

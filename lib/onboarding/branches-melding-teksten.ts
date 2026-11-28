@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 
 // De melding "kies je branches" (15 nov 2026) aan werkers die zich tussen 6 en 9 november aanmeldden, vóór de stap "branches" bestond
 // (10 nov) en nog geen keuze maakten (lib/onboarding/branches-melding.ts): als push en als mail, in de taal van de werker. Puur bestand.
@@ -14,7 +14,7 @@ export interface BranchesMeldingTekst {
   knop: string;
 }
 
-export const BRANCHES_MELDING: Record<Locale, BranchesMeldingTekst> = {
+export const BRANCHES_MELDING: Record<Locale, BranchesMeldingTekst> = metMachineTalen({
   nl: {
     pushTitel: "Kies je branches",
     pushBody: "Kies in welke branches je wilt werken, dan zie je eerst de klussen die bij je passen.",
@@ -60,4 +60,4 @@ export const BRANCHES_MELDING: Record<Locale, BranchesMeldingTekst> = {
     alinea2: "Обери галузі, і спершу побачиш роботи, які тобі підходять.",
     knop: "Обрати галузі",
   },
-};
+});
