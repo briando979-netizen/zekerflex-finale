@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { basisLocale, type Locale } from "@/lib/i18n/config";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { openVerplicht, poortStapVan, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 import { volgendeStapHref, type PoortSleutel } from "@/lib/onboarding/volgende-stap";
@@ -37,6 +37,6 @@ const NAAM = {
 
 /** De naam van de stap zoals de wizard hem noemt (d4, vijf talen), met een kleine letter: hij staat midden in een zin. */
 export function stapNaam(sleutel: PoortSleutel, taal: Locale): string {
-  const naam = FREELANCER_DICTS[taal].start[NAAM[sleutel]];
+  const naam = FREELANCER_DICTS[basisLocale(taal)].start[NAAM[sleutel]];
   return naam.charAt(0).toLocaleLowerCase(taal) + naam.slice(1);
 }

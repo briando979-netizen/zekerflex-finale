@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { incheckenVereistVoor } from "@/lib/checkin/vereist";
-import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, isLocale, basisLocale, type Locale, type BasisLocale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Agenda-abonnement voor werkers: een geheime iCal-link met al je diensten,
@@ -63,7 +63,8 @@ export interface FeedAssignment {
 }
 
 /** Teksten in de feed, in de app-taal van de werker (een agenda-app stuurt geen taal mee). */
-const FEED_TEXT: Record<Locale, {
+// de vijf handgemaakte talen; een machinetaal krijgt het Engels (basisLocale)
+const FEED_TEXT: Record<BasisLocale, {
   calName: string;
   intro: (company: string) => string;
   pause: (minutes: number) => string;
@@ -136,7 +137,7 @@ async function feedLanguage(userId: string): Promise<Locale> {
 }
 
 export function feedIcs(assignments: FeedAssignment[], siteUrl: string, lang: Locale = DEFAULT_LOCALE): string {
-  const tx = FEED_TEXT[lang];
+  const tx = FEED_TEXT[basisLocale(lang)];
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

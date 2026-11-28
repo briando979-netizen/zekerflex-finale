@@ -11,6 +11,7 @@ import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { MELDING_NL } from "@/lib/notifications/feed-teksten";
 import { meldingBedrijfVoor } from "@/lib/notifications/bedrijf-teksten";
 import { getLocale } from "@/lib/i18n/server";
+import { laadFreelancerDict } from "@/lib/i18n/freelancer-lader";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ async function handleGET(request: Request): Promise<NextResponse> {
     }
     // een werker leest de vaste zinnen in zijn app-taal (vertaald bij het lezen, dus ook bestaande meldingen);
     // een opdrachtgever en beheer blijven Nederlands
-    const teksten = hasRole(p, "FREELANCER") ? FREELANCER_DICTS[await userLocale(p.userId)].meldingTeksten : MELDING_NL;
+    const teksten = hasRole(p, "FREELANCER") ? (await laadFreelancerDict(await userLocale(p.userId))).meldingTeksten : MELDING_NL;
     const items = await getNotifications(p, teksten, app ? { app } : {});
     return NextResponse.json({ items, count: items.length, urgent: items.filter((i) => i.urgent).length });
   } catch (err) {

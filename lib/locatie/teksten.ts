@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 import { vulIn } from "@/lib/i18n/vul-in";
 
 // ---------------------------------------------------------------------------
@@ -285,7 +285,7 @@ const uk: LocatieTeksten = {
   account: { portofoon: "Рація", kluis: "Коди доступу", voertuig: "Мій номерний знак" },
 };
 
-export const LOCATIE_TEKSTEN: Record<Locale, LocatieTeksten> = { nl, en, pl, ro, uk };
+export const LOCATIE_TEKSTEN: Record<Locale, LocatieTeksten> = metMachineTalen({ nl, en, pl, ro, uk });
 
 export const locatieTeksten = (locale: Locale): LocatieTeksten => LOCATIE_TEKSTEN[locale] ?? nl;
 

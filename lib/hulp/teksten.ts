@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 import { SUPPORT_CHAT, type HulpTeksten } from "@/lib/hulp/hulpjes";
 
 // ---------------------------------------------------------------------------
@@ -969,7 +969,7 @@ const uk: HulpTeksten = {
   ],
 };
 
-export const HULP_TEKSTEN: Record<Locale, HulpTeksten> = { nl, en, pl, ro, uk };
+export const HULP_TEKSTEN: Record<Locale, HulpTeksten> = metMachineTalen({ nl, en, pl, ro, uk });
 
 export function hulpTeksten(locale: Locale): HulpTeksten {
   return HULP_TEKSTEN[locale] ?? nl;
