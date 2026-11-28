@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { HERLAAD_SLEUTEL, isNietIngelogd, stopBijVerlopenSessie, type SessieOmgeving } from "@/lib/app/sessie-verlopen";
+import { HERLAAD_SLEUTEL, isNietIngelogd, isNietToegestaan, stopBijVerlopenSessie, type SessieOmgeving } from "@/lib/app/sessie-verlopen";
 
 // 28 nov 2026 gemeten in het Caddy-log: 17.494 en 15.016 keer een 401 op /api/werkgever/recent-responses,
 // /api/inbox en /api/me/notifications op 23 en 24 november, vanuit 24 adressen. Tabbladen met een verlopen
@@ -93,6 +93,42 @@ describe("stopBijVerlopenSessie", () => {
   });
 });
 
+describe("403: wel ingelogd, maar mag dit niet", () => {
+  it("alleen 403 betekent 'dit mag je niet'", () => {
+    expect(isNietToegestaan(403)).toBe(true);
+    expect(isNietToegestaan(401)).toBe(false);
+    expect(isNietToegestaan(200)).toBe(false);
+    expect(isNietToegestaan(423)).toBe(false);
+  });
+
+  // /api/werkgever/recent-responses eist een van vier rollen en wordt elke 6 seconden gevraagd. Wijzigt
+  // iemands rol of bedrijf terwijl zijn tabblad openstaat, dan weigert de route met 403. Gemeten op
+  // 24 nov: 78 van die 403's op één dag. AGENTS.md: CrowdSec telt een reeks 403's als inbraakpoging en
+  // blokkeert het hele IP vier uur — dus ook de app voor dat bedrijf. Eén 403 is geen reeks.
+  it("stopt met vragen bij een 403, zodat er nooit een reeks ontstaat", () => {
+    const b = nepBrowser();
+    expect(stopBijVerlopenSessie(403, b.omgeving)).toBe(true);
+  });
+
+  it("herlaadt NIET bij een 403: die bezoeker is ingelogd, herladen helpt hem niet", () => {
+    const b = nepBrowser();
+    stopBijVerlopenSessie(403, b.omgeving);
+    expect(b.keerHerladen()).toBe(0);
+    // en het mag de herlaadmarkering niet verbruiken, zodat een latere 401 nog wel naar de inlogpagina gaat
+    expect(b.opslag[HERLAAD_SLEUTEL]).toBeUndefined();
+    expect(stopBijVerlopenSessie(401, b.omgeving)).toBe(true);
+    expect(b.keerHerladen()).toBe(1);
+  });
+
+  it("andere foutcodes laten de poller gewoon doorgaan (een storing is tijdelijk)", () => {
+    const b = nepBrowser();
+    for (const code of [404, 422, 423, 429, 500, 502, 503]) {
+      expect(stopBijVerlopenSessie(code, b.omgeving), String(code)).toBe(false);
+    }
+    expect(b.keerHerladen()).toBe(0);
+  });
+});
+
 describe("bewaker: de pollers stoppen echt bij een verlopen sessie", () => {
   const lees = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
@@ -102,19 +138,19 @@ describe("bewaker: de pollers stoppen echt bij een verlopen sessie", () => {
       "components/app/RecentResponseAlert.tsx",
       "components/chat/ChatDock.tsx",
     ]) {
-      expect(lees(p), `${p} moet sessieVerlopen gebruiken, anders blijft het tabblad doorvragen`).toContain("sessieVerlopen(");
+      expect(lees(p), `${p} moet stopMetPollen gebruiken, anders blijft het tabblad doorvragen`).toContain("stopMetPollen(");
     }
   });
 
   it("de meldingenbel stopt zijn eigen timer", () => {
     const src = lees("components/app/NotificationsBell.tsx");
-    expect(src).toContain("verlopen.current = true");
+    expect(src).toContain("gestopt.current = true");
     expect(src).toContain("clearInterval(id)");
   });
 
   it("de reactiemelding van de werkgever stopt zijn timer van 6 seconden", () => {
     const src = lees("components/app/RecentResponseAlert.tsx");
-    expect(src).toContain("verlopen = true");
+    expect(src).toContain("gestopt = true");
     // de timer mag niet meer blind elke 6 s doorvragen
     expect(src).not.toContain("setInterval(() => void poll(), POLL_MS)");
   });

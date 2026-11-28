@@ -12,7 +12,7 @@ import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
 import { BinnenkomendGesprek } from "./BinnenkomendGesprek";
-import { sessieVerlopen } from "@/lib/app/sessie-verlopen";
+import { stopMetPollen } from "@/lib/app/sessie-verlopen";
 import { Portal } from "./Portal";
 import { makeRingtone } from "./ringtone";
 import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
@@ -75,9 +75,10 @@ function ChatDockInner() {
   const loadThreads = useCallback(async () => {
     try {
       const r = await fetch(`/api/inbox${document.visibilityState === "visible" ? "?visible=1" : ""}`, { cache: "no-store" });
-      // sessie verlopen: het paneel verdwijnt en we stoppen met vragen (lib/app/sessie-verlopen.ts). Zonder dat
-      // laatste bleef dit elke 8 seconden doorvragen zolang het tabblad openstond (28 nov gemeten in het Caddy-log).
-      if (sessieVerlopen(r.status)) return setAvailable(false);
+      // Mag het niet (meer)? Dan verdwijnt het paneel en stoppen we met vragen (lib/app/sessie-verlopen.ts):
+      // 401 niet ingelogd, 403 rol of bedrijf gewijzigd. Zonder dat laatste bleef dit elke 8 seconden doorvragen
+      // zolang het tabblad openstond — 28 nov gemeten in het Caddy-log: 6.364 van die 401's op één dag.
+      if (stopMetPollen(r.status)) return setAvailable(false);
       if (!r.ok) return;
       const d = await r.json();
       setMe(d.me);

@@ -21,6 +21,22 @@ export function isNietIngelogd(status: number): boolean {
   return status === 401;
 }
 
+/**
+ * Zegt dit antwoord "je bent ingelogd, maar dit mag je niet"?
+ *
+ * Dit gebeurt echt: /api/werkgever/recent-responses eist een van vier rollen, en het scherm eromheen
+ * (EmployerShell) vraagt het elke 6 seconden. Wijzigt iemands rol of bedrijf terwijl zijn tabblad
+ * openstaat, dan is de pagina al getekend maar weigert de route. Gemeten in het Caddy-log: 78 van die
+ * 403's op 24 nov en 7 op 26 nov.
+ *
+ * Doorvragen is dan niet alleen zinloos maar gevaarlijk: AGENTS.md waarschuwt dat CrowdSec een reeks
+ * 403's als inbraakpoging telt en het hele IP-adres vier uur blokkeert — dus ook de app en de site voor
+ * dat hele bedrijf. Eén 403 is geen reeks, dus stoppen is de hele oplossing.
+ */
+export function isNietToegestaan(status: number): boolean {
+  return status === 403;
+}
+
 /** De sleutel waarmee een tabblad onthoudt dat het al één keer herladen heeft. */
 export const HERLAAD_SLEUTEL = "zf-sessie-verlopen-herladen";
 
@@ -36,12 +52,16 @@ export interface SessieOmgeving {
 /**
  * Handelt het antwoord van een herhaalde achtergrondvraag af.
  *
- * Geeft `true` als de aanroeper moet **stoppen** met vragen (de sessie is verlopen).
- * Bij de eerste 401 in dit tabblad wordt ook één keer herladen, zodat de bezoeker
- * op de inlogpagina komt. Een tweede keer herladen gebeurt nooit: dat zou een
- * herlaadlus kunnen worden als de inlogpagina zelf nog iets opvraagt.
+ * Geeft `true` als de aanroeper moet **stoppen** met vragen. Dat is zo bij een 401 (niet meer
+ * ingelogd) en bij een 403 (wel ingelogd, mag dit niet).
+ *
+ * Alleen bij een 401 wordt het tabblad één keer herladen, zodat de bezoeker op de inlogpagina komt
+ * die het in zijn eigen taal uitlegt. Bij een 403 niet: die bezoeker ís ingelogd, dus herladen helpt
+ * hem niet en laat hem alleen een pagina opnieuw zien. Een tweede keer herladen gebeurt nooit: dat
+ * zou een herlaadlus kunnen worden als de inlogpagina zelf nog iets opvraagt.
  */
 export function stopBijVerlopenSessie(status: number, omgeving: SessieOmgeving): boolean {
+  if (isNietToegestaan(status)) return true; // stoppen, maar niet herladen
   if (!isNietIngelogd(status)) return false;
 
   let alHerladen = false;
@@ -86,7 +106,12 @@ export function browserOmgeving(): SessieOmgeving {
   };
 }
 
-/** Het geval dat bijna elke poller nodig heeft: stop ik met vragen? */
-export function sessieVerlopen(status: number): boolean {
+/**
+ * Het geval dat bijna elke poller nodig heeft: stop ik met vragen?
+ *
+ * `true` bij een 401 of een 403. Bij een 401 gaat het tabblad ook één keer naar de inlogpagina.
+ * De naam zegt wat de aanroeper moet doen, want dát is wat er op de plek van de aanroep telt.
+ */
+export function stopMetPollen(status: number): boolean {
   return stopBijVerlopenSessie(status, browserOmgeving());
 }

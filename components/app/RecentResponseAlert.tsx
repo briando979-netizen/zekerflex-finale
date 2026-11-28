@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { sessieVerlopen } from "@/lib/app/sessie-verlopen";
+import { stopMetPollen } from "@/lib/app/sessie-verlopen";
 
 interface RecentResponse {
   id: string;
@@ -30,17 +30,19 @@ export function RecentResponseAlert() {
 
   useEffect(() => {
     let cancelled = false;
-    // de sessie is verlopen: stoppen met vragen (lib/app/sessie-verlopen.ts). Zonder dit bleef dit scherm elke
-    // 6 seconden doorvragen — 28 nov gemeten: 17.494 keer een 401 op één dag, en de werkgever zag géén reacties.
-    let verlopen = false;
+    // Stoppen zodra de server zegt dat het niet (meer) mag: 401 niet ingelogd, 403 rol of bedrijf gewijzigd
+    // (lib/app/sessie-verlopen.ts). Zonder dit bleef dit scherm elke 6 seconden doorvragen — 28 nov gemeten in
+    // het Caddy-log: 17.494 keer een 401 en 78 keer een 403 op één dag, en de werkgever zag géén reacties.
+    // Die 403-reeks is extra gevaarlijk: CrowdSec blokkeert dan het hele IP-adres van dat bedrijf.
+    let gestopt = false;
     const poll = async () => {
-      if (verlopen) return;
+      if (gestopt) return;
       try {
         const r = await fetch(`/api/werkgever/recent-responses?since=${encodeURIComponent(sinceRef.current)}`, {
           cache: "no-store",
         });
-        if (sessieVerlopen(r.status)) {
-          verlopen = true;
+        if (stopMetPollen(r.status)) {
+          gestopt = true;
           return;
         }
         if (!r.ok || cancelled) return;
@@ -56,7 +58,7 @@ export function RecentResponseAlert() {
       }
     };
     const id = setInterval(() => {
-      if (verlopen) {
+      if (gestopt) {
         clearInterval(id);
         return;
       }
