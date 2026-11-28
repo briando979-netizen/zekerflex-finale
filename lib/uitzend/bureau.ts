@@ -4,6 +4,7 @@ import { requirePrincipal, type Principal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { listCounterOffers } from "@/lib/offers/store";
 import { leesUitzendPartners } from "@/lib/uitzend/partners";
+import { metLand, postcodeTekst } from "@/lib/geo/vestiging-land";
 import {
   isOpen,
   isTeLaat,
@@ -307,7 +308,8 @@ export async function locatiesVan(ctx: BureauContext, nu: Date = new Date()): Pr
     return {
       id: l.id,
       naam: l.name,
-      adres: [l.addressLine, [l.postalCode, l.city].filter(Boolean).join(" ")].filter(Boolean).join(", "),
+      // buiten Nederland "Meir 1, 2000 Antwerpen, België" (lib/geo/vestiging-land.ts); Nederland zoals altijd
+      adres: metLand([l.addressLine, [postcodeTekst(l.postalCode), l.city].filter(Boolean).join(" ")].filter(Boolean).join(", "), l.postalCode, "nl"),
       vast: l.kind === "PERMANENT",
       komendeKlussen: eigen.length,
       openPlekken: eigen.reduce((n, k) => n + Math.max(0, k.positions - k.assignments.length), 0),

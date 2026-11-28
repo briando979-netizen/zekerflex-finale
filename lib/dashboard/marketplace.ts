@@ -13,6 +13,7 @@ import { reserveReactieIds } from "@/lib/reservebank/store";
 import { tenantsBlockingUser, tenantsFavoritingUser } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
+import { landVanVestiging } from "@/lib/geo/vestiging-land";
 import { followedTenantIds } from "@/lib/worker/follows";
 import { getZoeklocatie } from "@/lib/worker/zoeklocatie";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
@@ -58,6 +59,8 @@ export interface MarketplaceShift {
    *  (die heet bij een losse adres "Eenmalige locatie — …"; 10 nov, eigenaar) */
   company: string;
   city: string;
+  /** het land van een werklocatie buiten Nederland (ISO, "BE"; lib/geo/vestiging-land.ts); ontbreekt in Nederland */
+  land?: string | undefined;
   branchLat: number;
   branchLng: number;
   startsAt: Date;
@@ -332,7 +335,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
     branchId: true,
     viaUitzendbureau: true,
     requiredSkill: { select: { name: true } },
-    branch: { select: { name: true, city: true, latitude: true, longitude: true, tenantId: true, tenant: { select: { name: true } } } },
+    branch: { select: { name: true, city: true, postalCode: true, latitude: true, longitude: true, tenantId: true, tenant: { select: { name: true } } } },
     _count: { select: { assignments: { where: { cancelledAt: null } } } },
   } as const;
 
@@ -425,6 +428,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         branch: s.branch.name,
         company: s.branch.tenant.name,
         city: s.branch.city,
+        ...(landVanVestiging(s.branch.postalCode) !== "NL" ? { land: landVanVestiging(s.branch.postalCode) } : {}),
         branchLat: s.branch.latitude,
         branchLng: s.branch.longitude,
         startsAt: s.startsAt,
@@ -664,6 +668,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       branch: row.branch.name,
       company: row.branch.tenant.name,
       city: row.branch.city,
+      ...(landVanVestiging(row.branch.postalCode) !== "NL" ? { land: landVanVestiging(row.branch.postalCode) } : {}),
       branchLat: row.branch.latitude,
       branchLng: row.branch.longitude,
       startsAt: row.startsAt,

@@ -1,5 +1,6 @@
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { postcodePlaats } from "@/lib/geo/vestiging-land";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,7 +62,9 @@ export async function GET(req: Request, props: { params: Promise<{ assignmentId:
   const s = assignment.shift;
   const b = s.branch;
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
-  const address = `${b.name}, ${b.addressLine}, ${b.postalCode} ${b.city}`;
+  // buiten Nederland "2000 Antwerpen, België" (lib/geo/vestiging-land.ts); de tekst van dit bestand is Nederlands
+  const plaats = postcodePlaats(b, "nl");
+  const address = `${b.name}, ${b.addressLine}, ${plaats}`;
   const rate = `EUR ${(s.hourlyRateCents / 100).toFixed(2).replace(".", ",")}`;
 
   const description = [
@@ -69,7 +72,7 @@ export async function GET(req: Request, props: { params: Promise<{ assignmentId:
     `Uurtarief: ${rate} per uur.`,
     s.requiredSkill ? `Functie: ${s.requiredSkill.name}.` : null,
     s.breakMinutes > 0 ? `Pauze: ${s.breakMinutes} minuten.` : "Geen pauze.",
-    `Adres: ${b.addressLine}, ${b.postalCode} ${b.city}.`,
+    `Adres: ${b.addressLine}, ${plaats}.`,
     "",
     "Bevestig je komst in de app en check op tijd in op locatie.",
   ]

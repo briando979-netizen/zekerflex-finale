@@ -5,6 +5,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
+import { controleerWerklocatiePostcode } from "@/lib/geo/vestiging-buitenland";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,8 @@ async function ownedBranch(tenantId: string, id: string) {
 const patchSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   addressLine: z.string().trim().min(3).max(200).optional(),
-  postalCode: z.string().trim().min(4).max(12).optional(),
+  // dezelfde controle als bij toevoegen (POST /api/werkgever/branches): Nederland zoals altijd, buiten Nederland met landcode
+  postalCode: z.string().trim().max(16).optional(),
   city: z.string().trim().min(2).max(100).optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
@@ -41,13 +43,14 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     const parsed = patchSchema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) throw AppError.validation("Controleer de ingevulde gegevens", parsed.error.flatten());
     const d = parsed.data;
+    const postalCode = d.postalCode !== undefined ? await controleerWerklocatiePostcode(d.postalCode, principal) : undefined;
 
     const branch = await prisma.branch.update({
       where: { id },
       data: {
         ...(d.name !== undefined ? { name: d.name } : {}),
         ...(d.addressLine !== undefined ? { addressLine: d.addressLine } : {}),
-        ...(d.postalCode !== undefined ? { postalCode: d.postalCode } : {}),
+        ...(postalCode !== undefined ? { postalCode } : {}),
         ...(d.city !== undefined ? { city: d.city } : {}),
         ...(d.latitude !== undefined ? { latitude: d.latitude } : {}),
         ...(d.longitude !== undefined ? { longitude: d.longitude } : {}),

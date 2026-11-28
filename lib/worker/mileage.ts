@@ -4,6 +4,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
+import { postcodePlaats } from "@/lib/geo/vestiging-land";
 import { AppError } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
@@ -137,7 +138,8 @@ export async function getMileageLog(userId: string, year: number): Promise<Milea
       day: amsterdamDayKey(t.actualStart ?? t.scheduledStart),
       company: t.branch.tenant.name,
       purpose: t.assignment.shift.title,
-      destination: `${t.branch.addressLine}, ${t.branch.postalCode} ${t.branch.city}`,
+      // buiten Nederland "2000 Antwerpen, België" (lib/geo/vestiging-land.ts); de rittenadministratie is Nederlands
+      destination: `${t.branch.addressLine}, ${postcodePlaats(t.branch, "nl")}`,
       estimatedKm,
       km,
       edited: o?.km !== undefined,

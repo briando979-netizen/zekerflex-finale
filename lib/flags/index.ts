@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
 import { ALLEEN_APP_VLAG } from "@/lib/app-vereist";
-import { WERK_IN_BELGIE_VLAG } from "@/lib/geo/vestiging-land";
+import { WERK_IN_BELGIE_VLAG, WERK_IN_BUITENLAND_VLAG } from "@/lib/geo/vestiging-land";
 
 // ---------------------------------------------------------------------------
 // Feature flags / remote config.
@@ -163,12 +163,21 @@ FLAG_REGISTRY.push({
 });
 
 // Werken in België (28 nov 2026, eigenaar wil naar België): een werklocatie met een Belgisch adres, opgezocht bij OpenStreetMap
-// (lib/geo/vestiging-belgie.ts). Standaard uit: geld, contracten en de Wet DBA-teksten zijn nog op Nederland gebouwd.
+// (lib/geo/vestiging-buitenland.ts). Standaard uit: geld, contracten en de Wet DBA-teksten zijn nog op Nederland gebouwd.
 FLAG_REGISTRY.push({
   key: WERK_IN_BELGIE_VLAG,
   label: "Werklocaties in België",
   description:
-    "Aan = een bedrijf kan bij Locaties, Jouw start, Klus uitzetten en een eenmalige locatie bij een klus het land kiezen (Nederland of België). Voor België vult het straat en huisnummer, de postcode (vier cijfers) en de plaats in, en ZekerFlex zoekt het adres op bij OpenStreetMap; vindt die niets, dan krijgt het bedrijf een eerlijke melding. Matching op afstand, inchecken binnen het gebied en de kaart werken dan met die plek, en bij het adres staat België. Uit (standaard) = alleen Nederlandse adressen, zoals altijd. Zet dit pas aan als de fee, de facturen, de overeenkomsten en de Wet DBA-teksten voor België zijn uitgezocht: die zijn nog op Nederland gebouwd.",
+    "Aan = een bedrijf kan bij Locaties, Jouw start, Klus uitzetten en een eenmalige locatie bij een klus het land kiezen (Nederland of België). Voor België vult het straat en huisnummer, de postcode (vier cijfers) en de plaats in, en ZekerFlex zoekt het adres op bij OpenStreetMap; vindt die niets, dan krijgt het bedrijf een eerlijke melding. Matching op afstand, inchecken binnen het gebied en de kaart werken dan met die plek, en bij het adres staat België. Uit (standaard) = alleen Nederlandse adressen, zoals altijd. Zet dit pas aan als de fee, de facturen, de overeenkomsten en de Wet DBA-teksten voor België zijn uitgezocht: die zijn nog op Nederland gebouwd. Staat Werklocaties in alle landen aan, dan telt die (België hoort daar ook bij).",
+  default: false,
+});
+
+// Werklocaties in elk land (28 nov 2026, eigenaar): hetzelfde als `werk-in-belgie`, maar met elk land (ISO 3166). Standaard uit.
+FLAG_REGISTRY.push({
+  key: WERK_IN_BUITENLAND_VLAG,
+  label: "Werklocaties in alle landen",
+  description:
+    "Aan = een bedrijf kan bij elke werklocatie (Locaties, Jouw start, Klus uitzetten en een eenmalige locatie bij een klus) een land kiezen: Nederland bovenaan, daarna België, Duitsland, Luxemburg, Frankrijk, de rest van de EU en de EER, en daarna alle andere landen, met de namen in de taal van de gebruiker. Buiten Nederland vult het straat en huisnummer, de postcode (in een land zonder postcodes mag die leeg) en de plaats in, en ZekerFlex zoekt het adres op bij OpenStreetMap; vindt die niets, dan krijgt het bedrijf een eerlijke melding. De postcode wordt bewaard met de landcode ervoor (DE-10115), zoals de thuisbasis van een werker. Uit (standaard) = alleen Nederland, of Nederland en België als Werklocaties in België aan staat. Zet dit pas aan als geld, facturen, overeenkomsten, uitzendregels en de kaart per land zijn uitgezocht: die zijn nog op Nederland gebouwd.",
   default: false,
 });
 

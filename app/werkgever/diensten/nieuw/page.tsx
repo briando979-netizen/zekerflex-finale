@@ -15,7 +15,7 @@ import { SNEL_EN, SNEL_NL } from "@/components/werkgever/snel-teksten";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 import { amsterdamClock } from "@/lib/time/amsterdam";
-import { werkInBelgieAan } from "@/lib/geo/vestiging-belgie";
+import { werklocatieKeuzes } from "@/lib/geo/vestiging-buitenland";
 
 export const dynamic = "force-dynamic";
 
@@ -63,14 +63,15 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   });
 
   const tenantId = scope.tenantIds[0];
-  const [pools, extra, alleenFlexwerk, locale, metBelgie] = await Promise.all([
+  const [pools, extra, alleenFlexwerk, locale, landen] = await Promise.all([
     tenantId ? listPools(tenantId) : Promise.resolve([]),
     tenantId ? getOrgProfileExtra(tenantId).catch((): OrgProfileExtra => ({})) : Promise.resolve<OrgProfileExtra>({}),
     // vlag `publiek-alleen-flexwerk` (20 nov): daarmee is er ook de korte weg in drie stappen (SnelPlaatsen), via een link
     alleenFlexwerkAan().catch(() => false),
     getLocale(),
-    // vlag `werk-in-belgie` (standaard uit): het eerste adres en een eenmalige locatie mogen ook in België liggen
-    werkInBelgieAan(principal),
+    // vlaggen `werk-in-belgie` en `werk-in-buitenland` (standaard uit): het eerste adres en een eenmalige locatie mogen ook
+    // buiten Nederland liggen; de landnamen in de taal van de pagina
+    getLocale().then((taal) => werklocatieKeuzes(principal, taal)),
   ]);
   // 22 nov: het uitgebreide formulier (twee stappen, alle opties) is de standaard; "Snel een klus plaatsen" alleen via ?snel=1
   const snelModus = alleenFlexwerk && snelParam === "1";
@@ -93,7 +94,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
         // het concept van /klus-plaatsen gaat naar het formulier dat open staat; in de snelle weg (?snel=1) neemt SnelPlaatsen het
         // concept, en bij "Klus dupliceren" is de gekozen klus het vertrekpunt
         leesConcept={!snelModus && !voorinvulling}
-        metBelgie={metBelgie}
+        landen={landen}
         {...(voorinvulling ? { voorinvulling } : {})}
       />
     </div>
@@ -119,7 +120,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
         // meteen hier in (EersteVestiging, zelfde poort als POST /api/werkgever/branches); daarna staat het klusformulier er.
         // Een ander leest wie hij moet vragen.
         hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") ? (
-          <EersteVestiging metBelgie={metBelgie} />
+          <EersteVestiging landen={landen} />
         ) : (
           <div className="card border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
             <p>{n.noBranches}</p>

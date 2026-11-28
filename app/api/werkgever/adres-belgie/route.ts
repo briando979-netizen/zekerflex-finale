@@ -1,50 +1,20 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
-import { AppError, toErrorBody } from "@/lib/errors";
-import { enforceRateLimit } from "@/lib/rate-limit";
-import { werkInBelgieAan, zoekBelgischAdres } from "@/lib/geo/vestiging-belgie";
+import { toErrorBody } from "@/lib/errors";
+import { POST as zoekAdresBuitenland } from "@/app/api/werkgever/adres-buitenland/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /api/werkgever/adres-belgie: een werklocatie in België opzoeken bij OpenStreetMap (lib/geo/vestiging-belgie.ts), voor
-// de knop "Adres zoeken" in components/werkgever/BelgischAdres.tsx (Locaties, Jouw start, Klus uitzetten en een eenmalige
-// locatie bij een klus). Alleen achter de vlag `werk-in-belgie` (standaard uit: 412, geen 403 voor CrowdSec). Het adres staat
-// in de body, niet in het adres van de aanvraag, zodat het in geen enkel log komt. Opslaan gaat daarna gewoon via
-// POST /api/werkgever/branches of het klusformulier, met de punt die deze route teruggeeft.
-
-const MAX_BODY = 4_096;
-
-const schema = z.object({
-  straat: z.string().max(160).default(""),
-  postcode: z.string().max(16).default(""),
-  plaats: z.string().max(100).default(""),
-});
-
+// Het oude adres van POST /api/werkgever/adres-buitenland (28 nov 2026, toen alleen België): een tabblad dat vóór de uitrol
+// openging, stuurt "Adres zoeken" nog hierheen, zonder land. Zelfde poort (sessie en rol), daarna dezelfde route; zonder land
+// is het België. Mag weg zodra niemand hem meer gebruikt (de werkgeversapp vraagt nu alleen /api/werkgever/adres-buitenland).
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    if (Number(request.headers.get("content-length") ?? "0") > MAX_BODY) throw AppError.validation("Dit adres is te lang.");
-    const principal = await requirePrincipal();
-    requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
-    if (!(await werkInBelgieAan(principal))) {
-      throw new AppError("PRECONDITION_FAILED", "Werklocaties in België staan nog niet aan.", 412, { reden: "belgie-uit" });
-    }
-    await enforceRateLimit({
-      name: "adres-belgie",
-      identifier: principal.userId,
-      limit: 20,
-      windowSeconds: 600,
-      message: "Je zocht net al veel adressen op. Probeer het over een paar minuten opnieuw.",
-    });
-    const b = schema.safeParse(await request.json().catch(() => null));
-    if (!b.success) throw AppError.validation("Controleer de ingevulde gegevens.");
-    const adres = await zoekBelgischAdres(b.data);
-    return NextResponse.json({
-      result: { label: adres.label, lat: adres.latitude, lng: adres.longitude, straat: adres.straat, postcode: adres.postalCode, plaats: adres.city },
-    });
+    requireRole(await requirePrincipal(), "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
   } catch (err) {
     const { status, body, headers } = toErrorBody(err);
     return NextResponse.json(body, { status, headers });
   }
+  return zoekAdresBuitenland(request);
 }

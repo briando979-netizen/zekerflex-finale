@@ -41,7 +41,7 @@ import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { kl, startMarges } from "@/lib/werkgever/start-marges";
 import { vestigingRegel } from "@/lib/geo/adres-keuze";
 import { metLand } from "@/lib/geo/vestiging-land";
-import { werkInBelgieAan } from "@/lib/geo/vestiging-belgie";
+import { werklocatieKeuzes } from "@/lib/geo/vestiging-buitenland";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
@@ -102,8 +102,8 @@ export default async function WerkgeverStartPage() {
           .findFirst({ where: { tenantId, kind: "PERMANENT" }, orderBy: { createdAt: "asc" }, select: { name: true, addressLine: true, postalCode: true, city: true } })
           .catch(() => null)
       : null;
-  // de vlag `werk-in-belgie` (standaard uit): bij de adres-stap ook België kunnen kiezen
-  const metBelgie = showWizard && !adresKlaar ? await werkInBelgieAan(principal) : false;
+  // de vlaggen `werk-in-belgie` en `werk-in-buitenland` (standaard uit): bij de adres-stap ook een ander land kunnen kiezen
+  const landen = showWizard && !adresKlaar ? await werklocatieKeuzes(principal, locale) : null;
   // Startmodus: nog bezig met de stappen. Dan is het startscherm alleen de kop en de twee blokken van Jouw start; de groet, de
   // takenlijst, de cijfers en de panelen komen pas daarna (23 nov 2026, zoals bij YoungOnes; eerder alleen bij een leeg bedrijf).
   // De klussen, uren en facturen zelf blijven gewoon bereikbaar via het menu.
@@ -372,10 +372,10 @@ export default async function WerkgeverStartPage() {
                 profiel: { websiteUrl: extra.websiteUrl ?? "", about: extra.about ?? "" },
                 answers,
                 brancheKeuze: maakBrancheKeuze({ alle: ob.alleBranches, branches: ob.branches }),
-                // een Belgische werklocatie krijgt het land erachter ("…, België"); een Nederlandse blijft zoals hij was
+                // een werklocatie buiten Nederland krijgt het land erachter ("…, België"); een Nederlandse blijft zoals hij was
                 vestiging: bestaandeVestiging ? { naam: bestaandeVestiging.name, adres: metLand(vestigingRegel(bestaandeVestiging), bestaandeVestiging.postalCode, locale) } : null,
                 eersteKlus,
-                metBelgie,
+                landen,
               }}
             />
           </div>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { incheckenVereistVoor } from "@/lib/checkin/vereist";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
+import { postcodePlaats } from "@/lib/geo/vestiging-land";
 
 // ---------------------------------------------------------------------------
 // Agenda-abonnement voor werkers: een geheime iCal-link met al je diensten,
@@ -167,7 +168,8 @@ export function feedIcs(assignments: FeedAssignment[], siteUrl: string, lang: Lo
       `DTSTART:${stamp(s.startsAt)}`,
       `DTEND:${stamp(s.endsAt)}`,
       `SUMMARY:${esc(`${cancelled ? tx.cancelledPrefix : ""}${s.title} · ${b.tenant.name}`)}`,
-      `LOCATION:${esc(`${b.name}, ${b.addressLine}, ${b.postalCode} ${b.city}`)}`,
+      // buiten Nederland "2000 Antwerpen, België", het land in de app-taal van de werker (lib/geo/vestiging-land.ts)
+      `LOCATION:${esc(`${b.name}, ${b.addressLine}, ${postcodePlaats(b, lang)}`)}`,
       `DESCRIPTION:${esc(desc)}`,
       `STATUS:${cancelled ? "CANCELLED" : "CONFIRMED"}`,
       `TRANSP:${cancelled ? "TRANSPARENT" : "OPAQUE"}`,

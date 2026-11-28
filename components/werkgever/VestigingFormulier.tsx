@@ -2,28 +2,28 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
-import { BelgischAdres } from "@/components/werkgever/BelgischAdres";
+import { BuitenlandAdres } from "@/components/werkgever/BuitenlandAdres";
 import { useT } from "@/components/i18n/I18nProvider";
 import { adresUitKeuze } from "@/lib/geo/adres-keuze";
-import { isVestigingLand, type GevondenBelgischAdres, type VestigingLand } from "@/lib/geo/vestiging-land";
+import type { GevondenBuitenlandsAdres, LandKeuze, VestigingLand } from "@/lib/geo/vestiging-land";
 
 // Een vaste werklocatie (vestiging) toevoegen: op Locaties (BranchesBoard) en, voor een bedrijf zonder adres, meteen op
 // Klus uitzetten (EersteVestiging). 22 nov 2026 (gebruikersonderzoek B16–B19): elk veld een eigen label, en postcode en
 // plaats vult de adreszoeker zelf in uit PDOK; de naam wordt de plaats als je hem leeg laat. Dezelfde POST als altijd
-// (/api/werkgever/branches, alleen een beheerder). 28 nov 2026: met de vlag `werk-in-belgie` (metBelgie) eerst een keuze
-// Nederland of België; voor België zoekt BelgischAdres het adres op bij OpenStreetMap. Zonder de vlag is alles zoals het was.
+// (/api/werkgever/branches, alleen een beheerder). 28 nov 2026: met de vlag `werk-in-belgie` of `werk-in-buitenland` (landen)
+// eerst het land; buiten Nederland zoekt BuitenlandAdres het adres op bij OpenStreetMap. Zonder de vlaggen is alles zoals het was.
 export function VestigingFormulier({
   beginPlaats = "",
   metKostenplaats = false,
-  metBelgie = false,
+  landen = null,
   onOpgeslagen,
   onAnnuleer,
 }: {
   /** de plaats van een klus die al klaarstaat (/klus-plaatsen): alvast in de zoeker, de naam en de plaats */
   beginPlaats?: string;
   metKostenplaats?: boolean;
-  /** de vlag `werk-in-belgie` staat aan: het land kiezen (lib/geo/vestiging-land.ts) */
-  metBelgie?: boolean;
+  /** de landen die het bedrijf mag kiezen, met hun naam (van de server, lib/geo/vestiging-buitenland.ts); null = alleen Nederland */
+  landen?: LandKeuze[] | null | undefined;
   onOpgeslagen: (branch: { id: string; name: string }) => void | Promise<void>;
   onAnnuleer?: () => void;
 }) {
@@ -37,8 +37,9 @@ export function VestigingFormulier({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [land, setLand] = useState<VestigingLand>("NL");
-  const [belgisch, setBelgisch] = useState<GevondenBelgischAdres | null>(null);
-  const inBelgie = metBelgie && land === "BE";
+  const [buitenlands, setBuitenlands] = useState<GevondenBuitenlandsAdres | null>(null);
+  const keuze = landen && landen.length > 1 ? landen : null;
+  const gekozen = keuze?.find((l) => l.code === land && l.code !== "NL") ?? null;
 
   function kies(a: PickedAddress) {
     setAddress(a);
@@ -51,20 +52,21 @@ export function VestigingFormulier({
     setErr(null);
   }
 
-  function kiesBelgisch(a: GevondenBelgischAdres) {
-    setBelgisch(a);
+  function kiesBuitenlands(a: GevondenBuitenlandsAdres) {
+    setBuitenlands(a);
     if (a.plaats) setName((nu) => (nu.trim() ? nu : a.plaats));
     setErr(null);
   }
 
   async function opslaan(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // België: het punt dat OpenStreetMap vond ("BE-2000" als postcode); Nederland: het gekozen PDOK-adres, zoals altijd
-    const plek = inBelgie
-      ? belgisch && { addressLine: belgisch.straat, postalCode: belgisch.postcode, city: belgisch.plaats.trim(), latitude: belgisch.lat, longitude: belgisch.lng }
+    // buiten Nederland: het punt dat OpenStreetMap vond ("BE-2000" als postcode); Nederland: het gekozen PDOK-adres, zoals altijd
+    const plek = gekozen
+      ? buitenlands && { addressLine: buitenlands.straat, postalCode: buitenlands.postcode, city: buitenlands.plaats.trim(), latitude: buitenlands.lat, longitude: buitenlands.lng }
       : address && { addressLine: adresUitKeuze(address).straat, postalCode: postalCode.trim(), city: city.trim(), latitude: address.lat, longitude: address.lng };
-    if (!plek) return setErr(inBelgie ? v.belgieEerst : v.kiesAdres);
-    if (name.trim().length < 2 || plek.postalCode.length < 4 || plek.city.length < 2) return setErr(v.vulAlles);
+    if (!plek) return setErr(gekozen ? v.buitenlandEerst : v.kiesAdres);
+    // een land zonder postcodes bewaart alleen de landcode ("AE-"): daar telt de lengte niet
+    if (name.trim().length < 2 || (!gekozen && plek.postalCode.length < 4) || plek.city.length < 2) return setErr(v.vulAlles);
     setBusy(true);
     setErr(null);
     try {
@@ -90,7 +92,7 @@ export function VestigingFormulier({
   const fout = err ? { "aria-describedby": `${id}-fout` } : {};
   return (
     <form onSubmit={opslaan} className="space-y-3" noValidate>
-      {metBelgie && (
+      {keuze && (
         <div>
           <label htmlFor={`${id}-land`} className="field-label">
             {v.land}
@@ -99,18 +101,31 @@ export function VestigingFormulier({
             id={`${id}-land`}
             value={land}
             onChange={(e) => {
-              if (isVestigingLand(e.target.value)) setLand(e.target.value);
+              if (keuze.some((l) => l.code === e.target.value)) setLand(e.target.value);
+              setBuitenlands(null);
               setErr(null);
             }}
             className="field-input w-full"
           >
-            <option value="NL">{v.landNL}</option>
-            <option value="BE">{v.landBE}</option>
+            {keuze.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.naam}
+              </option>
+            ))}
           </select>
         </div>
       )}
-      {inBelgie ? (
-        <BelgischAdres id={id} gevonden={belgisch} onGevonden={kiesBelgisch} onWijzig={() => setBelgisch(null)} beginPlaats={beginPlaats} />
+      {gekozen ? (
+        <BuitenlandAdres
+          key={gekozen.code}
+          id={id}
+          land={gekozen.code}
+          landNaam={gekozen.naam}
+          gevonden={buitenlands}
+          onGevonden={kiesBuitenlands}
+          onWijzig={() => setBuitenlands(null)}
+          beginPlaats={beginPlaats}
+        />
       ) : (
         <>
           <div>

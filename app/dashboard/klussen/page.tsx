@@ -13,7 +13,8 @@ import { getFiscal } from "@/lib/fiscal/store";
 import { isBirthdayToday } from "@/lib/birthday";
 import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
-import { getFreelancerDict } from "@/lib/i18n/server";
+import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
+import { landNaam } from "@/lib/werkrecht/landen";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
 import { alleenTestklussen, geenEchteInDeBuurt } from "@/lib/shifts/testklus";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
@@ -35,6 +36,7 @@ export default async function KlussenPage(
   const principal = await requirePrincipal();
   const m = await getMarketplace(principal.userId);
   const t = await getFreelancerDict();
+  const taal = await getLocale();
   const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";
   // de branches die de werker bij de start koos (of alle): daarop staat de lijst standaard gefilterd
   const brancheKeuze = await getBrancheKeuze(principal.userId).catch(() => null);
@@ -148,7 +150,9 @@ export default async function KlussenPage(
       {/* ook zonder klussen staat de filterbalk met het zoekveld er (YoungOnes; het vergrootglas in de balk springt naar #zoeken).
           Het lege vak heeft één actie: naar de meldingen. De knop zelf staat sinds 21 nov op Account (daar kent hij zijn stand op dit apparaat). */}
       <MarketplaceView
-        shifts={m.shifts}
+        // een klus buiten Nederland: het land achter de plaats ("Antwerpen, België"), in de taal van de werker; hier op de
+        // server, zodat de naam in de browser precies dezelfde is (Intl kan daar net anders zijn)
+        shifts={m.shifts.some((s) => s.land) ? m.shifts.map((s) => (s.land ? { ...s, city: `${s.city}, ${landNaam(s.land, taal)}` } : s)) : m.shifts}
         home={m.home}
         homeLabel={m.homeLabel}
         initialQuery={initialQuery}

@@ -13,6 +13,7 @@ import { notifyJobAlerts } from "@/lib/matching/job-alerts";
 import { isUrgent, notifyStandby } from "@/lib/matching/standby";
 import { listPools } from "@/lib/pools/store";
 import { dedupePlaceParts } from "@/lib/shifts/place-label";
+import { controleerWerklocatiePostcode } from "@/lib/geo/vestiging-buitenland";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 import { ANNULEER_TERMIJNEN, isAnnuleerTermijn, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
@@ -30,7 +31,9 @@ export const MIN_SHIFT_RATE_CENTS = env.MIN_SHIFT_RATE_CENTS;
 /** A one-off klus-locatie (e.g. an offsite demo) instead of a saved vestiging. */
 export const adHocAddressSchema = z.object({
   label: z.string().trim().min(3).max(200),
-  postalCode: z.string().trim().min(4).max(12),
+  // Nederland 4 tot 12 tekens zoals altijd; buiten Nederland met de landcode ervoor ("BE-2000"), alleen in een land dat de
+  // vlaggen toestaan: dat controleert createShift (lib/geo/vestiging-buitenland.ts → controleerWerklocatiePostcode)
+  postalCode: z.string().trim().max(16),
   city: z.string().trim().min(2).max(100),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
@@ -100,13 +103,14 @@ export async function createShift(
     const tenantId = scope.tenantIds[0];
     if (!tenantId) throw AppError.forbidden("Geen organisatie gekoppeld aan je account.");
     // plaatsen is vrij voor elk bedrijf (23 nov 2026): de controle komt pas bij het inplannen (lib/company/gecontroleerd.ts)
+    const postalCode = await controleerWerklocatiePostcode(input.adHocAddress.postalCode, principal, "Gebruik een geldige postcode.");
     branch = await prisma.branch.create({
       data: {
         tenantId,
         kind: "AD_HOC",
         name: `Eenmalige locatie — ${dedupePlaceParts(input.adHocAddress.label)}`,
         addressLine: dedupePlaceParts(input.adHocAddress.label),
-        postalCode: input.adHocAddress.postalCode,
+        postalCode,
         city: input.adHocAddress.city,
         latitude: input.adHocAddress.latitude,
         longitude: input.adHocAddress.longitude,

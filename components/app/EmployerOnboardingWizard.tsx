@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { saveOnboardingProfileAction } from "@/app/werkgever/onboarding/actions";
 import { VestigingFormulier } from "@/components/werkgever/VestigingFormulier";
+import type { LandKeuze } from "@/lib/geo/vestiging-land";
 import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
 import { blokVoortgang, stapStanden, type StapStand } from "@/components/werkgever/bouwstenen";
 import { useT } from "@/components/i18n/I18nProvider";
@@ -98,8 +99,8 @@ export function EmployerOnboardingWizard({
     vestiging?: { naam: string; adres: string } | null | undefined;
     /** blok 2: wat er al gebeurd is */
     eersteKlus: { heeftKlus: boolean; klusLive: boolean; heeftReactie: boolean; heeftIngepland: boolean };
-    /** de vlag `werk-in-belgie`: bij het adres ook België kiezen (components/werkgever/VestigingFormulier.tsx) */
-    metBelgie?: boolean | undefined;
+    /** de vlag `werk-in-belgie` of `werk-in-buitenland`: bij het adres ook een ander land kiezen (components/werkgever/VestigingFormulier.tsx) */
+    landen?: LandKeuze[] | null | undefined;
   };
 }) {
   const t = useT();
@@ -381,7 +382,7 @@ export function EmployerOnboardingWizard({
         <VestigingFormulier
           key={concept?.city ?? ""}
           beginPlaats={concept?.city ?? ""}
-          metBelgie={initial.metBelgie === true}
+          landen={initial.landen ?? null}
           onOpgeslagen={() => {
             setAdresOpgeslagen(true);
             verderNa("adres", { adres: true });

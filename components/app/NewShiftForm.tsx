@@ -12,8 +12,8 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { extraDayOptions } from "@/lib/shifts/extra-days";
 import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, annuleerUrenOf, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
-import { BelgischAdres } from "@/components/werkgever/BelgischAdres";
-import { isVestigingLand, type GevondenBelgischAdres, type VestigingLand } from "@/lib/geo/vestiging-land";
+import { BuitenlandAdres } from "@/components/werkgever/BuitenlandAdres";
+import type { GevondenBuitenlandsAdres, LandKeuze as LandOptie, VestigingLand } from "@/lib/geo/vestiging-land";
 import { FairPayMeter } from "@/components/app/FairPayMeter";
 import { kostenUitUren, toShiftFormValues } from "@/lib/klusconcept/concept";
 import { useKlusConcept } from "@/components/werkgever/useKlusConcept";
@@ -59,15 +59,21 @@ function Sectie({ titel, kaart, children }: { titel: string; kaart: boolean; chi
   );
 }
 
-/** Nederland of België voor een eenmalige locatie (alleen met de vlag `werk-in-belgie`). Een losse component: velden houden hun focus. */
-function LandKeuze({ land, onLand }: { land: VestigingLand; onLand: (land: VestigingLand) => void }) {
+/**
+ * Het land van een eenmalige locatie (alleen met de vlag `werk-in-belgie` of `werk-in-buitenland`); de namen komen van de
+ * server (lib/geo/vestiging-land.ts → landKeuzes). Een losse component: velden houden hun focus.
+ */
+function LandKeuze({ land, landen, onLand }: { land: VestigingLand; landen: LandOptie[]; onLand: (land: VestigingLand) => void }) {
   const v = useT().vestigingForm;
   return (
     <label className="block">
       <span className="field-label">{v.land}</span>
-      <select value={land} onChange={(e) => isVestigingLand(e.target.value) && onLand(e.target.value)} className="field-input">
-        <option value="NL">{v.landNL}</option>
-        <option value="BE">{v.landBE}</option>
+      <select value={land} onChange={(e) => landen.some((l) => l.code === e.target.value) && onLand(e.target.value)} className="field-input">
+        {landen.map((l) => (
+          <option key={l.code} value={l.code}>
+            {l.naam}
+          </option>
+        ))}
       </select>
     </label>
   );
@@ -117,7 +123,7 @@ export function NewShiftForm({
   kostenplaatsen = [],
   leesConcept = true,
   voorinvulling,
-  metBelgie = false,
+  landen = null,
 }: {
   branches: { id: string; name: string; city: string }[];
   templates: ShiftTemplate[];
@@ -133,8 +139,8 @@ export function NewShiftForm({
   leesConcept?: boolean;
   /** "Klus dupliceren": een bestaande klus als vertrekpunt, alleen de datum is nieuw (de tijden staan in de melding) */
   voorinvulling?: SnelVoorinvulling;
-  /** de vlag `werk-in-belgie`: een eenmalige locatie mag ook in België liggen (components/werkgever/BelgischAdres.tsx) */
-  metBelgie?: boolean;
+  /** de landen die een eenmalige locatie mag hebben (vlag `werk-in-belgie` of `werk-in-buitenland`, van de server); null = alleen Nederland */
+  landen?: LandOptie[] | null | undefined;
 }) {
   const router = useRouter();
   const { locale, t: dict } = useI18n();
@@ -191,11 +197,17 @@ export function NewShiftForm({
   const [adHocAddress, setAdHocAddress] = useState<PickedAddress | null>(null);
   const [adHocPostalCode, setAdHocPostalCode] = useState("");
   const [adHocCity, setAdHocCity] = useState("");
-  // een eenmalige locatie in België (vlag werk-in-belgie): het punt komt van OpenStreetMap, de postcode is "BE-2000"
+  // een eenmalige locatie buiten Nederland (vlaggen werk-in-belgie, werk-in-buitenland): het punt komt van OpenStreetMap,
+  // de postcode met de landcode ervoor ("BE-2000")
+  const landKeuze = landen && landen.length > 1 ? landen : null;
   const [adHocLand, setAdHocLand] = useState<VestigingLand>("NL");
-  const [adHocBe, setAdHocBe] = useState<GevondenBelgischAdres | null>(null);
-  const [adHocBeEerst, setAdHocBeEerst] = useState(false);
-  const adHocBelgie = metBelgie && adHocLand === "BE";
+  const [adHocBuiten, setAdHocBuiten] = useState<GevondenBuitenlandsAdres | null>(null);
+  const [adHocBuitenEerst, setAdHocBuitenEerst] = useState(false);
+  const adHocGekozen = landKeuze?.find((l) => l.code === adHocLand && l.code !== "NL") ?? null;
+  const kiesAdHocLand = (land: VestigingLand) => {
+    setAdHocLand(land);
+    setAdHocBuiten(null);
+  };
   const [ownTemplates, setOwnTemplates] = useState<OwnTemplate[]>([]);
   const [fromWebsite, setFromWebsite] = useState(false);
 
@@ -353,10 +365,10 @@ export function NewShiftForm({
 
   // een toetsenbord dat "Ga" stuurt zonder Enter-toets: ook dan in stap 1 doorgaan in plaats van indienen
   function stapOpIndienen(e: FormEvent<HTMLFormElement>) {
-    // een eenmalige locatie in België zonder opgezocht adres: eerst "Adres zoeken" (anders weigert de server zonder uitleg)
-    if (stap !== 1 && oneOff && adHocBelgie && !adHocBe) {
+    // een eenmalige locatie buiten Nederland zonder opgezocht adres: eerst "Adres zoeken" (anders weigert de server zonder uitleg)
+    if (stap !== 1 && oneOff && adHocGekozen && !adHocBuiten) {
       e.preventDefault();
-      setAdHocBeEerst(true);
+      setAdHocBuitenEerst(true);
       return;
     }
     if (stap !== 1) return;
@@ -404,7 +416,7 @@ export function NewShiftForm({
   // de waarde van een datetime-local is al de tijd in Nederland ("2026-11-05T09:00"): laat hem zo zien, in welke zone de browser ook staat
   const tijdTekst = (v: string) => new Date(`${v}Z`).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
-  const plek = edit ? edit.locatie : oneOff ? (adHocBelgie ? adHocBe?.label : adHocAddress?.label) ?? n.eenmaligeLocatie : branches[0]?.name ?? n.vestigingNaam;
+  const plek = edit ? edit.locatie : oneOff ? (adHocGekozen ? adHocBuiten?.label : adHocAddress?.label) ?? n.eenmaligeLocatie : branches[0]?.name ?? n.vestigingNaam;
   const kopieVestiging = kopie && branches.some((b) => b.id === kopie.branchId) ? kopie.branchId : undefined;
 
   return (
@@ -723,28 +735,31 @@ export function NewShiftForm({
                   .
                 </span>
               </label>
-            ) : adHocBelgie ? (
+            ) : landKeuze && adHocGekozen ? (
               <div className="mt-2 space-y-3">
-                <LandKeuze land={adHocLand} onLand={setAdHocLand} />
-                <BelgischAdres
+                <LandKeuze land={adHocLand} landen={landKeuze} onLand={kiesAdHocLand} />
+                <BuitenlandAdres
+                  key={adHocGekozen.code}
                   id="klus-eenmalig"
-                  gevonden={adHocBe}
+                  land={adHocGekozen.code}
+                  landNaam={adHocGekozen.naam}
+                  gevonden={adHocBuiten}
                   onGevonden={(a) => {
-                    setAdHocBe(a);
-                    setAdHocBeEerst(false);
+                    setAdHocBuiten(a);
+                    setAdHocBuitenEerst(false);
                   }}
-                  onWijzig={() => setAdHocBe(null)}
-                  melding={adHocBeEerst && !adHocBe ? dict.vestigingForm.belgieEerst : null}
+                  onWijzig={() => setAdHocBuiten(null)}
+                  melding={adHocBuitenEerst && !adHocBuiten ? dict.vestigingForm.buitenlandEerst : null}
                 />
-                <input type="hidden" name="adHocLabel" value={adHocBe?.label ?? ""} />
-                <input type="hidden" name="adHocPostalCode" value={adHocBe?.postcode ?? ""} />
-                <input type="hidden" name="adHocCity" value={adHocBe?.plaats ?? ""} />
-                <input type="hidden" name="adHocLatitude" value={adHocBe?.lat ?? ""} />
-                <input type="hidden" name="adHocLongitude" value={adHocBe?.lng ?? ""} />
+                <input type="hidden" name="adHocLabel" value={adHocBuiten?.label ?? ""} />
+                <input type="hidden" name="adHocPostalCode" value={adHocBuiten?.postcode ?? ""} />
+                <input type="hidden" name="adHocCity" value={adHocBuiten?.plaats ?? ""} />
+                <input type="hidden" name="adHocLatitude" value={adHocBuiten?.lat ?? ""} />
+                <input type="hidden" name="adHocLongitude" value={adHocBuiten?.lng ?? ""} />
               </div>
             ) : (
               <div className="mt-2 space-y-3">
-                {metBelgie && <LandKeuze land={adHocLand} onLand={setAdHocLand} />}
+                {landKeuze && <LandKeuze land={adHocLand} landen={landKeuze} onLand={kiesAdHocLand} />}
                 <label className="block">
                   <span className="field-label">{n.adres}</span>
                   {/* postcode en plaats komen uit het gekozen adres (PDOK); aanpassen kan daaronder */}
