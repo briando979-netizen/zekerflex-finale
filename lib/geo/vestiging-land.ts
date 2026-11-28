@@ -33,21 +33,37 @@ const EU_EER = [
 /** Alle andere landen en gebieden met inwoners (ISO 3166-1); onbewoonde gebieden (Antarctica, Bouveteiland, …) staan er niet in. */
 const OVERIG = [
   "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AR", "AS", "AU", "AW", "AX", "AZ",
-  "BA", "BB", "BD", "BF", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ", "BR", "BS", "BT", "BW", "BY", "BZ",
-  "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK", "CL", "CM", "CN", "CO", "CR", "CU", "CV", "CW", "CX",
+  "BA", "BB", "BD", "BF", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ", "BR", "BS", "BT", "BW", "BZ",
+  "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK", "CL", "CM", "CN", "CO", "CR", "CV", "CW", "CX",
   "DJ", "DM", "DO", "DZ", "EC", "EG", "EH", "ER", "ET", "FJ", "FK", "FM", "FO",
   "GA", "GB", "GD", "GE", "GF", "GG", "GH", "GI", "GL", "GM", "GN", "GP", "GQ", "GT", "GU", "GW", "GY",
-  "HK", "HN", "HT", "ID", "IL", "IM", "IN", "IQ", "IR", "JE", "JM", "JO", "JP",
-  "KE", "KG", "KH", "KI", "KM", "KN", "KP", "KR", "KW", "KY", "KZ", "LA", "LB", "LC", "LK", "LR", "LS", "LY",
+  "HK", "HN", "HT", "ID", "IL", "IM", "IN", "IQ", "JE", "JM", "JO", "JP",
+  "KE", "KG", "KH", "KI", "KM", "KN", "KR", "KW", "KY", "KZ", "LA", "LB", "LC", "LK", "LR", "LS", "LY",
   "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK", "ML", "MM", "MN", "MO", "MP", "MQ", "MR", "MS", "MU", "MV", "MW", "MX", "MY", "MZ",
   "NA", "NC", "NE", "NF", "NG", "NI", "NP", "NR", "NU", "NZ", "OM",
-  "PA", "PE", "PF", "PG", "PH", "PK", "PM", "PN", "PR", "PS", "PW", "PY", "QA", "RE", "RS", "RU", "RW",
-  "SA", "SB", "SC", "SD", "SG", "SH", "SJ", "SL", "SM", "SN", "SO", "SR", "SS", "ST", "SV", "SX", "SY", "SZ",
+  "PA", "PE", "PF", "PG", "PH", "PK", "PM", "PN", "PR", "PS", "PW", "PY", "QA", "RE", "RS", "RW",
+  "SA", "SB", "SC", "SD", "SG", "SH", "SJ", "SL", "SM", "SN", "SO", "SR", "SS", "ST", "SV", "SX", "SZ",
   "TC", "TD", "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO", "TR", "TT", "TV", "TW", "TZ",
   "UA", "UG", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VI", "VN", "VU", "WF", "WS", "YE", "YT", "ZA", "ZM", "ZW",
 ] as const;
 
-const ALLE = new Set<string>([...VOORAAN, ...EU_EER, ...OVERIG]);
+/**
+ * Landen met zware sancties: Zekerflex, Inc. is Amerikaans (OFAC) en werkt ook in de EU. Ze staan nooit in de keuzelijst
+ * en de server weigert ze (controleerVestigingPostcode, lib/geo/vestiging-buitenland.ts). Ze blijven wel herkenbaar, zodat
+ * "RU-101000" niet als gewone Nederlandse tekst wordt bewaard.
+ */
+export const GESANCTIONEERDE_LANDEN = ["CU", "IR", "KP", "SY", "RU", "BY"] as const;
+const SANCTIES = new Set<string>(GESANCTIONEERDE_LANDEN);
+
+/** De melding bij een land met sancties (server; het formulier toont buitenlandSanctie). */
+export const SANCTIE_MELDING = "Werken in dit land kan niet via ZekerFlex.";
+
+export function isGesanctioneerdLand(land: string): boolean {
+  return SANCTIES.has(land.trim().toUpperCase());
+}
+
+/** Elk land dat we herkennen, ook de landen met sancties (die mag niemand kiezen, zie werklocatieLanden). */
+const ALLE = new Set<string>([...VOORAAN, ...EU_EER, ...OVERIG, ...GESANCTIONEERDE_LANDEN]);
 
 /**
  * Landen zonder (gangbare) postcode: daar is het veld niet verplicht en zoeken we op straat en plaats. Liever een land te
@@ -70,6 +86,7 @@ export function heeftPostcode(land: string): boolean {
 
 /** Welke landen een bedrijf mag kiezen: alleen Nederland (zoals altijd), Nederland en België, of elk land. */
 export function werklocatieLanden(stand: { belgie: boolean; buitenland: boolean }): readonly string[] {
+  // de landen met sancties staan niet in OVERIG: die komen hier nooit in
   if (stand.buitenland) return [...VOORAAN, ...EU_EER, ...OVERIG];
   if (stand.belgie) return ["NL", "BE"];
   return ["NL"];
@@ -231,6 +248,7 @@ export function controleerVestigingPostcode(
   if (!m || land === "NL" || !ALLE.has(land)) {
     return p.length >= 4 && p.length <= 12 ? { ok: true, postalCode: p } : { ok: false, melding: "Gebruik een geldige postcode.", buitenland: false };
   }
+  if (SANCTIES.has(land)) return { ok: false, melding: SANCTIE_MELDING, buitenland: true };
   if (!landen.includes(land)) return { ok: false, melding: "Werklocaties in dit land staan nog niet aan.", buitenland: true };
   const pc = buitenlandsePostcode(land, m[2] ?? "");
   if (pc === null || (pc === "" && heeftPostcode(land))) return { ok: false, melding: "Gebruik een geldige postcode voor dit land.", buitenland: true };
@@ -271,6 +289,7 @@ export type BuitenlandMelding =
   | "buitenlandNlPostcode"
   | "buitenlandPlaats"
   | "buitenlandNietVlaanderen"
+  | "buitenlandSanctie"
   | "buitenlandNietGevonden"
   | "buitenlandOnbereikbaar";
 
@@ -294,6 +313,7 @@ export function buitenlandFoutMelding(antwoord: unknown, land: string): Buitenla
   if (reden === "buitenland-postcode") return land === "BE" ? "buitenlandPostcodeBE" : "buitenlandPostcode";
   if (reden === "buitenland-plaats") return "buitenlandPlaats";
   if (reden === "buitenland-vlaanderen") return "buitenlandNietVlaanderen";
+  if (reden === "buitenland-sanctie") return "buitenlandSanctie";
   if (reden === "buitenland-niet-gevonden") return "buitenlandNietGevonden";
   if (reden === "buitenland-onbereikbaar") return "buitenlandOnbereikbaar";
   return null;

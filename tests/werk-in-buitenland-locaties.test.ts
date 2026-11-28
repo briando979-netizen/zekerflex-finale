@@ -84,6 +84,16 @@ describe("een locatie toevoegen (POST)", () => {
     expect((await post(lichaam("DE-"))).status).toBe(422);
     expect(m.branchCreate.mock.calls.map((c) => c[0].data.postalCode)).toEqual(["DE-10115", "AE-"]);
   });
+
+  it("een land met sancties nooit, ook met alle landen aan", async () => {
+    vlaggen({ belgie: true, buitenland: true });
+    for (const c of ["CU", "IR", "KP", "SY", "RU", "BY"]) {
+      const res = await post(lichaam(`${c}-101000`));
+      expect(res.status, c).toBe(422);
+      expect((await res.json()).error.message, c).toBe("Werken in dit land kan niet via ZekerFlex.");
+    }
+    expect(m.branchCreate).not.toHaveBeenCalled();
+  });
 });
 
 describe("een locatie bewerken (PATCH): dezelfde controle", () => {
@@ -95,6 +105,10 @@ describe("een locatie bewerken (PATCH): dezelfde controle", () => {
     expect((await patch({ postalCode: "be-2000" })).status).toBe(200);
     expect(m.branchUpdate.mock.calls[1]?.[0].data).toEqual({ postalCode: "BE-2000" });
     expect((await patch({ postalCode: "BE-5000" })).status).toBe(422);
+    vlaggen({ buitenland: true });
+    const ru = await patch({ postalCode: "RU-101000" });
+    expect(ru.status).toBe(422);
+    expect((await ru.json()).error.message).toBe("Werken in dit land kan niet via ZekerFlex.");
     // zonder postcode in het verzoek: geen controle, geen vlaggen
     m.featureEnabled.mockClear();
     expect((await patch({ name: "Nieuwe naam" })).status).toBe(200);

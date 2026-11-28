@@ -2166,6 +2166,8 @@ export const nl = {
     buitenlandPlaats: "Vul de plaats in.",
     // België voorlopig alleen Vlaanderen (lib/geo/vestiging-land.ts → isVlaamsePostcode)
     buitenlandNietVlaanderen: "Brussel en Wallonië volgen later; nu kan een werklocatie in België alleen in Vlaanderen.",
+    // landen met zware sancties (lib/geo/vestiging-land.ts → GESANCTIONEERDE_LANDEN)
+    buitenlandSanctie: "Werken in dit land kan niet via ZekerFlex.",
     buitenlandNietGevonden: "We vonden dit adres niet in {land}. Controleer de straat, het huisnummer, de postcode en de plaats.",
     buitenlandOnbereikbaar: "Het adres kon nu niet worden opgezocht. Probeer het over een minuut opnieuw.",
   },

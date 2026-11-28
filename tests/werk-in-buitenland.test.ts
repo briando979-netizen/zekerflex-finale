@@ -40,6 +40,7 @@ import {
   controleerVestigingPostcode,
   heeftPostcode,
   herkenLand,
+  isGesanctioneerdLand,
   isVlaamsePostcode,
   landKeuzes,
   landVanVestiging,
@@ -51,6 +52,8 @@ import {
   postcodeTekst,
   werklocatieLanden,
   NIET_VLAANDEREN_MELDING,
+  GESANCTIONEERDE_LANDEN,
+  SANCTIE_MELDING,
   WERK_IN_BELGIE_VLAG,
   WERK_IN_BUITENLAND_VLAG,
 } from "@/lib/geo/vestiging-land";
@@ -129,6 +132,20 @@ describe("welke landen een bedrijf mag kiezen (puur)", () => {
       { code: "NL", naam: "Netherlands" },
       { code: "BE", naam: "Belgium" },
     ]);
+  });
+
+  it("landen met zware sancties (OFAC en EU) staan nooit in de lijst, ook niet met alle landen aan", () => {
+    expect([...GESANCTIONEERDE_LANDEN].sort()).toEqual(["BY", "CU", "IR", "KP", "RU", "SY"]);
+    const alle = werklocatieLanden({ belgie: true, buitenland: true });
+    for (const c of GESANCTIONEERDE_LANDEN) {
+      expect(alle, c).not.toContain(c);
+      expect(isGesanctioneerdLand(c.toLowerCase()), c).toBe(true);
+    }
+    expect(landKeuzes(alle, "nl").map((l) => l.code)).not.toEqual(expect.arrayContaining(["RU"]));
+    expect(isGesanctioneerdLand("DE")).toBe(false);
+    expect(nl.vestigingForm.buitenlandSanctie).toBe("Werken in dit land kan niet via ZekerFlex.");
+    expect(SANCTIE_MELDING).toBe(nl.vestigingForm.buitenlandSanctie);
+    expect(en.vestigingForm.buitenlandSanctie).toBe("Working in this country is not possible through ZekerFlex.");
   });
 
   it("weet welke landen geen postcode hebben", () => {
@@ -243,6 +260,15 @@ describe("de servercontrole van de postcode (POST en PATCH van een locatie, de e
     expect(controleerVestigingPostcode("BE-20000", ["NL", "BE"])).toMatchObject({ ok: false });
     expect(controleerVestigingPostcode("AE-", ALLE)).toEqual({ ok: true, postalCode: "AE-" });
     expect(controleerVestigingPostcode("DE-", ALLE)).toMatchObject({ ok: false });
+  });
+
+  it("een land met sancties wordt geweigerd met de eigen melding, ook met alle landen aan; nooit als Nederlandse tekst bewaard", () => {
+    for (const c of GESANCTIONEERDE_LANDEN) {
+      expect(controleerVestigingPostcode(`${c}-101000`, ALLE), c).toEqual({ ok: false, melding: SANCTIE_MELDING, buitenland: true });
+      expect(controleerVestigingPostcode(`${c.toLowerCase()}-1234`, ["NL"]), c).toMatchObject({ ok: false, melding: SANCTIE_MELDING });
+      expect(landVanVestiging(`${c}-1234`), c).toBe(c);
+    }
+    expect(buitenlandFoutMelding({ error: { details: { reden: "buitenland-sanctie" } } }, "RU")).toBe("buitenlandSanctie");
   });
 
   it("België buiten Vlaanderen wordt geweigerd, ook met alle landen aan", () => {
@@ -379,6 +405,17 @@ describe("een adres opzoeken bij OpenStreetMap", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("een land met sancties: de melding, en er gaat niets naar OSM", async () => {
+    for (const land of GESANCTIONEERDE_LANDEN) {
+      await expect(zoekBuitenlandsAdres({ land, straat: "Straat 1", postcode: "101000", plaats: "Stad" })).rejects.toMatchObject({
+        status: 422,
+        message: SANCTIE_MELDING,
+        details: { reden: "buitenland-sanctie" },
+      });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("eerlijke fouten, en nooit het midden van Nederland", async () => {
     await expect(zoekBuitenlandsAdres({ land: "NL", straat: "Damrak 1", postcode: "1012LG" })).rejects.toMatchObject({ details: { reden: "buitenland-land" } });
     await expect(zoekBuitenlandsAdres({ land: "DE", straat: "Hauptstraße", postcode: "10115" })).rejects.toMatchObject({ details: { reden: "buitenland-straat" } });
@@ -459,6 +496,17 @@ describe("POST /api/werkgever/adres-buitenland", () => {
     const brussel = await vraag({ land: "BE", straat: "Grote Markt 1", postcode: "1000", plaats: "Brussel" });
     expect(brussel.status).toBe(422);
     expect((await brussel.json()).error.details).toEqual({ reden: "buitenland-vlaanderen" });
+  });
+
+  it("een land met sancties: 422 met de eigen melding, ook met alle landen aan", async () => {
+    getPrincipal.mockResolvedValue(principal);
+    vlaggen({ buitenland: true });
+    const res = await vraag({ land: "RU", straat: "Tverskaya 1", postcode: "125009", plaats: "Moskou" });
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error.message).toBe(SANCTIE_MELDING);
+    expect(body.error.details).toEqual({ reden: "buitenland-sanctie" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("alle landen aan: Duitsland werkt ook", async () => {

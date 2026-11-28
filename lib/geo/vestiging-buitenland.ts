@@ -8,10 +8,12 @@ import {
   buitenlandsePostcode,
   controleerVestigingPostcode,
   heeftPostcode,
+  isGesanctioneerdLand,
   isVestigingLand,
   isVlaamsePostcode,
   landKeuzes,
   NIET_VLAANDEREN_MELDING,
+  SANCTIE_MELDING,
   opslagPostcode,
   werklocatieLanden,
   WERK_IN_BELGIE_VLAG,
@@ -200,6 +202,8 @@ export function vestigingBuitenlandVergeetAlles(): void {
 export async function zoekBuitenlandsAdres(invoer: BuitenlandsAdresInvoer): Promise<BuitenlandsAdres> {
   const land = invoer.land.trim().toUpperCase();
   if (land === "NL" || !isVestigingLand(land)) throw AppError.validation("Kies een land uit de lijst.", { reden: "buitenland-land" });
+  // landen met zware sancties (OFAC en EU): nooit, ook niet als iemand de keuzelijst omzeilt; er gaat dan niets naar buiten
+  if (isGesanctioneerdLand(land)) throw AppError.validation(SANCTIE_MELDING, { reden: "buitenland-sanctie" });
   const straat = invoer.straat.trim().replace(/\s+/g, " ");
   const postcode = buitenlandsePostcode(land, invoer.postcode ?? "");
   const plaats = invoer.plaats?.trim().replace(/\s+/g, " ") || null;

@@ -4,6 +4,7 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { werklocatieLandenVoor, zoekBuitenlandsAdres } from "@/lib/geo/vestiging-buitenland";
+import { isGesanctioneerdLand, SANCTIE_MELDING } from "@/lib/geo/vestiging-land";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!b.success) throw AppError.validation("Controleer de ingevulde gegevens.");
     // zonder land: een tabblad van vóór 28 nov 2026 (toen alleen België), via /api/werkgever/adres-belgie
     const land = b.data.land.trim().toUpperCase() || "BE";
+    // landen met zware sancties: de eigen melding, nooit "staat nog niet aan"
+    if (isGesanctioneerdLand(land)) throw AppError.validation(SANCTIE_MELDING, { reden: "buitenland-sanctie" });
     const landen = await werklocatieLandenVoor(principal);
     if (land === "NL" || !landen.includes(land)) {
       throw new AppError("PRECONDITION_FAILED", "Werklocaties in dit land staan nog niet aan.", 412, { reden: "buitenland-uit" });

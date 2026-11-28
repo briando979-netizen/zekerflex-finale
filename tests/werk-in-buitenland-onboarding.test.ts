@@ -108,6 +108,13 @@ describe("submitEmployerOnboarding met een Belgische vestiging", () => {
     expect(m.branchCreate).not.toHaveBeenCalled();
   });
 
+  it("een land met sancties: de eigen melding, niets naar OSM, geen vestiging", async () => {
+    vlaggen({ belgie: true, buitenland: true });
+    await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse({ ...be, vestigingLand: "RU", postalCode: "101000" }))).rejects.toMatchObject({ status: 422, message: "Werken in dit land kan niet via ZekerFlex." });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(m.branchCreate).not.toHaveBeenCalled();
+  });
+
   it("België buiten Vlaanderen: de melding over Vlaanderen, niets naar OSM", async () => {
     vlaggen({ belgie: true });
     await expect(submitEmployerOnboarding("u1", "t1", employerOnboardingSchema.parse({ ...be, postalCode: "1000" }))).rejects.toMatchObject({ status: 422, details: { reden: "buitenland-vlaanderen" } });

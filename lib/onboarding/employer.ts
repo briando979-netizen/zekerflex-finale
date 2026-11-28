@@ -8,7 +8,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { geocodePostcode, type GeocodeResult } from "@/lib/integrations/pdok";
 import { werklocatieLandenVoor, zoekBuitenlandsAdres } from "@/lib/geo/vestiging-buitenland";
-import { buitenlandsePostcode, heeftPostcode, isVestigingLand } from "@/lib/geo/vestiging-land";
+import { buitenlandsePostcode, heeftPostcode, isGesanctioneerdLand, isVestigingLand, SANCTIE_MELDING } from "@/lib/geo/vestiging-land";
 import { registerTenantCompany } from "@/lib/company/registration";
 import { kvkLimietVan } from "@/lib/kvk/tegoed";
 import { wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
@@ -266,6 +266,7 @@ export async function koppelBedrijfsgegevens(userId: string, tenantId: string, i
 async function geocodeVestiging(userId: string, v: EmployerOnboardingInput): Promise<GeocodeResult> {
   const land = v.vestigingLand.toUpperCase();
   if (land === "NL") return geocodePostcode(v.postalCode, v.houseNumber);
+  if (isGesanctioneerdLand(land)) throw AppError.validation(SANCTIE_MELDING);
   if (!(await werklocatieLandenVoor({ userId })).includes(land)) throw AppError.validation(POSTCODE_MELDING);
   // het huisnummer staat hier in een eigen veld; zit er al een nummer in de adresregel, dan niet nog eens
   const straat = /\d/.test(v.addressLine) ? v.addressLine : `${v.addressLine} ${v.houseNumber}`;

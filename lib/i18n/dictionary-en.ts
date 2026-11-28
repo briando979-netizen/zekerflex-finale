@@ -2118,6 +2118,7 @@ export const en: Dict = {
     buitenlandNlPostcode: "This is a Dutch postcode. Choose Netherlands as the country.",
     buitenlandPlaats: "Fill in the town.",
     buitenlandNietVlaanderen: "Brussels and Wallonia will follow later; for now a work location in Belgium can only be in Flanders.",
+    buitenlandSanctie: "Working in this country is not possible through ZekerFlex.",
     buitenlandNietGevonden: "We could not find this address in {land}. Check the street, house number, postcode and town.",
     buitenlandOnbereikbaar: "The address could not be looked up right now. Please try again in a minute.",
   },
