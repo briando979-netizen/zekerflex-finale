@@ -277,7 +277,9 @@ export function schedulePostsForWeek(startDate: Date, config: FacebookCampaignCo
     const daysFromStart = (config.startDay + i * 2) % 7; // Space out by 2 days
     const postDate = new Date(startDate);
     postDate.setDate(postDate.getDate() + daysFromStart);
-    const [hours, minutes] = config.postTime.split(":").map(Number);
+    const timeParts = config.postTime.split(":").map(Number);
+    const hours = timeParts[0] ?? 9;
+    const minutes = timeParts[1] ?? 0;
     postDate.setHours(hours, minutes, 0, 0);
     posts.push(postDate);
   }

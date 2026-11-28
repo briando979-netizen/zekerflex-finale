@@ -92,6 +92,7 @@ export function kvkChecklist(today: Date): KvKStatus {
       description: "Na goedkeuring ontvang je een KvK-nummer (8 cijfers) en een inschrijfbewijs.",
       status: "pending",
       dueDate: "2026-12-17",
+      ...(false && { doneOn: undefined }),
       doneOn: undefined,
       notes: "Dit is je Nederlands bedrijfsregistratienummer. Bewaar het inschrijfbewijs.",
     },
