@@ -29,13 +29,13 @@ async function getEmployerReactionStats(tenantId: string): Promise<ReactionStats
 
     const shiftIds = shifts.map((s) => s.id);
 
-    // Get reaction events for these shifts - fetch last 14 days to split into this week and last week
+    // Get reaction events for these shifts
     const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const events = await prisma.analyticsEvent.findMany({
       where: {
-        createdAt: { gte: twoWeeksAgo },
+        createdAt: { gte: weekAgo },
         label: {
           in: [
             "shift_reaction_accept",
@@ -64,8 +64,7 @@ async function getEmployerReactionStats(tenantId: string): Promise<ReactionStats
 
       if (!shiftIds.includes(shiftId)) continue;
 
-      // Split events into this week (last 7 days) and last week (7-14 days ago)
-      const isThisWeek = event.createdAt >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const isThisWeek = event.createdAt >= now.getTime() - 24 * 60 * 60 * 1000;
       if (isThisWeek) thisWeekTotal += 1;
       else lastWeekTotal += 1;
 
