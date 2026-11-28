@@ -37,13 +37,18 @@ export function useT(): Dict {
   return useContext(Ctx).t;
 }
 
-/** Set the locale cookie and reload so server components re-render. */
-export function setLocale(locale: Locale): void {
+/** Alleen het taalcookie zetten, zonder herladen (de knoppen op /pl/praca-w-holandii e.d. gaan daarna zelf door). */
+export function bewaarTaalKeuze(locale: Locale): void {
   try {
     document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${LOCALE_MAX_AGE}; samesite=lax`;
   } catch {
     /* ignore */
   }
+}
+
+/** Set the locale cookie and reload so server components re-render. */
+export function setLocale(locale: Locale): void {
+  bewaarTaalKeuze(locale);
   // Also on the server, for pushes in this language (/api/me/taal). sendBeacon survives the reload;
   // a visitor without an account just gets a 401, which is fine.
   try {

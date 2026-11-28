@@ -185,6 +185,8 @@ const PAGINA_FOTOS: Record<string, string> = {
   uitzendpartner: "campagne-rooster",
   // /starten-als-uitzendkracht (21 nov 2026): werken via een uitzendbureau, uitzendklussen in de app
   "starten-als-uitzendkracht": "campagne-steekkar",
+  // /werken-in-nederland en de versies in vier andere talen (28 nov 2026); de alt-tekst komt per taal uit lib/marketing/werken-in-nederland.ts
+  "werken-in-nederland": "campagne-steekkar",
   verkopen: "campagne-inpakken",
   rekentools: "campagne-vouwen",
   "review-check": "campagne-bediening",

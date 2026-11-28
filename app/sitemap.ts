@@ -16,6 +16,7 @@ import { aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
 import { paginaLijst } from "@/lib/ontwerp/paginas-store";
 import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { WIN_PADEN, winHreflang } from "@/lib/marketing/werken-in-nederland";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -67,6 +68,12 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/uitzendpartner/voorwaarden", 0.4, "monthly"),
     entry("/partners/uitzend", 0.6, "monthly"),
     entry("/starten-als-uitzendkracht", 0.8, "monthly"),
+    // Werken in Nederland in vijf talen (28 nov 2026, lib/marketing/werken-in-nederland.ts), elk met hreflang naar de andere vier
+    { ...entry(WIN_PADEN.nl, 0.7, "monthly"), alternates: { languages: winHreflang(SITE.url) } },
+    { ...entry(WIN_PADEN.en, 0.7, "monthly"), alternates: { languages: winHreflang(SITE.url) } },
+    { ...entry(WIN_PADEN.pl, 0.7, "monthly"), alternates: { languages: winHreflang(SITE.url) } },
+    { ...entry(WIN_PADEN.ro, 0.7, "monthly"), alternates: { languages: winHreflang(SITE.url) } },
+    { ...entry(WIN_PADEN.uk, 0.7, "monthly"), alternates: { languages: winHreflang(SITE.url) } },
     entry("/nog-geen-18", 0.4, "monthly"),
 
     // Open klussen (Google for Jobs) + per-city landing pages

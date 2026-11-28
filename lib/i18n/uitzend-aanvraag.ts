@@ -124,7 +124,10 @@ export const UITZEND_AANVRAAG_TEKSTEN: Record<BasisLocale, UitzendAanvraagTekste
   },
 };
 
-/** Vult {klant} en {bureau} in. */
+/**
+ * Vult {klant} en {bureau} in. Met split/join in plaats van replaceAll (28 nov 2026): de klus-pagina van de werker laadt dit,
+ * en replaceAll kent Safari pas sinds 13.1 (iOS 13.4); daarvoor viel de pagina om. Ook vult een "$&" in een naam zo niets in.
+ */
 export function vulUitzend(tekst: string, w: { klant: string; bureau: string }): string {
-  return tekst.replaceAll("{klant}", w.klant).replaceAll("{bureau}", w.bureau);
+  return tekst.split("{klant}").join(w.klant).split("{bureau}").join(w.bureau);
 }
