@@ -24,6 +24,8 @@ export async function WerkenInNederland({ taal }: { taal: WinTaal }) {
   ]);
   const plaats = metBuitenland ? t.plaatsMetBuitenland : metBelgie ? t.plaatsMetBelgie : null;
   const eerlijk = plaats ? [plaats, ...t.eerlijk.slice(1)] : t.eerlijk;
+  // Een klus in België kan zodra een van beide vlaggen aan staat; daar is het bedrijf de werkgever (lib/belgie/, sessie fd 28 nov).
+  const faq = metBuitenland || metBelgie ? t.faq.map((f, i) => (i === 3 ? { ...f, a: `${f.a} ${t.werkgeverBelgie}` } : f)) : t.faq;
   const pad = WIN_PADEN[taal];
   const basisFoto = paginaFoto("werken-in-nederland");
   const foto = basisFoto ? { ...basisFoto, alt: t.fotoAlt } : undefined;
@@ -31,7 +33,7 @@ export async function WerkenInNederland({ taal }: { taal: WinTaal }) {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     inLanguage: taal,
-    mainEntity: t.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+    mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
   };
   return (
     <div lang={taal}>
@@ -127,7 +129,7 @@ export async function WerkenInNederland({ taal }: { taal: WinTaal }) {
       <Section>
         <SectionHead title={t.faqKop} />
         <div className="mt-8 max-w-3xl">
-          <FaqList items={t.faq} />
+          <FaqList items={faq} />
         </div>
       </Section>
 

@@ -71,6 +71,9 @@ describe("werken in Nederland: vijf talen", () => {
       // waar het werk is: alleen Nederland, of met de vlag werk-in-belgie ook België; geen "altijd in Nederland" meer in de vragen
       expect(WIN_TEKST[t].plaatsMetBelgie, t).toMatch(/Belgi|Бельгі/);
       expect(WIN_TEKST[t].plaatsMetBuitenland, t).not.toMatch(/Belgi|Бельгі/);
+      // faq[3] is overal "Wie is mijn werkgever?"; met België erbij komt daar de zin over het bedrijf als werkgever achter
+      expect(WIN_TEKST[t].faq[3]?.q, t).toMatch(/werkgever|employer|pracodawc|angajator|роботодав/i);
+      expect(WIN_TEKST[t].werkgeverBelgie, t).toMatch(/Belgi|Бельгі/);
       expect(WIN_TEKST[t].faq.map((f) => f.a).join(" "), t).not.toMatch(/altijd in Nederland|always in the Netherlands|zawsze w Holandii|mereu în Olanda/);
       const alles = JSON.stringify(WIN_TEKST[t]).toLowerCase();
       expect(alles, t).not.toMatch(/zekerflex bank|voorschot|advance|zaliczk|avans|аванс|sneller uitbetaald|instant payout|huisvesting geregeld/);
@@ -92,6 +95,9 @@ describe("werken in Nederland: vijf talen", () => {
     expect(scherm).toContain("featureEnabled(WERK_IN_BUITENLAND_VLAG).catch(() => false)");
     // elk land gaat voor België: met werk-in-buitenland aan klopt "alleen België" niet meer
     expect(scherm).toContain("metBuitenland ? t.plaatsMetBuitenland : metBelgie ? t.plaatsMetBelgie : null");
+    expect(scherm).toContain("i === 3 ? { ...f, a: `${f.a} ${t.werkgeverBelgie}` } : f");
+    expect(scherm).toContain("<FaqList items={faq} />");
+    expect(scherm).toContain("mainEntity: faq.map(");
   });
 });
 

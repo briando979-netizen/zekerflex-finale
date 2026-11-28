@@ -67,6 +67,8 @@ export interface WinTekst {
   plaatsMetBelgie: string;
   /** dat eerste punt als de vlag werk-in-buitenland aan staat (elk land, gaat voor België) */
   plaatsMetBuitenland: string;
+  /** achter het antwoord op "Wie is mijn werkgever?" (faq[3]) zodra een klus in België kan: daar is het bedrijf de werkgever (lib/belgie/) */
+  werkgeverBelgie: string;
   faqKop: string;
   faq: { q: string; a: string }[];
   slotKop: string;
@@ -115,6 +117,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     ],
     plaatsMetBelgie: "De diensten zijn in Nederland, en bij sommige bedrijven in België.",
     plaatsMetBuitenland: "De diensten zijn in Nederland, en bij sommige bedrijven in een ander land.",
+    werkgeverBelgie: "Bij een klus in België is het bedrijf zelf je werkgever, als student of flexi-jobber.",
     eerlijkKop: "Goed om te weten",
     eerlijk: [
       "Alle diensten zijn in Nederland.",
@@ -187,6 +190,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     ],
     plaatsMetBelgie: "Shifts are in the Netherlands, and with some companies in Belgium.",
     plaatsMetBuitenland: "Shifts are in the Netherlands, and with some companies in another country.",
+    werkgeverBelgie: "For a shift in Belgium, the company itself is your employer, as a student or flexi-jobber.",
     eerlijkKop: "Good to know before you come",
     eerlijk: [
       "All shifts are in the Netherlands.",
@@ -259,6 +263,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     ],
     plaatsMetBelgie: "Zmiany są w Holandii, a w niektórych firmach także w Belgii.",
     plaatsMetBuitenland: "Zmiany są w Holandii, a w niektórych firmach także w innym kraju.",
+    werkgeverBelgie: "Przy zmianie w Belgii pracodawcą jest sama firma: pracujesz jako student lub w ramach flexi-job.",
     eerlijkKop: "Dobrze wiedzieć przed przyjazdem",
     eerlijk: [
       "Wszystkie zmiany są w Holandii.",
@@ -331,6 +336,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     ],
     plaatsMetBelgie: "Turele sunt în Olanda, iar la unele firme și în Belgia.",
     plaatsMetBuitenland: "Turele sunt în Olanda, iar la unele firme și în altă țară.",
+    werkgeverBelgie: "La o tură în Belgia, angajatorul tău este chiar firma, ca student sau cu flexi-job.",
     eerlijkKop: "Bine de știut înainte să vii",
     eerlijk: [
       "Toate turele sunt în Olanda.",
@@ -403,6 +409,7 @@ export const WIN_TEKST: Record<WinTaal, WinTekst> = {
     ],
     plaatsMetBelgie: "Зміни — у Нідерландах, а в деяких компаній також у Бельгії.",
     plaatsMetBuitenland: "Зміни — у Нідерландах, а в деяких компаній також в іншій країні.",
+    werkgeverBelgie: "На зміні в Бельгії ваш роботодавець — сама компанія: ви працюєте як студент або за flexi-job.",
     eerlijkKop: "Варто знати заздалегідь",
     eerlijk: [
       "Усі зміни — у Нідерландах.",
