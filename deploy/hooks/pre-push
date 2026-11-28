@@ -1,0 +1,101 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# ZekerFlex — slot op `main` (28 nov 2026)
+#
+# Waarom dit bestaat: op 27 en 28 nov is main vier keer rood gepusht door
+# sessies die hun werk niet hadden laten controleren. Een rode main betekent dat
+# de Auto-uitrol NIETS meer uitrolt, ook niet het werk van alle andere sessies.
+# Op 28 nov stond daardoor de hele ochtend niets live. Twee keer werd een groen
+# herstel ook nog eens overschreven met een force-push.
+#
+# Deze hook weigert daarom een push naar `main` die:
+#   1. een force-push is (de huidige main is geen voorouder van wat je pusht), of
+#   2. geen groene controle-uitslag heeft op de VPS.
+#
+# Alle sessies op deze pc delen één .git-map, dus deze hook geldt ook in elke
+# `git worktree`. Pushen naar een eigen tak blijft gewoon vrij.
+#
+# Noodgeval (alleen de eigenaar, bv. een site die plat ligt):
+#   ZF_NOOD=1 git push origin <sha>:main
+# ---------------------------------------------------------------------------
+
+VPS="briando@37.97.226.24"
+SLEUTEL="$HOME/.ssh/transip"
+NUL_SHA="0000000000000000000000000000000000000000"
+
+rood()  { printf '\033[31m%s\033[0m\n' "$1" >&2; }
+grijs() { printf '\033[90m%s\033[0m\n' "$1" >&2; }
+
+while read -r _lokale_ref lokale_sha externe_ref externe_sha; do
+  # alleen pushes naar main worden gecontroleerd
+  [ "$externe_ref" = "refs/heads/main" ] || continue
+
+  if [ "$lokale_sha" = "$NUL_SHA" ]; then
+    rood "GEWEIGERD: main verwijderen mag niet."
+    exit 1
+  fi
+
+  if [ "${ZF_NOOD:-0}" = "1" ]; then
+    grijs "ZF_NOOD=1 — controle overgeslagen. Alleen voor een noodgeval; meld dit aan de eigenaar."
+    continue
+  fi
+
+  # --- 1. geen force-push ------------------------------------------------
+  if [ -n "$externe_sha" ] && [ "$externe_sha" != "$NUL_SHA" ]; then
+    if ! git merge-base --is-ancestor "$externe_sha" "$lokale_sha" 2>/dev/null; then
+      rood "GEWEIGERD: dit is een force-push naar main."
+      grijs ""
+      grijs "  main staat nu op  : $externe_sha"
+      grijs "  jij pusht         : $lokale_sha"
+      grijs ""
+      grijs "Die commit heeft de huidige main niet als voorouder. Je zou dus het werk"
+      grijs "van een andere sessie weggooien. Dat is op 28 nov twee keer gebeurd."
+      grijs ""
+      grijs "Doe dit:   git fetch origin main"
+      grijs "           git rebase origin/main      (of: git cherry-pick <jouw sha>)"
+      grijs "           daarna opnieuw de controle, en dan pas pushen."
+      exit 1
+    fi
+  fi
+
+  # --- 2. groene controle op de VPS --------------------------------------
+  if [ ! -f "$SLEUTEL" ]; then
+    rood "GEWEIGERD: ssh-sleutel $SLEUTEL niet gevonden, dus de controle is niet na te kijken."
+    grijs "Zonder die controle mag er niets naar main. Vraag de eigenaar om hulp."
+    exit 1
+  fi
+
+  uitslag=$(ssh -i "$SLEUTEL" -o StrictHostKeyChecking=no -o ConnectTimeout=20 -o BatchMode=yes "$VPS" \
+    "docker exec zekerflex-bouwer-1 sh -c 'cat /werk/controle/uitslagen/$lokale_sha.json 2>/dev/null'" 2>/dev/null)
+
+  if [ -z "$uitslag" ]; then
+    rood "GEWEIGERD: er is geen controle-uitslag voor $lokale_sha."
+    grijs ""
+    grijs "Elke commit die naar main gaat is eerst gecontroleerd op de VPS."
+    grijs "Doe dit:"
+    grijs "  1. git push origin $lokale_sha:refs/heads/<jouw-tak>"
+    grijs "  2. gebruik de agent 'zekerflex-controle' op die sha, of draai zelf:"
+    grijs "     docker exec zekerflex-bouwer-1 node /opt/bouwer/controle.mjs \\"
+    grijs "       --sha $lokale_sha --vanaf \$(docker exec zekerflex-app-1 cat /app/VERSIE)"
+    grijs "  3. pas bij een groene uitslag opnieuw pushen naar main."
+    exit 1
+  fi
+
+  case "$uitslag" in
+    *'"ok":true'*|*'"ok": true'*) : ;;
+    *)
+      rood "GEWEIGERD: de controle van $lokale_sha is NIET groen."
+      grijs ""
+      grijs "$(printf '%s' "$uitslag" | tr ',' '\n' | grep -E '"(ok|tsc|eslint|tests|gefaald)"' | head -8)"
+      grijs ""
+      grijs "Een rode main legt de uitrol voor ALLE sessies stil. Repareer eerst de fouten,"
+      grijs "draai de controle opnieuw, en push pas bij groen."
+      grijs "De volledige uitslag: /werk/controle/uitslagen/$lokale_sha.json in zekerflex-bouwer-1."
+      exit 1
+      ;;
+  esac
+
+  grijs "Controle groen voor $lokale_sha — push naar main toegestaan."
+done
+
+exit 0

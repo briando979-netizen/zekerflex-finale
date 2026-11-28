@@ -11,11 +11,29 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
    - `npx vitest related --run <gewijzigde bestanden>` — dit is wat de live-zetter doet; draai het zelf, niet `vitest run` (alles)
    - Raak je `prisma/schema.prisma` aan: `npx prisma validate` (met `DATABASE_URL` en `DATABASE_URL_UNPOOLED` gezet, anders keurt hij elk schema af). 8 nov werd het schema bij één commit ongeldig en bouwden 147 commits erop door voordat iemand het zag; main is toen teruggezet (tak `bewaard-2026-11-08`).
    Commit/push **alleen** als alles schoon is.
-2. **Een push naar `main` staat binnen enkele minuten live.** De Auto-uitrol staat aan (19 nov gemeten: vlag aan, modus aan, noodrem uit): na 3 minuten rust en een schone controle zet de server GitHub `main` zelf live. Push dus alleen wat live mag, meld "rolt NU" vóór de push en "klaar" erna. Migraties draaien **niet** vanzelf: alleen met `ZF_MIGREER=1`, na een droge proef (`BEGIN … ROLLBACK`); een wijziging met een migratie rolt de Auto-uitrol niet uit. Handmatig of bij een storing: Admin → ZekerFlex AI → Live zetten (de live-zetter op de VPS) of `deploy/scripts/vps-update.sh`. Noodrem: Beheer → Live zetten.
-3. **Strikte TypeScript:** `noUncheckedIndexedAccess` (guard `arr[i]` met `?? …`) en `exactOptionalPropertyTypes` (nooit `prop: undefined` toekennen; laat de key weg of type `| undefined`).
-4. **Volg de bestaande stijl** (naamgeving, comment-dichtheid, patronen van omringende code). Kijk eerst hoe iets elders is gedaan.
-5. **Kleine, omkeerbare diffs.** Geen destructieve/riskante commando's. Bouw niet opnieuw wat al bestaat — het platform is zeer compleet; zoek echte gaten.
-6. **Alle zichtbare tekst is gewoon Nederlands** (de eigenaar leest geen Engels).
+2. **Naar `main` gaat alleen wat de controle op de VPS groen heeft verklaard, en nooit met force.**
+   Dit is geen advies maar een slot: `.git/hooks/pre-push` weigert elke push naar `main` zonder groene
+   uitslag in `/werk/controle/uitslagen/<sha>.json`, en elke push waarvan de huidige `main` geen voorouder is.
+   De vaste volgorde is:
+   `git push origin <sha>:refs/heads/<eigen-tak>` → agent `zekerflex-controle` (of `controle.mjs`) op die sha →
+   pas bij groen `git push origin <sha>:main`.
+   **Waarom dit zo streng is:** een rode `main` betekent dat de Auto-uitrol NIETS meer uitrolt, ook niet het werk van
+   alle andere sessies. Op 27 nov lag dat drie dagen stil; op 28 nov de hele ochtend, met vier rode pushes en twee
+   force-pushes die een groen herstel overschreven. Eén ongecontroleerde push kost dus iedereen zijn uitrol.
+   De hook staat in de repo als `deploy/hooks/pre-push`; installeren in een nieuwe kloon of worktree-set:
+   `cp deploy/hooks/pre-push "$(git rev-parse --git-common-dir)/hooks/pre-push" && chmod +x "$(git rev-parse --git-common-dir)/hooks/pre-push"`.
+3. **Bouw je meerdere dingen tegelijk (parallelle agenten), draai dan één controle over het geheel vóór de push.**
+   Vijf losse "klaar"-meldingen van vijf agenten zijn geen controle. Op 28 nov ging zo een commit van 2199 regels naar
+   `main` die een tabel bevroeg die niet bestaat (`prisma.application`), velden las die niet bestaan
+   (`Principal.type`, `Tenant.contact`) en `AppError.httpStatus` gebruikte in plaats van `.status`: 51 tsc-fouten.
+4. **Je bent pas klaar als live op jouw sha staat,** niet als je gepusht hebt. Controleer
+   `docker exec zekerflex-app-1 cat /app/VERSIE` en de KV-sleutel `bouwer:auto-uitrol:stand` (veld `laatsteBeslissing`).
+   Staat daar "geweigerd", dan is `main` rood en ligt alles stil: repareer dat eerst, vóór je eigen werk.
+5. **Een push naar `main` staat binnen enkele minuten live.** De Auto-uitrol staat aan (19 nov gemeten: vlag aan, modus aan, noodrem uit): na 3 minuten rust en een schone controle zet de server GitHub `main` zelf live. Push dus alleen wat live mag, meld "rolt NU" vóór de push en "klaar" erna. Migraties draaien **niet** vanzelf: alleen met `ZF_MIGREER=1`, na een droge proef (`BEGIN … ROLLBACK`); een wijziging met een migratie rolt de Auto-uitrol niet uit. Handmatig of bij een storing: Admin → ZekerFlex AI → Live zetten (de live-zetter op de VPS) of `deploy/scripts/vps-update.sh`. Noodrem: Beheer → Live zetten.
+6. **Strikte TypeScript:** `noUncheckedIndexedAccess` (guard `arr[i]` met `?? …`) en `exactOptionalPropertyTypes` (nooit `prop: undefined` toekennen; laat de key weg of type `| undefined`).
+7. **Volg de bestaande stijl** (naamgeving, comment-dichtheid, patronen van omringende code). Kijk eerst hoe iets elders is gedaan.
+8. **Kleine, omkeerbare diffs.** Geen destructieve/riskante commando's. Bouw niet opnieuw wat al bestaat — het platform is zeer compleet; zoek echte gaten.
+9. **Alle zichtbare tekst is gewoon Nederlands** (de eigenaar leest geen Engels).
 
 ## Valkuilen (lessen uit eerdere fouten)
 
@@ -117,6 +135,27 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **Taken voor de eigenaar** (sleutels, accounts, iets in een extern portaal) horen in `lib/admin/owner-todos.ts` (Admin → Te doen); aan/uit zonder uitrol via `lib/flags`.
 
 ### Gedeelde werkmap en uitrollen (sessies op de pc; de Bouwer heeft een eigen kopie)
+
+**Afspraken tussen sessies (28 nov 2026, na een ochtend zonder uitrol).** Meerdere sessies en hun agenten delen één
+`main` en één werkmap. Daarom:
+
+- **Eén wachtrij naar `main`.** Wie wil uitrollen meldt "rolt NU" aan de andere sessies (SendMessage) vóór de push en
+  "klaar" erna. Loopt er al een uitrol, wacht dan; de controle breekt anders af met exit 137.
+- **Nooit `--force` naar `main`.** Moet je werk bovenop iets nieuws? `git fetch origin main` en dan rebasen of
+  cherry-picken, daarna opnieuw controleren. De pre-push hook weigert een force-push.
+- **Raak de gedeelde werkmap niet aan als er onaf werk van een ander in staat** (`git status`: gewijzigde of
+  ongetrackte bestanden). Werk dan in een eigen `git worktree`. `git revert` faalt daar sowieso op
+  ("local changes would be overwritten"). Nooit `pull --rebase`/`--autostash` in de gedeelde map.
+- **Breekt een ander iets, dan repareer je het niet stilletjes.** Zet zijn werk veilig op een tak
+  (`git push origin <sha>:refs/heads/<naam>`), draai de controle op de verdachte commit **én op de commit ervóór** zodat
+  je weet waar het vandaan komt, meld het aan die sessie, en draai pas daarna terug. Zo gaat er niets verloren.
+- **Deel je takken.** Heb je werk dat nog niet groen is, push het naar een eigen tak en geef de sha door, in plaats van
+  het in de werkmap te laten slingeren. Dan kan een ander het meenemen in zijn groene ronde.
+- **De juiste repository is `briando979-netizen/zekerflex-finale`** (gemeten 28 nov: wat daar naar `main` gaat, haalt de
+  VPS op en zet hij live). Verander nooit zelf een remote-URL.
+- **Eén zware node-run tegelijk op de pc** (8 GB, meerdere sessies). Loopt het geheugen vol, dan faalt zelfs
+  `git fetch` met "malloc failed": draai de zware controle op de VPS, niet lokaal.
+
 
 - Meerdere sessies delen één werkmap en `main`. Push op sha (`git push origin <sha>:main`) en rol een vaste hash uit, nooit HEAD. Gewoon pushen alleen als `git merge-base --is-ancestor origin/main main` waar is; anders je eigen commits in een losse worktree op `origin/main` cherry-picken. Nooit `pull --rebase`/`--autostash` in de gedeelde map (dat raakt onaf werk van anderen). Faalt tsc door onaf werk van een ander, controleer dan HEAD + je eigen bestanden in een losse `git worktree`.
 - **Auto-uitrol (14 nov, `deploy/bouwer/README.md` punt 3):** staat de vlag `auto-uitrol` aan (standaard uit), dan rolt de server main vanzelf uit na 3 minuten rust en een schone controle (prisma validate, tsc, eslint, tests, bewakers), nooit bij een rode controle of een wachtende migratie (die blijft handwerk). Een push naar `main` kan dus binnen enkele minuten live staan: push alleen wat gecontroleerd is. Noodrem: Beheer → Live zetten. GitHub Actions blijft uit (kosten); `.github/workflows.disabled/` doet niets.
