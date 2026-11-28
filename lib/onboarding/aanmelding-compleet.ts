@@ -8,6 +8,7 @@ import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { FOUTEN } from "@/lib/i18n/fouten";
 import { kanReagerenOpKlussen } from "@/lib/onboarding/kan-reageren";
 import { idMeldingStand } from "@/lib/onboarding/id-geverifieerd";
+import { basisLocale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // De mail "aanmelding compleet" (10 nov, eigenaar: "als ik de gegevens heb ingevuld wil ik een
@@ -95,7 +96,7 @@ export async function meldAanmeldingCompleet(userId: string, now = new Date()): 
     if (!isReservedTestAddress(user.email)) {
       const taal = await mailTaalVoorWerker(userId);
       // de reden is Nederlands; met een sleutel (lib/fiscal/eligibility.ts) vertalen we hem naar de taal van de werker
-      const reden = (reageren?.sleutel && taal !== "nl" ? FOUTEN[reageren.sleutel]?.[taal] : undefined) ?? reageren?.reden ?? null;
+      const reden = (reageren?.sleutel && taal !== "nl" ? FOUTEN[reageren.sleutel]?.[basisLocale(taal)] : undefined) ?? reageren?.reden ?? null;
       const r = await sendMail({
         ...aanmeldingCompleetEmailT({ fullName: user.fullName, appUrl: env.APP_BASE_URL, soort, reden }, taal),
         to: user.email,

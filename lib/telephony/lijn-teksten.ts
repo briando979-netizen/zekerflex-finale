@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 import type { BerichtSoort, Weekdag } from "@/lib/telephony/lijn";
 
 // ---------------------------------------------------------------------------
@@ -271,4 +271,4 @@ const UK: LijnTeksten = {
   koppelen: "Розмісти цей номер на сайті, візитівках і рахунках.",
 };
 
-export const LIJN_TEKSTEN: Record<Locale, LijnTeksten> = { nl: LIJN_NL, en: EN, pl: PL, ro: RO, uk: UK };
+export const LIJN_TEKSTEN: Record<Locale, LijnTeksten> = metMachineTalen({ nl: LIJN_NL, en: EN, pl: PL, ro: RO, uk: UK });

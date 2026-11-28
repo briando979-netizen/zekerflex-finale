@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { metMachineTalen, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Teksten van het stappenscherm "Hey! Wie ben jij?" op /dashboard/verificatie
@@ -30,7 +30,7 @@ export interface WieTeksten {
   };
 }
 
-export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
+export const WIE_TEKSTEN: Record<Locale, WieTeksten> = metMachineTalen({
   "nl": {
     "terug": "Terug",
     "sluiten": "Sluiten",
@@ -506,4 +506,4 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "anders": "Інший спосіб верифікації"
     }
   }
-};
+});

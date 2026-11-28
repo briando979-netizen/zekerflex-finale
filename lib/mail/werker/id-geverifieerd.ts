@@ -4,6 +4,7 @@
 import type { MailInput } from "@/lib/mail";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 interface IdTekst {
   subject: string;
@@ -18,7 +19,7 @@ interface IdTekst {
   knopVolgende: string;
 }
 
-const TEKST: Record<MailTaal, IdTekst> = {
+const TEKST: Record<MailTaal, IdTekst> = metMachineTalen({
   nl: {
     subject: "Je ID is geverifieerd",
     hoi: "Hoi {naam},",
@@ -74,7 +75,7 @@ const TEKST: Record<MailTaal, IdTekst> = {
     knop: "Зроби гарне перше враження",
     knopVolgende: "Продовжити реєстрацію",
   },
-};
+});
 
 /**
  * Met `volgende` (er staat nog een stap van de aanmelding open): in één zin wat er nog moet en een knop naar die stap, in plaats

@@ -1,6 +1,7 @@
 import type { MailTaal } from "@/lib/mail/vorm";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // De mails rond passkeys (code om een passkey toe te voegen + meldingen bij een wijziging), in de app-taal van de werker.
@@ -8,21 +9,21 @@ import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 // Machine-assisted translations: native-speaker review recommended.
 // ---------------------------------------------------------------------------
 
-const MAANDEN: Record<MailTaal, readonly string[]> = {
+const MAANDEN: Record<MailTaal, readonly string[]> = metMachineTalen({
   nl: ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"],
   en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
   pl: ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"],
   ro: ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"],
   uk: ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"],
-};
+});
 
-const TIJDSTIP: Record<MailTaal, string> = {
+const TIJDSTIP: Record<MailTaal, string> = metMachineTalen({
   nl: "{dag} {maand} {jaar} om {tijd}",
   en: "{maand} {dag}, {jaar} at {tijd}",
   pl: "{dag} {maand} {jaar} o {tijd}",
   ro: "{dag} {maand} {jaar} la {tijd}",
   uk: "{dag} {maand} {jaar} о {tijd}",
-};
+});
 
 /** "9 november 2026 om 15:04" in Nederlandse tijd (de server draait in UTC), in de taal van de mail. */
 export function mailTijdstip(d: Date, taal: MailTaal): string {
@@ -35,7 +36,7 @@ interface CodeTekst {
   tekst: string;
 }
 
-const CODE: Record<MailTaal, CodeTekst> = {
+const CODE: Record<MailTaal, CodeTekst> = metMachineTalen({
   nl: {
     onderwerp: "Je bevestigingscode voor een nieuwe passkey",
     tekst:
@@ -61,7 +62,7 @@ const CODE: Record<MailTaal, CodeTekst> = {
     tekst:
       "Привіт, {naam}!\n\nТи хочеш додати passkey до свого облікового запису ZekerFlex (вхід за відбитком пальця, обличчям або PIN-кодом). Введи цей код, щоб підтвердити; він дійсний 15 хвилин:\n\n{code}\n\nЦе був не ти? Ігноруй цей лист: без коду passkey не буде додано. Для безпеки зміни свій пароль.",
   },
-};
+});
 
 /** De mail met de code om een passkey toe te voegen. */
 export function passkeyCodeMailT(voornaam: string, code: string, taal: MailTaal): { subject: string; text: string } {
@@ -80,7 +81,7 @@ interface MeldingTeksten {
   verwijderd: CodeTekst;
 }
 
-const MELDING: Record<MailTaal, MeldingTeksten> = {
+const MELDING: Record<MailTaal, MeldingTeksten> = metMachineTalen({
   nl: {
     hoi: "Hoi {naam},\n\n",
     wasJijDitNiet: "\n\nWas jij dit niet? Verwijder de passkey in je account en wijzig je wachtwoord:\n{link}",
@@ -196,7 +197,7 @@ const MELDING: Record<MailTaal, MeldingTeksten> = {
       tekst: "З твого облікового запису ZekerFlex видалено passkey: {toestel}, {wanneer}. На цьому пристрої ти знову входиш за допомогою пароля.",
     },
   },
-};
+});
 
 export interface PasskeyMeldingInvulling {
   wat: PasskeyMeldingSoort;

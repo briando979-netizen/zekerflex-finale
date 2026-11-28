@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, type Locale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, basisLocale, type Locale, type BasisLocale } from "@/lib/i18n/config";
 import { vulIn } from "@/lib/i18n/vul-in";
 
 // ---------------------------------------------------------------------------
@@ -13,7 +13,8 @@ import { vulIn } from "@/lib/i18n/vul-in";
 // Machine-assisted translations: native-speaker review recommended.
 // ---------------------------------------------------------------------------
 
-type Tekst = Record<Locale, string>;
+// de vijf handgemaakte talen; een machinetaal krijgt het Engels (basisLocale)
+type Tekst = Record<BasisLocale, string>;
 
 /** De uitleg bij een controle die faalde (detail) en de redenen van de AI-beoordeling. */
 export const ID_REDENEN = {
@@ -453,7 +454,7 @@ export function vertaalIdTekst(nl: string, locale: Locale): string {
   if (locale === "nl") return nl;
   const gevonden = idRedenSleutel(nl);
   if (!gevonden) return nl;
-  const tekst = ALLES[gevonden.sleutel]?.[locale];
+  const tekst = ALLES[gevonden.sleutel]?.[basisLocale(locale)];
   return tekst ? vulIn(tekst, gevonden.waarden) : nl;
 }
 

@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { basisLocale, metMachineTalen, type Locale } from "@/lib/i18n/config";
 import { gegevensMist, type GegevensStand } from "@/lib/onboarding/gegevens-mist";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
@@ -224,13 +224,13 @@ const HERINNERING_UK: HerinneringTeksten = {
   },
 };
 
-export const HERINNERING_TEKSTEN: Record<Locale, HerinneringTeksten> = {
+export const HERINNERING_TEKSTEN: Record<Locale, HerinneringTeksten> = metMachineTalen({
   nl: HERINNERING_NL,
   en: HERINNERING_EN,
   pl: HERINNERING_PL,
   ro: HERINNERING_RO,
   uk: HERINNERING_UK,
-};
+});
 
 export interface WerkerHerinnering {
   /** de taal van de mail (voor het lang-attribuut en de regel onderaan) */
@@ -257,7 +257,7 @@ export function werkerHerinnering(mist: MistStuk[], t: HerinneringTeksten, voorn
   const items = mist.map((m) => ({ tekst: t.stuk[m], href: MIST_HREF[m] }));
   const lijst = items.map((i) => i.tekst).join("; ");
   const poort = stapUitMist(mist);
-  const start = FREELANCER_DICTS[taal ?? "nl"].start;
+  const start = FREELANCER_DICTS[basisLocale(taal ?? "nl")].start;
   const naam: Record<PoortSleutel, string> = { kind: start.kindStep, branches: start.brancheStep, gegevens: start.gegevensStep, identiteit: start.identiteitStep, foto: start.fotoStep };
   const stapRegel = poort ? `${vulIn(start.stapVan, { n: poort.n, totaal: poort.totaal })}: ${naam[poort.sleutel]}` : null;
   return {

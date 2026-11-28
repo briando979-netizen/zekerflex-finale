@@ -1,6 +1,7 @@
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { MailTaal } from "@/lib/mail/vorm";
 import type { MailInput } from "@/lib/mail";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // De mail aan een uitzendkracht wiens ABU-fase overgaat (lib/payroll/abu-phase-sweep.ts), in de app-taal van de werker. Platte tekst,
@@ -13,7 +14,7 @@ interface Tekst {
   tekst: string;
 }
 
-const TEKST: Record<MailTaal, Tekst> = {
+const TEKST: Record<MailTaal, Tekst> = metMachineTalen({
   nl: {
     subject: "Je ABU-fase is overgegaan naar fase {naar}",
     tekst:
@@ -59,7 +60,7 @@ const TEKST: Record<MailTaal, Tekst> = {
       "строк попередження про звільнення та накопичення пенсії (StiPP).\n\n" +
       "Актуальний статус дивись на /dashboard/verloning.\n\nZekerFlex",
   },
-};
+});
 
 export function abuFaseEmailT(input: { fullName: string; van: string; naar: string; weken: number }, taal: MailTaal): MailInput {
   const t = TEKST[taal];

@@ -27,7 +27,7 @@ import { setUserLocale, userLocale } from "@/lib/i18n/worker-locale";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { approvedPushText } from "@/lib/notifications/approved-push";
 import { WORKER_PUSH, pushWhen } from "@/lib/i18n/worker-push";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES } from "@/lib/i18n/config";
 
 beforeEach(() => {
   h.kv.clear();
@@ -71,7 +71,7 @@ describe("approvedPushText in de taal van de werker", () => {
   });
 
   it("heeft in elke taal alle teksten", () => {
-    for (const l of LOCALES) {
+    for (const l of BASIS_LOCALES) {
       const t = WORKER_PUSH[l];
       expect(t.approvedTitle.length).toBeGreaterThan(5);
       expect(t.timeChangedBody("X")).toContain("X");

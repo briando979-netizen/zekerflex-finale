@@ -3,6 +3,7 @@
 import type { MailInput } from "@/lib/mail";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 interface Teksten {
   onderwerp: string;
@@ -16,7 +17,7 @@ interface Teksten {
   htmlNegeer: string;
 }
 
-const T: Record<MailTaal, Teksten> = {
+const T: Record<MailTaal, Teksten> = metMachineTalen({
   nl: {
     onderwerp: "Bevestig het verwijderen van je ZekerFlex-account",
     begroeting: "Hoi {naam},",
@@ -82,7 +83,7 @@ const T: Record<MailTaal, Teksten> = {
     nietWerkt: "Кнопка не працює? Скопіюй це посилання:",
     htmlNegeer: "Ти цього не запитував(ла)? Ігноруй цей лист — з твоїм акаунтом нічого не станеться.",
   },
-};
+});
 
 export function accountDeletionEmailT(fullName: string, link: string, taal: MailTaal): MailInput {
   const t = T[taal];

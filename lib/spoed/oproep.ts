@@ -17,6 +17,7 @@ import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { isEigenTestBedrijf } from "@/lib/admin/eigen-test-regel";
 import { eigenTestGebruikerIds } from "@/lib/admin/eigen-test-zicht";
 import { zonderNummers } from "@/lib/telephony/log-nummer";
+import { basisLocale } from "@/lib/i18n/config";
 import {
   MAX_ONTVANGERS,
   isOpen,
@@ -183,7 +184,7 @@ export async function startSpoedoproep(input: StartInput): Promise<StartUitkomst
     const wilGeenBerichten = uitKeys.has(uitKey(k.userId));
     if (tel && !wilGeenBerichten && (kanalen.includes("whatsapp") || kanalen.includes("sms"))) {
       const locale = locales.get(k.userId) ?? "nl";
-      const t = WORKER_PUSH[locale];
+      const t = WORKER_PUSH[basisLocale(locale)];
       const tekst = t.spoedSms(shift.title, bedrijf, shift.branch.city, pushWhen(locale, shift), pushRate(t, shift.hourlyRateCents), link);
       const kanaal: Kanaal = kanalen.includes("whatsapp") ? "whatsapp" : "sms";
       try {
@@ -236,7 +237,7 @@ export async function antwoordOpSpoed(telefoon: string, tekst: string, via: "sms
   if (!user) return null;
 
   const locale = await userLocale(user.id);
-  const t = WORKER_PUSH[locale];
+  const t = WORKER_PUSH[basisLocale(locale)];
   const antwoord = leesAntwoord(tekst);
   if (antwoord === "stop") {
     await zetSpoedUit(user.id, true);

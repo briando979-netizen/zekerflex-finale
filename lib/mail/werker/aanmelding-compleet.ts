@@ -5,6 +5,7 @@
 import type { MailInput } from "@/lib/mail";
 import { button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 export type AanmeldingCompleetSoort = "kan-reageren" | "nog-iets" | "id-in-controle";
 
@@ -26,7 +27,7 @@ interface CompleetTekst {
   tip: string;
 }
 
-const TEKST: Record<MailTaal, CompleetTekst> = {
+const TEKST: Record<MailTaal, CompleetTekst> = metMachineTalen({
   nl: {
     hoi: "Hoi {naam},",
     subjectKan: "Je aanmelding is compleet: je kunt reageren op klussen",
@@ -107,7 +108,7 @@ const TEKST: Record<MailTaal, CompleetTekst> = {
     knopId: "Подивитися навколо",
     tip: "З чітким фото профілю та досвідом роботи замовники швидше обирають тебе.",
   },
-};
+});
 
 export function aanmeldingCompleetEmailT(
   input: {

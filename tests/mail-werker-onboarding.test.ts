@@ -10,7 +10,7 @@ vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: 
 import { welcomeEmailT } from "@/lib/mail/werker/welkom";
 import { idGeverifieerdEmailT } from "@/lib/mail/werker/id-geverifieerd";
 import { aanmeldingCompleetEmailT } from "@/lib/mail/werker/aanmelding-compleet";
-import { LOCALES } from "@/lib/i18n/config";
+import { BASIS_LOCALES, LOCALES } from "@/lib/i18n/config";
 import { FOUTEN } from "@/lib/i18n/fouten";
 
 const u = "https://zf.test";
@@ -113,11 +113,11 @@ describe("aanroepers", () => {
   });
   it("vertalen de reden van 'nog iets' via FOUTEN en de sleutel", () => {
     const s = bron("lib/onboarding/aanmelding-compleet.ts");
-    expect(s).toContain("FOUTEN[reageren.sleutel]?.[taal]");
+    expect(s).toContain("FOUTEN[reageren.sleutel]?.[basisLocale(taal)]");
     expect(bron("lib/onboarding/kan-reageren.ts")).toContain("sleutel");
     // elke sleutel van eligibility heeft een vertaling in alle talen
     for (const k of ["elig.uitzendGegevens", "elig.contract", "elig.kvk", "elig.kvkWacht", "elig.iban", "elig.proefOp"]) {
-      for (const taal of LOCALES) expect(FOUTEN[k]?.[taal]?.length ?? 0, `${k} ${taal}`).toBeGreaterThan(5);
+      for (const taal of BASIS_LOCALES) expect(FOUTEN[k]?.[taal]?.length ?? 0, `${k} ${taal}`).toBeGreaterThan(5);
     }
   });
 });

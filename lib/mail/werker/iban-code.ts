@@ -1,5 +1,6 @@
 import type { MailTaal } from "@/lib/mail/vorm";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { metMachineTalen } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // De mail met de bevestigingscode voor een nieuw rekeningnummer, in de app-taal van de werker. Puur bestand; de aanroeper is
@@ -7,7 +8,7 @@ import { vulIn } from "@/lib/i18n/vul-in";
 // Machine-assisted translations: native-speaker review recommended.
 // ---------------------------------------------------------------------------
 
-const TEKSTEN: Record<MailTaal, { onderwerp: string; tekst: string }> = {
+const TEKSTEN: Record<MailTaal, { onderwerp: string; tekst: string }> = metMachineTalen({
   nl: {
     onderwerp: "Je bevestigingscode voor een nieuw rekeningnummer",
     tekst:
@@ -33,7 +34,7 @@ const TEKSTEN: Record<MailTaal, { onderwerp: string; tekst: string }> = {
     tekst:
       "Привіт, {naam}!\n\nТи хочеш змінити номер рахунку для виплат на {iban}. Введи цей код, щоб підтвердити; він дійсний 15 хвилин:\n\n{code}\n\nЦе був не ти? Одразу зміни пароль та ігноруй цей лист: без коду нічого не зміниться у твоїх виплатах.",
   },
-};
+});
 
 /** De mail met de code om een nieuw rekeningnummer te bevestigen. `iban` is al gemaskeerd. */
 export function ibanCodeMailT(voornaam: string, iban: string, code: string, taal: MailTaal): { subject: string; text: string } {
