@@ -70,5 +70,8 @@
       "path": "/api/internal/pensioen/aangifte",
       "schedule": "0 7 1 * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }
