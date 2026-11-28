@@ -12,7 +12,6 @@ import { useFT } from "@/components/i18n/useFT";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { SAVED_EVENT, deviceStore, readSaved } from "@/lib/shifts/bewaard";
 import { echteKlussenEerst } from "@/lib/shifts/testklus";
-import { KLUS_TYPE_EMOJI } from "@/lib/shifts/klus-type";
 import { ALLE_BRANCHES_ICOON, brancheIcoon } from "@/lib/shifts/branche-keuze";
 
 type Sort = "match" | "soonest" | "pay" | "near";
@@ -26,69 +25,10 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
     Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-const TYPE_EMOJI = KLUS_TYPE_EMOJI;
 /** Type klus in het filter (zoals YoungOnes, 21 nov): beide staan standaard aan */
 type KlusType = "freelance" | "uitzend";
 const ALLE_TYPEN: readonly KlusType[] = ["freelance", "uitzend"];
 
-function KlusTypeExplainer() {
-  const t = useFT();
-  const zip = (emoji: readonly string[], texts: readonly string[]) => texts.map((text, i) => [emoji[i] ?? "•", text] as const);
-  const Column = ({
-    label,
-    rows,
-    tone,
-  }: {
-    label: string;
-    rows: readonly (readonly [string, string])[];
-    tone: "freelance" | "uitzenden";
-  }) => (
-    <div className="min-w-0 rounded-xl border border-hair bg-paper-soft/50 p-2.5 sm:p-3.5">
-      <span
-        className={`inline-block rounded-lg border px-2.5 py-1 text-xs font-semibold ${
-          tone === "freelance"
-            ? "border-brand-500/40 bg-brand-50 text-brand-700"
-            : "border-violet-300 bg-violet-50 text-violet-700"
-        }`}
-      >
-        {label}
-      </span>
-      <ul className="mt-2.5 space-y-1.5 sm:mt-3 sm:space-y-2">
-        {rows.map(([emoji, text]) => (
-          <li key={text} className="flex items-start gap-1.5 text-xs text-neutralx-700 sm:gap-2.5 sm:text-sm">
-            <span aria-hidden>{emoji}</span>
-            <span>{text}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-
-  return (
-    <details className="group mb-5 rounded-xl border border-hair bg-white px-4 py-3">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-bold text-ink">
-        <span className="underline decoration-crit/50 decoration-2 underline-offset-4">
-          {t.market.typeTitle}
-        </span>
-        <svg
-          className="flex-shrink-0 text-neutralx-400 transition group-open:rotate-180"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden
-        >
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </summary>
-      {/* 21 nov (eigenaar): Freelance en Uitzenden naast elkaar, ook op de telefoon */}
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
-        <Column label={t.market.freelanceLabel} rows={zip(TYPE_EMOJI.freelance, t.market.typeFreelance)} tone="freelance" />
-        <Column label={t.market.uitzendLabel} rows={zip(TYPE_EMOJI.uitzenden, t.market.typeUitzend)} tone="uitzenden" />
-      </div>
-    </details>
-  );
-}
 /** Een rij met een vinkje in het filter (Type klus, branches), zoals in de app van YoungOnes. */
 function VinkRij({ label, aan, onClick, icoon, rechts }: { label: string; aan: boolean; onClick: () => void; icoon?: string; rechts?: ReactNode }) {
   return (
@@ -527,9 +467,6 @@ export function MarketplaceView({
           </div>
         )}
       </div>
-
-      {/* Type-klus vergelijking — onder de filterbalk */}
-      <KlusTypeExplainer />
 
       {view === "map" && home ? (
         <div className="space-y-4">
